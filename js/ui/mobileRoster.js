@@ -522,11 +522,15 @@
   // ============================
   
   /**
-   * Normalize player status properties
+   * Normalize player status properties from canonical game state.
+   * IMPORTANT: This function now reads from canonical game state as the single
+   * source of truth for HOH, POV, and NOM badges. This ensures badges are
+   * always in sync with the actual game state.
+   * 
    * Maps various property names to canonical status properties:
-   * - isHOH, hohWinner, hoh -> hoh
-   * - isNominated, nominee, isNominee -> nominated
-   * - veto, vetoHolder, hasVeto -> pov
+   * - game.hohId -> hoh
+   * - game.vetoHolder -> pov
+   * - game.nominees -> nominated
    * - immunity, protected, isSafe -> safe
    * - state==='evicted', evictedWeek, evictWeek, evicted -> evicted
    * 
@@ -536,26 +540,28 @@
   function normalizeStatus(player) {
     if (!player || typeof player !== 'object') return player;
     
-    // HOH normalization - check isHOH, hohWinner
-    if (player.hoh === undefined) {
-      if (player.isHOH || player.hohWinner) {
-        player.hoh = true;
-      }
-    }
+    // Get canonical game state
+    const game = global.game || {};
+    const playerId = player.id;
     
-    // POV/Veto normalization - check veto, hasVeto, vetoHolder
-    if (player.pov === undefined) {
-      if (player.veto || player.hasVeto || player.vetoHolder) {
-        player.pov = true;
-      }
-    }
+    // HOH normalization - use canonical game.hohId as single source of truth
+    // Also check player properties for backward compatibility
+    const isCanonicalHOH = game.hohId === playerId;
+    const hasHOHProperty = player.isHOH || player.hohWinner || player.hoh === true;
+    player.hoh = isCanonicalHOH || hasHOHProperty;
     
-    // Nominated normalization - check isNominated, nominee, isNominee
-    if (player.nominated === undefined) {
-      if (player.isNominated || player.nominee || player.isNominee) {
-        player.nominated = true;
-      }
-    }
+    // POV/Veto normalization - use canonical game.vetoHolder as single source of truth
+    // Also check player properties for backward compatibility
+    const isCanonicalPOV = game.vetoHolder === playerId;
+    const hasPOVProperty = player.veto || player.hasVeto || player.vetoHolder || player.pov === true;
+    player.pov = isCanonicalPOV || hasPOVProperty;
+    
+    // Nominated normalization - use canonical game.nominees as single source of truth
+    // Also check player properties for backward compatibility
+    const nominees = Array.isArray(game.nominees) ? game.nominees : [];
+    const isCanonicalNominated = nominees.includes(playerId);
+    const hasNominatedProperty = player.isNominated || player.nominee || player.isNominee || player.nominated === true;
+    player.nominated = !player.evicted && (isCanonicalNominated || hasNominatedProperty);
     
     // Safe/immunity normalization - check immunity, protected, isSafe
     if (player.safe === undefined) {
@@ -748,6 +754,16 @@
   function renderActiveGrid() {
     const container = document.querySelector('.mobile-roster-active-grid');
     if (!container) return;
+    
+    // Sync badge states from canonical game state before rendering
+    // This ensures badges are always up-to-date with HOH, POV, and nominations
+    if (typeof global.syncPlayerBadgeStates === 'function') {
+      try {
+        global.syncPlayerBadgeStates();
+      } catch (e) {
+        console.warn('[MobileRoster] Badge sync failed:', e);
+      }
+    }
     
     const { columns } = computeLayout(state.activePlayers.length, state.orientation);
     

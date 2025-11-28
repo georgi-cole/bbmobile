@@ -229,6 +229,95 @@
   function safeName(id){ return getP(id)?.name||'(?)'; }
   function alivePlayers(){ return game.players.filter(p=>!p.evicted); }
   function fmtList(ids){ return ids.map(safeName).join(', '); }
+  
+  /* ===== Active Roster Validation ===== */
+  /**
+   * Check if a player ID exists in the active season roster.
+   * @param {number} id - Player ID to check
+   * @returns {boolean} True if player exists in current game.players
+   */
+  function isInActiveRoster(id){
+    return game.players.some(p => p.id === id);
+  }
+  
+  /**
+   * Get a Set of all player IDs in the active roster for fast lookups.
+   * @returns {Set<number>} Set of player IDs
+   */
+  function getActiveRosterIds(){
+    return new Set(game.players.map(p => p.id));
+  }
+  
+  /**
+   * Validate and sanitize game state to ensure all player references
+   * exist in the active roster. Removes references to invalid player IDs.
+   * @returns {Object} Report of sanitized fields
+   */
+  function validateGameStateRoster(){
+    const rosterIds = getActiveRosterIds();
+    const report = { sanitized: [], warnings: [] };
+    
+    // Validate hohId
+    if(game.hohId !== null && game.hohId !== undefined && !rosterIds.has(game.hohId)){
+      report.warnings.push(`Invalid hohId ${game.hohId} not in active roster`);
+      game.hohId = null;
+      report.sanitized.push('hohId');
+    }
+    
+    // Validate lastHOHId
+    if(game.lastHOHId !== null && game.lastHOHId !== undefined && !rosterIds.has(game.lastHOHId)){
+      report.warnings.push(`Invalid lastHOHId ${game.lastHOHId} not in active roster`);
+      game.lastHOHId = null;
+      report.sanitized.push('lastHOHId');
+    }
+    
+    // Validate vetoHolder
+    if(game.vetoHolder !== null && game.vetoHolder !== undefined && !rosterIds.has(game.vetoHolder)){
+      report.warnings.push(`Invalid vetoHolder ${game.vetoHolder} not in active roster`);
+      game.vetoHolder = null;
+      report.sanitized.push('vetoHolder');
+    }
+    
+    // Validate nominees array
+    if(Array.isArray(game.nominees)){
+      const validNominees = game.nominees.filter(id => rosterIds.has(id));
+      const invalidNominees = game.nominees.filter(id => !rosterIds.has(id));
+      if(invalidNominees.length > 0){
+        report.warnings.push(`Invalid nominees [${invalidNominees.join(', ')}] not in active roster`);
+        game.nominees = validNominees;
+        report.sanitized.push('nominees');
+      }
+    }
+    
+    // Validate jury array
+    if(Array.isArray(game.jury)){
+      const validJury = game.jury.filter(id => rosterIds.has(id));
+      const invalidJury = game.jury.filter(id => !rosterIds.has(id));
+      if(invalidJury.length > 0){
+        report.warnings.push(`Invalid jury members [${invalidJury.join(', ')}] not in active roster`);
+        game.jury = validJury;
+        report.sanitized.push('jury');
+      }
+    }
+    
+    // Validate juryHouse array
+    if(Array.isArray(game.juryHouse)){
+      const validJuryHouse = game.juryHouse.filter(id => rosterIds.has(id));
+      const invalidJuryHouse = game.juryHouse.filter(id => !rosterIds.has(id));
+      if(invalidJuryHouse.length > 0){
+        report.warnings.push(`Invalid juryHouse members [${invalidJuryHouse.join(', ')}] not in active roster`);
+        game.juryHouse = validJuryHouse;
+        report.sanitized.push('juryHouse');
+      }
+    }
+    
+    // Log warnings in debug mode
+    if(report.warnings.length > 0){
+      console.warn('[state] Game state roster validation:', report.warnings);
+    }
+    
+    return report;
+  }
 
   /* ===== Player Creation ===== */
   function pushPlayer({name,human=false}){
@@ -372,16 +461,23 @@
   function updatePlayerThreat(p){ p.threat=THREAT_BASE+0.1*(p.wins.hoh+p.wins.veto); }
 
   /* ===== Badge State Synchronization ===== */
-  // Synchronize per-player properties (p.hoh, p.nominated, p.nominationState) with game state (g.hohId, g.nominees)
-  // This ensures badge rendering always matches the true HOH and nominees state
+  // Synchronize per-player properties (p.hoh, p.pov, p.nominated, p.nominationState) with game state
+  // This ensures badge rendering always matches the true HOH, POV, and nominees state
   function syncPlayerBadgeStates(){
     const g = game;
+    
+    // Validate game state roster first to remove any invalid player references
+    validateGameStateRoster();
+    
     const nominees = Array.isArray(g.nominees) ? g.nominees : [];
     const nomineeSet = new Set(nominees);
     
     for(const p of g.players){
       // Sync HOH badge
       p.hoh = (p.id === g.hohId);
+      
+      // Sync POV/Veto badge
+      p.pov = (p.id === g.vetoHolder);
       
       // Sync nomination badge and state
       const isNominated = nomineeSet.has(p.id);
@@ -391,6 +487,15 @@
       // During veto ceremony, these states are managed by veto.js
       if(p.nominationState !== 'pendingSave' && p.nominationState !== 'saved' && p.nominationState !== 'replacement'){
         p.nominationState = isNominated ? 'nominated' : 'none';
+      }
+    }
+    
+    // Notify PlayerService about the update if available
+    if(global.PlayerService && typeof global.PlayerService.setAlivePlayers === 'function'){
+      try {
+        global.PlayerService.setAlivePlayers(g.players);
+      } catch(e) {
+        console.warn('[state] Failed to notify PlayerService:', e);
       }
     }
   }
@@ -528,6 +633,10 @@
   global.avgAffinity=avgAffinity;
   global.updatePlayerThreat=updatePlayerThreat;
   global.syncPlayerBadgeStates=syncPlayerBadgeStates;
+  // Active roster validation exports
+  global.isInActiveRoster=isInActiveRoster;
+  global.getActiveRosterIds=getActiveRosterIds;
+  global.validateGameStateRoster=validateGameStateRoster;
 
   global.ALLY_T=ALLY_T;
   global.ENEMY_T=ENEMY_T;
