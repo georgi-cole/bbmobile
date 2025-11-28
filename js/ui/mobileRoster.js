@@ -747,8 +747,8 @@
             draggable="false"
           />
           ${isEvicted ? '<div class="mobile-roster-evicted-cross" aria-hidden="true"></div>' : ''}
-          ${badgeHTML}
         </div>
+        ${badgeHTML}
         <div class="mobile-roster-name">${name}</div>
         ${debugTag}
       </button>
