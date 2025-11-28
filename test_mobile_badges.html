@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Roster Badges Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobileRoster.css?v=badge-rebuild-1">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg, #0a0a1a);
+      color: var(--ink, #fff);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .test-container {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--card, #1a1a2e);
+      border-radius: 12px;
+      border: 1px solid var(--line, #333);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+    .test-btn {
+      padding: 8px 16px;
+      background: var(--primary-2, #252540);
+      border: 1px solid var(--line, #333);
+      border-radius: 8px;
+      color: var(--ink, #fff);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: var(--primary-3, #353560);
+      transform: translateY(-1px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--card-2, #252540);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--muted-2, #888);
+    }
+    
+    .status-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--card-2, #252540);
+      border-radius: 8px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+    }
+    
+    .legend-badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 700;
+      font-size: 0.65rem;
+    }
+    
+    .legend-badge.hoh { background: linear-gradient(135deg, #ffb142, #ff8c42); color: #fff; }
+    .legend-badge.pov { background: linear-gradient(135deg, #f1c40f, #d4af37); color: #333; }
+    .legend-badge.nom { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; }
+    .legend-badge.safe { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; }
+    .legend-badge.evict { background: linear-gradient(135deg, #c0392b, #e74c3c); color: #fff; }
+    
+    .tv {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--card, #1a1a2e);
+      border-radius: 12px;
+      border: 2px solid var(--line, #333);
+      min-height: 200px;
+      position: relative;
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 150px;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    #tvNow {
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+    }
+    
+    .diagnostics {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--card, #1a1a2e);
+      border-radius: 12px;
+      border: 1px solid var(--line, #333);
+    }
+    
+    .diagnostics h3 {
+      margin: 0 0 12px 0;
+      font-size: 1rem;
+    }
+    
+    .diagnostics pre {
+      margin: 0;
+      padding: 12px;
+      background: var(--card-2, #252540);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🏷️ Mobile Roster Badges Test</h1>
+      <p style="margin: 0 0 8px 0; color: var(--muted-2, #888); font-size: 0.875rem;">
+        Test harness for badge rendering on mobile roster tiles.
+        All status combinations are covered by the 8 demo players below.
+      </p>
+      
+      <div class="status-legend">
+        <div class="legend-item"><span class="legend-badge hoh">HOH</span> Head of Household</div>
+        <div class="legend-item"><span class="legend-badge pov">POV</span> Power of Veto</div>
+        <div class="legend-item"><span class="legend-badge nom">NOM</span> Nominated</div>
+        <div class="legend-item"><span class="legend-badge safe">SAFE</span> Safe/Immunity</div>
+        <div class="legend-item"><span class="legend-badge evict">EVICTED</span> Evicted</div>
+      </div>
+      
+      <div class="test-controls">
+        <button class="test-btn" onclick="testRefresh()">Refresh View</button>
+        <button class="test-btn" onclick="testDiagnostics()">Show Diagnostics</button>
+        <button class="test-btn" onclick="toggleDebugMode()">Toggle Debug Mode</button>
+      </div>
+      
+      <div class="test-info" id="testInfo">
+        Players: <span id="playerCount">8</span> | 
+        Badges Rendered: <span id="badgeCount">0</span>
+      </div>
+    </div>
+    
+    <!-- Roster Bar (hidden when mobile roster active) -->
+    <div id="rosterBar" style="padding: 12px; background: var(--card-2, #252540); border-radius: 8px; margin-bottom: 16px; text-align: center; color: var(--muted, #666);">
+      Default roster bar (hidden in mobile mode)
+    </div>
+    
+    <!-- Mobile Roster Container (injected by JS) -->
+    
+    <!-- Faux TV -->
+    <div class="tv">
+      <h2 style="margin: 0 0 12px 0; font-size: 1.1rem;">Faux TV</h2>
+      <div class="tvViewport">
+        <div id="tvNow">Click a player tile to spotlight them here</div>
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+    
+    <!-- Diagnostics Panel -->
+    <div class="diagnostics">
+      <h3>📊 MobileRosterDiagnostics.getStatus()</h3>
+      <pre id="diagnosticsOutput">Click "Show Diagnostics" to see status</pre>
+    </div>
+  </div>
+  
+  <!-- Load mobile roster module -->
+  <script src="js/ui/mobileRoster.js?v=badge-rebuild-1"></script>
+  
+  <script>
+    // Mock game state and event bus
+    window.game = window.game || {};
+    window.g = window.g || {};
+    
+    // Event bus
+    window.bbGameBus = {
+      listeners: new Map(),
+      on(event, callback) {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+      },
+      emit(event, data) {
+        if (!this.listeners.has(event)) return;
+        this.listeners.get(event).forEach(cb => cb(data));
+      }
+    };
+    
+    // Mock avatar resolver
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    /**
+     * 8 demo players covering realistic status combinations:
+     * 1. Alice - HOH only
+     * 2. Bob - POV only (via vetoHolder alternate key)
+     * 3. Carol - NOM only (via isNominated alternate key)
+     * 4. Dave - SAFE only (via immunity alternate key)
+     * 5. Emma - HOH+POV combo (HOH who also won veto - this is valid)
+     * 6. Frank - POV+NOM combo (nominee who won veto to save themselves - valid)
+     * 7. Grace - NOM only (another nominated player, via isNominee key)
+     * 8. Henry - EVICTED (via state:'evicted' alternate key)
+     * 
+     * Note: HOH+NOM is impossible in Big Brother since HOH cannot nominate themselves.
+     */
+    const DEMO_PLAYERS = [
+      {
+        id: 1,
+        name: 'Alice',
+        hoh: true
+        // Expected badge: HOH
+      },
+      {
+        id: 2,
+        name: 'Bob',
+        vetoHolder: true
+        // Expected badge: POV (via vetoHolder key)
+      },
+      {
+        id: 3,
+        name: 'Carol',
+        isNominated: true
+        // Expected badge: NOM (via isNominated key)
+      },
+      {
+        id: 4,
+        name: 'Dave',
+        immunity: true
+        // Expected badge: SAFE (via immunity key)
+      },
+      {
+        id: 5,
+        name: 'Emma',
+        isHOH: true,
+        hasVeto: true
+        // Expected badge: HOH+POV (HOH who also won veto - valid scenario)
+      },
+      {
+        id: 6,
+        name: 'Frank',
+        veto: true,
+        nominee: true
+        // Expected badge: POV+NOM (nominee who won veto - valid scenario)
+      },
+      {
+        id: 7,
+        name: 'Grace',
+        isNominee: true
+        // Expected badge: NOM (via isNominee alternate key)
+      },
+      {
+        id: 8,
+        name: 'Henry',
+        state: 'evicted',
+        evictedWeek: 3
+        // Expected badge: EVICTED (via state:'evicted' key)
+      }
+    ];
+    
+    // Initialize with demo players
+    window.game.players = DEMO_PLAYERS.map(p => ({ ...p }));
+    
+    // Force mobile roster activation
+    window.FORCE_MOBILE_ROSTER = true;
+    
+    // Initialize mobile roster
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Initializing mobile roster with demo players...');
+      window.MobileRoster.init();
+      updateTestInfo();
+      
+      // Auto-show diagnostics after a short delay
+      setTimeout(() => {
+        testDiagnostics();
+      }, 500);
+    });
+    
+    // Test functions
+    function testRefresh() {
+      console.log('Refreshing mobile roster...');
+      window.MobileRoster.refresh();
+      updateTestInfo();
+      testDiagnostics();
+    }
+    
+    function testDiagnostics() {
+      const status = window.MobileRosterDiagnostics.getStatus();
+      const output = document.getElementById('diagnosticsOutput');
+      output.textContent = JSON.stringify(status, null, 2);
+      
+      // Update badge count
+      document.getElementById('badgeCount').textContent = status.badgesRendered;
+    }
+    
+    function toggleDebugMode() {
+      const url = new URL(window.location.href);
+      const currentDebug = url.searchParams.get('debug');
+      
+      if (currentDebug === '1') {
+        url.searchParams.delete('debug');
+      } else {
+        url.searchParams.set('debug', '1');
+      }
+      
+      window.location.href = url.toString();
+    }
+    
+    function updateTestInfo() {
+      const players = window.game.players;
+      document.getElementById('playerCount').textContent = players.length;
+      
+      // Update badge count after render
+      setTimeout(() => {
+        const status = window.MobileRosterDiagnostics.getStatus();
+        document.getElementById('badgeCount').textContent = status.badgesRendered;
+      }, 100);
+    }
+  </script>
+  
+</body>
+</html>

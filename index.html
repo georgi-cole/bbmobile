@@ -34,8 +34,7 @@
 <link rel="stylesheet" href="css/tv-inline-cards.css">
 <link rel="stylesheet" href="css/tv-sequence.css">
 <link rel="stylesheet" href="css/eviction-modal.css">
-<link rel="stylesheet" href="css/eviction-layout-containment.css">
-<link rel="stylesheet" href="css/mobileRoster.css?v=roster-ui-3">
+<link rel="stylesheet" href="css/mobileRoster.css?v=badge-rebuild-1">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -253,7 +252,31 @@
 <script defer src="js/roster-visibility.js"></script>
 
 <!-- Mobile Roster View System -->
-<script defer src="js/ui/mobileRoster.js?v=roster-ui-3"></script>
+<script defer src="js/ui/mobileRoster.js?v=badge-rebuild-1"></script>
+
+<!-- Mobile Roster Fallback Initializer -->
+<script>
+(function() {
+  'use strict';
+  // Redundant fallback to ensure Mobile Roster initializes on iOS Safari
+  window.addEventListener('load', function() {
+    try {
+      var ua = navigator.userAgent || '';
+      if (/iPhone|iPod|Android|Mobile/i.test(ua)) {
+        window.FORCE_MOBILE_ROSTER = true;
+        window.MOBILE_ROSTER_DISABLE_SPOTLIGHT = true;
+      }
+      if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
+        if (!document.body.getAttribute('data-mobile-roster-active')) {
+          console.info('[MobileRoster Fallback] Forcing init on window.load');
+          window.MobileRoster.init();
+          window.MobileRoster.refresh && window.MobileRoster.refresh();
+        }
+      }
+    } catch(e) { console.error('[MobileRoster Fallback] Error', e); }
+  });
+})();
+</script>
 
 <!-- Show "BIG BROTHER" placeholder tiles before game starts (DEFERRED) -->
 <script defer src="js/roster-placeholders.js"></script>
