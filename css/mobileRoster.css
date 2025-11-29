@@ -91,13 +91,15 @@ body[data-mobile-roster-active="true"] #rosterBar {
   max-width: min(100%, 520px);
   margin: 0 auto;
   width: 100%;
+  /* Ensure the final row fully clears the TV overlay */
+  padding-bottom: calc(var(--mobile-roster-tile-size, 80px) + var(--mobile-roster-gap, 6px));
 }
 
 /* Grid tiles */
 .mobile-roster-tile {
   position: relative;
   isolation: isolate;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: unset; /* Remove fixed aspect ratio to allow name footer space */
   min-width: 56px; /* Minimum tap target size */
   max-width: 100px;
   
@@ -108,6 +110,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
   border-radius: 8px;
   padding: var(--mobile-roster-tile-padding, 2px); /* Ultra-thin padding so photos appear bigger */
   
+  /* Columnar tile layout to reserve space for name footer */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -151,6 +154,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
 /* Avatar container */
 .mobile-roster-avatar-wrap {
   position: relative;
+  flex: 0 0 auto; /* Prevent shrinking/growing to reserve space for name footer */
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 5px; /* Per requirements: smaller border radius */
@@ -187,12 +191,13 @@ body[data-mobile-roster-active="true"] #rosterBar {
   transform: scale(1.05);
 }
 
-/* Name label - always visible regardless of cast size
+/* Name label (tile footer) - always visible regardless of cast size
  * Requirements: min-height guaranteed, no clipping, centered, ellipsis for long names
- * Changed from 0.50rem to 0.55rem for better readability
+ * Acts as the tile footer - reserved space for name below avatar
  */
 .mobile-roster-name {
-  font-size: 0.55rem; /* Increased from 0.50rem for better readability */
+  flex: 0 0 auto; /* Prevent shrinking to ensure name footer space */
+  font-size: 13px; /* Consistent readable size per requirements */
   font-weight: 600;
   letter-spacing: 0.3px;
   color: var(--ink);
@@ -202,10 +207,16 @@ body[data-mobile-roster-active="true"] #rosterBar {
   white-space: nowrap;
   width: 100%;
   line-height: 1.2;
-  min-height: 14px; /* Guarantee minimum height for name visibility */
-  max-height: 18px; /* Constrain max height to prevent layout issues */
-  padding: 2px 2px 1px 2px; /* Slightly more padding for better visibility */
-  flex-shrink: 0; /* Prevent shrinking when tile is small */
+  min-height: 20px; /* Guarantee minimum height for name visibility */
+  padding: 6px 8px 8px; /* Proper padding for footer per requirements */
+}
+
+/* Tile footer wrapper - ensures reserved space for name */
+.mobile-roster-tile-footer {
+  flex: 0 0 auto;
+  min-height: 20px;
+  padding: 6px 8px 8px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,15 +243,16 @@ body[data-mobile-roster-active="true"] #rosterBar {
 
 /* ============================
    Status Chips Overlay Container
-   Centered overlay positioned absolutely in tile (sibling of avatar-wrap).
+   Centered overlay positioned absolutely in avatar area.
    Single row container - no wrapping to prevent clipping and overlap with name.
+   Positioned at top of avatar to avoid impacting footer.
    Emoji fallbacks used when text would overflow.
    ============================ */
 
 .mobile-roster-status-chips {
   position: absolute;
-  /* Position at bottom of avatar, above name label */
-  bottom: calc(var(--name-label-height, 18px) + 4px);
+  /* Position at top of avatar area, centered horizontally */
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
   /* Single row flex container - no wrapping */
@@ -248,14 +260,12 @@ body[data-mobile-roster-active="true"] #rosterBar {
   flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
-  gap: 2px;
-  /* Constrain width to avatar bounds */
-  max-width: 90%;
-  width: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 86%; /* Constrain width to avatar bounds */
   z-index: 3;
   pointer-events: none;
-  /* Prevent overflow and clipping */
-  overflow: hidden;
 }
 
 /* Individual chip styles - compact for single row */
@@ -697,9 +707,12 @@ body[data-mobile-roster-active="true"] #tvNow {
    Faux TV Adjustments
    ============================ */
 
-/* When mobile roster is active, adjust faux TV positioning */
+/* When mobile roster is active, adjust faux TV positioning.
+ * IMPORTANT: Use positive top margin (never negative) to prevent overlap with roster grid.
+ * The small gap ensures TV overlay never covers last roster row avatars.
+ */
 body[data-mobile-roster-active="true"] .tv {
-  margin-top: 12px;
+  margin-top: 8px; /* Small positive margin - tightened but never overlapping */
   position: relative;
   overflow: hidden;
 }
@@ -774,8 +787,9 @@ body[data-mobile-roster-active="true"] .tv {
   
   /* Name always visible - ensure min-height on small screens */
   .mobile-roster-name {
-    font-size: 0.52rem;
-    min-height: 13px;
+    font-size: 11px; /* Slightly smaller on small screens but still readable */
+    min-height: 18px;
+    padding: 4px 6px 6px;
   }
   
   .mobile-roster-badge {
@@ -836,8 +850,9 @@ body[data-mobile-roster-active="true"] .tv {
   
   /* Name always visible - ensure min-height on very small screens */
   .mobile-roster-name {
-    font-size: 0.48rem;
-    min-height: 12px;
+    font-size: 10px; /* Minimum readable size for very small screens */
+    min-height: 16px;
+    padding: 3px 4px 5px;
   }
   
   .mobile-roster-badge {
