@@ -38,6 +38,9 @@
     OVERFLOW_PADDING: 8,           // Padding for overflow detection
     ROSTER_CONTAINER_PADDING: 32,  // Padding/margins inside roster container
     TV_ROSTER_GAP: 20,             // Gap between TV and roster (px)
+    
+    // Badge pill animation timing
+    BADGE_PILL_DURATION: 7000,     // Badge pill persists up to 7 seconds (ms)
   };
   
   // ============================
@@ -65,6 +68,10 @@
     badgesRendered: 0,
     evictedCount: 0, // Track evicted count for diagnostics
     phaseChangeHandler: null, // Handler for bb:phase:changed event
+    
+    // Badge pill animation state
+    // Maps playerId -> { badgeType, timerId, startTime }
+    activeBadgePills: new Map(),
   };
   
   // Max events to keep in lastEvents rolling window
@@ -477,12 +484,17 @@
           p.hoh = false;
           p.isHOH = false;
           p.hohWinner = false;
+          // Clear corner emoji for old HOH
+          clearCornerEmoji(p.id, 'HOH');
         }
       }
       // Set HOH for this player
       player.hoh = true;
       player.isHOH = true;
       player.hohWinner = true;
+      
+      // Trigger badge animation (pill then emoji)
+      triggerBadgeAnimation(player.id, 'HOH');
     });
   }
   
@@ -498,6 +510,8 @@
           p.veto = false;
           p.hasVeto = false;
           p.vetoHolder = false;
+          // Clear corner emoji for old POV holder
+          clearCornerEmoji(p.id, 'POV');
         }
       }
       // Set POV for this player
@@ -505,6 +519,9 @@
       player.veto = true;
       player.hasVeto = true;
       player.vetoHolder = true;
+      
+      // Trigger badge animation (pill then emoji)
+      triggerBadgeAnimation(player.id, 'POV');
     });
   }
   
@@ -517,6 +534,9 @@
       player.isNominated = true;
       player.nominee = true;
       player.isNominee = true;
+      
+      // Trigger badge animation (pill then emoji)
+      triggerBadgeAnimation(player.id, 'NOM');
     });
   }
   
@@ -530,6 +550,9 @@
       player.nominee = true;
       player.isNominee = true;
       player.replacementNominee = true;
+      
+      // Trigger badge animation (pill then emoji)
+      triggerBadgeAnimation(player.id, 'NOM');
     });
   }
   
@@ -543,11 +566,17 @@
       player.isNominated = false;
       player.nominee = false;
       player.isNominee = false;
+      // Clear NOM emoji if present
+      clearCornerEmoji(player.id, 'NOM');
+      
       // Set safe status
       player.safe = true;
       player.isSafe = true;
       player.immunity = true;
       player.protected = true;
+      
+      // Trigger badge animation (pill then emoji)
+      triggerBadgeAnimation(player.id, 'SAFE');
     });
   }
   
@@ -564,11 +593,17 @@
       player.evictedWeek = eventData.week || eventData.evictedWeek || state.evictedCount + 1;
       player.evictedAt = player.evictedWeek;
       
-      // Clear other statuses
+      // Clear other statuses and emojis
       player.hoh = false;
       player.pov = false;
       player.nominated = false;
       player.safe = false;
+      
+      // Clear all corner emojis for evicted player
+      clearCornerEmoji(player.id);
+      
+      // Dismiss any active badge pill for this player
+      dismissBadgePill(player.id, false);
       
       // Increment evicted count efficiently
       if (wasNotEvicted) {
@@ -890,6 +925,194 @@
     'NOM': '❓',
     'SAFE': '✅'
   };
+  
+  /**
+   * Badge pill animation system
+   * 
+   * When a badge-granting event triggers (HOH win, POV win, nomination, etc):
+   * 1. A badge pill appears centered in place of the name in the avatar tile footer
+   * 2. The pill persists up to 7 seconds
+   * 3. If phase advances early (fast forward, live update, badge removal, etc),
+   *    the pill is dismissed immediately
+   * 4. After dismissal, badge emoji appears in avatar's upper-right corner
+   * 5. Emoji persists as long as the badge logic dictates (per game event specs)
+   */
+  
+  /**
+   * Show a badge pill for a player
+   * The pill replaces the player's name temporarily
+   * @param {string|number} playerId - Player ID
+   * @param {string} badgeType - Badge type ('HOH', 'POV', 'NOM', 'SAFE')
+   */
+  function showBadgePill(playerId, badgeType) {
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    if (!tile) {
+      console.warn(`[MobileRoster] Cannot show badge pill: tile not found for player ${playerId}`);
+      return;
+    }
+    
+    // Cancel any existing pill animation for this player
+    dismissBadgePill(playerId, false);
+    
+    // Find name element
+    const nameEl = tile.querySelector('.mobile-roster-name');
+    if (!nameEl) return;
+    
+    // Store original name for restoration
+    const originalName = nameEl.textContent;
+    nameEl.dataset.originalName = originalName;
+    
+    // Get badge styling
+    const badgeClass = badgeType.toLowerCase();
+    const badgeText = badgeType;
+    
+    // Replace name with pill
+    nameEl.innerHTML = `<span class="badge-pill badge-pill-${badgeClass}" data-badge-type="${badgeType}">${badgeText}</span>`;
+    nameEl.classList.add('badge-pill-active');
+    
+    // Set timer to dismiss pill and show corner emoji
+    const timerId = setTimeout(() => {
+      dismissBadgePill(playerId, true);
+    }, CONFIG.BADGE_PILL_DURATION);
+    
+    // Track active pill animation
+    state.activeBadgePills.set(String(playerId), {
+      badgeType,
+      timerId,
+      startTime: Date.now(),
+      originalName
+    });
+    
+    console.info(`[MobileRoster] Badge pill shown: ${badgeType} for player ${playerId}`);
+  }
+  
+  /**
+   * Dismiss a badge pill and show corner emoji
+   * @param {string|number} playerId - Player ID
+   * @param {boolean} showEmoji - Whether to show corner emoji after dismissal
+   */
+  function dismissBadgePill(playerId, showEmoji = true) {
+    const pillData = state.activeBadgePills.get(String(playerId));
+    if (!pillData) return;
+    
+    // Clear timer
+    if (pillData.timerId) {
+      clearTimeout(pillData.timerId);
+    }
+    
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    if (tile) {
+      const nameEl = tile.querySelector('.mobile-roster-name');
+      if (nameEl) {
+        // Restore original name
+        nameEl.textContent = pillData.originalName || nameEl.dataset.originalName || '';
+        nameEl.classList.remove('badge-pill-active');
+        delete nameEl.dataset.originalName;
+      }
+      
+      // Show corner emoji if requested and badge is still active
+      if (showEmoji && pillData.badgeType) {
+        showCornerEmoji(playerId, pillData.badgeType);
+      }
+    }
+    
+    // Remove from active pills
+    state.activeBadgePills.delete(String(playerId));
+    
+    console.info(`[MobileRoster] Badge pill dismissed for player ${playerId}, showEmoji: ${showEmoji}`);
+  }
+  
+  /**
+   * Dismiss all active badge pills (e.g., on phase advance)
+   * @param {boolean} showEmojis - Whether to show corner emojis after dismissal
+   */
+  function dismissAllBadgePills(showEmojis = true) {
+    const playerIds = [...state.activeBadgePills.keys()];
+    for (const playerId of playerIds) {
+      dismissBadgePill(playerId, showEmojis);
+    }
+    console.info(`[MobileRoster] Dismissed ${playerIds.length} active badge pills`);
+  }
+  
+  /**
+   * Show a corner emoji badge on the avatar
+   * The emoji appears in the upper-right corner of the avatar
+   * @param {string|number} playerId - Player ID
+   * @param {string} badgeType - Badge type ('HOH', 'POV', 'NOM', 'SAFE')
+   */
+  function showCornerEmoji(playerId, badgeType) {
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    if (!tile) return;
+    
+    const avatarWrap = tile.querySelector('.mobile-roster-avatar-wrap');
+    if (!avatarWrap) return;
+    
+    // Get emoji for badge type
+    const emoji = BADGE_EMOJI_MAP[badgeType];
+    if (!emoji) return;
+    
+    // Remove any existing corner emoji
+    const existingEmoji = avatarWrap.querySelector('.corner-emoji-badge');
+    if (existingEmoji) {
+      existingEmoji.remove();
+    }
+    
+    // Create corner emoji element
+    const emojiEl = document.createElement('span');
+    emojiEl.className = `corner-emoji-badge corner-emoji-${badgeType.toLowerCase()}`;
+    emojiEl.textContent = emoji;
+    emojiEl.setAttribute('aria-label', badgeType);
+    emojiEl.dataset.badgeType = badgeType;
+    
+    avatarWrap.appendChild(emojiEl);
+    
+    console.info(`[MobileRoster] Corner emoji shown: ${emoji} (${badgeType}) for player ${playerId}`);
+  }
+  
+  /**
+   * Clear corner emoji from an avatar
+   * @param {string|number} playerId - Player ID
+   * @param {string} [badgeType] - Optional badge type to clear specifically, or all if omitted
+   */
+  function clearCornerEmoji(playerId, badgeType) {
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    if (!tile) return;
+    
+    const avatarWrap = tile.querySelector('.mobile-roster-avatar-wrap');
+    if (!avatarWrap) return;
+    
+    if (badgeType) {
+      // Clear specific badge type
+      const emojiEl = avatarWrap.querySelector(`.corner-emoji-${badgeType.toLowerCase()}`);
+      if (emojiEl) {
+        emojiEl.remove();
+        console.info(`[MobileRoster] Corner emoji cleared: ${badgeType} for player ${playerId}`);
+      }
+    } else {
+      // Clear all corner emojis
+      avatarWrap.querySelectorAll('.corner-emoji-badge').forEach(el => el.remove());
+      console.info(`[MobileRoster] All corner emojis cleared for player ${playerId}`);
+    }
+  }
+  
+  /**
+   * Handle badge event - show pill animation then corner emoji
+   * Called when a badge-granting event occurs (HOH win, POV win, nomination, etc)
+   * @param {string|number} playerId - Player ID
+   * @param {string} badgeType - Badge type ('HOH', 'POV', 'NOM', 'SAFE')
+   */
+  function triggerBadgeAnimation(playerId, badgeType) {
+    if (!playerId || !badgeType) return;
+    
+    // Validate badge type
+    if (!BADGE_EMOJI_MAP[badgeType]) {
+      console.warn(`[MobileRoster] Unknown badge type: ${badgeType}`);
+      return;
+    }
+    
+    // Show pill animation
+    showBadgePill(playerId, badgeType);
+  }
   
   /**
    * Compute badge tokens for a player
@@ -2233,6 +2456,11 @@
     // Store handler reference for potential cleanup
     state.phaseChangeHandler = (event) => {
       console.info('[MobileRoster] Phase changed event - refreshing roster', event?.detail?.phase);
+      
+      // Dismiss all active badge pills immediately on phase change
+      // Pills should be replaced by corner emojis since badges persist
+      dismissAllBadgePills(true);
+      
       refresh();
     };
     global.addEventListener('bb:phase:changed', state.phaseChangeHandler);
@@ -2366,6 +2594,13 @@
     toggleEvictedPanel,
     forceEnable,
     getState: () => ({ ...state }), // Return copy for debugging
+    
+    // Badge pill animation API
+    triggerBadgeAnimation,
+    dismissBadgePill,
+    dismissAllBadgePills,
+    showCornerEmoji,
+    clearCornerEmoji,
   };
   
   const MobileRosterDiagnostics = {
