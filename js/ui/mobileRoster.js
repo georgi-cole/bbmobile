@@ -874,15 +874,21 @@
   }
   
   /**
+   * Maximum combined badge text length before emoji fallback is used
+   * e.g., "HOH+POV" = 7 chars, "HOH+POV+NOM" = 11 chars
+   */
+  const MAX_BADGE_TEXT_LENGTH = 8;
+  
+  /**
    * Emoji fallbacks for status badges
    * Used when text would overflow the badge container
+   * Note: Only HOH, POV, NOM, SAFE are used on mobile tiles
    */
   const BADGE_EMOJI_MAP = {
     'HOH': '👑',
     'POV': '🛡️',
     'NOM': '❓',
-    'SAFE': '✅',
-    'EVICTED': '❌'  // Not used on mobile (red cross sufficient)
+    'SAFE': '✅'
   };
   
   /**
@@ -940,27 +946,30 @@
   function shouldUseEmojiFallback(tokens) {
     if (!tokens || tokens.length === 0) return false;
     
-    // Single token: use emoji if text would be too long for small tiles
+    // Single tokens (HOH, POV, NOM, SAFE) always fit - max 4 chars
     if (tokens.length === 1) {
-      return false; // Single tokens fit fine
+      return false;
     }
     
     // Multiple tokens (combo): check combined length
     const combinedLength = tokens.join('+').length;
     
-    // Use emoji if combined text exceeds threshold (e.g., "HOH+POV" = 7 chars)
-    return combinedLength > 8;
+    // Use emoji if combined text exceeds threshold
+    return combinedLength > MAX_BADGE_TEXT_LENGTH;
   }
   
   /**
    * Get emoji display for tokens
+   * Falls back to original token if no emoji mapping exists
    * @param {Array<string>} tokens - Array of status tokens
    * @returns {string} Emoji string (e.g., "👑+🛡️" for HOH+POV)
    */
   function getEmojiDisplay(tokens) {
     if (!tokens || tokens.length === 0) return '';
     
-    return tokens.map(t => BADGE_EMOJI_MAP[t] || t).join('+');
+    // Map tokens to emoji, falling back to emoji '❓' for unknown tokens
+    // to maintain consistent visual style
+    return tokens.map(t => BADGE_EMOJI_MAP[t] || '❓').join('+');
   }
   
   /**
