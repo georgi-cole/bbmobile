@@ -8,21 +8,10 @@
   const IntermissionFlow = {};
 
   /**
-   * Randomly select a game to offer
-   * @returns {string} 'tictactoe' or 'dotsandboxes'
-   */
-  // Note: selectRandomGame kept for potential future use but currently unused
-  // eslint-disable-next-line no-unused-vars
-  function selectRandomGame() {
-    const games = ['tictactoe', 'dotsandboxes'];
-    return games[Math.floor(Math.random() * games.length)];
-  }
-
-  /**
    * Show intermission offer card
    * @param {Object} options
    * @param {string} options.compType - 'HOH' or 'Veto'
-   * @param {string} options.gameType - 'tictactoe' or 'dotsandboxes' (optional, randomly selected if not provided)
+   * @param {string} options.gameType - 'tictactoe' or 'dotsandboxes' (optional, defaults based on compType: HOH→tictactoe, Veto→dotsandboxes)
    * @param {Function} options.onYes - Callback when user chooses to play
    * @param {Function} options.onNo - Callback when user chooses to skip
    */

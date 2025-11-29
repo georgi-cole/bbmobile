@@ -19,7 +19,7 @@
   /**
    * Initialize a new Tic Tac Toe game
    * @param {HTMLElement} container - Container element to render game in
-   * @param {Function} onComplete - Callback when game finishes (winner: 'human'|'ai'|'draw'|'cancelled')
+   * @param {Function} onComplete - Callback when game finishes (result: 'human'|'ai'|'draw'|'cancelled')
    */
   function init(container, onComplete) {
     TicTacToeIntermission.container = container;

@@ -15,7 +15,8 @@
    * @returns {HTMLElement} The card element
    */
   function showInTv(options) {
-    // eslint-disable-next-line no-unused-vars -- gameType kept for future expansion/logging
+    // gameType destructured for API compatibility but unused (message based on compType per design spec)
+    // eslint-disable-next-line no-unused-vars
     const { compType, gameType, onYes, onNo } = options;
 
     // Set intermission active flag
