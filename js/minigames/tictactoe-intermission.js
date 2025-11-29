@@ -218,10 +218,12 @@
    * Handle exit button click
    */
   function handleExit() {
+    // Save callback before cleanup (cleanup sets onComplete to null)
+    const callback = TicTacToeIntermission.onComplete;
     clearStallGuard();
     cleanup();
-    if (TicTacToeIntermission.onComplete) {
-      TicTacToeIntermission.onComplete('cancelled');
+    if (callback) {
+      callback('cancelled');
     }
   }
 
