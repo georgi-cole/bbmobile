@@ -15,6 +15,7 @@
    * @returns {HTMLElement} The card element
    */
   function showInTv(options) {
+    // eslint-disable-next-line no-unused-vars -- gameType kept for future expansion/logging
     const { compType, gameType, onYes, onNo } = options;
 
     // Set intermission active flag
@@ -40,59 +41,59 @@
       overlay.style.padding = '20px';
     }
 
-    // Create card container
+    // Create card container - sized to fit TV overlay without scroll
     const cardContainer = document.createElement('div');
     cardContainer.className = 'intermission-card-container';
     cardContainer.style.cssText = `
       pointer-events: auto;
-      padding: 0 16px;
-      max-width: 500px;
+      padding: 0 8px;
+      max-width: clamp(260px, 86vw, 360px);
       width: 100%;
+      max-height: 90%;
+      overflow: hidden;
       animation: slideUpFade 0.4s ease-out;
     `;
 
-    // Create card
+    // Create card - compact styling for TV overlay
     const card = document.createElement('div');
     card.className = 'intermission-offer-card in-tv';
     card.style.cssText = `
       background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(51, 65, 85, 0.75));
       border: none;
-      border-radius: 16px;
-      padding: 24px;
+      border-radius: 12px;
+      padding: 16px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(12px);
     `;
 
-    // Title - update text based on competition type
+    // Title - unified text for both competition types
     const title = document.createElement('div');
     title.className = 'intermission-offer-title';
-    const titleText = compType === 'Veto' 
-      ? 'You were not drawn to play this week'
-      : 'As the outgoing HOH, you cannot compete';
-    title.textContent = titleText;
+    title.textContent = 'You cannot compete';
     title.style.cssText = `
-      font-size: 1.4rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: #60a5fa;
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
       text-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
     `;
     card.appendChild(title);
 
-    // Message
+    // Message - dynamic based on compType per spec
     const message = document.createElement('div');
     message.className = 'intermission-offer-message';
-    const gameName = gameType === 'tictactoe' ? 'Tic Tac Toe' : 
-                     gameType === 'dotsandboxes' ? 'Dots and Boxes' : 
-                     'a quick game';
-    message.textContent = `The ${compType} competition is ongoing. Would you like to play ${gameName} while you wait?`;
+    // HOH → Tic Tac Toe, Veto → Dots and Boxes (per design spec)
+    const messageText = compType === 'Veto'
+      ? 'Play Dots and Boxes while you wait?'
+      : 'Play Tic Tac Toe while you wait?';
+    message.textContent = messageText;
     message.style.cssText = `
-      font-size: 1rem;
+      font-size: 0.95rem;
       color: rgba(255, 255, 255, 0.9);
       text-align: center;
-      line-height: 1.6;
-      margin-bottom: 24px;
+      line-height: 1.5;
+      margin-bottom: 14px;
     `;
     card.appendChild(message);
 
@@ -105,15 +106,15 @@
       justify-content: center;
     `;
 
-    // Yes button
+    // Yes button - compact for TV overlay
     const yesBtn = document.createElement('button');
     yesBtn.className = 'intermission-offer-button yes';
     yesBtn.textContent = 'Yes';
     yesBtn.style.cssText = `
       flex: 1;
-      max-width: 150px;
-      padding: 12px 24px;
-      font-size: 1rem;
+      max-width: 120px;
+      padding: 10px 16px;
+      font-size: 0.95rem;
       font-weight: 600;
       background: linear-gradient(135deg, #10b981, #059669);
       border: 2px solid #34d399;
@@ -139,15 +140,15 @@
     });
     buttons.appendChild(yesBtn);
 
-    // No button
+    // No button - compact for TV overlay
     const noBtn = document.createElement('button');
     noBtn.className = 'intermission-offer-button no';
     noBtn.textContent = 'No';
     noBtn.style.cssText = `
       flex: 1;
-      max-width: 150px;
-      padding: 12px 24px;
-      font-size: 1rem;
+      max-width: 120px;
+      padding: 10px 16px;
+      font-size: 0.95rem;
       font-weight: 600;
       background: linear-gradient(135deg, #6b7280, #4b5563);
       border: 2px solid #9ca3af;

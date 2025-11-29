@@ -11,6 +11,8 @@
    * Randomly select a game to offer
    * @returns {string} 'tictactoe' or 'dotsandboxes'
    */
+  // Note: selectRandomGame kept for potential future use but currently unused
+  // eslint-disable-next-line no-unused-vars
   function selectRandomGame() {
     const games = ['tictactoe', 'dotsandboxes'];
     return games[Math.floor(Math.random() * games.length)];
@@ -28,9 +30,9 @@
     const { compType, onYes, onNo } = options;
     let { gameType } = options;
     
-    // Randomly select game if not specified
+    // Per design spec: HOH → Tic Tac Toe, Veto → Dots and Boxes
     if (!gameType) {
-      gameType = selectRandomGame();
+      gameType = compType === 'Veto' ? 'dotsandboxes' : 'tictactoe';
     }
     
     // Store selected game type for later use
@@ -64,17 +66,19 @@
     const card = document.createElement('div');
     card.className = 'intermission-offer-card';
 
-    // Title
+    // Title - unified text per design spec
     const title = document.createElement('div');
     title.className = 'intermission-offer-title';
-    title.textContent = `${compType} Competition In Progress`;
+    title.textContent = 'You cannot compete';
     card.appendChild(title);
 
-    // Message
+    // Message - dynamic based on compType per design spec
     const message = document.createElement('div');
     message.className = 'intermission-offer-message';
-    const gameName = gameType === 'tictactoe' ? 'Tic Tac Toe' : 'Dots and Boxes';
-    message.textContent = `The ${compType} competition is ongoing. Would you like to play some ${gameName} while you wait?`;
+    const messageText = compType === 'Veto'
+      ? 'Play Dots and Boxes while you wait?'
+      : 'Play Tic Tac Toe while you wait?';
+    message.textContent = messageText;
     card.appendChild(message);
 
     // Buttons container
