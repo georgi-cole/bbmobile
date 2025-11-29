@@ -113,6 +113,9 @@ body[data-mobile-roster-active="true"] #rosterBar {
   align-items: center;
   gap: var(--mobile-roster-tile-gap, 4px); /* Reduced gap for tighter design */
   
+  /* CSS variable for name label height - used by badge positioning */
+  --name-label-height: 18px;
+  
   /* Interactions */
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.25, 0.9, 0.25, 1), box-shadow 0.3s, border-color 0.3s;
@@ -229,43 +232,46 @@ body[data-mobile-roster-active="true"] #rosterBar {
 /* ============================
    Status Chips Overlay Container
    Centered overlay positioned absolutely in tile (sibling of avatar-wrap).
-   Uses flexbox with flex-wrap for combo badges (e.g., HOH+POV).
-   Positioned same as .mobile-roster-badge-overlay for consistency.
+   Single row container - no wrapping to prevent clipping and overlap with name.
+   Emoji fallbacks used when text would overflow.
    ============================ */
 
 .mobile-roster-status-chips {
   position: absolute;
-  /* Position at bottom center, same calculation as badge-overlay */
-  bottom: calc(0.58rem * 1.2 + var(--mobile-roster-tile-gap, 4px) + 2px);
+  /* Position at bottom of avatar, above name label */
+  bottom: calc(var(--name-label-height, 18px) + 4px);
   left: 50%;
   transform: translateX(-50%);
-  /* Flexbox for wrapping combo badges */
+  /* Single row flex container - no wrapping */
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
   gap: 2px;
-  /* Allow content to expand without clipping */
-  max-width: 95%;
+  /* Constrain width to avatar bounds */
+  max-width: 90%;
   width: auto;
   z-index: 3;
   pointer-events: none;
+  /* Prevent overflow and clipping */
+  overflow: hidden;
 }
 
-/* Individual chip styles */
+/* Individual chip styles - compact for single row */
 .mobile-roster-status-chips .chip-hoh,
 .mobile-roster-status-chips .chip-pov,
 .mobile-roster-status-chips .chip-nom,
 .mobile-roster-status-chips .chip-safe,
 .mobile-roster-status-chips .chip-evict {
-  padding: 1px 4px;
+  padding: 1px 3px;
   border-radius: 3px;
-  font-size: 0.5rem;
+  font-size: 0.48rem;
   font-weight: 700;
   text-align: center;
   white-space: nowrap;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .mobile-roster-status-chips .chip-hoh {
@@ -300,41 +306,40 @@ body[data-mobile-roster-active="true"] #rosterBar {
   .mobile-roster-status-chips .chip-nom,
   .mobile-roster-status-chips .chip-safe,
   .mobile-roster-status-chips .chip-evict {
-    font-size: 0.45rem;
-    padding: 1px 3px;
+    font-size: 0.42rem;
+    padding: 1px 2px;
   }
 }
 
 /* Badge text overlay at bottom-center of avatar
  * NOTE: Badge is positioned as sibling of avatar-wrap to avoid overflow:hidden clipping.
- * Uses absolute positioning relative to tile, with bottom calculated to align with avatar bottom.
- * Per requirements D: position absolute, bottom 2px, left 50%, transform translateX(-50%), z-index 3
- * UPDATED: Now uses flex layout to allow combo badges to wrap instead of being clipped.
+ * Uses absolute positioning relative to tile, positioned above the name label.
+ * Single row container - no wrapping. Uses emoji fallback when text would overflow.
+ * Per requirements: centered via left:50% translateX(-50%), z-index 3
  */
 .mobile-roster-badge-overlay {
   position: absolute;
-  /* Per requirements D: position at bottom center */
-  bottom: calc(0.58rem * 1.2 + var(--mobile-roster-tile-gap, 4px) + 2px);
+  /* Position above name label */
+  bottom: calc(var(--name-label-height, 18px) + 4px);
   left: 50%;
   transform: translateX(-50%);
-  /* UPDATED: Allow flex display for wrapping combo badges */
+  /* Single row flex - no wrapping */
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
   gap: 2px;
-  min-width: 40%;
-  max-width: 95%;
+  min-width: 30%;
+  max-width: 90%;
   background: rgba(0, 0, 0, 0.85);
   color: #fff;
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   font-weight: 700;
   text-align: center;
   padding: 2px 4px;
-  /* UPDATED: Allow wrapping for combo badges instead of clipping */
-  white-space: normal;
-  word-break: keep-all;
-  /* Per requirements D: z-index 3 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   z-index: 3;
   pointer-events: none;
   letter-spacing: 0.3px;

@@ -874,9 +874,21 @@
   }
   
   /**
+   * Emoji fallbacks for status badges
+   * Used when text would overflow the badge container
+   */
+  const BADGE_EMOJI_MAP = {
+    'HOH': '👑',
+    'POV': '🛡️',
+    'NOM': '❓',
+    'SAFE': '✅',
+    'EVICTED': '❌'  // Not used on mobile (red cross sufficient)
+  };
+  
+  /**
    * Compute badge tokens for a player
    * Returns array of tokens in priority order: HOH > POV > NOM > SAFE
-   * If evicted, returns ["EVICTED"] alone
+   * Note: EVICTED is NOT returned - red cross overlay is sufficient on mobile tiles
    * @param {Object} player - Player object (should be normalized first)
    * @returns {Array<string>} Array of badge tokens
    */
@@ -886,9 +898,10 @@
     // Normalize status first
     normalizeStatus(player);
     
-    // Evicted overrides all other statuses
+    // Note: Evicted players do NOT get an EVICTED badge on mobile
+    // The red cross overlay is sufficient visual indicator
     if (player.evicted) {
-      return ['EVICTED'];
+      return []; // No badge - red cross is sufficient
     }
     
     const tokens = [];
@@ -919,9 +932,42 @@
   }
   
   /**
+   * Check if badge text would overflow and needs emoji fallback
+   * Uses a simple heuristic based on token count and combined length
+   * @param {Array<string>} tokens - Array of status tokens
+   * @returns {boolean} True if emoji fallback should be used
+   */
+  function shouldUseEmojiFallback(tokens) {
+    if (!tokens || tokens.length === 0) return false;
+    
+    // Single token: use emoji if text would be too long for small tiles
+    if (tokens.length === 1) {
+      return false; // Single tokens fit fine
+    }
+    
+    // Multiple tokens (combo): check combined length
+    const combinedLength = tokens.join('+').length;
+    
+    // Use emoji if combined text exceeds threshold (e.g., "HOH+POV" = 7 chars)
+    return combinedLength > 8;
+  }
+  
+  /**
+   * Get emoji display for tokens
+   * @param {Array<string>} tokens - Array of status tokens
+   * @returns {string} Emoji string (e.g., "👑+🛡️" for HOH+POV)
+   */
+  function getEmojiDisplay(tokens) {
+    if (!tokens || tokens.length === 0) return '';
+    
+    return tokens.map(t => BADGE_EMOJI_MAP[t] || t).join('+');
+  }
+  
+  /**
    * Render status chips HTML for a player
-   * Creates centered chip container with individual chips that can wrap
-   * @param {Array<string>} tokens - Array of status tokens (HOH, POV, NOM, SAFE, EVICTED)
+   * Creates centered single-row chip container.
+   * Uses emoji fallback when text would overflow.
+   * @param {Array<string>} tokens - Array of status tokens (HOH, POV, NOM, SAFE)
    * @returns {string} HTML string for status chips overlay, or empty string if not applicable
    */
   function renderStatusChipsHTML(tokens) {
@@ -959,14 +1005,19 @@
         .replace(/'/g, '&#39;');
     }
     
+    // Determine if we should use emoji fallback for overflow prevention
+    const useEmoji = shouldUseEmojiFallback(tokens);
+    
     // Build individual chips for combo badges with escaped content
     const chipsHTML = tokens.map(token => {
       const chipClass = classMap[token] || '';
-      const safeToken = escapeHTML(token);
+      // Use emoji fallback if needed
+      const displayText = useEmoji ? BADGE_EMOJI_MAP[token] : token;
+      const safeToken = escapeHTML(displayText);
       return `<span class="${chipClass}">${safeToken}</span>`;
     }).join('');
     
-    // Escape aria-label value to prevent attribute injection
+    // Escape aria-label value to prevent attribute injection (always use full text for a11y)
     const ariaLabel = escapeHTML(tokens.join(' and '));
     
     return `<div class="mobile-roster-status-chips" aria-label="${ariaLabel}">${chipsHTML}</div>`;
@@ -991,19 +1042,26 @@
     }
     
     // Use computeBadges to get tokens (handles normalization internally)
+    // Note: computeBadges returns empty array for evicted players (red cross sufficient)
     const tokens = computeBadges(player);
     
     if (tokens.length === 0) {
       return null;
     }
     
-    // Handle EVICTED case
-    if (tokens.includes('EVICTED')) {
-      return { text: 'EVICTED', class: 'evict', tokens };
-    }
+    // Note: EVICTED case is now handled by returning null above
+    // since computeBadges returns [] for evicted players
     
-    // Combine with separator
-    const text = tokens.join('+');
+    // Check if we should use emoji fallback for combo badges
+    const useEmoji = shouldUseEmojiFallback(tokens);
+    
+    // Build display text - use emoji for combos if needed
+    let text;
+    if (useEmoji) {
+      text = getEmojiDisplay(tokens);
+    } else {
+      text = tokens.join('+');
+    }
     
     // Determine class (use first status for styling)
     const classMap = {
@@ -1014,7 +1072,7 @@
     };
     const badgeClass = classMap[tokens[0]] || 'default';
     
-    return { text, class: badgeClass, tokens };
+    return { text, class: badgeClass, tokens, useEmoji };
   }
 
   /**
