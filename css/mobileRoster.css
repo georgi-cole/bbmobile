@@ -91,8 +91,8 @@ body[data-mobile-roster-active="true"] #rosterBar {
   max-width: min(100%, 520px);
   margin: 0 auto;
   width: 100%;
-  /* Ensure the final row fully clears the TV overlay */
-  padding-bottom: calc(var(--mobile-roster-tile-size, 80px) + var(--mobile-roster-gap, 6px));
+  /* Bottom padding equals grid gap for uniform spacing between last row and TV overlay */
+  padding-bottom: var(--mobile-roster-gap, 6px);
 }
 
 /* Grid tiles */
@@ -209,6 +209,100 @@ body[data-mobile-roster-active="true"] #rosterBar {
   line-height: 1.2;
   min-height: 20px; /* Guarantee minimum height for name visibility */
   padding: 6px 8px 8px; /* Proper padding for footer per requirements */
+}
+
+/* Badge pill animation - replaces name when badge event triggers */
+.mobile-roster-name.badge-pill-active {
+  overflow: visible;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: badge-pill-appear 0.3s ease-out;
+}
+
+@keyframes badge-pill-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.badge-pill-hoh {
+  background: linear-gradient(135deg, #ffb142, #ff8c42);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 177, 66, 0.5);
+}
+
+.badge-pill-pov {
+  background: linear-gradient(135deg, #f1c40f, #d4af37);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(241, 196, 15, 0.5);
+}
+
+.badge-pill-nom {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.5);
+}
+
+.badge-pill-safe {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.5);
+}
+
+/* Corner emoji badge - appears in upper-right of avatar after pill dismissal */
+.corner-emoji-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 1rem;
+  line-height: 1;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  animation: corner-emoji-appear 0.3s ease-out;
+}
+
+@keyframes corner-emoji-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Corner emoji variants for specific badge types */
+.corner-emoji-hoh {
+  filter: drop-shadow(0 1px 3px rgba(255, 177, 66, 0.7));
+}
+
+.corner-emoji-pov {
+  filter: drop-shadow(0 1px 3px rgba(241, 196, 15, 0.7));
+}
+
+.corner-emoji-nom {
+  filter: drop-shadow(0 1px 3px rgba(231, 76, 60, 0.7));
+}
+
+.corner-emoji-safe {
+  filter: drop-shadow(0 1px 3px rgba(46, 204, 113, 0.7));
 }
 
 /* Tile footer wrapper - ensures reserved space for name
