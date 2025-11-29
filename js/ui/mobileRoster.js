@@ -945,7 +945,9 @@
    * @param {string} badgeType - Badge type ('HOH', 'POV', 'NOM', 'SAFE')
    */
   function showBadgePill(playerId, badgeType) {
-    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    // Sanitize playerId for CSS selector
+    const safePlayerId = CSS.escape(String(playerId));
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${safePlayerId}"]`);
     if (!tile) {
       console.warn(`[MobileRoster] Cannot show badge pill: tile not found for player ${playerId}`);
       return;
@@ -962,12 +964,17 @@
     const originalName = nameEl.textContent;
     nameEl.dataset.originalName = originalName;
     
-    // Get badge styling
+    // Get badge styling - badgeType is validated against BADGE_EMOJI_MAP
     const badgeClass = badgeType.toLowerCase();
     const badgeText = badgeType;
     
-    // Replace name with pill
-    nameEl.innerHTML = `<span class="badge-pill badge-pill-${badgeClass}" data-badge-type="${badgeType}">${badgeText}</span>`;
+    // Replace name with pill using DOM methods to avoid innerHTML XSS
+    nameEl.textContent = '';
+    const pillSpan = document.createElement('span');
+    pillSpan.className = `badge-pill badge-pill-${CSS.escape(badgeClass)}`;
+    pillSpan.dataset.badgeType = badgeType;
+    pillSpan.textContent = badgeText;
+    nameEl.appendChild(pillSpan);
     nameEl.classList.add('badge-pill-active');
     
     // Set timer to dismiss pill and show corner emoji
@@ -1000,7 +1007,9 @@
       clearTimeout(pillData.timerId);
     }
     
-    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    // Sanitize playerId for CSS selector
+    const safePlayerId = CSS.escape(String(playerId));
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${safePlayerId}"]`);
     if (tile) {
       const nameEl = tile.querySelector('.mobile-roster-name');
       if (nameEl) {
@@ -1041,13 +1050,15 @@
    * @param {string} badgeType - Badge type ('HOH', 'POV', 'NOM', 'SAFE')
    */
   function showCornerEmoji(playerId, badgeType) {
-    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    // Sanitize playerId for CSS selector
+    const safePlayerId = CSS.escape(String(playerId));
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${safePlayerId}"]`);
     if (!tile) return;
     
     const avatarWrap = tile.querySelector('.mobile-roster-avatar-wrap');
     if (!avatarWrap) return;
     
-    // Get emoji for badge type
+    // Get emoji for badge type (validates badgeType against BADGE_EMOJI_MAP)
     const emoji = BADGE_EMOJI_MAP[badgeType];
     if (!emoji) return;
     
@@ -1057,9 +1068,11 @@
       existingEmoji.remove();
     }
     
-    // Create corner emoji element
+    // Create corner emoji element using DOM methods
     const emojiEl = document.createElement('span');
-    emojiEl.className = `corner-emoji-badge corner-emoji-${badgeType.toLowerCase()}`;
+    // Sanitize badgeType for CSS class (already validated against BADGE_EMOJI_MAP)
+    const safeBadgeClass = CSS.escape(badgeType.toLowerCase());
+    emojiEl.className = `corner-emoji-badge corner-emoji-${safeBadgeClass}`;
     emojiEl.textContent = emoji;
     emojiEl.setAttribute('aria-label', badgeType);
     emojiEl.dataset.badgeType = badgeType;
@@ -1075,15 +1088,18 @@
    * @param {string} [badgeType] - Optional badge type to clear specifically, or all if omitted
    */
   function clearCornerEmoji(playerId, badgeType) {
-    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${playerId}"]`);
+    // Sanitize playerId for CSS selector
+    const safePlayerId = CSS.escape(String(playerId));
+    const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${safePlayerId}"]`);
     if (!tile) return;
     
     const avatarWrap = tile.querySelector('.mobile-roster-avatar-wrap');
     if (!avatarWrap) return;
     
     if (badgeType) {
-      // Clear specific badge type
-      const emojiEl = avatarWrap.querySelector(`.corner-emoji-${badgeType.toLowerCase()}`);
+      // Clear specific badge type - sanitize for CSS selector
+      const safeBadgeClass = CSS.escape(badgeType.toLowerCase());
+      const emojiEl = avatarWrap.querySelector(`.corner-emoji-${safeBadgeClass}`);
       if (emojiEl) {
         emojiEl.remove();
         console.info(`[MobileRoster] Corner emoji cleared: ${badgeType} for player ${playerId}`);
