@@ -211,15 +211,13 @@ body[data-mobile-roster-active="true"] #rosterBar {
   padding: 6px 8px 8px; /* Proper padding for footer per requirements */
 }
 
-/* Tile footer wrapper - ensures reserved space for name */
+/* Tile footer wrapper - ensures reserved space for name
+ * Note: This class is available for future use if a wrapper element is needed.
+ * Currently, .mobile-roster-name handles footer styling directly.
+ */
 .mobile-roster-tile-footer {
   flex: 0 0 auto;
-  min-height: 20px;
-  padding: 6px 8px 8px;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* Badge indicators (HOH, NOM, etc.) */
@@ -262,7 +260,6 @@ body[data-mobile-roster-active="true"] #rosterBar {
   align-items: center;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 86%; /* Constrain width to avatar bounds */
   z-index: 3;
   pointer-events: none;
