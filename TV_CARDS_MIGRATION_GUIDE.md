@@ -265,6 +265,72 @@ All legacy classes are preserved on card elements:
 
 This ensures existing CSS rules continue to work while the new unified styling is applied on top.
 
+## Card Splitting and Ceremony Title Omission
+
+### Card Content Splitting
+
+When card content would overflow the visible TV overlay area, the TV cards module can automatically split content into multiple sequential cards. This ensures all content remains readable without requiring internal scrolling.
+
+**How it works:**
+1. When `enableSplit: true` is passed to `showTVCardWithAvatars()`, the module measures the content height
+2. If content would exceed the available overlay height (minus safe margins), lines are split into chunks
+3. Each chunk is displayed as a separate card with the specified duration
+4. By default, avatars appear on all split cards (`avatarsOnAll: true`) to maintain context
+
+**Example usage:**
+```javascript
+await TVCards.showTVCardWithAvatars({
+  title: 'Ceremony Update',
+  lines: ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5'],
+  duration: 2400,
+  actorIds: 1,
+  enableSplit: true,      // Enable automatic splitting
+  avatarsOnAll: true      // Show avatars on all split cards (default)
+});
+```
+
+**Helper functions exposed:**
+- `computeOverlayAvailableHeight()` - Get available height for cards
+- `measureAndSplitLines(lines, opts)` - Measure and split lines into chunks
+- `emitCardsFromChunks(chunks, options)` - Display chunks as sequential cards
+
+### Ceremony Title Omission
+
+For ceremony-labeled cards, the `<h3>` title element is automatically omitted to keep the focus on avatars and message content. This applies when the title contains any of these keywords (case-insensitive):
+
+- `ceremony`
+- `veto`
+- `nomination`
+- `eviction`
+- `results`
+- `adjourned`
+- `nominees`
+- `saved`
+- `replacement`
+
+**Automatic behavior:**
+- Title omission is automatic for `showTVCard()`, `showTVCardWithAvatars()`, and `showInlineCard()`
+- The `isCeremonyTitle(title)` helper can be used to check if a title matches ceremony keywords
+
+**Manual override:**
+```javascript
+await TVCards.showTVCard({
+  title: 'Veto Ceremony',
+  lines: ['This is the content.'],
+  omitCeremonyTitle: false  // Force title to render even if it matches keywords
+});
+```
+
+### Visual Style Consistency
+
+All TV overlay inline cards now have:
+- **No borders/outlines** - Clean, borderless appearance
+- **75% background transparency** - Consistent opacity across themes
+- **Max-width: 780px** - Constrained width for readability
+- **Max-height constraint** - Cards never overflow the visible TV overlay
+
+These styles are applied via CSS in `css/tv-inline-cards.css` and scoped to `#tvOverlay`.
+
 ## Questions?
 
 See the implementation in:

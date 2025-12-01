@@ -1,9 +1,53 @@
 // MODULE: tv-cards.js
 // Shared TV card scaffolding and presentation logic for in-TV ceremony cards.
 // Extracted from veto.js to standardize all ceremony card presentation.
+// 
+// Features:
+// - Automatic splitting of cards that would overflow the TV overlay
+// - Ceremony title omission for ceremony-labeled cards
+// - Avatar preservation across split cards
+// - CardManager integration for fast-forward support
 
 (function(global){
   'use strict';
+
+  // ======= CONSTANTS =======
+  
+  /**
+   * Ceremony keywords that trigger title omission.
+   * Case-insensitive matching against card title.
+   */
+  var CEREMONY_KEYWORDS = [
+    'ceremony',
+    'veto',
+    'nomination',
+    'eviction',
+    'results',
+    'adjourned',
+    'nominees',
+    'saved',
+    'replacement'
+  ];
+
+  /**
+   * Safe margin (px) to leave when computing available height for cards.
+   */
+  var SAFE_MARGIN_PX = 24;
+
+  /**
+   * Fallback height (px) when #tvOverlay is not available.
+   */
+  var FALLBACK_OVERLAY_HEIGHT_PX = 400;
+
+  /**
+   * Approximate avatar row height (px) for measurement calculations.
+   */
+  var AVATAR_ROW_HEIGHT_PX = 100;
+
+  /**
+   * Card measurement width (px) for off-DOM measurement.
+   */
+  var MEASUREMENT_CARD_WIDTH_PX = 400;
 
   // ======= UTILITY FUNCTIONS =======
 
@@ -25,6 +69,171 @@
     }
     document.addEventListener('keydown', handleEscape);
     return handleEscape;
+  }
+
+  /**
+   * Check if a title matches ceremony keywords (case-insensitive).
+   * @param {string} title - The card title to check
+   * @returns {boolean} True if title contains ceremony keywords
+   */
+  function isCeremonyTitle(title){
+    if(!title || typeof title !== 'string') return false;
+    var lowerTitle = title.toLowerCase();
+    for(var i = 0; i < CEREMONY_KEYWORDS.length; i++){
+      if(lowerTitle.indexOf(CEREMONY_KEYWORDS[i]) !== -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // ======= SPLITTING HELPER FUNCTIONS =======
+
+  /**
+   * Compute the available height for cards inside #tvOverlay.
+   * Returns the visible height minus safe margins.
+   * @returns {number} Available height in pixels
+   */
+  function computeOverlayAvailableHeight(){
+    var tvOverlay = document.getElementById('tvOverlay');
+    if(!tvOverlay) return FALLBACK_OVERLAY_HEIGHT_PX;
+    
+    var rect = tvOverlay.getBoundingClientRect();
+    var availableHeight = rect.height - (SAFE_MARGIN_PX * 2);
+    
+    // Minimum reasonable height
+    return Math.max(availableHeight, 200);
+  }
+
+  /**
+   * Measure and split lines array into chunks that fit within available height.
+   * Uses off-DOM measurement to detect overflow.
+   * 
+   * @param {string[]} lines - Array of text lines to display
+   * @param {Object} opts - Options
+   * @param {string} [opts.title] - Card title (for height calculation)
+   * @param {boolean} [opts.hasAvatars] - Whether avatars are present (adds height)
+   * @param {number} [opts.availableHeight] - Override available height
+   * @returns {string[][]} Array of line chunks, each chunk fits in one card
+   */
+  function measureAndSplitLines(lines, opts){
+    opts = opts || {};
+    
+    if(!lines || lines.length === 0) return [[]];
+    if(lines.length === 1) return [lines];
+    
+    var availableHeight = opts.availableHeight || computeOverlayAvailableHeight();
+    
+    // Create off-DOM measurement container
+    var measurer = document.createElement('div');
+    measurer.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
+    measurer.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;' +
+      'max-width:min(780px, 92%);width:' + MEASUREMENT_CARD_WIDTH_PX + 'px;padding:22px 26px;';
+    
+    // Add title if present (contributes to height)
+    if(opts.title && !isCeremonyTitle(opts.title)){
+      var h3 = document.createElement('h3');
+      h3.textContent = opts.title;
+      h3.style.fontSize = '0.95rem';
+      h3.style.marginBottom = '0.6em';
+      measurer.appendChild(h3);
+    }
+    
+    // Account for avatar row height if present
+    if(opts.hasAvatars){
+      var avatarPlaceholder = document.createElement('div');
+      avatarPlaceholder.style.height = AVATAR_ROW_HEIGHT_PX + 'px';
+      avatarPlaceholder.style.marginBottom = '16px';
+      measurer.appendChild(avatarPlaceholder);
+    }
+    
+    document.body.appendChild(measurer);
+    
+    var chunks = [];
+    var currentChunk = [];
+    var linesContainer = document.createElement('div');
+    measurer.appendChild(linesContainer);
+    
+    for(var i = 0; i < lines.length; i++){
+      var p = document.createElement('p');
+      if(currentChunk.length === 0) p.className = 'big';
+      p.textContent = lines[i];
+      p.style.fontSize = currentChunk.length === 0 ? '0.92rem' : '0.86rem';
+      p.style.lineHeight = '1.45';
+      p.style.margin = '0.5em 0';
+      linesContainer.appendChild(p);
+      
+      currentChunk.push(lines[i]);
+      
+      // Check if we exceed available height
+      if(measurer.scrollHeight > availableHeight && currentChunk.length > 1){
+        // Remove last line and start new chunk
+        linesContainer.removeChild(p);
+        currentChunk.pop();
+        
+        // Save current chunk
+        chunks.push(currentChunk);
+        
+        // Start new chunk with the line that caused overflow
+        currentChunk = [lines[i]];
+        linesContainer.innerHTML = '';
+        
+        // Re-add the overflowing line to new measurement
+        var newP = document.createElement('p');
+        newP.className = 'big';
+        newP.textContent = lines[i];
+        newP.style.fontSize = '0.92rem';
+        newP.style.lineHeight = '1.45';
+        newP.style.margin = '0.5em 0';
+        linesContainer.appendChild(newP);
+      }
+    }
+    
+    // Add remaining lines as final chunk
+    if(currentChunk.length > 0){
+      chunks.push(currentChunk);
+    }
+    
+    // Cleanup
+    document.body.removeChild(measurer);
+    
+    return chunks.length > 0 ? chunks : [lines];
+  }
+
+  /**
+   * Emit sequential cards from line chunks with proper CardManager registration.
+   * Each card is displayed in sequence with the specified duration.
+   * 
+   * @param {string[][]} chunks - Array of line arrays
+   * @param {Object} options - Card options (title, tone, duration, actorIds, subjectIds)
+   * @returns {Promise} Resolves when all cards have been shown
+   */
+  function emitCardsFromChunks(chunks, options){
+    if(!chunks || chunks.length === 0) return Promise.resolve();
+    if(chunks.length === 1){
+      // Single chunk - use normal card display
+      return showTVCardWithAvatarsInternal(Object.assign({}, options, { lines: chunks[0] }));
+    }
+    
+    // Multiple chunks - display sequentially
+    var index = 0;
+    
+    function showNext(){
+      if(index >= chunks.length) return Promise.resolve();
+      
+      var isFirst = index === 0;
+      var chunkOptions = Object.assign({}, options, {
+        lines: chunks[index],
+        // Only show avatars on first card by default (can be overridden)
+        actorIds: isFirst ? options.actorIds : (options.avatarsOnAll ? options.actorIds : undefined),
+        subjectIds: isFirst ? options.subjectIds : (options.avatarsOnAll ? options.subjectIds : undefined)
+      });
+      
+      index++;
+      return showTVCardWithAvatarsInternal(chunkOptions).then(showNext);
+    }
+    
+    return showNext();
   }
 
   // ======= TV OVERLAY SCAFFOLD MANAGEMENT =======
@@ -102,12 +311,20 @@
    * @param {string[]} options.lines - Array of text lines
    * @param {string} [options.tone] - Optional tone/style attribute
    * @param {number} [options.duration=2400] - Display duration in ms
+   * @param {boolean} [options.omitCeremonyTitle] - Force omit title if true (auto-detected otherwise)
    * @returns {Promise} Resolves when card is dismissed
    * 
    * NOTE: CardManager wrapper automatically handles timeout registration and phase guards.
    * Factory returns {card, timeout} - CardManager.show() auto-registers the timeout.
+   * 
+   * CEREMONY TITLE OMISSION: If title contains ceremony keywords (ceremony, veto, nomination,
+   * eviction, results, adjourned, nominees, saved, replacement), the <h3> title element
+   * will not be rendered. This keeps ceremony cards focused on avatars and content.
    */
-  function showTVCard({title, lines, tone, duration}){
+  function showTVCard({title, lines, tone, duration, omitCeremonyTitle}){
+    // Determine if we should omit the title
+    var shouldOmitTitle = omitCeremonyTitle === true || isCeremonyTitle(title);
+    
     return new Promise(function(resolve){
       var content = ensureTVOverlay();
       if(!content){ resolve(); return; }
@@ -131,9 +348,12 @@
           card.setAttribute('aria-live', 'polite');
           card.setAttribute('tabindex', '0');
           
-          var h3 = document.createElement('h3');
-          h3.textContent = title;
-          card.appendChild(h3);
+          // Only render title if not a ceremony label
+          if(!shouldOmitTitle){
+            var h3 = document.createElement('h3');
+            h3.textContent = title;
+            card.appendChild(h3);
+          }
           
           for(var i=0; i<lines.length; i++){
             var p = document.createElement('p');
@@ -194,9 +414,12 @@
         card.setAttribute('aria-live', 'polite');
         card.setAttribute('tabindex', '0');
         
-        var h3 = document.createElement('h3');
-        h3.textContent = title;
-        card.appendChild(h3);
+        // Only render title if not a ceremony label
+        if(!shouldOmitTitle){
+          var h3 = document.createElement('h3');
+          h3.textContent = title;
+          card.appendChild(h3);
+        }
         
         for(var i=0; i<lines.length; i++){
           var p = document.createElement('p');
@@ -230,8 +453,19 @@
   /**
    * Helper: Build avatar card DOM structure.
    * @private
+   * @param {Object} opts - Card options
+   * @param {string} opts.title - Card title
+   * @param {string[]} opts.lines - Text lines
+   * @param {string} [opts.tone] - Tone attribute
+   * @param {number|number[]} [opts.actorIds] - Actor ID(s)
+   * @param {number|number[]} [opts.subjectIds] - Subject ID(s)
+   * @param {boolean} [opts.omitCeremonyTitle] - Force omit title (auto-detected for ceremony keywords)
+   * @returns {HTMLElement} Card element
    */
-  function buildAvatarCard({title, lines, tone, actorIds, subjectIds}){
+  function buildAvatarCard({title, lines, tone, actorIds, subjectIds, omitCeremonyTitle}){
+    // Determine if we should omit the title
+    var shouldOmitTitle = omitCeremonyTitle === true || isCeremonyTitle(title);
+    
     var card = document.createElement('div');
     card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
     if(tone) card.setAttribute('data-tone', tone);
@@ -348,9 +582,12 @@
       }
     }
     
-    var h3 = document.createElement('h3');
-    h3.textContent = title;
-    card.appendChild(h3);
+    // Only render title if not a ceremony label
+    if(!shouldOmitTitle){
+      var h3 = document.createElement('h3');
+      h3.textContent = title;
+      card.appendChild(h3);
+    }
     
     for(var k=0; k<lines.length; k++){
       var p = document.createElement('p');
@@ -363,17 +600,11 @@
   }
 
   /**
-   * Show a TV card with player avatars.
-   * @param {Object} options - Card configuration
-   * @param {string} options.title - Card title
-   * @param {string[]} options.lines - Array of text lines
-   * @param {string} [options.tone] - Optional tone/style attribute
-   * @param {number} [options.duration=2400] - Display duration in ms
-   * @param {number|number[]} [options.actorIds] - Actor player ID(s) to show avatars
-   * @param {number|number[]} [options.subjectIds] - Subject player ID(s) to show avatars
-   * @returns {Promise} Resolves when card is dismissed
+   * Internal implementation for showTVCardWithAvatars.
+   * Called by both the public API and the splitting helper.
+   * @private
    */
-  function showTVCardWithAvatars({title, lines, tone, duration, actorIds, subjectIds}){
+  function showTVCardWithAvatarsInternal({title, lines, tone, duration, actorIds, subjectIds, omitCeremonyTitle}){
     return new Promise(function(resolve){
       var content = ensureTVOverlay();
       if(!content){ resolve(); return; }
@@ -383,7 +614,7 @@
         global.CardManager.show(function(){
           clearTVOverlay();
           
-          var card = buildAvatarCard({title, lines, tone, actorIds, subjectIds});
+          var card = buildAvatarCard({title, lines, tone, actorIds, subjectIds, omitCeremonyTitle});
           content.appendChild(card);
           
           var tv = document.getElementById('tv');
@@ -420,7 +651,7 @@
         // Fallback: original implementation without CardManager
         clearTVOverlay();
         
-        var card = buildAvatarCard({title, lines, tone, actorIds, subjectIds});
+        var card = buildAvatarCard({title, lines, tone, actorIds, subjectIds, omitCeremonyTitle});
         content.appendChild(card);
         
         var tv = document.getElementById('tv');
@@ -441,6 +672,47 @@
         }, normalizedDuration);
       }
     });
+  }
+
+  /**
+   * Show a TV card with player avatars.
+   * Supports automatic splitting if content would overflow the TV overlay.
+   * 
+   * @param {Object} options - Card configuration
+   * @param {string} options.title - Card title
+   * @param {string[]} options.lines - Array of text lines
+   * @param {string} [options.tone] - Optional tone/style attribute
+   * @param {number} [options.duration=2400] - Display duration in ms
+   * @param {number|number[]} [options.actorIds] - Actor player ID(s) to show avatars
+   * @param {number|number[]} [options.subjectIds] - Subject player ID(s) to show avatars
+   * @param {boolean} [options.enableSplit=false] - Enable automatic content splitting
+   * @param {boolean} [options.avatarsOnAll=true] - Show avatars on all split cards (default: true)
+   * @returns {Promise} Resolves when card(s) dismissed
+   */
+  function showTVCardWithAvatars({title, lines, tone, duration, actorIds, subjectIds, enableSplit, avatarsOnAll}){
+    // Check if splitting is enabled and needed
+    if(enableSplit && lines && lines.length > 1){
+      var hasAvatars = (actorIds != null) || (subjectIds != null);
+      var chunks = measureAndSplitLines(lines, {
+        title: title,
+        hasAvatars: hasAvatars
+      });
+      
+      if(chunks.length > 1){
+        // Multiple chunks - emit sequential cards
+        return emitCardsFromChunks(chunks, {
+          title: title,
+          tone: tone,
+          duration: duration,
+          actorIds: actorIds,
+          subjectIds: subjectIds,
+          avatarsOnAll: avatarsOnAll !== false // Default to true
+        });
+      }
+    }
+    
+    // Single card (no splitting needed)
+    return showTVCardWithAvatarsInternal({title, lines, tone, duration, actorIds, subjectIds});
   }
 
   /**
@@ -630,14 +902,20 @@
 
   /**
    * Generic inline card for ceremony messages (nominations adjourn, eviction results, etc.).
+   * Supports automatic ceremony title omission for ceremony-labeled cards.
+   * 
    * @param {Object} options - Card configuration
    * @param {string} options.title - Card title
    * @param {string|string[]} options.content - Card content (string or array of strings)
    * @param {string} [options.tone] - Optional tone/style attribute
    * @param {number} [options.duration=2400] - Display duration in ms (0 = no auto-dismiss)
+   * @param {boolean} [options.omitCeremonyTitle] - Force omit title (auto-detected for ceremony keywords)
    * @returns {Promise} Resolves when card is dismissed
    */
-  function showInlineCard({title, content, tone, duration}){
+  function showInlineCard({title, content, tone, duration, omitCeremonyTitle}){
+    // Determine if we should omit the title
+    var shouldOmitTitle = omitCeremonyTitle === true || isCeremonyTitle(title);
+    
     return new Promise(function(resolve){
       var container = ensureTVOverlay();
       if(!container){ resolve(); return; }
@@ -656,9 +934,12 @@
           card.setAttribute('aria-live', 'polite');
           card.setAttribute('tabindex', '0');
           
-          var h3 = document.createElement('h3');
-          h3.textContent = title;
-          card.appendChild(h3);
+          // Only render title if not a ceremony label
+          if(!shouldOmitTitle){
+            var h3 = document.createElement('h3');
+            h3.textContent = title;
+            card.appendChild(h3);
+          }
           
           // Handle content as string or array
           var contentArray = Array.isArray(content) ? content : [content];
@@ -706,9 +987,12 @@
         card.setAttribute('aria-live', 'polite');
         card.setAttribute('tabindex', '0');
         
-        var h3 = document.createElement('h3');
-        h3.textContent = title;
-        card.appendChild(h3);
+        // Only render title if not a ceremony label
+        if(!shouldOmitTitle){
+          var h3 = document.createElement('h3');
+          h3.textContent = title;
+          card.appendChild(h3);
+        }
         
         // Handle content as string or array
         var contentArray = Array.isArray(content) ? content : [content];
@@ -789,14 +1073,25 @@
 
   // Export to global namespace
   var TVCards = {
+    // Core scaffold
     ensureTVOverlay: ensureTVOverlay,
     clearTVOverlay: clearTVOverlay,
+    
+    // Card display functions
     showTVCard: showTVCard,
     showTVCardWithAvatars: showTVCardWithAvatars,
     showTVDecision: showTVDecision,
     showTVNomineeSavePanel: showTVNomineeSavePanel,
     showInlineCard: showInlineCard,
-    showNominateIntro: showNominateIntro
+    showNominateIntro: showNominateIntro,
+    
+    // Splitting helpers (for advanced use cases)
+    computeOverlayAvailableHeight: computeOverlayAvailableHeight,
+    measureAndSplitLines: measureAndSplitLines,
+    emitCardsFromChunks: emitCardsFromChunks,
+    
+    // Utility functions
+    isCeremonyTitle: isCeremonyTitle
   };
 
   // Export as module
