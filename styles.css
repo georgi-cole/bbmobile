@@ -3319,28 +3319,38 @@ button:focus-visible,.btn:focus-visible{
 
 
 /* In-TV summary card - contained within TV and respects safe areas */
+/* Updated to match TV inline card spec: 75% transparency, no outline, max-width 780px */
 .lv2-inline-card {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  /* Use relative positioning when inside #tvOverlay (flexbox centers it) */
+  /* Fallback to absolute centering when inside #tv directly */
+  position: relative;
   z-index: 20;
-  background: linear-gradient(135deg, rgba(20,35,55,0.98) 0%, rgba(14,23,48,0.98) 100%);
-  border: 2px solid rgba(131,191,255,0.4);
+  /* TV Inline Card Spec: 75% transparency background */
+  background: rgba(20, 35, 55, 0.75);
+  /* TV Inline Card Spec: No border/outline for cleaner look */
+  border: none;
+  outline: none;
   border-radius: 16px;
   padding: clamp(20px, 4dvh, 32px) clamp(24px, 5dvw, 40px);
-  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 60px rgba(131,191,255,0.3);
-  max-width: min(90%, 500px);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  /* TV Inline Card Spec: max-width 780px */
+  max-width: min(92%, 780px);
   min-width: min(80%, 300px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease-in-out;
   /* Ensure it stays within TV safe areas */
-  max-height: calc(100% - var(--tv-safe-top) - var(--tv-safe-bottom) - var(--tv-safe-gutter) * 4);
-  margin-top: max(env(safe-area-inset-top, 0px), var(--tv-safe-top));
-  margin-bottom: max(env(safe-area-inset-bottom, 0px), var(--tv-safe-bottom));
+  max-height: calc(100% - 24px);
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* When inside #tv directly (fallback), use absolute centering */
+#tv > .lv2-inline-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .lv2-inline-card.visible {
@@ -3367,10 +3377,9 @@ button:focus-visible,.btn:focus-visible{
   margin: clamp(6px, 1.5dvh, 10px) 0;
 }
 
-/* Tone variants for inline card */
+/* Tone variants for inline card - no borders, just subtle shadow/glow effects */
 .lv2-inline-card.tone-evict {
-  border-color: rgba(255,107,107,0.5);
-  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 60px rgba(255,107,107,0.4);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 40px rgba(255,107,107,0.25);
 }
 
 .lv2-inline-card.tone-evict h3 {
@@ -3379,8 +3388,7 @@ button:focus-visible,.btn:focus-visible{
 }
 
 .lv2-inline-card.tone-live {
-  border-color: rgba(119,213,141,0.4);
-  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 60px rgba(119,213,141,0.3);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 40px rgba(119,213,141,0.2);
 }
 
 .lv2-inline-card.tone-live h3 {
