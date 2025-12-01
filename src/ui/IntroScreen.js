@@ -876,7 +876,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     const text = document.createElement('div');
     text.className = 'intro-avatar-preload-text';
     text.id = 'avatarPreloadText';
-    text.textContent = 'Loading houseguest profiles…';
+    text.textContent = 'Loading houseguest profiles...';
     
     // Progress percentage
     const progress = document.createElement('div');

@@ -12,6 +12,10 @@
   const DEFAULT_READY_PERCENT = 0.99;
   const DEFAULT_LOAD_MODE = 'batch'; // 'batch' | 'skeleton'
 
+  // ===== String Constants =====
+  const LOADING_SUFFIX = ' (loading)';
+  const DICEBEAR_URL_PATTERN = 'https://api.dicebear.com/6.x/bottts/svg?seed=';
+
   // ===== Logging Helpers =====
   function logInfo(...args) {
     console.info('[AvatarPreload]', ...args);
@@ -241,7 +245,7 @@
           if (getDicebearUrl) {
             url = getDicebearUrl(player.name || String(player.id));
           } else {
-            url = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name || String(player.id))}`;
+            url = DICEBEAR_URL_PATTERN + encodeURIComponent(player.name || String(player.id));
           }
         }
       }
@@ -405,7 +409,7 @@
     placeholder.className = 'avatar-skeleton';
     placeholder.setAttribute('data-player-id', player.id);
     placeholder.setAttribute('role', 'img');
-    placeholder.setAttribute('aria-label', `${player.name || 'Player'} (loading)`);
+    placeholder.setAttribute('aria-label', `${player.name || 'Player'}${LOADING_SUFFIX}`);
 
     // Add shimmer animation div
     const shimmer = document.createElement('div');
@@ -431,7 +435,7 @@
     const img = document.createElement('img');
     img.className = 'avatar-image avatar-image--loading';
     img.src = url;
-    img.alt = skeleton.getAttribute('aria-label')?.replace(' (loading)', '') || 'Player avatar';
+    img.alt = skeleton.getAttribute('aria-label')?.replace(LOADING_SUFFIX, '') || 'Player avatar';
     img.setAttribute('data-player-id', playerId);
 
     // Handle load complete - trigger fade transition
