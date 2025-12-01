@@ -1,9 +1,20 @@
 // MODULE: livevote-choice-card.js
 // Renders a small centered Choice Card inside the TV showing nominees
 // Opens the full voting overlay when the Vote button is clicked
+//
+// STABILITY FEATURES (PR #xxx):
+// - Pre-locked card height based on available overlay safe height
+// - Fixed avatar dimensions to prevent reflow on image load
+// - CSS containment to prevent layout shifts
+// - Eager image loading for avatars
 
 (function(global) {
   'use strict';
+
+  // ======= CONSTANTS =======
+  const SAFE_MARGIN_PX = 24;
+  const FALLBACK_OVERLAY_HEIGHT_PX = 400;
+  const AVATAR_SIZE_PX = 64; // Fixed avatar dimensions to prevent reflow
 
   // Get avatar helper (fallback to global if available)
   function getAvatarUrl(playerId) {
@@ -20,6 +31,25 @@
 
   function getDicebearUrl(seed) {
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+  }
+
+  /**
+   * Compute available height for the choice card.
+   * Uses TVCards.computeOverlayAvailableHeight if available, otherwise fallback.
+   * @returns {number} Available height in pixels
+   */
+  function computeSafeHeight() {
+    // Use TVCards helper if available
+    if (global.TVCards && typeof global.TVCards.computeOverlayAvailableHeight === 'function') {
+      return global.TVCards.computeOverlayAvailableHeight();
+    }
+    // Fallback: compute from viewport
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      const rect = tvOverlay.getBoundingClientRect();
+      return Math.max(rect.height - (SAFE_MARGIN_PX * 2), 200);
+    }
+    return FALLBACK_OVERLAY_HEIGHT_PX;
   }
 
   // Singleton state tracking
@@ -80,11 +110,17 @@
     };
     root.appendChild(backdrop);
 
-    // Create card element
+    // Create card element with locked height to prevent reflow
     const card = document.createElement('div');
     card.className = 'lv-choice-card';
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-label', 'Vote to evict');
+    
+    // STABILITY: Pre-compute and lock card max-height to prevent post-mount size changes
+    const safeHeight = computeSafeHeight();
+    card.style.maxHeight = `${safeHeight}px`;
+    card.style.contain = 'layout'; // CSS containment to prevent reflow propagation
+    card.style.overflowY = 'auto'; // Allow scroll if content exceeds locked height
 
     // Header
     const header = document.createElement('div');
@@ -105,12 +141,16 @@
       nomineeEl.className = 'lv-choice-card__nominee';
       nomineeEl.setAttribute('role', 'listitem');
 
-      // Avatar
+      // Avatar with fixed dimensions to prevent reflow on image load
       const avatar = document.createElement('img');
       avatar.className = 'lv-choice-card__avatar';
       avatar.src = getAvatarUrl(nomineeId);
       avatar.alt = `${player.name}'s avatar`;
+      // STABILITY: Fixed dimensions and eager loading to prevent reflow
+      avatar.width = AVATAR_SIZE_PX;
+      avatar.height = AVATAR_SIZE_PX;
       avatar.loading = 'eager';
+      avatar.style.objectFit = 'cover';
       avatar.onerror = () => {
         avatar.src = getDicebearUrl(player.name);
       };

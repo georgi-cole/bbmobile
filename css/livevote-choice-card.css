@@ -2,6 +2,13 @@
  * Styles for the small in-TV Choice Card shown during eviction voting
  * Mobile-first, safe-area aware, centered within TV viewport
  * Updated: Modal now mounts to document.body with full-viewport backdrop
+ *
+ * STABILITY FEATURES (TV Inline Card Spec):
+ * - No border/outline for cleaner look
+ * - 75% background transparency
+ * - Max-width: 780px (TV inline card standard)
+ * - Fixed avatar dimensions with object-fit: cover to prevent reflow
+ * - CSS containment to prevent layout propagation
  */
 
 /* Modal root container - full viewport overlay */
@@ -28,18 +35,25 @@
 
 .lv-choice-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(20, 35, 55, 0.95), rgba(14, 23, 40, 0.98));
-  border: 2px solid rgba(143, 211, 255, 0.3);
+  /* TV Inline Card Spec: 75% transparency background */
+  background: rgba(20, 35, 55, 0.75);
+  /* TV Inline Card Spec: No border/outline for cleaner look */
+  border: none;
+  outline: none;
   border-radius: 16px;
   padding: 24px;
-  max-width: min(420px, calc(100% - 32px));
+  /* TV Inline Card Spec: max-width 780px */
+  max-width: min(780px, calc(100% - 32px));
   width: 100%;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(143, 211, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   z-index: 1;
   text-align: center;
   pointer-events: auto; /* Card intercepts clicks */
+  /* STABILITY: CSS containment to prevent layout propagation */
+  contain: layout;
+  /* STABILITY: Allow scroll if content exceeds available height */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lv-choice-card__header {
@@ -67,8 +81,9 @@
 }
 
 .lv-choice-card__avatar {
-  width: clamp(56px, 14vw, 72px);
-  height: clamp(56px, 14vw, 72px);
+  /* STABILITY: Fixed dimensions to prevent reflow on image load */
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: 2px solid rgba(255, 107, 107, 0.6);
   object-fit: cover;

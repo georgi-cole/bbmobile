@@ -1069,6 +1069,138 @@
     });
   }
 
+  /**
+   * Show a unified intermission card for HOH/POV non-participants.
+   * Renders inside TV overlay with consistent styling across both competition types.
+   * 
+   * @param {Object} options - Card configuration
+   * @param {string} [options.title='You cannot compete'] - Card title
+   * @param {string[]} [options.lines=[]] - Additional text lines
+   * @param {Array} options.buttons - Array of button configs: {label, value, primary, ariaLabel}
+   * @param {string} [options.compType] - Competition type ('HOH' or 'Veto') for context
+   * @returns {Promise} Resolves with selected button value
+   * 
+   * DESIGN SPEC:
+   * - Uses TV inline card styling (no outline, 75% transparency, max-width 780px)
+   * - Consistent with other TV overlay cards
+   * - Supports content splitting for long content
+   * - Mobile-friendly with responsive button layout
+   */
+  function showTVIntermissionCard({title, lines, buttons, compType}){
+    // Default title for intermission cards
+    var cardTitle = title || 'You cannot compete';
+    var cardLines = lines || [];
+    
+    // Build decision buttons with consistent styling
+    var decisionButtons = [];
+    if(buttons && buttons.length > 0){
+      decisionButtons = buttons;
+    } else {
+      // Default buttons if none provided
+      decisionButtons = [
+        { label: 'Continue', value: 'continue', primary: true, ariaLabel: 'Continue to competition results' }
+      ];
+    }
+    
+    return new Promise(function(resolve){
+      var content = ensureTVOverlay();
+      if(!content){ resolve(null); return; }
+      
+      clearTVOverlay();
+      
+      var card = document.createElement('div');
+      // Use unified TV inline card classes for consistent styling
+      card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody intermission-tv-card';
+      
+      // ARIA for accessibility
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-label', cardTitle);
+      card.setAttribute('tabindex', '0');
+      
+      // Title
+      var h3 = document.createElement('h3');
+      h3.textContent = cardTitle;
+      h3.style.cssText = 'text-align:center;margin-bottom:12px;color:#60a5fa;';
+      card.appendChild(h3);
+      
+      // Lines
+      for(var i = 0; i < cardLines.length; i++){
+        var p = document.createElement('p');
+        if(i === 0) p.className = 'big';
+        p.textContent = cardLines[i];
+        p.style.textAlign = 'center';
+        card.appendChild(p);
+      }
+      
+      // Spacer before buttons
+      if(cardLines.length > 0){
+        var spacer = document.createElement('div');
+        spacer.style.height = '16px';
+        card.appendChild(spacer);
+      }
+      
+      // Buttons row
+      var btnRow = document.createElement('div');
+      btnRow.className = 'veto-decision-row';
+      btnRow.style.cssText = 'display:flex;gap:12px;justify-content:center;flex-wrap:wrap;';
+      
+      function disableAll(){
+        var btns = btnRow.querySelectorAll('button');
+        for(var j = 0; j < btns.length; j++){ btns[j].disabled = true; }
+      }
+      
+      // ESC key dismissal handler
+      createEscDismissHandler(function(){
+        clearTVOverlay();
+        var tv = document.getElementById('tv');
+        if(tv) tv.classList.remove('tvTall');
+        resolve(null);
+      });
+      
+      for(var k = 0; k < decisionButtons.length; k++){
+        (function(btn){
+          var b = document.createElement('button');
+          b.className = btn.primary ? 'btn primary' : 'btn';
+          b.textContent = btn.label;
+          b.setAttribute('aria-label', btn.ariaLabel || btn.label);
+          b.style.minHeight = '44px';
+          b.style.minWidth = '80px';
+          b.onclick = function(){
+            disableAll();
+            clearTVOverlay();
+            var tv = document.getElementById('tv');
+            if(tv) tv.classList.remove('tvTall');
+            resolve(btn.value);
+          };
+          // Keyboard accessibility
+          b.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              b.click();
+            }
+          };
+          btnRow.appendChild(b);
+        })(decisionButtons[k]);
+      }
+      
+      card.appendChild(btnRow);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      // Downscale font if card is too tall
+      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+      if(fitTVCardText) fitTVCardText(card);
+      
+      // Focus first button for accessibility
+      setTimeout(function(){
+        var firstBtn = btnRow.querySelector('button');
+        if(firstBtn) firstBtn.focus();
+      }, 100);
+    });
+  }
+
   // ======= EXPORTS =======
 
   // Export to global namespace
@@ -1084,6 +1216,7 @@
     showTVNomineeSavePanel: showTVNomineeSavePanel,
     showInlineCard: showInlineCard,
     showNominateIntro: showNominateIntro,
+    showTVIntermissionCard: showTVIntermissionCard,
     
     // Splitting helpers (for advanced use cases)
     computeOverlayAvailableHeight: computeOverlayAvailableHeight,
