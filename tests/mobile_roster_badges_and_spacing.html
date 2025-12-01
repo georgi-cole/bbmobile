@@ -239,7 +239,10 @@
   <!-- Test Controls Panel -->
   <div class="test-controls">
     <div class="controls-row">
-      <span class="control-label">Badge Events:</span>
+      <span class="control-label">Cast Size:</span>
+      <input type="range" class="height-slider" id="castSizeSlider" min="12" max="16" value="16" onchange="updateCastSize(this.value)">
+      <span id="castSizeValue" style="font-size: 0.7rem; min-width: 30px;">16</span>
+      <span class="control-label" style="margin-left: 16px;">Badge Events:</span>
       <button class="test-btn hoh" onclick="triggerHOH()">👑 HOH</button>
       <button class="test-btn pov" onclick="triggerPOV()">🛡️ POV</button>
       <button class="test-btn nom" onclick="triggerNominate()">❓ NOM</button>
@@ -254,6 +257,7 @@
       <button class="test-btn" onclick="resetPlayers()">Reset Players</button>
       <button class="test-btn danger" onclick="evictRandomPlayer()">Evict Random</button>
       <button class="test-btn" onclick="toggleOverlapLine()">Toggle Debug Line</button>
+      <button class="test-btn" onclick="triggerComboStatus()">Test HOH+POV Combo</button>
     </div>
   </div>
   
@@ -288,6 +292,10 @@
   <div class="metrics-panel">
     <div class="metrics-grid">
       <div class="metric">
+        <div class="metric-label">Cast Size</div>
+        <div class="metric-value" id="metricCastSize">16</div>
+      </div>
+      <div class="metric">
         <div class="metric-label">Row Gap</div>
         <div class="metric-value" id="metricRowGap">6px</div>
       </div>
@@ -304,12 +312,16 @@
         <div class="metric-value" id="metricLastRowBottom">0px</div>
       </div>
       <div class="metric">
-        <div class="metric-label">Overlap Status</div>
-        <div class="metric-value success" id="metricOverlapStatus">✓ OK</div>
+        <div class="metric-label">Last Row Status</div>
+        <div class="metric-value success" id="metricOverlapStatus">✓ Visible</div>
       </div>
       <div class="metric">
-        <div class="metric-label">Active Badges</div>
+        <div class="metric-label">Active Pills</div>
         <div class="metric-value" id="metricActiveBadges">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Corner Emojis</div>
+        <div class="metric-value" id="metricCornerEmojis">0</div>
       </div>
     </div>
   </div>
@@ -463,13 +475,76 @@
       });
     }
     
-    function resetPlayers() {
-      window.game.players = createMockPlayers(16);
+    function updateCastSize(value) {
+      const count = parseInt(value, 10);
+      window.game.players = createMockPlayers(count);
       window.game.hohId = null;
       window.game.vetoHolder = null;
       window.game.nominees = [];
       lastHOH = null;
       lastPOV = null;
+      
+      document.getElementById('castSizeValue').textContent = count;
+      
+      // Force cold-start pill reset so it can trigger again
+      if (window.MobileRoster && window.MobileRoster.getState) {
+        const state = window.MobileRoster.getState();
+        state.coldStartPillShown = false;
+      }
+      
+      window.bbGameBus.emit('players:update', { players: window.game.players });
+      
+      // Clear event log
+      const log = document.getElementById('eventLog');
+      log.innerHTML = '<div class="event-log-title">📋 Event Log</div>';
+      
+      setTimeout(updateMetrics, 100);
+    }
+    
+    function triggerComboStatus() {
+      // Give a player both HOH and POV to test combo emoji display
+      const player = getRandomActivePlayer([lastHOH, lastPOV]);
+      if (!player) return;
+      
+      // Clear existing HOH and POV
+      for (const p of window.game.players) {
+        p.hoh = false;
+        p.pov = false;
+      }
+      
+      // Set both statuses on same player
+      player.hoh = true;
+      player.pov = true;
+      window.game.hohId = player.id;
+      window.game.vetoHolder = player.id;
+      lastHOH = player.id;
+      lastPOV = player.id;
+      
+      // Trigger HOH event first
+      window.bbGameBus.emit('player:hoh', { playerId: player.id });
+      
+      // Trigger POV event after a brief delay
+      setTimeout(() => {
+        window.bbGameBus.emit('player:veto', { playerId: player.id });
+      }, 100);
+      
+      console.log('Combo status triggered for', player.name);
+    }
+    
+    function resetPlayers() {
+      const currentCastSize = parseInt(document.getElementById('castSizeSlider').value, 10) || 16;
+      window.game.players = createMockPlayers(currentCastSize);
+      window.game.hohId = null;
+      window.game.vetoHolder = null;
+      window.game.nominees = [];
+      lastHOH = null;
+      lastPOV = null;
+      
+      // Force cold-start pill reset so it can trigger again
+      if (window.MobileRoster && window.MobileRoster.getState) {
+        const state = window.MobileRoster.getState();
+        state.coldStartPillShown = false;
+      }
       
       window.bbGameBus.emit('players:update', { players: window.game.players });
       
@@ -554,6 +629,10 @@
       const tv = document.querySelector('.tv');
       const tiles = document.querySelectorAll('.mobile-roster-tile');
       
+      // Cast size
+      const castSize = window.game ? window.game.players.filter(p => !p.evicted).length : 0;
+      document.getElementById('metricCastSize').textContent = castSize;
+      
       // Row gap
       const rowGap = getComputedStyle(document.documentElement).getPropertyValue('--mobile-roster-gap') || '6px';
       document.getElementById('metricRowGap').textContent = rowGap.trim();
@@ -575,28 +654,33 @@
       }
       document.getElementById('metricLastRowBottom').textContent = lastRowBottom + 'px';
       
-      // Overlap status
+      // Last row status (visible/hidden)
       const tvTop = tv ? tv.getBoundingClientRect().top : window.innerHeight;
       const hasOverlap = lastRowBottom > tvTop;
       const overlapEl = document.getElementById('metricOverlapStatus');
       
       if (hasOverlap) {
-        overlapEl.textContent = '✗ OVERLAP';
+        overlapEl.textContent = '✗ HIDDEN';
         overlapEl.className = 'metric-value error';
       } else {
         const gapToTV = Math.round(tvTop - lastRowBottom);
         if (gapToTV < 6) {
-          overlapEl.textContent = `⚠ ${gapToTV}px gap`;
+          overlapEl.textContent = `⚠ ${gapToTV}px`;
           overlapEl.className = 'metric-value warning';
         } else {
-          overlapEl.textContent = `✓ ${gapToTV}px gap`;
+          overlapEl.textContent = `✓ Visible (${gapToTV}px)`;
           overlapEl.className = 'metric-value success';
         }
       }
       
-      // Active badges (pills)
+      // Active pills
       const activePills = document.querySelectorAll('.badge-pill');
       document.getElementById('metricActiveBadges').textContent = activePills.length;
+      
+      // Corner emojis (including combo groups)
+      const cornerEmojis = document.querySelectorAll('.corner-emoji-badge');
+      const emojiGroups = document.querySelectorAll('.corner-emoji-group');
+      document.getElementById('metricCornerEmojis').textContent = `${cornerEmojis.length} (${emojiGroups.length} groups)`;
       
       // Update overlap line position
       updateOverlapLinePosition();
@@ -629,8 +713,10 @@
       triggerNominate,
       triggerSafe,
       triggerFastForward,
+      triggerComboStatus,
       evictRandomPlayer,
       resetPlayers,
+      updateCastSize,
       updateTVHeight,
       updateMetrics
     };

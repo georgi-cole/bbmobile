@@ -72,6 +72,9 @@
     // Badge pill animation state
     // Maps playerId -> { badgeType, timerId, startTime }
     activeBadgePills: new Map(),
+    
+    // Cold-start pill tracking - ensures we show pill on first render for existing statuses
+    coldStartPillShown: false,
   };
   
   // Max events to keep in lastEvents rolling window
@@ -1087,9 +1090,34 @@
         delete nameEl.dataset.originalName;
       }
       
-      // Show corner emoji if requested and badge is still active
-      if (showEmoji && pillData.badgeType) {
-        showCornerEmoji(playerId, pillData.badgeType);
+      // Show corner emojis if requested
+      if (showEmoji) {
+        // Get player to check all current badges for combo display
+        const player = state.playersById.get(String(playerId));
+        if (player) {
+          normalizeStatus(player);
+          
+          // Collect all active badges
+          const badges = [];
+          if (player.hoh) badges.push('HOH');
+          if (player.pov) badges.push('POV');
+          if (player.nominated) badges.push('NOM');
+          if (player.safe && badges.length === 0) badges.push('SAFE');
+          
+          if (badges.length > 1) {
+            // Multiple badges - show combo
+            showComboEmojis(playerId, badges);
+          } else if (badges.length === 1) {
+            // Single badge
+            showCornerEmoji(playerId, badges[0]);
+          } else if (pillData.badgeType) {
+            // Fallback: show the pill's badge type
+            showCornerEmoji(playerId, pillData.badgeType);
+          }
+        } else if (pillData.badgeType) {
+          // No player found, use the badge type from the pill
+          showCornerEmoji(playerId, pillData.badgeType);
+        }
       }
     }
     
@@ -1130,24 +1158,84 @@
     const emoji = BADGE_EMOJI_MAP[badgeType];
     if (!emoji) return;
     
-    // Remove any existing corner emoji
-    const existingEmoji = avatarWrap.querySelector('.corner-emoji-badge');
+    // Get or create the emoji group container for combo emojis
+    let emojiGroup = avatarWrap.querySelector('.corner-emoji-group');
+    if (!emojiGroup) {
+      emojiGroup = document.createElement('div');
+      emojiGroup.className = 'corner-emoji-group';
+      emojiGroup.setAttribute('aria-label', 'Player badges');
+      avatarWrap.appendChild(emojiGroup);
+    }
+    
+    // Check if this badge type already exists in the group
+    const safeBadgeClass = CSS.escape(badgeType.toLowerCase());
+    const existingEmoji = emojiGroup.querySelector(`.corner-emoji-${safeBadgeClass}`);
     if (existingEmoji) {
-      existingEmoji.remove();
+      // Already exists, don't duplicate
+      return;
     }
     
     // Create corner emoji element using DOM methods
     const emojiEl = document.createElement('span');
-    // Sanitize badgeType for CSS class (already validated against BADGE_EMOJI_MAP)
-    const safeBadgeClass = CSS.escape(badgeType.toLowerCase());
     emojiEl.className = `corner-emoji-badge corner-emoji-${safeBadgeClass}`;
     emojiEl.textContent = emoji;
     emojiEl.setAttribute('aria-label', badgeType);
     emojiEl.dataset.badgeType = badgeType;
     
-    avatarWrap.appendChild(emojiEl);
+    // Insert in priority order: HOH > POV > NOM > SAFE
+    const priorityOrder = ['HOH', 'POV', 'NOM', 'SAFE'];
+    const newPriority = priorityOrder.indexOf(badgeType);
+    let inserted = false;
     
-    console.info(`[MobileRoster] Corner emoji shown: ${emoji} (${badgeType}) for player ${playerId}`);
+    for (const child of emojiGroup.children) {
+      const childType = child.dataset.badgeType;
+      const childPriority = priorityOrder.indexOf(childType);
+      if (newPriority < childPriority) {
+        emojiGroup.insertBefore(emojiEl, child);
+        inserted = true;
+        break;
+      }
+    }
+    
+    if (!inserted) {
+      emojiGroup.appendChild(emojiEl);
+    }
+    
+    // Update group data-badge-count for CSS fallback (browsers without :has())
+    emojiGroup.dataset.badgeCount = emojiGroup.children.length;
+    
+    // Update group aria-label with all badges
+    const allBadges = Array.from(emojiGroup.querySelectorAll('.corner-emoji-badge'))
+      .map(el => el.dataset.badgeType)
+      .filter(Boolean);
+    emojiGroup.setAttribute('aria-label', allBadges.join(' and '));
+    
+    console.info(`[MobileRoster] Corner emoji shown: ${emoji} (${badgeType}) for player ${playerId}. Group now has ${emojiGroup.children.length} emojis`);
+  }
+  
+  /**
+   * Show combo emojis for a player with multiple statuses
+   * Displays a compact group element (top-right of avatar) with multiple tokens
+   * e.g., 👑+🛡️ for HOH+POV, 🛡️+❓ for POV+NOM
+   * @param {string|number} playerId - Player ID
+   * @param {Array<string>} badgeTypes - Array of badge types in priority order
+   */
+  function showComboEmojis(playerId, badgeTypes) {
+    if (!playerId || !Array.isArray(badgeTypes) || badgeTypes.length === 0) return;
+    
+    // Filter valid badge types
+    const validBadges = badgeTypes.filter(t => BADGE_EMOJI_MAP[t]);
+    if (validBadges.length === 0) return;
+    
+    // Clear any existing emojis for this player first
+    clearCornerEmoji(playerId);
+    
+    // Show each badge in order
+    for (const badge of validBadges) {
+      showCornerEmoji(playerId, badge);
+    }
+    
+    console.info(`[MobileRoster] Combo emojis shown for player ${playerId}: ${validBadges.join('+')}`);
   }
   
   /**
@@ -1164,16 +1252,42 @@
     const avatarWrap = tile.querySelector('.mobile-roster-avatar-wrap');
     if (!avatarWrap) return;
     
+    const emojiGroup = avatarWrap.querySelector('.corner-emoji-group');
+    
     if (badgeType) {
       // Clear specific badge type - sanitize for CSS selector
       const safeBadgeClass = CSS.escape(badgeType.toLowerCase());
-      const emojiEl = avatarWrap.querySelector(`.corner-emoji-${safeBadgeClass}`);
-      if (emojiEl) {
-        emojiEl.remove();
+      
+      // Check in group first
+      if (emojiGroup) {
+        const emojiEl = emojiGroup.querySelector(`.corner-emoji-${safeBadgeClass}`);
+        if (emojiEl) {
+          emojiEl.remove();
+          console.info(`[MobileRoster] Corner emoji cleared: ${badgeType} for player ${playerId}`);
+          
+          // Update badge count data attribute for CSS fallback
+          emojiGroup.dataset.badgeCount = emojiGroup.children.length;
+          
+          // If group is now empty, remove the group
+          if (emojiGroup.children.length === 0) {
+            emojiGroup.remove();
+          }
+          return;
+        }
+      }
+      
+      // Fallback: check for standalone emoji (legacy)
+      const standaloneEmoji = avatarWrap.querySelector(`.corner-emoji-${safeBadgeClass}`);
+      if (standaloneEmoji) {
+        standaloneEmoji.remove();
         console.info(`[MobileRoster] Corner emoji cleared: ${badgeType} for player ${playerId}`);
       }
     } else {
       // Clear all corner emojis
+      if (emojiGroup) {
+        emojiGroup.remove();
+      }
+      // Also clear any standalone emojis (legacy)
       avatarWrap.querySelectorAll('.corner-emoji-badge').forEach(el => el.remove());
       console.info(`[MobileRoster] All corner emojis cleared for player ${playerId}`);
     }
@@ -1579,8 +1693,14 @@
     // Post-render: restore any active badge pills that were interrupted by render
     restoreActiveBadgePills();
     
+    // Post-render: trigger cold-start pills for players with existing statuses
+    // This must run BEFORE syncCornerEmojisFromStatus so pills take precedence
+    if (!state.coldStartPillShown && state.activeBadgePills.size === 0) {
+      triggerColdStartPills();
+    }
+    
     // Post-render: sync corner emojis for players with existing statuses
-    // This ensures emojis render immediately after grid render if statuses exist
+    // (only for players without active pills)
     syncCornerEmojisFromStatus();
     
     // Update spacer height fallback if overlaySpacing module is not present
@@ -1646,7 +1766,8 @@
   
   /**
    * Sync corner emoji badges for all players with existing statuses
-   * Called after grid render to ensure emojis are visible immediately
+   * Called after grid render to ensure emojis are visible immediately.
+   * Supports combo emojis (e.g., HOH+POV, NOM+POV) for multi-status players.
    */
   function syncCornerEmojisFromStatus() {
     for (const player of state.activePlayers) {
@@ -1657,27 +1778,92 @@
       normalizeStatus(player);
       
       // Only show emoji if player has an active badge AND no pill animation is active
-      // Priority: HOH > POV > NOM > SAFE
       if (state.activeBadgePills.has(String(player.id))) {
         // Pill is active, don't show emoji yet
         continue;
       }
       
-      // Determine which badge type to show (prioritized)
-      let badgeType = null;
-      if (player.hoh) {
-        badgeType = 'HOH';
-      } else if (player.pov) {
-        badgeType = 'POV';
-      } else if (player.nominated) {
-        badgeType = 'NOM';
-      } else if (player.safe) {
-        badgeType = 'SAFE';
+      // Collect all badges for this player (priority order: HOH > POV > NOM > SAFE)
+      const badges = [];
+      if (player.hoh) badges.push('HOH');
+      if (player.pov) badges.push('POV');
+      if (player.nominated) badges.push('NOM');
+      // SAFE only shows if no other status badges (per spec)
+      if (player.safe && badges.length === 0) {
+        badges.push('SAFE');
       }
       
-      if (badgeType) {
-        showCornerEmoji(player.id, badgeType);
+      if (badges.length > 1) {
+        // Multiple badges - show combo
+        showComboEmojis(player.id, badges);
+      } else if (badges.length === 1) {
+        // Single badge
+        showCornerEmoji(player.id, badges[0]);
       }
+    }
+  }
+  
+  /**
+   * Trigger cold-start pill for players with existing statuses
+   * Per spec: "Do not bypass the pill at cold start when statuses already exist:
+   * show one pill for the highest-priority new or cold-start token (HOH > POV > NOM > SAFE),
+   * then the emoji group."
+   * 
+   * This function is called on the first render after initialization.
+   * It finds all players with active statuses and triggers a pill animation
+   * for the highest-priority badge, then shows the emoji group after pill dismissal.
+   */
+  function triggerColdStartPills() {
+    if (state.coldStartPillShown) {
+      // Already shown cold-start pills, skip
+      return;
+    }
+    
+    // Mark as shown to prevent re-triggering
+    state.coldStartPillShown = true;
+    
+    // Find all players with active statuses
+    const playersWithStatus = [];
+    
+    for (const player of state.activePlayers) {
+      if (player.evicted) continue;
+      
+      normalizeStatus(player);
+      
+      // Determine the highest-priority badge for this player
+      let highestBadge = null;
+      if (player.hoh) {
+        highestBadge = 'HOH';
+      } else if (player.pov) {
+        highestBadge = 'POV';
+      } else if (player.nominated) {
+        highestBadge = 'NOM';
+      } else if (player.safe) {
+        highestBadge = 'SAFE';
+      }
+      
+      if (highestBadge) {
+        playersWithStatus.push({
+          player,
+          highestBadge,
+          priority: ['HOH', 'POV', 'NOM', 'SAFE'].indexOf(highestBadge)
+        });
+      }
+    }
+    
+    if (playersWithStatus.length === 0) {
+      console.info('[MobileRoster] Cold-start: No players with active statuses');
+      return;
+    }
+    
+    // Sort by priority (lower index = higher priority)
+    playersWithStatus.sort((a, b) => a.priority - b.priority);
+    
+    console.info(`[MobileRoster] Cold-start: Triggering pills for ${playersWithStatus.length} players with active statuses`);
+    
+    // Trigger pill animation for each player with status
+    for (const { player, highestBadge } of playersWithStatus) {
+      triggerBadgeAnimation(player.id, highestBadge);
     }
   }
   
@@ -2834,6 +3020,7 @@
     dismissBadgePill,
     dismissAllBadgePills,
     showCornerEmoji,
+    showComboEmojis,
     clearCornerEmoji,
   };
   
