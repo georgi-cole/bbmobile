@@ -1403,32 +1403,11 @@
     // Normalize status first
     normalizeStatus(player);
     
-    // Get combined badge info using new pipeline
-    const badgeInfo = getCombinedBadgeInfo(player, isEvicted);
-    
-    let badgeHTML = '';
-    if (badgeInfo) {
-      // For combo badges (multiple tokens), try to use the chips container
-      // This allows badges to wrap instead of being clipped
-      // Use optional chaining for defensive programming
-      if (badgeInfo.tokens?.length > 1) {
-        const chipsHTML = renderStatusChipsHTML(badgeInfo.tokens);
-        if (chipsHTML) {
-          badgeHTML = chipsHTML;
-          state.badgesRendered++;
-        } else {
-          // Fallback to standard badge overlay
-          const sizeClass = getBadgeSizeClass(badgeInfo.text);
-          badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
-          state.badgesRendered++;
-        }
-      } else {
-        // Single badge - use standard overlay
-        const sizeClass = getBadgeSizeClass(badgeInfo.text);
-        badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
-        state.badgesRendered++;
-      }
-    }
+    // Note: Badge info is used for pill/emoji logic, not for inline badge rendering
+    // Badge display is now handled exclusively via:
+    // 1. Pill animation (replaces name footer for ~7s) - via showBadgePill()
+    // 2. Corner emoji (top-right of avatar after pill dismissal) - via showCornerEmoji()
+    // This avoids the "double badge" issue where badge appeared both on avatar AND as pill.
     
     // Debug tag showing normalized flags (only visible in debug mode)
     let debugTag = '';
@@ -1452,6 +1431,12 @@
     const safePlayerId = String(player.id).replace(/"/g, '&quot;');
     const safeName = String(player.name || 'Guest').replace(/"/g, '&quot;');
     
+    // Note: badgeHTML is NOT rendered here anymore.
+    // Badge logic is now handled exclusively via:
+    // 1. Pill animation (replaces name footer for ~7s) - via showBadgePill()
+    // 2. Corner emoji (top-right of avatar after pill dismissal) - via showCornerEmoji()
+    // This avoids the "double badge" issue where badge appeared both on avatar AND as pill.
+    
     return `
       <button 
         class="mobile-roster-tile ${evictedClass} no-touch-callout"
@@ -1472,7 +1457,6 @@
             draggable="false"
           />
           ${isEvicted ? '<div class="mobile-roster-evicted-cross" aria-hidden="true"></div>' : ''}
-          ${badgeHTML}
         </div>
         <div class="mobile-roster-name">${name}</div>
         ${debugTag}
