@@ -581,74 +581,6 @@
   }
   
   /**
-   * Create event handler for badge removal
-   * Called when a badge (HOH, POV, NOM, SAFE) is removed from a player
-   */
-  function handleBadgeRemoveEvent(data) {
-    handlePlayerStatusEvent('badge:remove', data, (player, eventData) => {
-      const badgeType = eventData.badgeType || eventData.type;
-      
-      console.info(`[MobileRoster] Badge remove event: ${badgeType} for player ${player.id}`);
-      
-      // Clear the specific badge status
-      if (badgeType === 'HOH') {
-        player.hoh = false;
-        player.isHOH = false;
-        player.hohWinner = false;
-        clearCornerEmoji(player.id, 'HOH');
-      } else if (badgeType === 'POV') {
-        player.pov = false;
-        player.veto = false;
-        player.hasVeto = false;
-        player.vetoHolder = false;
-        clearCornerEmoji(player.id, 'POV');
-      } else if (badgeType === 'NOM') {
-        player.nominated = false;
-        player.isNominated = false;
-        player.nominee = false;
-        player.isNominee = false;
-        player.replacementNominee = false;
-        clearCornerEmoji(player.id, 'NOM');
-      } else if (badgeType === 'SAFE') {
-        player.safe = false;
-        player.isSafe = false;
-        player.immunity = false;
-        player.protected = false;
-        clearCornerEmoji(player.id, 'SAFE');
-      } else {
-        // Unknown badge type - clear all emojis for this player
-        clearCornerEmoji(player.id);
-      }
-      
-      // Dismiss any active badge pill for this player (don't show emoji since badge is removed)
-      dismissBadgePill(player.id, false);
-    });
-  }
-  
-  /**
-   * Create event handler for nominee replaced
-   * Called when a veto is used and a nominee is saved/replaced
-   */
-  function handleNomineeReplacedEvent(data) {
-    handlePlayerStatusEvent('nominee:replaced', data, (player, _eventData) => {
-      console.info(`[MobileRoster] Nominee replaced event for player ${player.id}`);
-      
-      // Clear nomination status
-      player.nominated = false;
-      player.isNominated = false;
-      player.nominee = false;
-      player.isNominee = false;
-      player.replacementNominee = false;
-      
-      // Clear NOM emoji
-      clearCornerEmoji(player.id, 'NOM');
-      
-      // Dismiss badge pill without showing emoji (player is no longer nominated)
-      dismissBadgePill(player.id, false);
-    });
-  }
-  
-  /**
    * Create event handler for Evicted status
    */
   function handleEvictedEvent(data) {
@@ -2233,6 +2165,17 @@
   }
   
   /**
+   * Handle player eviction event (legacy - redirects to new handler)
+   * NOTE: Evicted players STAY in the main grid with evicted styling (B&W, transparency, red X).
+   * They are NOT removed from state.activePlayers (which contains ALL players, including evicted).
+   * @deprecated Use handleEvictedEvent instead
+   */
+  function handlePlayerEvicted(data) {
+    // Redirect to new handler
+    handleEvictedEvent(data);
+  }
+  
+  /**
    * Handle player update event
    */
   function handlePlayersUpdate(data) {
@@ -2414,9 +2357,6 @@
       <!-- Active Players Grid -->
       <div class="mobile-roster-active-grid" role="list" aria-label="Active houseguests"></div>
       
-      <!-- Grid Bottom Spacer - ensures TV overlay never covers avatar tiles -->
-      <div class="mobile-roster-grid-spacer" aria-hidden="true"></div>
-      
       <!-- Evicted Players Section -->
       <div class="mobile-roster-evicted-section">
         <button 
@@ -2525,12 +2465,6 @@
       global.bbGameBus.on('player:replacement_nom', handleReplacementNomEvent);
       global.bbGameBus.on('player:safe', handleSafeEvent);
       
-      // Badge removal and nominee replacement events
-      global.bbGameBus.on('badge:remove', handleBadgeRemoveEvent);
-      global.bbGameBus.on('badge-remove', handleBadgeRemoveEvent);
-      global.bbGameBus.on('nominee:replaced', handleNomineeReplacedEvent);
-      global.bbGameBus.on('nominee-replaced', handleNomineeReplacedEvent);
-      
       // Fast-forward and skip events - immediately dismiss pills and show emojis
       global.bbGameBus.on('phase:skip', () => {
         console.info('[MobileRoster] Phase skip event - dismissing all badge pills');
@@ -2545,7 +2479,7 @@
         dismissAllBadgePills(true);
       });
       
-      console.info('[MobileRoster] Subscribed to granular game events (HOH/POV/NOM/SAFE/EVICTED/REPLACEMENT_NOM/BADGE_REMOVE/NOMINEE_REPLACED/SKIP/FASTFORWARD)');
+      console.info('[MobileRoster] Subscribed to granular game events (HOH/POV/NOM/SAFE/EVICTED/REPLACEMENT_NOM/SKIP/FASTFORWARD)');
     }
     
     // Listen for bb:phase:changed custom event for phase transitions
