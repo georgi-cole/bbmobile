@@ -324,9 +324,11 @@
     }
 
     function clearOverlay() {
-      if (window.TVCards && window.TVCards.clearTVOverlay) {
+      // Use TVCards clearTVOverlay if available
+      if (window.TVCards && typeof window.TVCards.clearTVOverlay === 'function') {
         window.TVCards.clearTVOverlay();
       }
+      // Always reset placeholder as a fallback (for test environment without full scaffold)
       const content = document.querySelector('.tvOverlayContent');
       if (content) {
         content.innerHTML = '<div class="placeholder-text">Intermission cards will appear here</div>';

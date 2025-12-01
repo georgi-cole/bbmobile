@@ -2,7 +2,7 @@
 // Renders a small centered Choice Card inside the TV showing nominees
 // Opens the full voting overlay when the Vote button is clicked
 //
-// STABILITY FEATURES (PR #xxx):
+// STABILITY FEATURES:
 // - Pre-locked card height based on available overlay safe height
 // - Fixed avatar dimensions to prevent reflow on image load
 // - CSS containment to prevent layout shifts

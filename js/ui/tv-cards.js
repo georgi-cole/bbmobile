@@ -1074,11 +1074,11 @@
    * Renders inside TV overlay with consistent styling across both competition types.
    * 
    * @param {Object} options - Card configuration
-   * @param {string} [options.title='You cannot compete'] - Card title
-   * @param {string[]} [options.lines=[]] - Additional text lines
-   * @param {Array} options.buttons - Array of button configs: {label, value, primary, ariaLabel}
-   * @param {string} [options.compType] - Competition type ('HOH' or 'Veto') for context
-   * @returns {Promise} Resolves with selected button value
+   * @param {string} [options.title='You cannot compete'] - Card title (optional, defaults to 'You cannot compete')
+   * @param {string[]} [options.lines=[]] - Additional text lines (optional)
+   * @param {Array} [options.buttons] - Array of button configs: {label, value, primary, ariaLabel} (optional, defaults to Continue button)
+   * @param {string} [options.compType] - Competition type ('HOH' or 'Veto') for context (optional)
+   * @returns {Promise<string|null>} Resolves with selected button value or null if dismissed
    * 
    * DESIGN SPEC:
    * - Uses TV inline card styling (no outline, 75% transparency, max-width 780px)
@@ -1109,7 +1109,7 @@
       clearTVOverlay();
       
       var card = document.createElement('div');
-      // Use unified TV inline card classes for consistent styling
+      // TV inline card classes: base styling, reveal animation, diary room theme, typography, component identifier
       card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody intermission-tv-card';
       
       // ARIA for accessibility
