@@ -220,12 +220,13 @@
         }
       }, 100);
       
-      // Timeout after 5 seconds
+      // Timeout after 5 seconds - skip init entirely if MobileRoster not available
       setTimeout(() => {
         clearInterval(checkReady);
         if (!state.initialized) {
-          console.warn('[BadgeMachine] MobileRoster not available after 5s, initializing anyway');
-          completeInit();
+          console.warn('[BadgeMachine] MobileRoster not available after 5s, skipping initialization');
+          // Don't initialize without MobileRoster - the API functions will gracefully return early
+          state.initialized = true; // Mark as "initialized" to prevent duplicate attempts
         }
       }, 5000);
       return;

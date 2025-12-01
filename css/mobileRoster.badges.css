@@ -133,16 +133,18 @@
   font-size: 0.85rem;
 }
 
-/* Compact layout for 3+ emojis */
-.corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) {
-  gap: 1px;
+/* Compact layout for 3+ emojis - wrap in @supports for browsers that support :has() */
+@supports selector(:has(*)) {
+  .corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) {
+    gap: 1px;
+  }
+
+  .corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) .corner-emoji-badge {
+    font-size: 0.75rem;
+  }
 }
 
-.corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) .corner-emoji-badge {
-  font-size: 0.75rem;
-}
-
-/* Fallback for browsers without :has() - uses data-badge-count */
+/* Fallback for browsers without :has() - uses data-badge-count set by JS */
 .corner-emoji-group[data-badge-count="3"],
 .corner-emoji-group[data-badge-count="4"] {
   gap: 1px;

@@ -61,24 +61,27 @@
 
     // Check if overlaySpacing module is available
     if (!global.OverlaySpacing) {
-      console.warn('[OverlaySpacingFix] OverlaySpacing module not found, waiting...');
+      console.warn('[OverlaySpacingFix] OverlaySpacing module not found, using exponential backoff...');
       
-      // Wait for it to load
-      const checkOverlay = setInterval(() => {
+      // Use exponential backoff instead of continuous polling
+      let attempt = 0;
+      const maxAttempts = 5;
+      const baseDelay = 200;
+      
+      const tryInit = () => {
+        attempt++;
         if (global.OverlaySpacing) {
-          clearInterval(checkOverlay);
           completeInit();
+        } else if (attempt < maxAttempts) {
+          // Exponential backoff: 200ms, 400ms, 800ms, 1600ms
+          const delay = baseDelay * Math.pow(2, attempt - 1);
+          setTimeout(tryInit, delay);
+        } else {
+          console.error('[OverlaySpacingFix] OverlaySpacing module not available after', maxAttempts, 'attempts');
         }
-      }, 100);
+      };
       
-      // Timeout after 3 seconds
-      setTimeout(() => {
-        clearInterval(checkOverlay);
-        if (!state.initialized) {
-          console.error('[OverlaySpacingFix] OverlaySpacing module not available after 3s');
-        }
-      }, 3000);
-      
+      setTimeout(tryInit, baseDelay);
       return;
     }
 
