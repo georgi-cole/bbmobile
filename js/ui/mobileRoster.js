@@ -1403,32 +1403,11 @@
     // Normalize status first
     normalizeStatus(player);
     
-    // Get combined badge info using new pipeline
-    const badgeInfo = getCombinedBadgeInfo(player, isEvicted);
-    
-    let badgeHTML = '';
-    if (badgeInfo) {
-      // For combo badges (multiple tokens), try to use the chips container
-      // This allows badges to wrap instead of being clipped
-      // Use optional chaining for defensive programming
-      if (badgeInfo.tokens?.length > 1) {
-        const chipsHTML = renderStatusChipsHTML(badgeInfo.tokens);
-        if (chipsHTML) {
-          badgeHTML = chipsHTML;
-          state.badgesRendered++;
-        } else {
-          // Fallback to standard badge overlay
-          const sizeClass = getBadgeSizeClass(badgeInfo.text);
-          badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
-          state.badgesRendered++;
-        }
-      } else {
-        // Single badge - use standard overlay
-        const sizeClass = getBadgeSizeClass(badgeInfo.text);
-        badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
-        state.badgesRendered++;
-      }
-    }
+    // Note: Badge info is used for pill/emoji logic, not for inline badge rendering
+    // Badge display is now handled exclusively via:
+    // 1. Pill animation (replaces name footer for ~7s) - via showBadgePill()
+    // 2. Corner emoji (top-right of avatar after pill dismissal) - via showCornerEmoji()
+    // This avoids the "double badge" issue where badge appeared both on avatar AND as pill.
     
     // Debug tag showing normalized flags (only visible in debug mode)
     let debugTag = '';
@@ -1452,6 +1431,12 @@
     const safePlayerId = String(player.id).replace(/"/g, '&quot;');
     const safeName = String(player.name || 'Guest').replace(/"/g, '&quot;');
     
+    // Note: badgeHTML is NOT rendered here anymore.
+    // Badge logic is now handled exclusively via:
+    // 1. Pill animation (replaces name footer for ~7s) - via showBadgePill()
+    // 2. Corner emoji (top-right of avatar after pill dismissal) - via showCornerEmoji()
+    // This avoids the "double badge" issue where badge appeared both on avatar AND as pill.
+    
     return `
       <button 
         class="mobile-roster-tile ${evictedClass} no-touch-callout"
@@ -1473,7 +1458,6 @@
           />
           ${isEvicted ? '<div class="mobile-roster-evicted-cross" aria-hidden="true"></div>' : ''}
         </div>
-        ${badgeHTML}
         <div class="mobile-roster-name">${name}</div>
         ${debugTag}
       </button>
@@ -1591,6 +1575,150 @@
     });
     
     console.info(`[MobileRoster] Rendered ${state.activePlayers.length} active players in ${columns}x grid`);
+    
+    // Post-render: restore any active badge pills that were interrupted by render
+    restoreActiveBadgePills();
+    
+    // Post-render: sync corner emojis for players with existing statuses
+    // This ensures emojis render immediately after grid render if statuses exist
+    syncCornerEmojisFromStatus();
+    
+    // Update spacer height fallback if overlaySpacing module is not present
+    updateSpacerFallback();
+  }
+  
+  /**
+   * Restore active badge pills after a grid re-render
+   * When renderActiveGrid() is called, it destroys existing DOM elements including pills.
+   * This function re-creates the pill UI for any active pill animations.
+   */
+  function restoreActiveBadgePills() {
+    for (const [playerId, pillData] of state.activeBadgePills.entries()) {
+      // Recalculate remaining time
+      const elapsed = Date.now() - pillData.startTime;
+      const remaining = CONFIG.BADGE_PILL_DURATION - elapsed;
+      
+      if (remaining <= 0) {
+        // Pill should have already dismissed - clean it up
+        dismissBadgePill(playerId, true);
+        continue;
+      }
+      
+      // Re-create the pill DOM
+      const safePlayerId = CSS.escape(String(playerId));
+      const tile = document.querySelector(`.mobile-roster-tile[data-player-id="${safePlayerId}"]`);
+      if (!tile) continue;
+      
+      const nameEl = tile.querySelector('.mobile-roster-name');
+      if (!nameEl) continue;
+      
+      // Store original name (if not already stored)
+      if (!pillData.originalName) {
+        pillData.originalName = nameEl.textContent;
+      }
+      
+      // Replace name with pill using DOM methods
+      const badgeClass = pillData.badgeType.toLowerCase();
+      const badgeText = pillData.badgeType;
+      
+      nameEl.textContent = '';
+      const pillSpan = document.createElement('span');
+      pillSpan.className = `badge-pill badge-pill-${CSS.escape(badgeClass)}`;
+      pillSpan.dataset.badgeType = pillData.badgeType;
+      pillSpan.textContent = badgeText;
+      nameEl.appendChild(pillSpan);
+      nameEl.classList.add('badge-pill-active');
+      
+      // Update the timer for remaining time
+      if (pillData.timerId) {
+        clearTimeout(pillData.timerId);
+      }
+      
+      const newTimerId = setTimeout(() => {
+        dismissBadgePill(playerId, true);
+      }, remaining);
+      
+      pillData.timerId = newTimerId;
+      
+      console.info(`[MobileRoster] Restored badge pill: ${pillData.badgeType} for player ${playerId}, ${remaining}ms remaining`);
+    }
+  }
+  
+  /**
+   * Sync corner emoji badges for all players with existing statuses
+   * Called after grid render to ensure emojis are visible immediately
+   */
+  function syncCornerEmojisFromStatus() {
+    for (const player of state.activePlayers) {
+      // Skip evicted players - they don't get badge emojis
+      if (player.evicted) continue;
+      
+      // Normalize status to get canonical flags
+      normalizeStatus(player);
+      
+      // Only show emoji if player has an active badge AND no pill animation is active
+      // Priority: HOH > POV > NOM > SAFE
+      if (state.activeBadgePills.has(String(player.id))) {
+        // Pill is active, don't show emoji yet
+        continue;
+      }
+      
+      // Determine which badge type to show (prioritized)
+      let badgeType = null;
+      if (player.hoh) {
+        badgeType = 'HOH';
+      } else if (player.pov) {
+        badgeType = 'POV';
+      } else if (player.nominated) {
+        badgeType = 'NOM';
+      } else if (player.safe) {
+        badgeType = 'SAFE';
+      }
+      
+      if (badgeType) {
+        showCornerEmoji(player.id, badgeType);
+      }
+    }
+  }
+  
+  /**
+   * Update spacer height as fallback when overlaySpacing module is not present
+   * Uses measured TV height to ensure proper spacing between grid and overlay
+   */
+  function updateSpacerFallback() {
+    // Check if overlaySpacing module is handling this
+    if (global.OverlaySpacing && global.OverlaySpacing.getStatus) {
+      const status = global.OverlaySpacing.getStatus();
+      if (status.initialized) {
+        // OverlaySpacing module is active, no fallback needed
+        return;
+      }
+    }
+    
+    // Fallback: measure TV overlay height and set CSS variables
+    const tv = document.querySelector('.tv') || document.querySelector('#tv');
+    const tvNow = document.querySelector('#tvNow');
+    const spacer = document.querySelector('.mobile-roster-grid-spacer');
+    const rowGap = CONFIG.GAP_SIZE || 6;
+    
+    let overlayHeight = 200; // Default fallback
+    
+    if (tv && tv.offsetHeight > 0) {
+      overlayHeight = tv.offsetHeight;
+    } else if (tvNow && tvNow.offsetHeight > 0) {
+      overlayHeight = tvNow.offsetHeight;
+    }
+    
+    // Set CSS variable for spacer calculation
+    document.documentElement.style.setProperty('--tv-overlay-height', `${overlayHeight}px`);
+    document.documentElement.style.setProperty('--avatar-row-gap', `${rowGap}px`);
+    
+    // Also set explicit spacer height as ultimate fallback
+    if (spacer) {
+      spacer.style.height = `${overlayHeight + rowGap}px`;
+    }
+    
+    console.info(`[MobileRoster] Spacer fallback: overlayHeight=${overlayHeight}px, rowGap=${rowGap}px`);
   }
   
   /**
