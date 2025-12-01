@@ -477,7 +477,7 @@
    * Create event handler for HOH status
    */
   function handleHOHEvent(data) {
-    handlePlayerStatusEvent('player:hoh', data, (player, eventData) => {
+    handlePlayerStatusEvent('player:hoh', data, (player, _eventData) => {
       // Clear HOH from all other players first
       for (const p of state.playersById.values()) {
         if (p.id !== player.id) {
@@ -502,7 +502,7 @@
    * Create event handler for Veto/POV status
    */
   function handleVetoEvent(data) {
-    handlePlayerStatusEvent('player:veto', data, (player, eventData) => {
+    handlePlayerStatusEvent('player:veto', data, (player, _eventData) => {
       // Clear POV from all other players first
       for (const p of state.playersById.values()) {
         if (p.id !== player.id) {
@@ -529,7 +529,7 @@
    * Create event handler for Nominated status
    */
   function handleNominatedEvent(data) {
-    handlePlayerStatusEvent('player:nominated', data, (player, eventData) => {
+    handlePlayerStatusEvent('player:nominated', data, (player, _eventData) => {
       player.nominated = true;
       player.isNominated = true;
       player.nominee = true;
@@ -544,7 +544,7 @@
    * Create event handler for Replacement Nominee status
    */
   function handleReplacementNomEvent(data) {
-    handlePlayerStatusEvent('player:replacement_nom', data, (player, eventData) => {
+    handlePlayerStatusEvent('player:replacement_nom', data, (player, _eventData) => {
       player.nominated = true;
       player.isNominated = true;
       player.nominee = true;
@@ -560,7 +560,7 @@
    * Create event handler for Safe status (saved from block)
    */
   function handleSafeEvent(data) {
-    handlePlayerStatusEvent('player:safe', data, (player, eventData) => {
+    handlePlayerStatusEvent('player:safe', data, (player, _eventData) => {
       // Player is saved - clear nomination status
       player.nominated = false;
       player.isNominated = false;
@@ -2465,7 +2465,21 @@
       global.bbGameBus.on('player:replacement_nom', handleReplacementNomEvent);
       global.bbGameBus.on('player:safe', handleSafeEvent);
       
-      console.info('[MobileRoster] Subscribed to granular game events (HOH/POV/NOM/SAFE/EVICTED/REPLACEMENT_NOM)');
+      // Fast-forward and skip events - immediately dismiss pills and show emojis
+      global.bbGameBus.on('phase:skip', () => {
+        console.info('[MobileRoster] Phase skip event - dismissing all badge pills');
+        dismissAllBadgePills(true);
+      });
+      global.bbGameBus.on('phase:fastforward', () => {
+        console.info('[MobileRoster] Fast-forward event - dismissing all badge pills');
+        dismissAllBadgePills(true);
+      });
+      global.bbGameBus.on('game:fastforward', () => {
+        console.info('[MobileRoster] Game fast-forward event - dismissing all badge pills');
+        dismissAllBadgePills(true);
+      });
+      
+      console.info('[MobileRoster] Subscribed to granular game events (HOH/POV/NOM/SAFE/EVICTED/REPLACEMENT_NOM/SKIP/FASTFORWARD)');
     }
     
     // Listen for bb:phase:changed custom event for phase transitions
@@ -2480,6 +2494,16 @@
       refresh();
     };
     global.addEventListener('bb:phase:changed', state.phaseChangeHandler);
+    
+    // Also listen for skip/fast-forward custom events on window
+    global.addEventListener('bb:skip', () => {
+      console.info('[MobileRoster] bb:skip event - dismissing all badge pills');
+      dismissAllBadgePills(true);
+    });
+    global.addEventListener('bb:fastforward', () => {
+      console.info('[MobileRoster] bb:fastforward event - dismissing all badge pills');
+      dismissAllBadgePills(true);
+    });
     
     // Subscribe to PlayerService if available
     if (global.PlayerService && typeof global.PlayerService.subscribe === 'function') {

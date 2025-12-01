@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Roster Grid Spacing Test - Cast Sizes 12-16</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobileRoster.css?v=rt-badges-2">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg, #0a0a1a);
+      color: var(--ink, #fff);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .test-container {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--card, #1a1a2e);
+      border-radius: 12px;
+      border: 1px solid var(--line, #333);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+    .test-btn {
+      padding: 8px 16px;
+      background: var(--primary-2, #252540);
+      border: 1px solid var(--line, #333);
+      border-radius: 8px;
+      color: var(--ink, #fff);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: var(--primary-3, #353560);
+      transform: translateY(-1px);
+    }
+    
+    .test-btn.active {
+      background: var(--accent, #00d4ff);
+      color: #000;
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--card-2, #252540);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--muted-2, #888);
+    }
+    
+    .verification-checklist {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--card-2, #252540);
+      border-radius: 8px;
+      border: 1px dashed var(--line, #333);
+    }
+    
+    .verification-checklist h3 {
+      margin: 0 0 12px 0;
+      font-size: 0.875rem;
+      color: var(--accent, #00d4ff);
+    }
+    
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      font-size: 0.8rem;
+      color: var(--muted-2, #888);
+    }
+    
+    .checklist-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent, #00d4ff);
+    }
+    
+    .checklist-item.pass {
+      color: #2ecc71;
+    }
+    
+    .checklist-item.fail {
+      color: #e74c3c;
+    }
+    
+    .tv {
+      margin-top: 8px; /* Small margin to test spacing */
+      padding: 16px;
+      background: var(--card, #1a1a2e);
+      border-radius: 12px;
+      border: 2px solid var(--line, #333);
+      min-height: 200px;
+      position: relative;
+    }
+    
+    .tv-label {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 212, 255, 0.2);
+      color: var(--accent, #00d4ff);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 150px;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 24px;
+    }
+    
+    #tvNow {
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+    }
+    
+    .metrics-display {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #2ecc71;
+    }
+    
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .metrics-row:last-child {
+      border-bottom: none;
+    }
+    
+    .metrics-label {
+      color: var(--muted-2, #888);
+    }
+    
+    .metrics-value {
+      color: #fff;
+      font-weight: 600;
+    }
+    
+    .spacing-indicator {
+      position: absolute;
+      right: -40px;
+      bottom: 0;
+      width: 30px;
+      background: rgba(255, 177, 66, 0.3);
+      border: 1px dashed #ffb142;
+      font-size: 0.5rem;
+      text-align: center;
+      color: #ffb142;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="test-container">
+    <div class="test-header">
+      <h1>📏 Grid Spacing Test</h1>
+      <p style="margin: 0 0 8px 0; color: var(--muted-2); font-size: 0.875rem;">
+        Test that the last row of avatars doesn't overlap the TV overlay for cast sizes 12-16.
+        The bottom gap should match the vertical gap between rows.
+      </p>
+      
+      <div class="test-controls">
+        <button class="test-btn active" onclick="setCastSize(12)">12 Players</button>
+        <button class="test-btn" onclick="setCastSize(13)">13 Players</button>
+        <button class="test-btn" onclick="setCastSize(14)">14 Players</button>
+        <button class="test-btn" onclick="setCastSize(15)">15 Players</button>
+        <button class="test-btn" onclick="setCastSize(16)">16 Players</button>
+      </div>
+      
+      <div class="test-info" id="testInfo">
+        Cast Size: <span id="castCount">12</span> | 
+        Grid Rows: <span id="gridRows">3</span> | 
+        Grid Cols: <span id="gridCols">4</span>
+      </div>
+      
+      <div class="verification-checklist">
+        <h3>✅ Visual Verification Checklist</h3>
+        <div class="checklist-item" id="check1">
+          <input type="checkbox" id="chk1">
+          <label for="chk1">Last row avatars are fully visible</label>
+        </div>
+        <div class="checklist-item" id="check2">
+          <input type="checkbox" id="chk2">
+          <label for="chk2">Player names in last row are not cut off</label>
+        </div>
+        <div class="checklist-item" id="check3">
+          <input type="checkbox" id="chk3">
+          <label for="chk3">Bottom gap matches gap between rows</label>
+        </div>
+        <div class="checklist-item" id="check4">
+          <input type="checkbox" id="chk4">
+          <label for="chk4">No overlap with TV overlay</label>
+        </div>
+        <div class="checklist-item" id="check5">
+          <input type="checkbox" id="chk5">
+          <label for="chk5">Badges display correctly</label>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Roster Bar (hidden when mobile roster active) -->
+    <div id="rosterBar" style="padding: 12px; background: var(--card-2); border-radius: 8px; margin-bottom: 16px; text-align: center; color: var(--muted); display: none;">
+      Default roster bar (hidden in mobile mode)
+    </div>
+    
+    <!-- Mobile Roster Container (injected by JS) -->
+    
+    <!-- Faux TV -->
+    <div class="tv" id="fauxTv">
+      <div class="tv-label">FAUX TV OVERLAY</div>
+      <div class="tvViewport">
+        <div id="tvNow">This is the TV overlay area. The roster grid should not overlap with this.</div>
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+    
+    <!-- Metrics Display -->
+    <div class="metrics-display" id="metricsDisplay">
+      <div class="metrics-row">
+        <span class="metrics-label">Grid Gap:</span>
+        <span class="metrics-value" id="metricGap">-</span>
+      </div>
+      <div class="metrics-row">
+        <span class="metrics-label">Grid Padding Bottom:</span>
+        <span class="metrics-value" id="metricPadding">-</span>
+      </div>
+      <div class="metrics-row">
+        <span class="metrics-label">TV Margin Top:</span>
+        <span class="metrics-value" id="metricMargin">-</span>
+      </div>
+      <div class="metrics-row">
+        <span class="metrics-label">Total Space:</span>
+        <span class="metrics-value" id="metricTotal">-</span>
+      </div>
+      <div class="metrics-row">
+        <span class="metrics-label">Status:</span>
+        <span class="metrics-value" id="metricStatus">-</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load mobile roster module -->
+  <script src="js/ui/mobileRoster.js?v=rt-badges-2"></script>
+  
+  <script>
+    // Mock game state and event bus
+    window.game = window.game || {};
+    window.g = window.g || {};
+    
+    // Event bus
+    window.bbGameBus = {
+      listeners: new Map(),
+      on(event, callback) {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+      },
+      emit(event, data) {
+        if (!this.listeners.has(event)) return;
+        this.listeners.get(event).forEach(cb => cb(data));
+      }
+    };
+    
+    // Mock avatar resolver
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    // Player names
+    const PLAYER_NAMES = [
+      'Alice', 'Bob', 'Carol', 'Dave', 'Emma', 'Frank', 'Grace', 'Henry',
+      'Iris', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Paul'
+    ];
+    
+    let currentCastSize = 12;
+    
+    function createMockPlayers(count) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        players.push({
+          id: i + 1,
+          name: PLAYER_NAMES[i] || `Player ${i + 1}`,
+          evicted: false,
+          hoh: i === 0,
+          nominated: i === 1 || i === 2,
+          pov: i === 3,
+        });
+      }
+      return players;
+    }
+    
+    function setCastSize(size) {
+      currentCastSize = size;
+      
+      // Update button styles
+      document.querySelectorAll('.test-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.includes(size)) {
+          btn.classList.add('active');
+        }
+      });
+      
+      // Update players
+      window.game.players = createMockPlayers(size);
+      
+      // Refresh roster
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+      }
+      
+      // Update info
+      updateTestInfo();
+      updateMetrics();
+    }
+    
+    function updateTestInfo() {
+      const players = window.game.players || [];
+      const cols = Math.min(4, Math.ceil(Math.sqrt(players.length)));
+      const rows = Math.ceil(players.length / cols);
+      
+      document.getElementById('castCount').textContent = players.length;
+      document.getElementById('gridRows').textContent = rows;
+      document.getElementById('gridCols').textContent = cols;
+    }
+    
+    function updateMetrics() {
+      const grid = document.querySelector('.mobile-roster-active-grid');
+      const tv = document.querySelector('.tv');
+      
+      if (!grid || !tv) {
+        document.getElementById('metricStatus').textContent = 'Grid not rendered';
+        return;
+      }
+      
+      const gridStyle = window.getComputedStyle(grid);
+      const tvStyle = window.getComputedStyle(tv);
+      
+      const gap = parseFloat(gridStyle.gap) || parseFloat(gridStyle.rowGap) || 6;
+      const paddingBottom = parseFloat(gridStyle.paddingBottom) || 0;
+      const marginTop = parseFloat(tvStyle.marginTop) || 0;
+      const totalSpace = paddingBottom + marginTop;
+      
+      document.getElementById('metricGap').textContent = gap + 'px';
+      document.getElementById('metricPadding').textContent = paddingBottom + 'px';
+      document.getElementById('metricMargin').textContent = marginTop + 'px';
+      document.getElementById('metricTotal').textContent = totalSpace + 'px';
+      
+      // Check if spacing is correct
+      const isCorrect = paddingBottom >= gap && marginTop >= gap / 2;
+      document.getElementById('metricStatus').textContent = isCorrect ? '✅ PASS' : '❌ FAIL';
+      document.getElementById('metricStatus').style.color = isCorrect ? '#2ecc71' : '#e74c3c';
+    }
+    
+    // Initialize
+    window.game.players = createMockPlayers(12);
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Initializing grid spacing test...');
+      window.MobileRoster.init();
+      updateTestInfo();
+      
+      // Update metrics after render
+      setTimeout(updateMetrics, 100);
+      
+      // Re-check metrics on resize
+      window.addEventListener('resize', updateMetrics);
+    });
+  </script>
+</body>
+</html>
