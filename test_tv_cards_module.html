@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Test: TV Cards Module</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
   <style>
     body {
       margin: 0;
@@ -23,11 +24,20 @@
       border-radius: 12px;
       border: 1px solid rgba(110, 160, 220, 0.25);
       max-width: 280px;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .test-controls h3 {
       margin: 0 0 10px;
       font-size: 16px;
       color: #4CAF50;
+    }
+    .test-controls h4 {
+      margin: 15px 0 5px;
+      font-size: 12px;
+      color: #95a9c0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .test-controls button {
       display: block;
@@ -72,7 +82,7 @@
     }
     #tvOverlay {
       position: absolute;
-      inset: 0;
+      inset: 40px 30px;
     }
     .status {
       margin-top: 10px;
@@ -87,11 +97,25 @@
 <body>
   <div class="test-controls">
     <h3>🧪 TV Cards Module Tests</h3>
+    
+    <h4>Basic Tests</h4>
     <button id="testBasicCard">Basic Card</button>
     <button id="testCardWithAvatars">Card with Avatars</button>
     <button id="testInlineCard">Inline Card</button>
     <button id="testDecision">Decision Card</button>
     <button id="testCeremonyEnd">Ceremony End</button>
+    
+    <h4>Title Omission Tests</h4>
+    <button id="testVetoCeremonyTitle">Veto Ceremony (title omitted)</button>
+    <button id="testNominationTitle">Nomination (title omitted)</button>
+    <button id="testEvictionResults">Eviction Results (title omitted)</button>
+    <button id="testNonCeremonyTitle">Non-Ceremony (title shown)</button>
+    
+    <h4>Splitting Tests</h4>
+    <button id="testLongContent">Long Content (auto-split)</button>
+    <button id="testSplitWithAvatars">Split with Avatars</button>
+    
+    <h4>Controls</h4>
     <button id="clearOverlay">Clear Overlay</button>
     <div class="status" id="status">Ready</div>
   </div>
@@ -105,6 +129,10 @@
       <li>✅ Inline ceremony messages (showInlineCard)</li>
       <li>✅ Decision cards with buttons (showTVDecision)</li>
       <li>✅ Consistent positioning and typography</li>
+      <li>✅ <strong>NEW:</strong> Ceremony title omission (auto-detected)</li>
+      <li>✅ <strong>NEW:</strong> Card splitting for long content</li>
+      <li>✅ <strong>NEW:</strong> 75% background transparency</li>
+      <li>✅ <strong>NEW:</strong> No borders/outlines on TV inline cards</li>
     </ul>
   </div>
 
@@ -205,6 +233,118 @@
       updateStatus('Ceremony end test complete');
     });
 
+    // ===== NEW: Title Omission Tests =====
+    
+    // Test Veto Ceremony title (should be omitted)
+    document.getElementById('testVetoCeremonyTitle').addEventListener('click', async function() {
+      updateStatus('Testing Veto Ceremony (title should be omitted)...');
+      const isCeremony = window.TVCards.isCeremonyTitle('Veto Ceremony');
+      console.log('isCeremonyTitle("Veto Ceremony"):', isCeremony);
+      
+      await window.TVCards.showTVCardWithAvatars({
+        title: 'Veto Ceremony',
+        lines: ['Alice has decided to use the Power of Veto.', 'Bob has been saved!'],
+        tone: 'veto',
+        duration: 3000,
+        actorIds: 1,
+        subjectIds: 2
+      });
+      updateStatus('Veto Ceremony test complete - title omitted: ' + isCeremony);
+    });
+
+    // Test Nomination title (should be omitted)
+    document.getElementById('testNominationTitle').addEventListener('click', async function() {
+      updateStatus('Testing Nomination (title should be omitted)...');
+      await window.TVCards.showTVCard({
+        title: 'Nomination Results',
+        lines: ['Bob and Charlie are on the block.'],
+        tone: 'noms',
+        duration: 2500
+      });
+      updateStatus('Nomination test complete');
+    });
+
+    // Test Eviction Results (should be omitted)
+    document.getElementById('testEvictionResults').addEventListener('click', async function() {
+      updateStatus('Testing Eviction Results (title should be omitted)...');
+      await window.TVCards.showInlineCard({
+        title: 'Eviction Results',
+        content: ['By a vote of 5-2, Charlie has been evicted from the Big Brother house.'],
+        tone: 'eviction',
+        duration: 3000
+      });
+      updateStatus('Eviction results test complete');
+    });
+
+    // Test non-ceremony title (should be shown)
+    document.getElementById('testNonCeremonyTitle').addEventListener('click', async function() {
+      updateStatus('Testing non-ceremony title (title should be shown)...');
+      const isCeremony = window.TVCards.isCeremonyTitle('HOH Competition');
+      console.log('isCeremonyTitle("HOH Competition"):', isCeremony);
+      
+      await window.TVCards.showTVCard({
+        title: 'HOH Competition',
+        lines: ['The competition is about to begin!', 'Get ready houseguests.'],
+        tone: 'neutral',
+        duration: 2500
+      });
+      updateStatus('Non-ceremony test complete - title shown: ' + !isCeremony);
+    });
+
+    // ===== NEW: Splitting Tests =====
+    
+    // Test long content that should be split
+    document.getElementById('testLongContent').addEventListener('click', async function() {
+      updateStatus('Testing long content (should auto-split)...');
+      
+      const longLines = [
+        'This is the first line of a very long card that needs to be split.',
+        'Second line with more content about what happened in the house.',
+        'Third line describing the dramatic events of the week.',
+        'Fourth line with even more details about alliances and betrayals.',
+        'Fifth line where things get really intense.',
+        'Sixth line - the tension in the house is palpable.',
+        'Seventh line - everyone is on edge.',
+        'Eighth line - who will survive the eviction?'
+      ];
+      
+      await window.TVCards.showTVCardWithAvatars({
+        title: 'Weekly Recap',
+        lines: longLines,
+        tone: 'neutral',
+        duration: 2000,
+        actorIds: 1,
+        enableSplit: true,
+        avatarsOnAll: true
+      });
+      updateStatus('Long content test complete');
+    });
+
+    // Test split with avatars on all cards
+    document.getElementById('testSplitWithAvatars').addEventListener('click', async function() {
+      updateStatus('Testing split with avatars on all cards...');
+      
+      const lines = [
+        'Alice and Bob formed an alliance.',
+        'They agreed to protect each other.',
+        'Charlie suspects something is going on.',
+        'The tension in the house is rising.',
+        'Who will be nominated this week?'
+      ];
+      
+      await window.TVCards.showTVCardWithAvatars({
+        title: 'Alliance Update',
+        lines: lines,
+        tone: 'social',
+        duration: 2500,
+        actorIds: 1,
+        subjectIds: [2],
+        enableSplit: true,
+        avatarsOnAll: true
+      });
+      updateStatus('Split with avatars test complete');
+    });
+
     // Clear overlay
     document.getElementById('clearOverlay').addEventListener('click', function() {
       window.TVCards.clearTVOverlay();
@@ -214,6 +354,13 @@
 
     // Initial status
     updateStatus('Module loaded - TVCards available: ' + (window.TVCards ? 'YES ✓' : 'NO ✗'));
+    
+    // Verify new features are available
+    console.log('=== TV Cards Feature Check ===');
+    console.log('isCeremonyTitle:', typeof window.TVCards.isCeremonyTitle);
+    console.log('computeOverlayAvailableHeight:', typeof window.TVCards.computeOverlayAvailableHeight);
+    console.log('measureAndSplitLines:', typeof window.TVCards.measureAndSplitLines);
+    console.log('emitCardsFromChunks:', typeof window.TVCards.emitCardsFromChunks);
   </script>
 </body>
 </html>

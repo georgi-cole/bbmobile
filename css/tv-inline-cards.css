@@ -17,10 +17,12 @@
   --theme-primary: var(--accent, #2d3b55);
   --theme-on-primary: #ffffff;
   --tv-inline-focus-ring: var(--accent, #4a90e2);
-  /* Fallback for browsers without color-mix support */
-  --tv-inline-card-bg: rgba(45, 59, 85, 0.18);
-  --tv-inline-card-bg: color-mix(in srgb, var(--theme-primary) 18%, transparent);
+  /* 75% transparency background (as per TV overlay card spec) */
+  --tv-inline-card-bg: rgba(28, 43, 62, 0.75);
+  --tv-inline-card-bg: color-mix(in srgb, var(--theme-primary) 75%, transparent);
   --tv-inline-card-backdrop: blur(6px);
+  /* Max width for TV inline cards */
+  --tv-inline-card-max-width: 780px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -35,13 +37,17 @@
    ============================================================================ */
 
 .tv-inline-card {
-  /* Themed semi-transparent background */
+  /* Themed semi-transparent background - 75% opacity */
   background: var(--tv-inline-card-bg);
   backdrop-filter: var(--tv-inline-card-backdrop);
   -webkit-backdrop-filter: var(--tv-inline-card-backdrop);
   
-  /* Remove border for cleaner look */
+  /* Remove border and outline for cleaner look (spec requirement) */
   border: none !important;
+  outline: none !important;
+  
+  /* Enforce max-width: 780px for TV inline cards */
+  max-width: min(var(--tv-inline-card-max-width), 92%);
   
   /* Ensure text uses theme color */
   color: var(--theme-on-primary);
@@ -227,10 +233,48 @@
 /* For browsers that don't support backdrop-filter */
 @supports not (backdrop-filter: blur(6px)) {
   .tv-inline-card {
-    background: color-mix(in srgb, var(--theme-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--theme-primary) 75%, transparent);
   }
   
   .tv-status-chip.tv-inline-theme {
-    background: color-mix(in srgb, var(--theme-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--theme-primary) 75%, transparent);
   }
+}
+
+/* ============================================================================
+   TV OVERLAY-SPECIFIC RULES
+   Scoped to #tvOverlay to ensure inline cards have consistent behavior
+   ============================================================================ */
+
+#tvOverlay .tv-inline-card,
+#tvOverlay .revealCard,
+#tvOverlay .diaryRoomCard,
+#tvOverlay .tvCardBody {
+  /* Remove all borders/outlines for TV inline cards */
+  border: none !important;
+  outline: none !important;
+  
+  /* 75% background transparency - use popup token for theme consistency */
+  background: var(--popup-bg-start, rgba(28, 43, 62, 0.75)) !important;
+  
+  /* Enforce max-width constraint */
+  max-width: min(var(--tv-inline-card-max-width, 780px), 92%);
+  
+  /* Ensure cards fit within TV overlay - max-height with overflow */
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Maintain existing shadows/blur (do not reduce) */
+  backdrop-filter: var(--tv-inline-card-backdrop, blur(6px));
+  -webkit-backdrop-filter: var(--tv-inline-card-backdrop, blur(6px));
+}
+
+/* Ensure ceremony-card class also gets proper styling */
+#tvOverlay .ceremony-card {
+  border: none !important;
+  outline: none !important;
+  background: var(--popup-bg-start, rgba(28, 43, 62, 0.75)) !important;
+  max-width: min(var(--tv-inline-card-max-width, 780px), 92%);
 }
