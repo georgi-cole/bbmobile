@@ -467,7 +467,11 @@ test.describe('Last Row Visibility', () => {
         gapToTV: Math.round(gapToTV),
         rowGap,
         isVisible: gapToTV >= rowGap,
-        gapMatchesRowGap: Math.abs(gapToTV - rowGap) <= 30 // Allow some tolerance
+        // Allow 30px tolerance for gap matching because:
+        // 1. Spacer includes compensation that may add extra padding
+        // 2. Different cast sizes may result in partial row heights
+        // 3. Browser rendering differences and subpixel calculations
+        gapMatchesRowGap: Math.abs(gapToTV - rowGap) <= 30
       };
     });
     

@@ -1201,6 +1201,9 @@
       emojiGroup.appendChild(emojiEl);
     }
     
+    // Update group data-badge-count for CSS fallback (browsers without :has())
+    emojiGroup.dataset.badgeCount = emojiGroup.children.length;
+    
     // Update group aria-label with all badges
     const allBadges = Array.from(emojiGroup.querySelectorAll('.corner-emoji-badge'))
       .map(el => el.dataset.badgeType)
@@ -1261,6 +1264,9 @@
         if (emojiEl) {
           emojiEl.remove();
           console.info(`[MobileRoster] Corner emoji cleared: ${badgeType} for player ${playerId}`);
+          
+          // Update badge count data attribute for CSS fallback
+          emojiGroup.dataset.badgeCount = emojiGroup.children.length;
           
           // If group is now empty, remove the group
           if (emojiGroup.children.length === 0) {

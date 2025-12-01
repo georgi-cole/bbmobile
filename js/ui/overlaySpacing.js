@@ -139,6 +139,8 @@
     root.style.setProperty('--tv-overlay-height', `${overlayHeight}px`);
     
     // Update effective height including compensation
+    // This variable is exposed for external consumption (debugging, diagnostics, custom layouts)
+    // and is used by the spacer element height calculation
     root.style.setProperty('--overlay-effective-height', `${effectiveHeight}px`);
     
     // Ensure row gap is set
