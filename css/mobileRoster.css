@@ -25,11 +25,6 @@
   /* Avatar border - DPR-normalized via JS, fallback here */
   --avatar-border-width: 1px;
   --avatar-border-width-normalized: 1px;
-  
-  /* TV overlay spacing variables - used for dynamic spacer calculation */
-  /* These are updated by JS overlaySpacing module */
-  --tv-overlay-height: 200px; /* Default, updated dynamically */
-  --avatar-row-gap: 6px; /* Matches --mobile-roster-gap */
 }
 
 /* ============================
@@ -100,37 +95,15 @@ body[data-mobile-roster-active="true"] #rosterBar {
   max-width: min(100%, 520px);
   margin: 0 auto;
   width: 100%;
-  /* Minimal bottom padding - actual spacing is handled by the spacer element */
-  padding-bottom: var(--mobile-roster-gap, 6px);
+  /* Bottom padding equals grid gap for uniform spacing between last row and TV overlay.
+   * CRITICAL: This ensures the space below the last row of avatars ALWAYS matches the 
+   * vertical gap between avatar rows—not more, not less. This prevents overlap, crowding, 
+   * or extra spacing with the TV overlay, regardless of cast size (12-16 players).
+   * Also accounts for safe-area insets on mobile devices with notches/home indicators.
+   */
+  padding-bottom: calc(var(--mobile-roster-gap, 6px) + env(safe-area-inset-bottom, 0px));
   /* Prevent overflow issues on mobile that could cause scrolling or clipping */
   overflow: visible;
-}
-
-/* ============================
-   Grid Bottom Spacer
-   Ensures the TV overlay never overlaps avatar tiles.
-   Height is dynamically calculated: overlayHeight + rowGap.
-   This spacer sits after the grid and pushes content up.
-   ============================ */
-
-.mobile-roster-grid-spacer {
-  flex: 0 0 auto;
-  width: 100%;
-  /* Height = TV overlay height + one row gap
-   * This ensures consistent spacing between last row and overlay at all times.
-   * The JS overlaySpacing module updates --tv-overlay-height dynamically.
-   */
-  height: calc(var(--tv-overlay-height, 200px) + var(--avatar-row-gap, 6px));
-  min-height: calc(var(--avatar-row-gap, 6px) + env(safe-area-inset-bottom, 0px));
-  /* Invisible spacer */
-  pointer-events: none;
-  /* Debug: uncomment to visualize spacer */
-  /* background: rgba(255, 0, 0, 0.1); */
-}
-
-/* When mobile roster is NOT active, hide the spacer */
-body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
-  display: none;
 }
 
 /* Grid tiles */
@@ -252,39 +225,19 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 /* Badge pill animation - replaces name when badge event triggers */
 .mobile-roster-name.badge-pill-active {
   overflow: visible;
-  /* Ensure pill is centered by making name area a flex container */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Remove default text styling */
-  text-align: center;
 }
 
 .badge-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
+  padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   animation: badge-pill-appear 0.3s ease-out;
-  /* Ensure pill expands to fill footer area on mobile */
-  min-width: 70%;
-  max-width: 100%;
-  /* Prevent pill from being cut off */
-  white-space: nowrap;
-}
-
-/* Mobile-specific badge pill overrides (higher specificity) */
-@media (max-width: 768px) {
-  .mobile-roster-tile .mobile-roster-name.badge-pill-active .badge-pill {
-    min-width: 75%;
-    padding: 4px 10px;
-    font-size: 0.7rem;
-  }
 }
 
 @keyframes badge-pill-appear {
