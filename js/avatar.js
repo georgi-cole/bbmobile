@@ -44,7 +44,15 @@
     try {
       const hostname = window.location.hostname;
       const pathname = window.location.pathname;
-      return hostname.includes('github.io') || pathname.startsWith(GITHUB_PAGES_PATH);
+      
+      // Secure GitHub Pages detection:
+      // 1. Must end with .github.io (prevents github.io.attacker.com)
+      // 2. Or must be exactly 'github.io'
+      // 3. Or path starts with the known project path
+      const isGitHubIoHost = hostname === 'github.io' || hostname.endsWith('.github.io');
+      const isProjectPath = pathname.startsWith(GITHUB_PAGES_PATH);
+      
+      return isGitHubIoHost || isProjectPath;
     } catch (e) {
       return false;
     }
@@ -58,21 +66,32 @@
    */
   function shouldSkipLocalFolderLookups() {
     const cfg = g.game?.cfg || g.cfg || {};
-    // Default to enabled (don't skip) if config not set
-    const localFolderEnabled = cfg.avatarLocalFolderEnabled !== false;
     
-    // Skip local lookups if: on GitHub Pages AND local folder is disabled
-    if (!localFolderEnabled && isGitHubPages()) {
-      console.info('[AvatarPreload] Skipping local folder lookups - GitHub Pages optimization');
+    // Check explicit config setting first
+    // When avatarLocalFolderEnabled is explicitly set to false, skip local lookups
+    if (cfg.avatarLocalFolderEnabled === false) {
+      if (isGitHubPages()) {
+        console.info('[AvatarPreload] Skipping local folder lookups - explicitly disabled for GitHub Pages');
+        return true;
+      }
+      // Even if not on GitHub Pages, honor explicit disable
+      console.info('[AvatarPreload] Skipping local folder lookups - explicitly disabled');
       return true;
     }
     
-    // Auto-detect: if on GitHub Pages with no explicit setting, prefer external
-    if (cfg.avatarLocalFolderEnabled === undefined && isGitHubPages()) {
+    // When explicitly enabled (true), always allow local lookups
+    if (cfg.avatarLocalFolderEnabled === true) {
+      return false;
+    }
+    
+    // Auto-detect mode: if on GitHub Pages with no explicit setting, prefer external
+    // This prevents 404 churn when local avatars don't exist on GitHub Pages
+    if (isGitHubPages()) {
       console.info('[AvatarPreload] Auto-detected GitHub Pages - skipping local folder lookups');
       return true;
     }
     
+    // Default: allow local folder lookups (for local development)
     return false;
   }
   
@@ -91,10 +110,11 @@
     const hostname = window.location.hostname;
     const pathname = window.location.pathname;
     
-    // GitHub Pages detection: username.github.io or custom domain with /repo/ path
-    const isGitHubPages = hostname.includes('github.io') || pathname.startsWith(GITHUB_PAGES_PATH);
+    // Secure GitHub Pages detection (host ends with .github.io or is exactly github.io)
+    const isGitHubIoHost = hostname === 'github.io' || hostname.endsWith('.github.io');
+    const isProjectPath = pathname.startsWith(GITHUB_PAGES_PATH);
     
-    if (isGitHubPages && pathname.startsWith(GITHUB_PAGES_PATH)) {
+    if ((isGitHubIoHost || isProjectPath) && pathname.startsWith(GITHUB_PAGES_PATH)) {
       return GITHUB_PAGES_PATH;
     }
     

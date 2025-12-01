@@ -35,6 +35,7 @@ console.info('[IntroScreen] Script executing – pre-init');
   const LOADING_BUFFER_THRESHOLD = 300; // ms - show loading spinner if preload exceeds this
   const AVATAR_PRELOAD_TIMEOUT = 6000; // ms - timeout for avatar preloading
   const PLAYERS_READY_TIMEOUT = 8000; // ms - max wait for players to be ready
+  const PLAYERS_READY_POLL_INTERVAL = 200; // ms - polling interval for player availability check
 
   // ===== DOM BUILDING =====
 
@@ -1044,7 +1045,7 @@ console.info('[IntroScreen] Script executing – pre-init');
       // Listen for players-ready event
       window.addEventListener('players-ready', eventHandler);
       
-      // Polling fallback - check every 200ms for players
+      // Polling fallback - check periodically for players
       pollTimer = setInterval(() => {
         if (resolved) return;
         
@@ -1052,7 +1053,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         if (players.length > 0) {
           complete(players, 'polling');
         }
-      }, 200);
+      }, PLAYERS_READY_POLL_INTERVAL);
       
       // Timeout - resolve with whatever we have after max wait
       timeoutTimer = setTimeout(() => {
