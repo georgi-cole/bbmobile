@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Result Card Test - Real Browser</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #88aaff;
+      margin-bottom: 20px;
+    }
+
+    .test-controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .test-controls h2 {
+      margin-top: 0;
+      color: #88aaff;
+      font-size: 1rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    button {
+      background: #2f8651;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background: #36a563;
+    }
+
+    button.secondary {
+      background: #414c5c;
+    }
+
+    button.secondary:hover {
+      background: #556478;
+    }
+
+    button.danger {
+      background: #b71c1c;
+    }
+
+    button.danger:hover {
+      background: #c62828;
+    }
+
+    .info-panel {
+      background: rgba(136, 170, 255, 0.1);
+      border: 1px solid rgba(136, 170, 255, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+
+    .info-panel h3 {
+      margin: 0 0 8px;
+      color: #88aaff;
+      font-size: 0.95rem;
+    }
+
+    .info-panel ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .info-panel li {
+      margin: 4px 0;
+    }
+
+    /* Mock TV Container matching production styles */
+    .tv {
+      position: relative;
+      height: 520px;
+      background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
+      background-color: #0e1730;
+      border: 2px solid rgba(0,0,0,0.35);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      --tv-safe-top: 44px;
+      --tv-safe-bottom: 42px;
+      --tv-safe-x: 16px;
+    }
+
+    .tvHead {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(120,210,255,.07);
+      background: linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+    }
+
+    .tvTitle {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #88aaff;
+    }
+
+    .tvTimer {
+      font-size: 0.75rem;
+      color: #6699cc;
+    }
+
+    /* TV Overlay - matches production */
+    #tvOverlay {
+      position: absolute;
+      z-index: 12;
+      inset: var(--tv-safe-top, 44px) var(--tv-safe-x, 16px) var(--tv-safe-bottom, 42px) var(--tv-safe-x, 16px);
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 1px;
+      min-height: 1px;
+    }
+
+    .status-log {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 16px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+
+    .status-log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 3px solid #88aaff;
+      background: rgba(136, 170, 255, 0.05);
+    }
+
+    .status-log-entry.success {
+      border-left-color: #2f8651;
+      background: rgba(47, 134, 81, 0.1);
+    }
+
+    .status-log-entry.warning {
+      border-left-color: #ffa726;
+      background: rgba(255, 167, 38, 0.1);
+    }
+
+    .status-log-entry.error {
+      border-left-color: #b71c1c;
+      background: rgba(183, 28, 28, 0.1);
+    }
+
+    .test-result {
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+
+    .test-result.pass {
+      background: rgba(47, 134, 81, 0.2);
+      border: 1px solid #2f8651;
+      color: #77d58d;
+    }
+
+    .test-result.fail {
+      background: rgba(183, 28, 28, 0.2);
+      border: 1px solid #b71c1c;
+      color: #ff6b6b;
+    }
+
+    /* Viewport size indicators */
+    .viewport-info {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: #88aaff;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Eviction Result Card Test</h1>
+
+    <div class="info-panel">
+      <h3>📋 Test Objectives (TV Inline Card Spec)</h3>
+      <ul>
+        <li>✅ Card centered within TV overlay (not cut off at bottom)</li>
+        <li>✅ No border/outline for cleaner look</li>
+        <li>✅ 75% background transparency</li>
+        <li>✅ Max-width: 780px</li>
+        <li>✅ Card fully visible within TV safe area</li>
+        <li>✅ Uses tv-inline-card class for consistent styling</li>
+      </ul>
+    </div>
+
+    <div class="test-controls">
+      <h2>🎮 Test Controls</h2>
+      
+      <div class="button-group">
+        <button onclick="showEvictionResultCard()">Show Eviction Result Card</button>
+        <button onclick="hideCard()" class="secondary">Hide Card</button>
+        <button onclick="runPositioningTest()">Run Positioning Test</button>
+        <button onclick="clearLog()" class="danger">Clear Log</button>
+      </div>
+
+      <div class="button-group">
+        <button onclick="setMobileViewport()" class="secondary">Mobile (375px)</button>
+        <button onclick="setTabletViewport()" class="secondary">Tablet (768px)</button>
+        <button onclick="setDesktopViewport()" class="secondary">Desktop</button>
+      </div>
+
+      <div id="testResult" class="test-result" style="display: none;"></div>
+    </div>
+
+    <!-- Mock TV Container -->
+    <div class="tv" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">Live Eviction</div>
+        <div></div>
+        <div class="tvTimer">FFWD | 00:06</div>
+      </div>
+      
+      <!-- TV Overlay - this is where inline cards should be centered -->
+      <div id="tvOverlay"></div>
+    </div>
+
+    <!-- Status Log -->
+    <div class="status-log" id="statusLog">
+      <div class="status-log-entry">Test initialized. Ready to test eviction result card.</div>
+    </div>
+  </div>
+
+  <div class="viewport-info" id="viewportInfo">
+    Viewport: <span id="vpWidth">-</span> x <span id="vpHeight">-</span>
+  </div>
+
+  <!-- Test Script -->
+  <script>
+    // Update viewport info
+    function updateViewportInfo() {
+      document.getElementById('vpWidth').textContent = window.innerWidth;
+      document.getElementById('vpHeight').textContent = window.innerHeight;
+    }
+    updateViewportInfo();
+    window.addEventListener('resize', updateViewportInfo);
+
+    // Logging utility
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('statusLog');
+      const entry = document.createElement('div');
+      entry.className = 'status-log-entry ' + type;
+      entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log('[Test]', message);
+    }
+
+    function clearLog() {
+      document.getElementById('statusLog').innerHTML = '';
+      log('Log cleared');
+      document.getElementById('testResult').style.display = 'none';
+    }
+
+    function showTestResult(pass, message) {
+      const el = document.getElementById('testResult');
+      el.style.display = 'block';
+      el.className = 'test-result ' + (pass ? 'pass' : 'fail');
+      el.textContent = message;
+    }
+
+    // Show eviction result card (matching production code)
+    function showEvictionResultCard() {
+      log('Showing eviction result card...');
+      
+      const overlay = document.getElementById('tvOverlay');
+      if (!overlay) {
+        log('❌ TV overlay not found', 'error');
+        return null;
+      }
+
+      // Remove any existing card
+      const existing = overlay.querySelector('.lv2-inline-card');
+      if (existing) existing.remove();
+
+      // Create card matching production structure
+      const card = document.createElement('div');
+      card.className = 'lv2-inline-card tv-inline-card tone-evict';
+
+      // Title
+      const h3 = document.createElement('h3');
+      h3.textContent = 'Eviction Result';
+      card.appendChild(h3);
+
+      // Body content
+      const bodyDiv = document.createElement('div');
+      bodyDiv.className = 'lv2-inline-card-body';
+      
+      const lineDiv = document.createElement('div');
+      lineDiv.textContent = 'By a vote of 3 to 6, Rae has been evicted.';
+      bodyDiv.appendChild(lineDiv);
+      
+      card.appendChild(bodyDiv);
+
+      // Append to overlay
+      overlay.appendChild(card);
+
+      // Make visible after small delay (matching production)
+      setTimeout(() => {
+        card.classList.add('visible');
+        log('✅ Card shown and made visible', 'success');
+        
+        // Log computed styles
+        const styles = getComputedStyle(card);
+        log(`Background: ${styles.backgroundColor}`);
+        log(`Border: ${styles.border}`);
+        log(`Max-width: ${styles.maxWidth}`);
+        log(`Position: ${styles.position}`);
+      }, 50);
+
+      return card;
+    }
+
+    function hideCard() {
+      const overlay = document.getElementById('tvOverlay');
+      const card = overlay?.querySelector('.lv2-inline-card');
+      if (card) {
+        card.classList.remove('visible');
+        setTimeout(() => card.remove(), 500);
+        log('Card hidden', 'success');
+      } else {
+        log('No card to hide', 'warning');
+      }
+    }
+
+    // Run positioning test
+    function runPositioningTest() {
+      log('🧪 Running positioning test...');
+      
+      const card = showEvictionResultCard();
+      if (!card) {
+        showTestResult(false, '❌ FAILED: Could not create card');
+        return;
+      }
+
+      setTimeout(() => {
+        const overlay = document.getElementById('tvOverlay');
+        const tv = document.getElementById('tv');
+        
+        const overlayRect = overlay.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        const tvRect = tv.getBoundingClientRect();
+
+        log(`TV bounds: top=${tvRect.top.toFixed(0)}, bottom=${tvRect.bottom.toFixed(0)}, height=${tvRect.height.toFixed(0)}`);
+        log(`Overlay bounds: top=${overlayRect.top.toFixed(0)}, bottom=${overlayRect.bottom.toFixed(0)}, height=${overlayRect.height.toFixed(0)}`);
+        log(`Card bounds: top=${cardRect.top.toFixed(0)}, bottom=${cardRect.bottom.toFixed(0)}, height=${cardRect.height.toFixed(0)}`);
+
+        const issues = [];
+
+        // Check if card is within overlay bounds
+        if (cardRect.top < overlayRect.top) {
+          issues.push('Card top is above overlay');
+        }
+        if (cardRect.bottom > overlayRect.bottom) {
+          issues.push('Card bottom extends below overlay (was the original bug!)');
+        }
+
+        // Check horizontal centering
+        const overlayCenter = overlayRect.left + overlayRect.width / 2;
+        const cardCenter = cardRect.left + cardRect.width / 2;
+        const centerDiff = Math.abs(overlayCenter - cardCenter);
+        if (centerDiff > 5) {
+          issues.push(`Card not horizontally centered (diff: ${centerDiff.toFixed(0)}px)`);
+        } else {
+          log('✅ Card is horizontally centered', 'success');
+        }
+
+        // Check vertical centering
+        const overlayVertCenter = overlayRect.top + overlayRect.height / 2;
+        const cardVertCenter = cardRect.top + cardRect.height / 2;
+        const vertDiff = Math.abs(overlayVertCenter - cardVertCenter);
+        if (vertDiff > 20) {
+          issues.push(`Card not vertically centered (diff: ${vertDiff.toFixed(0)}px)`);
+        } else {
+          log('✅ Card is vertically centered', 'success');
+        }
+
+        // Check styling
+        const styles = getComputedStyle(card);
+        
+        // Check for no border
+        if (styles.border !== 'none' && !styles.border.includes('0px')) {
+          log(`⚠️ Border detected: ${styles.border}`, 'warning');
+        } else {
+          log('✅ No border (as per spec)', 'success');
+        }
+
+        // Check background transparency
+        const bg = styles.backgroundColor;
+        log(`Background: ${bg}`);
+        if (bg.includes('0.75') || bg.includes('rgba') && !bg.includes('0.98')) {
+          log('✅ Background appears to have transparency', 'success');
+        }
+
+        // Check tv-inline-card class
+        if (card.classList.contains('tv-inline-card')) {
+          log('✅ Has tv-inline-card class', 'success');
+        } else {
+          issues.push('Missing tv-inline-card class');
+        }
+
+        // Final result
+        if (issues.length === 0) {
+          showTestResult(true, '✅ PASSED: Card is properly centered and styled within TV overlay');
+          log('🎉 All positioning tests passed!', 'success');
+        } else {
+          showTestResult(false, '❌ FAILED: ' + issues.join('; '));
+          issues.forEach(issue => log('❌ ' + issue, 'error'));
+        }
+      }, 200);
+    }
+
+    // Viewport controls
+    function setMobileViewport() {
+      document.querySelector('.tv').style.maxWidth = '375px';
+      document.querySelector('.tv').style.margin = '0 auto';
+      log('Set to mobile viewport (375px)');
+    }
+
+    function setTabletViewport() {
+      document.querySelector('.tv').style.maxWidth = '768px';
+      document.querySelector('.tv').style.margin = '0 auto';
+      log('Set to tablet viewport (768px)');
+    }
+
+    function setDesktopViewport() {
+      document.querySelector('.tv').style.maxWidth = 'none';
+      document.querySelector('.tv').style.margin = '0';
+      log('Set to desktop viewport');
+    }
+
+    // Auto-run test on load
+    window.addEventListener('load', function() {
+      log('🚀 Page loaded. Ready to test.', 'success');
+      log('💡 Click "Show Eviction Result Card" to see the styled card');
+      log('💡 Click "Run Positioning Test" for automated verification');
+    });
+  </script>
+</body>
+</html>

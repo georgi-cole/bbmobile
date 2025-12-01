@@ -1271,13 +1271,19 @@
       return;
     }
 
-    // Remove any existing inline card
-    const existing = tv.querySelector('.lv2-inline-card');
-    if (existing) existing.remove();
+    // Prefer tvOverlay for proper centering within safe areas
+    const container = document.querySelector('#tvOverlay') || tv;
 
-    // Create inline card
+    // Remove any existing inline card
+    const existing = container.querySelector('.lv2-inline-card');
+    if (existing) existing.remove();
+    // Also check parent TV for lingering cards
+    const tvExisting = tv.querySelector('.lv2-inline-card');
+    if (tvExisting) tvExisting.remove();
+
+    // Create inline card with TV inline card class for consistent styling
     const card = document.createElement('div');
-    card.className = 'lv2-inline-card';
+    card.className = 'lv2-inline-card tv-inline-card';
     
     // Add tone class
     if (tone === 'evict' || tone === 'live') {
@@ -1300,8 +1306,8 @@
     });
     card.appendChild(bodyDiv);
 
-    // Append to TV
-    tv.appendChild(card);
+    // Append to container (tvOverlay if available for proper centering)
+    container.appendChild(card);
 
     // Fade in
     await sleep(50);

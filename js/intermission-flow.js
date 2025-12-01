@@ -39,6 +39,33 @@
       return;
     }
     
+    // Try to use unified showTVIntermissionCard from TVCards module
+    if (global.TVCards && typeof global.TVCards.showTVIntermissionCard === 'function') {
+      console.info('[IntermissionFlow] Using TVCards.showTVIntermissionCard (unified TV styling)');
+      
+      // HOH → Tic Tac Toe, Veto → Dots and Boxes (per design spec)
+      const messageText = compType === 'Veto'
+        ? 'Play Dots and Boxes while you wait?'
+        : 'Play Tic Tac Toe while you wait?';
+      
+      global.TVCards.showTVIntermissionCard({
+        title: 'You cannot compete',
+        lines: [messageText],
+        compType: compType,
+        buttons: [
+          { label: 'Yes', value: 'yes', primary: true, ariaLabel: 'Yes, play game' },
+          { label: 'No', value: 'no', primary: false, ariaLabel: 'No, just wait' }
+        ]
+      }).then(function(result) {
+        if (result === 'yes') {
+          if (onYes) onYes();
+        } else {
+          if (onNo) onNo();
+        }
+      });
+      return;
+    }
+    
     // Fallback: original panel-based rendering
     console.warn('[IntermissionFlow] IntermissionCard not available, using fallback panel rendering');
     
@@ -51,9 +78,9 @@
 
     panel.innerHTML = '';
 
-    // Create offer card
+    // Create offer card with TV inline card styling
     const card = document.createElement('div');
-    card.className = 'intermission-offer-card';
+    card.className = 'intermission-offer-card tv-inline-card';
 
     // Title - unified text per design spec
     const title = document.createElement('div');

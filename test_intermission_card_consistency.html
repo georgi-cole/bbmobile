@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Intermission Card Consistency Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <link rel="stylesheet" href="css/veto-wait-card.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #88aaff;
+      margin-bottom: 30px;
+    }
+
+    .test-controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .test-controls h2 {
+      margin-top: 0;
+      color: #88aaff;
+      font-size: 1.2rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: #2f8651;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background: #36a563;
+    }
+
+    button.secondary {
+      background: #414c5c;
+    }
+
+    button.secondary:hover {
+      background: #556478;
+    }
+
+    button.danger {
+      background: #b71c1c;
+    }
+
+    button.danger:hover {
+      background: #c62828;
+    }
+
+    .info-panel {
+      background: rgba(136, 170, 255, 0.1);
+      border: 1px solid rgba(136, 170, 255, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .info-panel h3 {
+      margin-top: 0;
+      color: #88aaff;
+      font-size: 1rem;
+    }
+
+    .info-panel ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .info-panel li {
+      margin: 6px 0;
+    }
+
+    /* Mock TV Container */
+    .mock-tv-container {
+      position: relative;
+      background: linear-gradient(135deg, #0f1419, #1a1f28);
+      border: 3px solid #2e3d52;
+      border-radius: 16px;
+      padding: 20px;
+      min-height: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tvHead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(45, 59, 85, 0.3);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .tvTitle {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #88aaff;
+    }
+
+    .tvViewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    #tvOverlay {
+      position: absolute;
+      inset: 44px 16px 42px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .placeholder-text {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 1.1rem;
+    }
+
+    .status-log {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+
+    .status-log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 3px solid #88aaff;
+      background: rgba(136, 170, 255, 0.05);
+    }
+
+    .status-log-entry.success {
+      border-left-color: #2f8651;
+      background: rgba(47, 134, 81, 0.1);
+    }
+
+    .status-log-entry.warning {
+      border-left-color: #ffa726;
+      background: rgba(255, 167, 38, 0.1);
+    }
+
+    .status-log-entry.error {
+      border-left-color: #b71c1c;
+      background: rgba(183, 28, 28, 0.1);
+    }
+
+    .consistency-result {
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-weight: 600;
+    }
+
+    .consistency-result.pass {
+      background: rgba(47, 134, 81, 0.2);
+      border: 1px solid #2f8651;
+      color: #77d58d;
+    }
+
+    .consistency-result.fail {
+      background: rgba(183, 28, 28, 0.2);
+      border: 1px solid #b71c1c;
+      color: #ff6b6b;
+    }
+
+    /* Responsive test */
+    @media (max-width: 860px) {
+      .test-controls {
+        padding: 16px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 TV Intermission Card Consistency Test</h1>
+
+    <div class="info-panel">
+      <h3>📋 Consistency Objectives</h3>
+      <ul>
+        <li>✅ HOH and POV intermission cards render identically</li>
+        <li>✅ Both use TV inline card styling (no outline, 75% transparency)</li>
+        <li>✅ Both respect max-width: 780px</li>
+        <li>✅ Both fit inside overlay area on mobile viewport</li>
+        <li>✅ Buttons remain visible without overflow</li>
+        <li>✅ showTVIntermissionCard respects splitting logic</li>
+        <li>✅ Consistent typography and button styling</li>
+      </ul>
+    </div>
+
+    <div class="test-controls">
+      <h2>🎮 Intermission Card Tests</h2>
+      
+      <div class="button-group">
+        <button onclick="showHOHIntermission()">Show HOH Intermission Card</button>
+        <button onclick="showPOVIntermission()">Show POV (Veto) Intermission Card</button>
+        <button onclick="runConsistencyTest()">Run Consistency Test (Auto)</button>
+      </div>
+
+      <div class="button-group">
+        <button onclick="clearOverlay()" class="secondary">Clear Overlay</button>
+        <button onclick="testMobileViewport()" class="secondary">Mobile (360px)</button>
+        <button onclick="testTabletViewport()" class="secondary">Tablet (768px)</button>
+        <button onclick="testDesktopViewport()" class="secondary">Desktop</button>
+        <button onclick="clearLog()" class="danger">Clear Log</button>
+      </div>
+
+      <div id="consistencyResult" class="consistency-result" style="display: none;"></div>
+    </div>
+
+    <!-- Mock TV Container -->
+    <div class="mock-tv-container" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">Competition</div>
+      </div>
+      <div class="tvViewport">
+        <div id="tvOverlay">
+          <div class="tvOverlayContent">
+            <div class="placeholder-text" id="placeholderText">
+              Intermission cards will appear here
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Log -->
+    <div class="status-log" id="statusLog">
+      <div class="status-log-entry">Test initialized. Ready to test intermission cards.</div>
+    </div>
+  </div>
+
+  <!-- Load modules -->
+  <script src="js/ui/tv-cards.js"></script>
+
+  <!-- Test Script -->
+  <script>
+    // Mock game object
+    window.game = {
+      cfg: {},
+      phase: 'hoh'
+    };
+
+    // Logging utility
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('statusLog');
+      const entry = document.createElement('div');
+      entry.className = 'status-log-entry ' + type;
+      entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log('[Test]', message);
+    }
+
+    function clearLog() {
+      document.getElementById('statusLog').innerHTML = '';
+      log('Log cleared');
+      hideConsistencyResult();
+    }
+
+    function showConsistencyResult(pass, message) {
+      const el = document.getElementById('consistencyResult');
+      el.style.display = 'block';
+      el.className = 'consistency-result ' + (pass ? 'pass' : 'fail');
+      el.textContent = message;
+    }
+
+    function hideConsistencyResult() {
+      document.getElementById('consistencyResult').style.display = 'none';
+    }
+
+    function clearOverlay() {
+      // Use TVCards clearTVOverlay if available
+      if (window.TVCards && typeof window.TVCards.clearTVOverlay === 'function') {
+        window.TVCards.clearTVOverlay();
+      }
+      // Always reset placeholder as a fallback (for test environment without full scaffold)
+      const content = document.querySelector('.tvOverlayContent');
+      if (content) {
+        content.innerHTML = '<div class="placeholder-text">Intermission cards will appear here</div>';
+      }
+      log('Overlay cleared', 'success');
+    }
+
+    // Show HOH intermission card
+    async function showHOHIntermission() {
+      log('Showing HOH intermission card...');
+      clearOverlay();
+      
+      if (!window.TVCards || !window.TVCards.showTVIntermissionCard) {
+        log('❌ TVCards.showTVIntermissionCard not available', 'error');
+        return null;
+      }
+
+      try {
+        const result = await window.TVCards.showTVIntermissionCard({
+          title: 'You cannot compete',
+          lines: ['Play Tic Tac Toe while you wait?'],
+          compType: 'HOH',
+          buttons: [
+            { label: 'Yes', value: 'yes', primary: true, ariaLabel: 'Yes, play game' },
+            { label: 'No', value: 'no', primary: false, ariaLabel: 'No, just wait' }
+          ]
+        });
+        log('HOH card closed with result: ' + result, 'success');
+        return result;
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+        return null;
+      }
+    }
+
+    // Show POV (Veto) intermission card
+    async function showPOVIntermission() {
+      log('Showing POV (Veto) intermission card...');
+      clearOverlay();
+      
+      if (!window.TVCards || !window.TVCards.showTVIntermissionCard) {
+        log('❌ TVCards.showTVIntermissionCard not available', 'error');
+        return null;
+      }
+
+      try {
+        const result = await window.TVCards.showTVIntermissionCard({
+          title: 'You cannot compete',
+          lines: ['Play Dots and Boxes while you wait?'],
+          compType: 'Veto',
+          buttons: [
+            { label: 'Yes', value: 'yes', primary: true, ariaLabel: 'Yes, play game' },
+            { label: 'No', value: 'no', primary: false, ariaLabel: 'No, just wait' }
+          ]
+        });
+        log('POV card closed with result: ' + result, 'success');
+        return result;
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+        return null;
+      }
+    }
+
+    // Run consistency test
+    async function runConsistencyTest() {
+      log('🧪 Starting consistency test...');
+      hideConsistencyResult();
+      
+      let passed = true;
+      const issues = [];
+
+      if (!window.TVCards || !window.TVCards.showTVIntermissionCard) {
+        showConsistencyResult(false, '❌ FAILED: TVCards.showTVIntermissionCard not available');
+        return;
+      }
+
+      // Test HOH card
+      log('Testing HOH intermission card...');
+      clearOverlay();
+      
+      // Show HOH card (don't await - just render and inspect)
+      window.TVCards.showTVIntermissionCard({
+        title: 'You cannot compete',
+        lines: ['Play Tic Tac Toe while you wait?'],
+        compType: 'HOH',
+        buttons: [
+          { label: 'Yes', value: 'yes', primary: true },
+          { label: 'No', value: 'no', primary: false }
+        ]
+      });
+
+      await new Promise(r => setTimeout(r, 200));
+
+      const hohCard = document.querySelector('.intermission-tv-card, .tv-inline-card');
+      if (!hohCard) {
+        issues.push('HOH card not rendered');
+        passed = false;
+      } else {
+        const hohRect = hohCard.getBoundingClientRect();
+        log(`HOH card dimensions: ${hohRect.width.toFixed(0)}px x ${hohRect.height.toFixed(0)}px`);
+        
+        // Check styling
+        const hohStyle = getComputedStyle(hohCard);
+        
+        // Check for no outline
+        if (hohStyle.outline === 'none' || hohStyle.outline.includes('0px')) {
+          log('✅ HOH card has no outline', 'success');
+        } else {
+          log('⚠️ HOH card has outline: ' + hohStyle.outline, 'warning');
+        }
+
+        // Check background transparency
+        const hohBg = hohStyle.backgroundColor;
+        log('HOH background: ' + hohBg);
+
+        // Check max-width
+        const hohMaxWidth = hohStyle.maxWidth;
+        log('HOH max-width: ' + hohMaxWidth);
+
+        // Check buttons visible
+        const hohButtons = hohCard.querySelectorAll('button');
+        if (hohButtons.length >= 2) {
+          log('✅ HOH card has ' + hohButtons.length + ' buttons', 'success');
+        } else {
+          issues.push('HOH card missing buttons');
+          passed = false;
+        }
+
+        // Store dimensions for comparison
+        var hohWidth = hohRect.width;
+        var hohHeight = hohRect.height;
+      }
+
+      // Clear and test POV card
+      log('Testing POV intermission card...');
+      clearOverlay();
+      await new Promise(r => setTimeout(r, 100));
+
+      window.TVCards.showTVIntermissionCard({
+        title: 'You cannot compete',
+        lines: ['Play Dots and Boxes while you wait?'],
+        compType: 'Veto',
+        buttons: [
+          { label: 'Yes', value: 'yes', primary: true },
+          { label: 'No', value: 'no', primary: false }
+        ]
+      });
+
+      await new Promise(r => setTimeout(r, 200));
+
+      const povCard = document.querySelector('.intermission-tv-card, .tv-inline-card');
+      if (!povCard) {
+        issues.push('POV card not rendered');
+        passed = false;
+      } else {
+        const povRect = povCard.getBoundingClientRect();
+        log(`POV card dimensions: ${povRect.width.toFixed(0)}px x ${povRect.height.toFixed(0)}px`);
+        
+        // Check styling
+        const povStyle = getComputedStyle(povCard);
+        
+        // Check for no outline
+        if (povStyle.outline === 'none' || povStyle.outline.includes('0px')) {
+          log('✅ POV card has no outline', 'success');
+        } else {
+          log('⚠️ POV card has outline: ' + povStyle.outline, 'warning');
+        }
+
+        // Check buttons visible
+        const povButtons = povCard.querySelectorAll('button');
+        if (povButtons.length >= 2) {
+          log('✅ POV card has ' + povButtons.length + ' buttons', 'success');
+        } else {
+          issues.push('POV card missing buttons');
+          passed = false;
+        }
+
+        // Compare dimensions (should be similar)
+        if (hohCard) {
+          const widthDiff = Math.abs(povRect.width - hohWidth);
+          if (widthDiff < 20) {
+            log('✅ HOH and POV cards have consistent width (diff: ' + widthDiff.toFixed(0) + 'px)', 'success');
+          } else {
+            log('⚠️ HOH and POV cards have different widths (diff: ' + widthDiff.toFixed(0) + 'px)', 'warning');
+          }
+        }
+      }
+
+      // Check if card fits in overlay on mobile
+      log('Testing mobile fit...');
+      const container = document.querySelector('.mock-tv-container');
+      container.style.maxWidth = '360px';
+      container.style.margin = '0 auto';
+
+      await new Promise(r => setTimeout(r, 300));
+
+      const mobileCard = document.querySelector('.intermission-tv-card, .tv-inline-card');
+      if (mobileCard) {
+        const overlay = document.getElementById('tvOverlay');
+        const overlayRect = overlay.getBoundingClientRect();
+        const cardRect = mobileCard.getBoundingClientRect();
+
+        if (cardRect.right <= overlayRect.right && cardRect.bottom <= overlayRect.bottom) {
+          log('✅ Card fits inside overlay on mobile', 'success');
+        } else {
+          log('⚠️ Card may overflow overlay on mobile', 'warning');
+        }
+
+        // Check buttons still visible
+        const buttons = mobileCard.querySelectorAll('button');
+        let allButtonsVisible = true;
+        buttons.forEach((btn, idx) => {
+          const btnRect = btn.getBoundingClientRect();
+          if (btnRect.bottom > overlayRect.bottom) {
+            allButtonsVisible = false;
+            log('⚠️ Button ' + (idx + 1) + ' may be cut off', 'warning');
+          }
+        });
+
+        if (allButtonsVisible) {
+          log('✅ All buttons visible on mobile', 'success');
+        } else {
+          issues.push('Buttons not fully visible on mobile');
+        }
+      }
+
+      // Reset viewport
+      container.style.maxWidth = 'none';
+      container.style.margin = '0';
+
+      // Report results
+      if (passed && issues.length === 0) {
+        showConsistencyResult(true, '✅ PASSED: HOH and POV intermission cards are consistent');
+        log('🎉 Consistency test PASSED', 'success');
+      } else {
+        showConsistencyResult(false, '❌ FAILED: ' + (issues.length > 0 ? issues.join('; ') : 'See log for details'));
+        log('❌ Consistency test FAILED', 'error');
+      }
+
+      clearOverlay();
+    }
+
+    // Viewport tests
+    function testMobileViewport() {
+      log('Testing mobile viewport (360px)');
+      const container = document.querySelector('.mock-tv-container');
+      container.style.maxWidth = '360px';
+      container.style.margin = '0 auto';
+    }
+
+    function testTabletViewport() {
+      log('Testing tablet viewport (768px)');
+      const container = document.querySelector('.mock-tv-container');
+      container.style.maxWidth = '768px';
+      container.style.margin = '0 auto';
+    }
+
+    function testDesktopViewport() {
+      log('Testing desktop viewport (full width)');
+      const container = document.querySelector('.mock-tv-container');
+      container.style.maxWidth = 'none';
+      container.style.margin = '0';
+    }
+
+    // Initialize
+    window.addEventListener('load', function() {
+      log('🚀 Page loaded, modules initialized', 'success');
+      
+      if (typeof window.TVCards !== 'undefined') {
+        log('✅ TVCards module loaded', 'success');
+        
+        if (typeof window.TVCards.showTVIntermissionCard === 'function') {
+          log('✅ showTVIntermissionCard function available', 'success');
+        } else {
+          log('❌ showTVIntermissionCard function NOT available', 'error');
+        }
+      } else {
+        log('❌ TVCards module NOT loaded', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -10,14 +10,18 @@
    - Smooth animations and transitions
    - Accessibility-compliant focus states
    - Button stacking on narrow screens
+   
+   TV INLINE CARD SPEC (unified styling):
+   - No border/outline for cleaner look
+   - 75% background transparency
+   - Max-width: 780px
+   - Safe max-height with overflow-y:auto
    ============================================================================ */
 
 :root {
-  --vwc-bg-start: #182232;
-  --vwc-bg-end: #202c40;
-  --vwc-border: #2e3d52;
+  --vwc-bg: rgba(24, 34, 50, 0.75); /* 75% transparency */
   --vwc-text: #d7e5f7;
-  --vwc-heading: #88aaff;
+  --vwc-heading: #60a5fa; /* Consistent with intermission cards */
   --vwc-btn-yes: #2f8651;
   --vwc-btn-yes-hover: #36a563;
   --vwc-btn-no: #414c5c;
@@ -26,35 +30,43 @@
 }
 
 /* ============================================================================
-   CARD CONTAINER
+   CARD CONTAINER - TV INLINE CARD STYLING
    ============================================================================ */
 
 .veto-wait-card {
   position: relative;
   margin: 12px auto;
-  background: linear-gradient(135deg, var(--vwc-bg-start), var(--vwc-bg-end));
-  border: 1px solid var(--vwc-border);
+  /* TV Inline Card Spec: 75% transparency background */
+  background: var(--vwc-bg);
+  /* TV Inline Card Spec: No border/outline */
+  border: none;
+  outline: none;
   border-radius: 14px;
   padding: 14px 16px;
-  max-width: 480px;
+  /* TV Inline Card Spec: max-width 780px */
+  max-width: min(780px, 90%);
   width: 90%;
   box-shadow: 0 6px 20px -6px var(--vwc-shadow);
   color: var(--vwc-text);
   font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   animation: vwcFadeIn 300ms ease-out;
+  /* TV Inline Card Spec: safe max-height with overflow */
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Tablet breakpoint */
 @media (min-width: 641px) and (max-width: 860px) {
   .veto-wait-card {
-    max-width: 420px;
+    max-width: min(780px, 85%);
   }
 }
 
 /* Mobile breakpoint */
 @media (max-width: 640px) {
   .veto-wait-card {
-    max-width: 340px;
+    max-width: min(780px, 92%);
     padding: 12px 14px;
   }
 }
@@ -103,6 +115,8 @@
   display: flex;
   gap: 12px;
   margin-top: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* Stack buttons vertically on very narrow screens */
@@ -118,6 +132,7 @@
 
 .vwc-btn {
   flex: 1;
+  max-width: 160px;
   background: var(--vwc-btn-no);
   border: none;
   border-radius: 8px;
@@ -237,4 +252,19 @@
   .veto-wait-card {
     display: none;
   }
+}
+
+/* ============================================================================
+   INTERMISSION TV CARD
+   Additional styling for intermission cards rendered via showTVIntermissionCard
+   ============================================================================ */
+
+.intermission-tv-card {
+  /* Inherit TV inline card base styling */
+  text-align: center;
+}
+
+.intermission-tv-card h3 {
+  color: var(--vwc-heading);
+  text-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
 }

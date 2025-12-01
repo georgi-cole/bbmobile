@@ -55,16 +55,19 @@
       animation: slideUpFade 0.4s ease-out;
     `;
 
-    // Create card - compact styling for TV overlay
+    // Create card - compact styling for TV overlay using TV inline card standards
     const card = document.createElement('div');
-    card.className = 'intermission-offer-card in-tv';
+    card.className = 'intermission-offer-card in-tv tv-inline-card';
     card.style.cssText = `
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(51, 65, 85, 0.75));
+      background: rgba(30, 41, 59, 0.75);
       border: none;
+      outline: none;
       border-radius: 12px;
       padding: 16px;
+      max-width: min(780px, 92%);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     `;
 
     // Title - unified text for both competition types
