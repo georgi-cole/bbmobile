@@ -82,7 +82,13 @@
     final4CombinedPower: true,  // When HOH === POV holder, allow eviction of any of the other 3 players (not just nominees)
     
     // Intermission Games (feature-flagged, on by default)
-    enableIntermissionGames: true  // When true, offer Tic Tac Toe game when player is ineligible for HOH/Veto competitions
+    enableIntermissionGames: true,  // When true, offer Tic Tac Toe game when player is ineligible for HOH/Veto competitions
+    
+    // Avatar Preloading Configuration
+    avatarPreloadConcurrency: 8,    // Max concurrent avatar requests (mobile stability)
+    avatarPreloadTimeoutMs: 7000,   // Timeout before forcing ready (ms)
+    avatarReadyPercent: 0.99,       // Percentage of avatars needed before ready event
+    avatarLoadMode: 'batch'         // 'batch' (gate roster) | 'skeleton' (progressive load)
   };
 
   // Load configuration from localStorage
@@ -146,6 +152,12 @@
     // Accessibility
     'autoShowRulesOnStart',
     'skipIntros',
+    
+    // Avatar preloading (can be changed immediately)
+    'avatarPreloadConcurrency',
+    'avatarPreloadTimeoutMs',
+    'avatarReadyPercent',
+    'avatarLoadMode',
     
     // Card animation
     'cardHoldMs',

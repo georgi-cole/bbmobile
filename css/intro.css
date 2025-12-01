@@ -728,3 +728,149 @@ body:not(.main-screen-built) .topbar {
     border-right-color: #00d4ff;
   }
 }
+
+/* ===== Avatar Preload Overlay - Enhanced A11y ===== */
+/* Full-screen loading dialog for avatar preloading */
+.avatar-preload-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9993;
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+  pointer-events: none;
+}
+
+.avatar-preload-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.avatar-preload-overlay--hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===== Avatar Skeleton Mode Styles ===== */
+/* Skeleton placeholder for avatar images */
+.avatar-skeleton {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #2a3a4a 0%, #1a2a3a 100%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* Shimmer animation for skeleton */
+.avatar-skeleton__shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: avatar-skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes avatar-skeleton-shimmer {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(200%); }
+}
+
+/* Avatar image states for skeleton mode */
+.avatar-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 350ms ease-in-out;
+}
+
+.avatar-image--loading {
+  opacity: 0;
+}
+
+.avatar-image--loaded {
+  opacity: 1;
+}
+
+.avatar-image--fallback {
+  opacity: 1;
+  /* Slight desaturation for fallback avatars */
+  filter: saturate(0.8);
+}
+
+/* ===== Roster Grid Gating (Batch Mode) ===== */
+/* Hide roster until avatars:ready event fires */
+.roster-grid--gated {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Roster grid fade-in animation */
+.roster-grid--ready {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  animation: roster-fade-in 400ms ease-out forwards;
+}
+
+@keyframes roster-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Top roster gating */
+.top-roster--gated {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.top-roster--ready {
+  opacity: 1;
+  visibility: visible;
+  animation: roster-fade-in 400ms ease-out forwards;
+}
+
+/* ===== Reduced Motion for Skeleton Mode ===== */
+@media (prefers-reduced-motion: reduce) {
+  .avatar-skeleton__shimmer {
+    animation: none !important;
+  }
+  
+  .avatar-image {
+    transition: opacity 100ms ease !important;
+  }
+  
+  .roster-grid--ready,
+  .top-roster--ready {
+    animation: none !important;
+    opacity: 1;
+  }
+}

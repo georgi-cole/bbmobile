@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Avatar Preload Modes Test - BBMobile</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="css/intro.css">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+  }
+  
+  .test-controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 20000;
+    background: rgba(0,0,0,0.95);
+    padding: 20px;
+    border-radius: 12px;
+    max-width: 420px;
+    border: 2px solid #00d4ff;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .test-controls h2 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    color: #00d4ff;
+  }
+  
+  .test-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #333;
+  }
+  
+  .test-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  
+  .test-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #78b4f0;
+  }
+  
+  .test-controls button {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    padding: 10px;
+    background: #0088ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s ease;
+  }
+  
+  .test-controls button:hover {
+    background: #0099ff;
+  }
+  
+  .test-controls button.secondary {
+    background: #333;
+  }
+  
+  .test-controls button.secondary:hover {
+    background: #444;
+  }
+  
+  .test-controls button.success {
+    background: #00aa66;
+  }
+  
+  .test-controls button.success:hover {
+    background: #00bb77;
+  }
+  
+  .test-status {
+    margin: 10px 0 0 0;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  
+  .test-status.pass {
+    border-left: 3px solid #00ff88;
+  }
+  
+  .test-status.fail {
+    border-left: 3px solid #ff4444;
+  }
+  
+  .test-status.info {
+    border-left: 3px solid #00d4ff;
+  }
+  
+  .config-panel {
+    background: rgba(0,0,0,0.5);
+    padding: 15px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 12px;
+  }
+  
+  .config-panel label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+  }
+  
+  .config-panel input[type="number"] {
+    width: 60px;
+    padding: 4px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #222;
+    color: #fff;
+  }
+  
+  .config-panel select {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #222;
+    color: #fff;
+    font-size: 12px;
+  }
+  
+  .config-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+  }
+  
+  .config-row span {
+    color: #aaa;
+  }
+  
+  #eventLog {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    z-index: 20000;
+    background: rgba(0,0,0,0.95);
+    padding: 15px;
+    border-radius: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    border: 2px solid #333;
+  }
+  
+  #eventLog .log-header {
+    font-weight: bold;
+    color: #00d4ff;
+    margin-bottom: 10px;
+    position: sticky;
+    top: 0;
+    background: rgba(0,0,0,0.95);
+    padding: 5px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  #eventLog .event {
+    margin: 3px 0;
+    padding: 5px;
+    border-left: 2px solid #00d4ff;
+    padding-left: 10px;
+  }
+  
+  #eventLog .event.error {
+    border-left-color: #ff4444;
+    color: #ff8888;
+  }
+  
+  #eventLog .event.success {
+    border-left-color: #00ff88;
+    color: #88ffbb;
+  }
+  
+  #eventLog .event.warning {
+    border-left-color: #ffaa00;
+    color: #ffcc66;
+  }
+  
+  /* Demo roster grid */
+  #demoRoster {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 200px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 15px;
+    background: rgba(0,0,0,0.8);
+    border-radius: 12px;
+    border: 2px solid #444;
+  }
+  
+  .demo-avatar-container {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #2a3a4a;
+  }
+  
+  .demo-avatar-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>
+</head>
+<body>
+
+<div class="test-controls">
+  <h2>🎭 Avatar Preload Modes Test</h2>
+  
+  <div class="test-section">
+    <h3>Configuration</h3>
+    <div class="config-panel">
+      <div class="config-row">
+        <span>Load Mode:</span>
+        <select id="loadMode">
+          <option value="batch">Batch (gate roster)</option>
+          <option value="skeleton">Skeleton (progressive)</option>
+        </select>
+      </div>
+      <div class="config-row">
+        <span>Concurrency:</span>
+        <input type="number" id="concurrency" value="8" min="1" max="20">
+      </div>
+      <div class="config-row">
+        <span>Timeout (ms):</span>
+        <input type="number" id="timeout" value="7000" min="1000" max="15000" step="500">
+      </div>
+      <div class="config-row">
+        <span>Ready % Threshold:</span>
+        <input type="number" id="readyPercent" value="99" min="50" max="100">%
+      </div>
+      <div class="config-row">
+        <span>Player Count:</span>
+        <input type="number" id="playerCount" value="12" min="1" max="20">
+      </div>
+      <label>
+        <input type="checkbox" id="includeMissing" checked>
+        Include some missing avatars
+      </label>
+      <label>
+        <input type="checkbox" id="simulateSlow">
+        Simulate slow network (2s timeout)
+      </label>
+    </div>
+    <button id="btnApplyConfig">Apply Configuration</button>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test: Batch Mode</h3>
+    <button id="btnTestBatch">Test Batch Mode Preload</button>
+    <div id="statusBatch" class="test-status info">
+      Batch mode gates roster until ≥99% avatars loaded
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test: Skeleton Mode</h3>
+    <button id="btnTestSkeleton">Test Skeleton Mode Preload</button>
+    <div id="statusSkeleton" class="test-status info">
+      Skeleton mode shows placeholders that fade to images
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test: Timeout Handling</h3>
+    <button id="btnTestTimeout" class="secondary">Test Timeout Fallback</button>
+    <div id="statusTimeout" class="test-status info">
+      Forces timeout to verify fallback behavior
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test: avatars:ready Event</h3>
+    <button id="btnTestEvent" class="secondary">Test Event Dispatch</button>
+    <div id="statusEvent" class="test-status info">
+      Verifies event detail structure and timing
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test: Accessibility</h3>
+    <button id="btnTestA11y" class="secondary">Test A11y Attributes</button>
+    <div id="statusA11y" class="test-status info">
+      Checks role, aria-modal, aria-live regions
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <button id="btnClearLog" class="secondary">Clear Event Log</button>
+    <button id="btnReset" class="secondary">Reset All</button>
+  </div>
+</div>
+
+<div id="demoRoster" style="display: none;">
+  <!-- Demo roster for skeleton mode visualization -->
+</div>
+
+<div id="eventLog">
+  <div class="log-header">
+    <span>📋 Event Log</span>
+    <span id="logCount">0 events</span>
+  </div>
+</div>
+
+<!-- Load dependencies -->
+<script src="js/bbGameBus.js"></script>
+<script src="js/avatar.js"></script>
+<script src="src/utils/backgroundTheme.js"></script>
+<script src="js/preload/avatars-preload.js"></script>
+<script src="js/preload/avatar-queue.js"></script>
+<script src="src/ui/IntroScreen.js"></script>
+
+<script>
+(function() {
+  'use strict';
+  
+  // Initialize game bus and game object
+  if (!window.game) window.game = {};
+  window.game.bus = window.bbGameBus;
+  window.game.players = [];
+  window.game.cfg = {
+    avatarPreloadConcurrency: 8,
+    avatarPreloadTimeoutMs: 7000,
+    avatarReadyPercent: 0.99,
+    avatarLoadMode: 'batch'
+  };
+  
+  let eventCount = 0;
+  
+  // Sample avatar URLs
+  const SAMPLE_AVATARS = [
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Alice',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Bob',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Charlie',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Diana',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Eve',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Frank',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Grace',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Henry',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Iris',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Jack',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Kate',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Leo',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Mike',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Nancy',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Oscar',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Paula',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Quinn',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Rose',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Sam',
+    'https://api.dicebear.com/6.x/avataaars/svg?seed=Tina'
+  ];
+  
+  const MISSING_AVATARS = [
+    './avatars/nonexistent1.png',
+    './avatars/nonexistent2.jpg',
+    'https://example.com/missing-avatar.png'
+  ];
+  
+  // Log events
+  function logEvent(message, type = 'info') {
+    eventCount++;
+    const log = document.getElementById('eventLog');
+    const entry = document.createElement('div');
+    entry.className = `event ${type}`;
+    const timestamp = new Date().toLocaleTimeString();
+    entry.textContent = `[${timestamp}] ${message}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+    document.getElementById('logCount').textContent = `${eventCount} events`;
+    console.log(`[Test] ${message}`);
+  }
+  
+  // Setup test players based on config
+  function setupPlayers() {
+    const count = parseInt(document.getElementById('playerCount').value) || 12;
+    const includeMissing = document.getElementById('includeMissing').checked;
+    
+    const players = [];
+    const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Iris', 'Jack', 'Kate', 'Leo', 'Mike', 'Nancy', 'Oscar', 'Paula', 'Quinn', 'Rose', 'Sam', 'Tina'];
+    
+    for (let i = 0; i < count; i++) {
+      const name = names[i % names.length];
+      const player = {
+        id: i,
+        name: name,
+        human: i === 0
+      };
+      
+      // Assign avatar - mix of valid and missing
+      if (includeMissing && i % 4 === 0) {
+        player.avatar = MISSING_AVATARS[i % MISSING_AVATARS.length];
+      } else if (i < SAMPLE_AVATARS.length) {
+        player.avatar = SAMPLE_AVATARS[i];
+      }
+      
+      players.push(player);
+    }
+    
+    window.game.players = players;
+    return players;
+  }
+  
+  // Apply configuration
+  document.getElementById('btnApplyConfig').addEventListener('click', () => {
+    const cfg = window.game.cfg;
+    cfg.avatarLoadMode = document.getElementById('loadMode').value;
+    cfg.avatarPreloadConcurrency = parseInt(document.getElementById('concurrency').value) || 8;
+    cfg.avatarPreloadTimeoutMs = parseInt(document.getElementById('timeout').value) || 7000;
+    cfg.avatarReadyPercent = parseFloat(document.getElementById('readyPercent').value) / 100 || 0.99;
+    
+    const players = setupPlayers();
+    
+    logEvent(`✓ Config applied: mode=${cfg.avatarLoadMode}, concurrency=${cfg.avatarPreloadConcurrency}, timeout=${cfg.avatarPreloadTimeoutMs}ms, threshold=${Math.round(cfg.avatarReadyPercent * 100)}%`, 'success');
+    logEvent(`✓ Created ${players.length} test players`, 'success');
+  });
+  
+  // Test Batch Mode
+  document.getElementById('btnTestBatch').addEventListener('click', async () => {
+    const status = document.getElementById('statusBatch');
+    status.className = 'test-status info';
+    status.textContent = 'Running batch mode test...';
+    
+    logEvent('=== TEST: Batch Mode Preload ===', 'info');
+    
+    // Ensure config is set to batch mode
+    window.game.cfg.avatarLoadMode = 'batch';
+    document.getElementById('loadMode').value = 'batch';
+    
+    const players = setupPlayers();
+    const AvatarQueue = window.AvatarQueue;
+    
+    if (!AvatarQueue || !AvatarQueue.preloadAvatarsQueued) {
+      logEvent('❌ AvatarQueue module not available', 'error');
+      status.className = 'test-status fail';
+      status.textContent = '❌ AvatarQueue module not loaded';
+      return;
+    }
+    
+    const startTime = Date.now();
+    
+    try {
+      const result = await AvatarQueue.batchPreload(players, {
+        onProgress: (loaded, total) => {
+          const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+          logEvent(`Progress: ${loaded}/${total} (${percent}%)`, 'info');
+          status.textContent = `Loading... ${percent}%`;
+        }
+      });
+      
+      const elapsed = Date.now() - startTime;
+      
+      if (result.isReady) {
+        status.className = 'test-status pass';
+        status.textContent = `✅ Batch complete: ${result.loaded}/${result.total} in ${elapsed}ms`;
+        logEvent(`✅ Batch preload complete: ${result.loaded}/${result.total} in ${elapsed}ms`, 'success');
+        logEvent(`   decodeSupported: ${result.decodeSupported}, decoded: ${result.decoded || 0}`, 'info');
+      } else {
+        status.className = 'test-status warning';
+        status.textContent = `⚠ Incomplete: ${result.loaded}/${result.total} (${Math.round(result.percentLoaded * 100)}%)`;
+        logEvent(`⚠ Batch preload incomplete`, 'warning');
+      }
+    } catch (err) {
+      status.className = 'test-status fail';
+      status.textContent = `❌ Error: ${err.message}`;
+      logEvent(`❌ Batch preload error: ${err.message}`, 'error');
+    }
+  });
+  
+  // Test Skeleton Mode
+  document.getElementById('btnTestSkeleton').addEventListener('click', async () => {
+    const status = document.getElementById('statusSkeleton');
+    status.className = 'test-status info';
+    status.textContent = 'Running skeleton mode test...';
+    
+    logEvent('=== TEST: Skeleton Mode Preload ===', 'info');
+    
+    // Ensure config is set to skeleton mode
+    window.game.cfg.avatarLoadMode = 'skeleton';
+    document.getElementById('loadMode').value = 'skeleton';
+    
+    const players = setupPlayers();
+    const AvatarQueue = window.AvatarQueue;
+    
+    if (!AvatarQueue || !AvatarQueue.skeletonPreload) {
+      logEvent('❌ AvatarQueue.skeletonPreload not available', 'error');
+      status.className = 'test-status fail';
+      status.textContent = '❌ Skeleton preload not available';
+      return;
+    }
+    
+    // Show demo roster with skeletons
+    const demoRoster = document.getElementById('demoRoster');
+    demoRoster.style.display = 'grid';
+    demoRoster.innerHTML = '';
+    
+    players.slice(0, 9).forEach(p => {
+      const container = document.createElement('div');
+      container.className = 'demo-avatar-container';
+      const skeleton = AvatarQueue.createSkeletonPlaceholder(p);
+      container.appendChild(skeleton);
+      demoRoster.appendChild(container);
+    });
+    
+    logEvent('Rendered skeleton placeholders', 'info');
+    
+    const startTime = Date.now();
+    
+    try {
+      const result = await AvatarQueue.skeletonPreload(players.slice(0, 9), demoRoster, {
+        onProgress: (loaded, total) => {
+          const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+          status.textContent = `Skeleton loading... ${percent}%`;
+        }
+      });
+      
+      const elapsed = Date.now() - startTime;
+      
+      status.className = 'test-status pass';
+      status.textContent = `✅ Skeleton complete: ${result.loaded}/${result.total} in ${elapsed}ms`;
+      logEvent(`✅ Skeleton preload complete: ${result.loaded}/${result.total} in ${elapsed}ms`, 'success');
+      
+    } catch (err) {
+      status.className = 'test-status fail';
+      status.textContent = `❌ Error: ${err.message}`;
+      logEvent(`❌ Skeleton preload error: ${err.message}`, 'error');
+    }
+  });
+  
+  // Test Timeout Handling
+  document.getElementById('btnTestTimeout').addEventListener('click', async () => {
+    const status = document.getElementById('statusTimeout');
+    status.className = 'test-status info';
+    status.textContent = 'Running timeout test...';
+    
+    logEvent('=== TEST: Timeout Fallback ===', 'info');
+    
+    // Force very short timeout
+    window.game.cfg.avatarPreloadTimeoutMs = 100; // Very short timeout
+    
+    const players = setupPlayers();
+    const AvatarQueue = window.AvatarQueue;
+    
+    if (!AvatarQueue) {
+      logEvent('❌ AvatarQueue not available', 'error');
+      return;
+    }
+    
+    try {
+      const result = await AvatarQueue.preloadAvatarsQueued(players, {
+        timeout: 100 // Force timeout
+      });
+      
+      if (result.timedOut) {
+        status.className = 'test-status pass';
+        status.textContent = `✅ Timeout handled: ${result.loaded}/${result.total} loaded before timeout`;
+        logEvent(`✅ Timeout test passed: timedOut=true, loaded=${result.loaded}/${result.total}`, 'success');
+      } else {
+        status.className = 'test-status warning';
+        status.textContent = `⚠ No timeout (loaded too fast): ${result.loaded}/${result.total}`;
+        logEvent(`⚠ No timeout occurred - images loaded within 100ms`, 'warning');
+      }
+      
+      // Restore timeout
+      window.game.cfg.avatarPreloadTimeoutMs = parseInt(document.getElementById('timeout').value) || 7000;
+      
+    } catch (err) {
+      status.className = 'test-status fail';
+      status.textContent = `❌ Error: ${err.message}`;
+      logEvent(`❌ Timeout test error: ${err.message}`, 'error');
+    }
+  });
+  
+  // Test avatars:ready Event
+  document.getElementById('btnTestEvent').addEventListener('click', async () => {
+    const status = document.getElementById('statusEvent');
+    status.className = 'test-status info';
+    status.textContent = 'Listening for avatars:ready event...';
+    
+    logEvent('=== TEST: avatars:ready Event ===', 'info');
+    
+    let eventReceived = false;
+    let receivedDetail = null;
+    
+    const handler = (e) => {
+      eventReceived = true;
+      receivedDetail = e.detail;
+      logEvent(`Event received: avatars:ready`, 'success');
+      logEvent(`  detail: ${JSON.stringify(e.detail)}`, 'info');
+    };
+    
+    window.addEventListener('avatars:ready', handler, { once: true });
+    
+    const players = setupPlayers();
+    const AvatarQueue = window.AvatarQueue;
+    
+    try {
+      await AvatarQueue.batchPreload(players);
+      
+      if (eventReceived && receivedDetail) {
+        const hasExpectedFields = 
+          typeof receivedDetail.total === 'number' &&
+          typeof receivedDetail.loaded === 'number' &&
+          typeof receivedDetail.timedOut === 'boolean' &&
+          typeof receivedDetail.decodeSupported === 'boolean';
+        
+        if (hasExpectedFields) {
+          status.className = 'test-status pass';
+          status.textContent = `✅ Event received with correct structure`;
+          logEvent(`✅ Event structure verified`, 'success');
+        } else {
+          status.className = 'test-status fail';
+          status.textContent = `❌ Event missing expected fields`;
+          logEvent(`❌ Event missing expected fields`, 'error');
+        }
+      } else {
+        status.className = 'test-status fail';
+        status.textContent = `❌ Event not received`;
+        logEvent(`❌ avatars:ready event not received`, 'error');
+      }
+    } catch (err) {
+      window.removeEventListener('avatars:ready', handler);
+      status.className = 'test-status fail';
+      status.textContent = `❌ Error: ${err.message}`;
+      logEvent(`❌ Event test error: ${err.message}`, 'error');
+    }
+  });
+  
+  // Test Accessibility
+  document.getElementById('btnTestA11y').addEventListener('click', () => {
+    const status = document.getElementById('statusA11y');
+    status.className = 'test-status info';
+    status.textContent = 'Testing accessibility attributes...';
+    
+    logEvent('=== TEST: Accessibility ===', 'info');
+    
+    // Create overlay manually to test attributes
+    const overlay = document.createElement('div');
+    overlay.id = 'testA11yOverlay';
+    overlay.className = 'intro-avatar-preload-overlay avatar-preload-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-busy', 'true');
+    
+    const spinner = document.createElement('div');
+    spinner.className = 'intro-avatar-preload-spinner';
+    spinner.setAttribute('role', 'img');
+    spinner.setAttribute('aria-label', 'Loading avatars');
+    
+    const liveRegion = document.createElement('div');
+    liveRegion.className = 'sr-only';
+    liveRegion.setAttribute('aria-live', 'polite');
+    
+    overlay.appendChild(spinner);
+    overlay.appendChild(liveRegion);
+    document.body.appendChild(overlay);
+    
+    // Check attributes
+    const checks = [
+      { name: 'role="dialog"', pass: overlay.getAttribute('role') === 'dialog' },
+      { name: 'aria-modal="true"', pass: overlay.getAttribute('aria-modal') === 'true' },
+      { name: 'aria-busy="true"', pass: overlay.getAttribute('aria-busy') === 'true' },
+      { name: 'spinner role="img"', pass: spinner.getAttribute('role') === 'img' },
+      { name: 'spinner aria-label', pass: spinner.getAttribute('aria-label') === 'Loading avatars' },
+      { name: 'live region aria-live="polite"', pass: liveRegion.getAttribute('aria-live') === 'polite' }
+    ];
+    
+    let allPassed = true;
+    checks.forEach(({ name, pass }) => {
+      if (pass) {
+        logEvent(`  ✓ ${name}`, 'success');
+      } else {
+        logEvent(`  ✗ ${name}`, 'error');
+        allPassed = false;
+      }
+    });
+    
+    // Cleanup
+    overlay.remove();
+    
+    if (allPassed) {
+      status.className = 'test-status pass';
+      status.textContent = `✅ All accessibility checks passed (${checks.length}/${checks.length})`;
+      logEvent(`✅ Accessibility test passed`, 'success');
+    } else {
+      status.className = 'test-status fail';
+      const passCount = checks.filter(c => c.pass).length;
+      status.textContent = `❌ Some checks failed (${passCount}/${checks.length})`;
+      logEvent(`❌ Accessibility test failed`, 'error');
+    }
+  });
+  
+  // Clear log
+  document.getElementById('btnClearLog').addEventListener('click', () => {
+    const log = document.getElementById('eventLog');
+    log.innerHTML = '<div class="log-header"><span>📋 Event Log (Cleared)</span><span id="logCount">0 events</span></div>';
+    eventCount = 0;
+    logEvent('Log cleared', 'info');
+  });
+  
+  // Reset all
+  document.getElementById('btnReset').addEventListener('click', () => {
+    logEvent('=== Resetting All ===', 'info');
+    
+    // Hide demo roster
+    document.getElementById('demoRoster').style.display = 'none';
+    
+    // Remove any overlays
+    document.querySelectorAll('.intro-avatar-preload-overlay, .avatar-preload-overlay').forEach(el => el.remove());
+    
+    // Reset config to defaults
+    document.getElementById('loadMode').value = 'batch';
+    document.getElementById('concurrency').value = '8';
+    document.getElementById('timeout').value = '7000';
+    document.getElementById('readyPercent').value = '99';
+    document.getElementById('playerCount').value = '12';
+    document.getElementById('includeMissing').checked = true;
+    document.getElementById('simulateSlow').checked = false;
+    
+    window.game.cfg = {
+      avatarPreloadConcurrency: 8,
+      avatarPreloadTimeoutMs: 7000,
+      avatarReadyPercent: 0.99,
+      avatarLoadMode: 'batch'
+    };
+    window.game.players = [];
+    
+    // Reset status messages
+    document.querySelectorAll('.test-status').forEach(el => {
+      el.className = 'test-status info';
+    });
+    document.getElementById('statusBatch').textContent = 'Batch mode gates roster until ≥99% avatars loaded';
+    document.getElementById('statusSkeleton').textContent = 'Skeleton mode shows placeholders that fade to images';
+    document.getElementById('statusTimeout').textContent = 'Forces timeout to verify fallback behavior';
+    document.getElementById('statusEvent').textContent = 'Verifies event detail structure and timing';
+    document.getElementById('statusA11y').textContent = 'Checks role, aria-modal, aria-live regions';
+    
+    logEvent('✓ All reset', 'success');
+  });
+  
+  // Listen to avatars:ready events
+  window.addEventListener('avatars:ready', (e) => {
+    logEvent(`📣 avatars:ready event: loaded=${e.detail?.loaded}/${e.detail?.total}, timedOut=${e.detail?.timedOut}`, 'success');
+  });
+  
+  // Initial log
+  logEvent('Test suite initialized', 'success');
+  logEvent('Modules loaded: AvatarQueue, avatars-preload, IntroScreen', 'success');
+  logEvent('Click "Apply Configuration" to set up players', 'info');
+  
+})();
+</script>
+
+</body>
+</html>

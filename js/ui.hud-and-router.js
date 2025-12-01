@@ -18,6 +18,108 @@
   };
   const FALLBACK = UI.FALLBACK_AVATAR || getDicebearUrl('Guest');
 
+  // ------------ Roster Gating System (Batch Mode) ------------
+  // State for roster gating
+  let rosterGateState = {
+    avatarsReady: false,
+    pendingRender: false,
+    timedOut: false,
+    summary: null
+  };
+
+  /**
+   * Check if roster should be gated in batch mode
+   * @returns {boolean} True if batch mode is enabled and avatars not yet ready
+   */
+  function shouldGateRoster(){
+    const cfg = g.game?.cfg || g.cfg || {};
+    const loadMode = cfg.avatarLoadMode || 'batch';
+    
+    // Only gate in batch mode
+    if(loadMode !== 'batch') return false;
+    
+    // Don't gate if avatars are already ready
+    if(rosterGateState.avatarsReady) return false;
+    
+    return true;
+  }
+
+  /**
+   * Handle avatars:ready event - ungate roster and trigger render
+   * @param {CustomEvent} event - The avatars:ready event
+   */
+  function handleAvatarsReady(event){
+    const detail = event?.detail || {};
+    
+    console.info('[RosterGate] avatars:ready event received:', detail);
+    
+    rosterGateState.avatarsReady = true;
+    rosterGateState.timedOut = !!detail.timedOut;
+    rosterGateState.summary = detail;
+    
+    // Log warning if timed out
+    if(detail.timedOut){
+      console.warn('[RosterGate] Roster ungated after timeout - some avatars may not be loaded');
+    }
+    
+    // Ungate and render roster
+    ungateRoster();
+    
+    // Trigger pending render if any
+    if(rosterGateState.pendingRender){
+      rosterGateState.pendingRender = false;
+      try{
+        renderTopRoster();
+      }catch(e){
+        console.error('[RosterGate] Error rendering roster after ungate:', e);
+      }
+    }
+  }
+
+  /**
+   * Apply gated class to roster element
+   */
+  function gateRoster(){
+    const host = document.getElementById('topRoster');
+    if(host){
+      host.classList.add('top-roster--gated');
+      host.classList.remove('top-roster--ready');
+    }
+    console.info('[RosterGate] Roster gated');
+  }
+
+  /**
+   * Remove gated class and apply ready class with fade-in
+   */
+  function ungateRoster(){
+    const host = document.getElementById('topRoster');
+    if(host){
+      host.classList.remove('top-roster--gated');
+      host.classList.add('top-roster--ready');
+    }
+    console.info('[RosterGate] Roster ungated with fade-in');
+  }
+
+  /**
+   * Reset roster gate state (for game restart)
+   */
+  function resetRosterGate(){
+    rosterGateState = {
+      avatarsReady: false,
+      pendingRender: false,
+      timedOut: false,
+      summary: null
+    };
+    console.info('[RosterGate] State reset');
+  }
+
+  // Wire up avatars:ready event listener
+  window.addEventListener('avatars:ready', handleAvatarsReady);
+
+  // Export roster gate functions
+  g.resetRosterGate = resetRosterGate;
+  g.isRosterGated = () => shouldGateRoster();
+
   // ------------ Final 3 Pending Mask Helper ------------
   /**
    * Check if Final 3 Pending Mask should be active.
@@ -879,6 +981,14 @@ header.innerHTML = `
       const show = cfg.showTopRoster !== false;
       host.style.display = show ? '' : 'none';
       if(!show){ host.innerHTML=''; return; }
+
+      // Roster gating: In batch mode, defer render until avatars:ready
+      if(shouldGateRoster()){
+        console.info('[RosterGate] Roster render deferred - awaiting avatars:ready');
+        rosterGateState.pendingRender = true;
+        gateRoster();
+        // Still build the roster but keep it hidden
+      }
 
       host.innerHTML='';
       const n=(game.players||[]).length;
