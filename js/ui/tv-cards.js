@@ -34,6 +34,21 @@
    */
   var SAFE_MARGIN_PX = 24;
 
+  /**
+   * Fallback height (px) when #tvOverlay is not available.
+   */
+  var FALLBACK_OVERLAY_HEIGHT_PX = 400;
+
+  /**
+   * Approximate avatar row height (px) for measurement calculations.
+   */
+  var AVATAR_ROW_HEIGHT_PX = 100;
+
+  /**
+   * Card measurement width (px) for off-DOM measurement.
+   */
+  var MEASUREMENT_CARD_WIDTH_PX = 400;
+
   // ======= UTILITY FUNCTIONS =======
 
   function getP(id){ 
@@ -81,7 +96,7 @@
    */
   function computeOverlayAvailableHeight(){
     var tvOverlay = document.getElementById('tvOverlay');
-    if(!tvOverlay) return 400; // Fallback default
+    if(!tvOverlay) return FALLBACK_OVERLAY_HEIGHT_PX;
     
     var rect = tvOverlay.getBoundingClientRect();
     var availableHeight = rect.height - (SAFE_MARGIN_PX * 2);
@@ -113,7 +128,7 @@
     var measurer = document.createElement('div');
     measurer.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
     measurer.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;' +
-      'max-width:min(780px, 92%);width:400px;padding:22px 26px;';
+      'max-width:min(780px, 92%);width:' + MEASUREMENT_CARD_WIDTH_PX + 'px;padding:22px 26px;';
     
     // Add title if present (contributes to height)
     if(opts.title && !isCeremonyTitle(opts.title)){
@@ -127,7 +142,7 @@
     // Account for avatar row height if present
     if(opts.hasAvatars){
       var avatarPlaceholder = document.createElement('div');
-      avatarPlaceholder.style.height = '100px'; // Approximate avatar row height
+      avatarPlaceholder.style.height = AVATAR_ROW_HEIGHT_PX + 'px';
       avatarPlaceholder.style.marginBottom = '16px';
       measurer.appendChild(avatarPlaceholder);
     }

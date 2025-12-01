@@ -17,12 +17,19 @@
   --theme-primary: var(--accent, #2d3b55);
   --theme-on-primary: #ffffff;
   --tv-inline-focus-ring: var(--accent, #4a90e2);
-  /* 75% transparency background (as per TV overlay card spec) */
-  --tv-inline-card-bg: rgba(28, 43, 62, 0.75);
+  /* 75% transparency background (as per TV overlay card spec) 
+     Use color-mix with rgba fallback for browsers without support */
   --tv-inline-card-bg: color-mix(in srgb, var(--theme-primary) 75%, transparent);
   --tv-inline-card-backdrop: blur(6px);
   /* Max width for TV inline cards */
   --tv-inline-card-max-width: 780px;
+}
+
+/* Fallback for browsers without color-mix support */
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  :root {
+    --tv-inline-card-bg: rgba(28, 43, 62, 0.75);
+  }
 }
 
 @media (prefers-color-scheme: light) {
