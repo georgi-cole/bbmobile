@@ -7,6 +7,7 @@
     "validate:minigames": "node scripts/validate-minigame-keys.mjs",
     "validate:legacy-map": "node scripts/validate-legacy-map.mjs",
     "audit:minigames": "node scripts/audit-minigame-keys.mjs",
+    "audit:bg-assets": "node scripts/audit-background-assets.js",
     "test:minigames": "npm run validate:minigames && npm run validate:legacy-map && node scripts/test-runtime-validation.mjs",
     "test:runtime": "node scripts/test-runtime-validation.mjs",
     "test:runtime-helpers": "node scripts/test-runtime-helpers.mjs",

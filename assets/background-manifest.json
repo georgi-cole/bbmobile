@@ -1,0 +1,90 @@
+{
+  "version": "1.0.0",
+  "description": "Manifest of valid background asset filenames for BackgroundTheme",
+  "basePath": "assets/skins/",
+  "defaultAsset": "daily-background.png",
+  "assets": [
+    {
+      "filename": "sunrise-background.png",
+      "timeOfDay": "sunrise",
+      "condition": "clear",
+      "key": "sunrise"
+    },
+    {
+      "filename": "daily-background.png",
+      "timeOfDay": "day",
+      "condition": "clear",
+      "key": "day"
+    },
+    {
+      "filename": "sunset-background.png",
+      "timeOfDay": "sunset",
+      "condition": "clear",
+      "key": "sunset"
+    },
+    {
+      "filename": "night-background.png",
+      "timeOfDay": "night",
+      "condition": "clear",
+      "key": "night"
+    },
+    {
+      "filename": "rainy-background.png",
+      "timeOfDay": "any",
+      "condition": "rain",
+      "key": "rain"
+    },
+    {
+      "filename": "night-snow-background.png",
+      "timeOfDay": "night",
+      "condition": "snow",
+      "key": "snow"
+    },
+    {
+      "filename": "snowday-background.png",
+      "timeOfDay": "day",
+      "condition": "snow",
+      "key": "snowday"
+    },
+    {
+      "filename": "thunderstorm-background.png",
+      "timeOfDay": "any",
+      "condition": "thunderstorm",
+      "key": "thunderstorm"
+    },
+    {
+      "filename": "xmas-day-background.png",
+      "timeOfDay": "day",
+      "condition": "holiday",
+      "key": "xmasDay"
+    },
+    {
+      "filename": "xmas-eve-background.png",
+      "timeOfDay": "evening",
+      "condition": "holiday",
+      "key": "xmasEve"
+    },
+    {
+      "filename": "xmasy-night-background.png",
+      "timeOfDay": "night",
+      "condition": "holiday",
+      "key": "xmasyNight"
+    }
+  ],
+  "typoMappings": {
+    "timeOfDay": {
+      "night": ["night", "nigt", "nit", "nightt", "nightst", "nigth", "nihgt"],
+      "day": ["day", "dy", "da", "dat", "daay", "dya"],
+      "sunrise": ["sunrise", "sunris", "sunrize", "surnise"],
+      "sunset": ["sunset", "sunst", "sunste", "sunsett"],
+      "dusk": ["dusk", "duk", "duks"],
+      "dawn": ["dawn", "daun", "dwn"]
+    },
+    "condition": {
+      "snow": ["snow", "snwo", "snw", "snoww", "snoe"],
+      "rain": ["rain", "rian", "rein", "rainn"],
+      "clear": ["clear", "cler", "clera", "claer"],
+      "thunderstorm": ["thunderstorm", "thundstorm", "thuner", "thunder"]
+    }
+  }
+}

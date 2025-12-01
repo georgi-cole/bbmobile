@@ -23,6 +23,16 @@
  *   PlayerService.onNextChange((players) => {
  *     console.log('Players changed once:', players);
  *   });
+ * 
+ *   // Wait for players to be ready (one-time)
+ *   PlayerService.onPlayersReady((players) => {
+ *     console.log('Players are now ready:', players);
+ *   });
+ * 
+ *   // Check if players are ready synchronously
+ *   if (PlayerService.isReady()) {
+ *     // Players are available
+ *   }
  */
 
 (function(global) {
@@ -30,7 +40,22 @@
 
   // Internal state
   let alivePlayers = [];
+  let playersReady = false;
+  let playersReadyEmitted = false;
   const eventTarget = new EventTarget();
+  
+  // Telemetry helper
+  function logTelemetry(event, data = {}) {
+    try {
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log(event, data);
+      } else {
+        console.info(`[PlayerService:Telemetry] ${event}`, data);
+      }
+    } catch (err) {
+      console.warn('[PlayerService] Telemetry logging failed:', err);
+    }
+  }
 
   /**
    * Normalize a player object to ensure consistent shape
@@ -51,6 +76,47 @@
       // Preserve other properties
       ...p
     };
+  }
+
+  /**
+   * Emit players-ready event once players are available
+   * Only emits once per session
+   */
+  function emitPlayersReady() {
+    if (playersReadyEmitted || alivePlayers.length === 0) {
+      return;
+    }
+    
+    playersReady = true;
+    playersReadyEmitted = true;
+    
+    console.info(`[PlayerService] Players ready: ${alivePlayers.length} players`);
+    logTelemetry('players_ready', { count: alivePlayers.length });
+    
+    // Dispatch players-ready event
+    const event = new CustomEvent('players-ready', {
+      detail: { players: alivePlayers.slice(), count: alivePlayers.length }
+    });
+    eventTarget.dispatchEvent(event);
+    
+    // Also dispatch on window for global listeners (e.g., MobileRoster)
+    try {
+      const globalEvent = new CustomEvent('players-ready', {
+        detail: { players: alivePlayers.slice(), count: alivePlayers.length }
+      });
+      global.dispatchEvent(globalEvent);
+    } catch (e) {
+      console.warn('[PlayerService] Failed to dispatch global players-ready event:', e);
+    }
+    
+    // Dispatch on bbGameBus if available
+    if (global.bbGameBus && typeof global.bbGameBus.emit === 'function') {
+      try {
+        global.bbGameBus.emit('players-ready', { players: alivePlayers.slice(), count: alivePlayers.length });
+      } catch (e) {
+        console.warn('[PlayerService] Failed to emit players-ready on bbGameBus:', e);
+      }
+    }
   }
 
   /**
@@ -103,6 +169,9 @@
       if (players && Array.isArray(players) && players.length > 0) {
         alivePlayers = players.map(normalizePlayer).filter(Boolean);
         console.info(`[PlayerService] Initialized with ${alivePlayers.length} alive players`);
+        
+        // Emit players-ready event
+        emitPlayersReady();
       } else {
         console.info('[PlayerService] No players found in globals, starting with empty state');
         alivePlayers = [];
@@ -126,6 +195,19 @@
   }
 
   /**
+   * Check if players are ready (populated)
+   * @returns {boolean} True if players are available
+   */
+  function isReady() {
+    if (alivePlayers.length > 0) {
+      return true;
+    }
+    // Try to seed before returning false
+    seedFromGlobals();
+    return alivePlayers.length > 0;
+  }
+
+  /**
    * Set alive players and notify subscribers
    * @param {Array} players - Array of player objects
    */
@@ -145,8 +227,14 @@
       normalized.some((p, i) => p.id !== alivePlayers[i]?.id);
 
     if (changed) {
+      const wasEmpty = alivePlayers.length === 0;
       alivePlayers = normalized;
       console.info(`[PlayerService] Players updated: ${alivePlayers.length} alive`);
+      
+      // Emit players-ready if this is the first time we have players
+      if (wasEmpty && alivePlayers.length > 0) {
+        emitPlayersReady();
+      }
       
       // Emit change event
       const event = new CustomEvent('players:change', {
@@ -212,6 +300,47 @@
     };
   }
 
+  /**
+   * Subscribe to players-ready event (one-time)
+   * If players are already ready, callback is invoked immediately
+   * @param {Function} callback - Called with (players) when players become ready
+   * @returns {Function} Unsubscribe function (in case you want to cancel)
+   */
+  function onPlayersReady(callback) {
+    if (typeof callback !== 'function') {
+      console.warn('[PlayerService] onPlayersReady called with non-function:', callback);
+      return () => {};
+    }
+
+    // If already ready, invoke immediately
+    if (playersReady && alivePlayers.length > 0) {
+      try {
+        callback(alivePlayers.slice());
+      } catch (err) {
+        console.error('[PlayerService] Error in onPlayersReady callback:', err);
+      }
+      return () => {};
+    }
+
+    // Otherwise, wait for event
+    const listener = (event) => {
+      try {
+        callback(event.detail.players);
+      } catch (err) {
+        console.error('[PlayerService] Error in onPlayersReady callback:', err);
+      } finally {
+        eventTarget.removeEventListener('players-ready', listener);
+      }
+    };
+
+    eventTarget.addEventListener('players-ready', listener);
+
+    // Return unsubscribe function in case caller wants to cancel
+    return () => {
+      eventTarget.removeEventListener('players-ready', listener);
+    };
+  }
+
   // Initialize on load
   seedFromGlobals();
 
@@ -220,7 +349,9 @@
     getAlivePlayers,
     setAlivePlayers,
     subscribe,
-    onNextChange
+    onNextChange,
+    onPlayersReady,
+    isReady
   };
 
   // Attach to window

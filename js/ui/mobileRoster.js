@@ -2722,10 +2722,23 @@
 })(window);
 
 // ============================
-// Auto-initialization with retry
+// Auto-initialization with guarded player waiting
 // ============================
 (function autoInit() {
   'use strict';
+  
+  // Telemetry helper
+  function logTelemetry(event, data = {}) {
+    try {
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log(event, data);
+      } else {
+        console.info(`[MobileRoster:Telemetry] ${event}`, data);
+      }
+    } catch (err) {
+      console.warn('[MobileRoster AutoInit] Telemetry logging failed:', err);
+    }
+  }
   
   // Check for force flag on mobile UA
   const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
@@ -2735,54 +2748,183 @@
     console.info('[MobileRoster AutoInit] Set FORCE_MOBILE_ROSTER=true for mobile UA');
   }
   
-  // Attempt initialization on DOMContentLoaded
-  const attemptInit = () => {
+  // Track initialization state to prevent duplicate logs
+  let initializationStarted = false;
+  let waitingForPlayers = false;
+  let lastStateLogged = null;
+  
+  /**
+   * Log state change only if different from last logged state
+   * Reduces repetitive log spam
+   */
+  function logStateChange(state, details = {}) {
+    if (state !== lastStateLogged) {
+      console.info(`[MobileRoster AutoInit] ${state}`, details);
+      lastStateLogged = state;
+      logTelemetry(`mobile_roster_${state.toLowerCase().replace(/\s+/g, '_')}`, details);
+    }
+  }
+  
+  /**
+   * Check if players are available via PlayerService or global state
+   */
+  function hasPlayers() {
+    // Try PlayerService first
+    if (window.PlayerService && typeof window.PlayerService.isReady === 'function') {
+      return window.PlayerService.isReady();
+    }
+    
+    // Fallback to global game state
+    const game = window.game || window.g?.game;
+    if (game && Array.isArray(game.players) && game.players.length > 0) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Wait for players to be ready before initializing
+   * Uses PlayerService.onPlayersReady if available, otherwise falls back to limited retries
+   */
+  function waitForPlayersAndInit() {
+    if (initializationStarted) {
+      return; // Already started
+    }
+    
+    // If players are already available, initialize immediately
+    if (hasPlayers()) {
+      initializationStarted = true;
+      logStateChange('Initialized', { playersReady: true });
+      initMobileRoster();
+      return;
+    }
+    
+    // Use PlayerService.onPlayersReady if available (preferred method)
+    if (window.PlayerService && typeof window.PlayerService.onPlayersReady === 'function') {
+      if (!waitingForPlayers) {
+        waitingForPlayers = true;
+        logStateChange('Waiting for players', { method: 'PlayerService.onPlayersReady' });
+        logTelemetry('mobile_roster_waiting_for_players', { method: 'event' });
+      }
+      
+      // Set a timeout for abort
+      const abortTimeout = setTimeout(() => {
+        if (!initializationStarted) {
+          console.warn('[MobileRoster AutoInit] Players never arrived, aborting initialization');
+          logTelemetry('mobile_roster_abort', { reason: 'timeout', method: 'event' });
+        }
+      }, 10000); // 10 second timeout
+      
+      window.PlayerService.onPlayersReady(() => {
+        clearTimeout(abortTimeout);
+        if (!initializationStarted) {
+          initializationStarted = true;
+          logStateChange('Initialized', { playersReady: true, method: 'event' });
+          initMobileRoster();
+        }
+      });
+      
+      return;
+    }
+    
+    // Fallback: limited retries (max 2 attempts instead of 10)
+    if (!waitingForPlayers) {
+      waitingForPlayers = true;
+      logStateChange('Waiting for players', { method: 'polling' });
+      logTelemetry('mobile_roster_waiting_for_players', { method: 'polling' });
+    }
+    
+    let retries = 0;
+    const maxRetries = 2; // Reduced from 10 to 2 per requirements
+    const retryDelay = 1000; // 1 second between retries
+    
+    const checkPlayers = () => {
+      if (hasPlayers()) {
+        initializationStarted = true;
+        logStateChange('Initialized', { playersReady: true, retries: retries });
+        initMobileRoster();
+        return;
+      }
+      
+      retries++;
+      if (retries < maxRetries) {
+        // Only log if we haven't logged this retry count before
+        if (retries === 1) {
+          console.info(`[MobileRoster AutoInit] Retry ${retries}/${maxRetries} - waiting for players...`);
+        }
+        setTimeout(checkPlayers, retryDelay);
+      } else {
+        console.warn('[MobileRoster AutoInit] Max retries reached, players not available');
+        logTelemetry('mobile_roster_abort', { reason: 'max_retries', retries: maxRetries });
+      }
+    };
+    
+    setTimeout(checkPlayers, retryDelay);
+  }
+  
+  /**
+   * Initialize MobileRoster
+   */
+  function initMobileRoster() {
     if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
-      console.info('[MobileRoster AutoInit] Starting initialization...');
       window.MobileRoster.init();
       
-      // Retry every 300ms for up to 3 seconds if container doesn't appear
-      let retries = 0;
-      const maxRetries = 10; // 10 * 300ms = 3s
-      
-      const retryInterval = setInterval(() => {
+      // Single verification after init (not repeated retries)
+      setTimeout(() => {
         const container = document.querySelector('.mobile-roster-container');
         const isActive = document.body.hasAttribute('data-mobile-roster-active');
         
         if (container && isActive) {
-          console.info('[MobileRoster AutoInit] Container active, initialization successful');
-          clearInterval(retryInterval);
-        } else if (retries < maxRetries) {
-          retries++;
-          console.info('[MobileRoster AutoInit] Retry ' + retries + '/' + maxRetries + ' - calling refresh()');
+          logStateChange('Container active');
+          logTelemetry('mobile_roster_initialized', { 
+            success: true,
+            hasContainer: true
+          });
+        } else {
+          // One refresh attempt if container isn't ready
           if (window.MobileRoster && typeof window.MobileRoster.refresh === 'function') {
             window.MobileRoster.refresh();
+            logTelemetry('mobile_roster_initialized', { 
+              success: true,
+              refreshed: true
+            });
           }
-        } else {
-          console.warn('[MobileRoster AutoInit] Max retries reached, initialization may have failed');
-          clearInterval(retryInterval);
         }
-      }, 300);
+      }, 500);
       
       return true;
     }
     return false;
-  };
+  }
   
+  // Start initialization on DOMContentLoaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attemptInit);
+    document.addEventListener('DOMContentLoaded', waitForPlayersAndInit);
   } else {
     // DOM already loaded
-    setTimeout(attemptInit, 0);
+    setTimeout(waitForPlayersAndInit, 0);
   }
+  
+  // Listen for players-ready event as fallback
+  window.addEventListener('players-ready', () => {
+    if (!initializationStarted) {
+      initializationStarted = true;
+      logStateChange('Players ready event received');
+      initMobileRoster();
+    }
+  }, { once: true });
   
   // Additional fallback on window.onload
   window.addEventListener('load', () => {
-    if (!document.body.hasAttribute('data-mobile-roster-active') && 
+    if (!initializationStarted && 
+        hasPlayers() &&
+        !document.body.hasAttribute('data-mobile-roster-active') && 
         window.MobileRoster && 
         typeof window.MobileRoster.init === 'function') {
       console.info('[MobileRoster AutoInit] Fallback initialization on window.load');
-      window.MobileRoster.init();
+      initializationStarted = true;
+      initMobileRoster();
     }
   });
 })();

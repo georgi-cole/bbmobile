@@ -64,6 +64,53 @@
   let activeInstructionsCard = null;
   let activeMinigameCleanup = null;
   
+  // ═══ Detach Detection & Consolidated Logging ═══
+  // Track detach events to consolidate warnings within a short window
+  let detachEventCount = 0;
+  let lastDetachLogTime = 0;
+  const DETACH_LOG_THROTTLE_MS = 2000; // Consolidate warnings within 2s window
+  
+  /**
+   * Log detach event with throttling to prevent spam
+   * If multiple detach events occur within 2s, consolidate to a single warning
+   * 
+   * @param {Object} diagnostic - Diagnostic details
+   * @returns {boolean} True if logged, false if throttled
+   */
+  function logDetachEvent(diagnostic) {
+    const now = Date.now();
+    detachEventCount++;
+    
+    // Check if we're within the throttle window
+    if (now - lastDetachLogTime < DETACH_LOG_THROTTLE_MS) {
+      // Throttled - only emit telemetry, not console
+      dispatchTelemetryEvent('instructions-detach-throttled', {
+        count: detachEventCount,
+        ...diagnostic
+      });
+      return false;
+    }
+    
+    // Log the event
+    lastDetachLogTime = now;
+    
+    if (detachEventCount > 1) {
+      console.warn(`[CompetitionFlow][Guard] Instructions detach detected (${detachEventCount} events in window)`, diagnostic);
+    } else {
+      console.warn('[CompetitionFlow][Guard] Instructions card detached after render', diagnostic);
+    }
+    
+    dispatchTelemetryEvent('instructions-detach-detected', {
+      count: detachEventCount,
+      ...diagnostic
+    });
+    
+    // Reset count after logging
+    detachEventCount = 0;
+    
+    return true;
+  }
+  
   // ═══ Centralized Game Object Resolution ═══
   /**
    * Get game object reference with retry logic
@@ -574,7 +621,17 @@
 
     // ═══ Post-Render Verification ═══
     // Verify card stays attached after next microtask + animation frame
+    // Use a stable parent mount node to prevent detach/re-render loops
     let verificationAttempted = false;
+    let recoveryAttempted = false;
+    
+    // Emit initial mount telemetry
+    dispatchTelemetryEvent('instructions-initial-mount', {
+      phase: gameRef?.phase,
+      gameKey: gameKey,
+      containerTag: container.tagName,
+      containerConnected: container.isConnected
+    });
     
     queueMicrotask(() => {
       requestAnimationFrame(() => {
@@ -583,9 +640,7 @@
         
         // Check if card is still attached
         if (!card.isConnected) {
-          console.warn('[CompetitionFlow][Guard] Instructions card detached after render, attempting re-render');
-          
-          // Diagnostic payload
+          // Use consolidated logging to prevent spam
           const diagnostic = {
             containerTag: container.tagName,
             containerClass: container.className,
@@ -595,35 +650,58 @@
             gameKey: gameKey
           };
           
-          console.warn('[CompetitionFlow][Guard] Diagnostic:', diagnostic);
+          // Only log if not throttled
+          logDetachEvent(diagnostic);
           
-          dispatchTelemetryEvent('error', {
-            type: 'instructions-detached',
-            ...diagnostic
-          });
-          
-          // Re-attempt render once
-          try {
-            const newCard = document.createElement('div');
-            newCard.className = card.className;
-            newCard.innerHTML = card.innerHTML;
-            newCard.style.cssText = card.style.cssText;
+          // Re-attempt render once (guarded)
+          if (!recoveryAttempted) {
+            recoveryAttempted = true;
             
-            // Re-attach event listeners
-            const newPlayButton = newCard.querySelector('button.primary');
-            if (newPlayButton && typeof onPlay === 'function') {
-              newPlayButton.addEventListener('click', () => {
-                console.info('[CompetitionFlow] ▶ Play button clicked (re-rendered), launching fullscreen minigame');
-                onPlay();
+            try {
+              // Find a stable parent element (fallback chain)
+              let stableParent = container.isConnected ? container : null;
+              if (!stableParent) {
+                stableParent = ensureAttachedContainer(null);
+              }
+              
+              if (stableParent && stableParent.isConnected) {
+                const newCard = document.createElement('div');
+                newCard.className = card.className;
+                newCard.innerHTML = card.innerHTML;
+                newCard.style.cssText = card.style.cssText;
+                
+                // Re-attach event listeners
+                const newPlayButton = newCard.querySelector('button.primary');
+                if (newPlayButton && typeof onPlay === 'function') {
+                  newPlayButton.addEventListener('click', () => {
+                    console.info('[CompetitionFlow] ▶ Play button clicked (re-rendered), launching fullscreen minigame');
+                    onPlay();
+                  });
+                }
+                
+                stableParent.appendChild(newCard);
+                activeInstructionsCard = newCard;
+                
+                console.info('[CompetitionFlow][Guard] ✓ Instructions card recovered to stable parent');
+                dispatchTelemetryEvent('instructions-recover-success', {
+                  newParentTag: stableParent.tagName,
+                  gameKey: gameKey
+                });
+              } else {
+                console.error('[CompetitionFlow][Guard] No stable parent available for recovery');
+                dispatchTelemetryEvent('instructions-recover-failed', {
+                  reason: 'no_stable_parent',
+                  gameKey: gameKey
+                });
+              }
+            } catch (reRenderErr) {
+              console.error('[CompetitionFlow][Guard] Failed to re-render instructions card:', reRenderErr);
+              dispatchTelemetryEvent('instructions-recover-failed', {
+                reason: 'exception',
+                error: reRenderErr.message,
+                gameKey: gameKey
               });
             }
-            
-            container.appendChild(newCard);
-            activeInstructionsCard = newCard;
-            
-            console.info('[CompetitionFlow][Guard] ✓ Instructions card re-rendered successfully');
-          } catch (reRenderErr) {
-            console.error('[CompetitionFlow][Guard] Failed to re-render instructions card:', reRenderErr);
           }
         } else {
           console.info('[CompetitionFlow][Guard] ✓ Instructions card verified attached');
