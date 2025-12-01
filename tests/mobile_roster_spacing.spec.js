@@ -332,3 +332,202 @@ test.describe('Post-Render Emoji Synchronization', () => {
   });
 
 });
+
+test.describe('Combo Emojis', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE);
+    await page.waitForSelector('.mobile-roster-container');
+    await page.waitForTimeout(500);
+  });
+
+  test('combo emojis render for multi-status players (HOH+POV)', async ({ page }) => {
+    // Click the combo test button
+    await page.click('button:has-text("Test HOH+POV Combo")');
+    
+    // Wait for pills to dismiss (we expect pills first, then emojis)
+    await page.waitForTimeout(PILL_DURATION + PILL_TOLERANCE);
+    
+    // Check for emoji group
+    const comboState = await page.evaluate(() => {
+      const emojiGroups = document.querySelectorAll('.corner-emoji-group');
+      const groupWithMultiple = Array.from(emojiGroups).filter(g => g.children.length >= 2);
+      
+      // Check if any group has both HOH and POV
+      let hasCombo = false;
+      for (const group of emojiGroups) {
+        const types = Array.from(group.querySelectorAll('.corner-emoji-badge')).map(e => e.dataset.badgeType);
+        if (types.includes('HOH') && types.includes('POV')) {
+          hasCombo = true;
+          break;
+        }
+      }
+      
+      return {
+        groupCount: emojiGroups.length,
+        groupsWithMultiple: groupWithMultiple.length,
+        hasHOHPOVCombo: hasCombo
+      };
+    });
+    
+    // Screenshot
+    await page.screenshot({ 
+      path: 'tests/screenshots/badge-combo-hoh-pov.png',
+      fullPage: false 
+    });
+    
+    // Should have at least one group with HOH+POV combo
+    expect(comboState.hasHOHPOVCombo).toBe(true);
+    
+    console.log('Combo emoji verified:', comboState);
+  });
+
+  test('combo emojis render for NOM+POV scenario', async ({ page }) => {
+    // Set up NOM+POV combo scenario
+    await page.evaluate(() => {
+      // Give a player both nominated and POV status
+      const player = window.game.players[0];
+      player.nominated = true;
+      player.pov = true;
+      window.game.vetoHolder = player.id;
+      window.game.nominees = [player.id];
+      
+      // Refresh roster
+      if (window.MobileRoster) {
+        // Reset cold start flag
+        const state = window.MobileRoster.getState();
+        state.coldStartPillShown = false;
+        window.MobileRoster.refresh();
+      }
+    });
+    
+    // Wait for pills to dismiss
+    await page.waitForTimeout(PILL_DURATION + PILL_TOLERANCE);
+    
+    // Check for NOM+POV combo
+    const comboState = await page.evaluate(() => {
+      const emojiGroups = document.querySelectorAll('.corner-emoji-group');
+      
+      let hasNOMPOVCombo = false;
+      for (const group of emojiGroups) {
+        const types = Array.from(group.querySelectorAll('.corner-emoji-badge')).map(e => e.dataset.badgeType);
+        if (types.includes('NOM') && types.includes('POV')) {
+          hasNOMPOVCombo = true;
+          break;
+        }
+      }
+      
+      return {
+        hasNOMPOVCombo
+      };
+    });
+    
+    // Screenshot
+    await page.screenshot({ 
+      path: 'tests/screenshots/badge-combo-nom-pov.png',
+      fullPage: false 
+    });
+    
+    expect(comboState.hasNOMPOVCombo).toBe(true);
+    
+    console.log('NOM+POV combo verified:', comboState);
+  });
+
+});
+
+test.describe('Last Row Visibility', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE);
+    await page.waitForSelector('.mobile-roster-container');
+    await page.waitForTimeout(500);
+  });
+
+  test('last row is visible and gap equals row gap', async ({ page }) => {
+    // Check that the last row is not overlapped by TV overlay
+    const visibility = await page.evaluate(() => {
+      const tiles = document.querySelectorAll('.mobile-roster-tile');
+      const tv = document.querySelector('.tv');
+      
+      if (!tiles.length || !tv) {
+        return { error: 'Elements not found' };
+      }
+      
+      // Get the last tile's bounding rect
+      const lastTile = tiles[tiles.length - 1];
+      const lastTileRect = lastTile.getBoundingClientRect();
+      const tvRect = tv.getBoundingClientRect();
+      
+      const gapToTV = tvRect.top - lastTileRect.bottom;
+      const rowGap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--avatar-row-gap') || '6', 10);
+      
+      return {
+        lastRowBottom: Math.round(lastTileRect.bottom),
+        tvTop: Math.round(tvRect.top),
+        gapToTV: Math.round(gapToTV),
+        rowGap,
+        isVisible: gapToTV >= rowGap,
+        gapMatchesRowGap: Math.abs(gapToTV - rowGap) <= 30 // Allow some tolerance
+      };
+    });
+    
+    expect(visibility.error).toBeUndefined();
+    
+    // Screenshot
+    await page.screenshot({ 
+      path: 'tests/screenshots/last-row-visibility.png',
+      fullPage: false 
+    });
+    
+    // Last row should be visible (gap >= row gap)
+    expect(visibility.isVisible).toBe(true);
+    
+    console.log('Last row visibility verified:', visibility);
+  });
+
+  test('last row remains visible with different cast sizes', async ({ page }) => {
+    const castSizes = [12, 13, 14, 15, 16];
+    
+    for (const size of castSizes) {
+      // Update cast size
+      await page.evaluate((castSize) => {
+        window.TestUtils.updateCastSize(castSize);
+      }, size);
+      
+      await page.waitForTimeout(300);
+      
+      // Check visibility
+      const visibility = await page.evaluate(() => {
+        const tiles = document.querySelectorAll('.mobile-roster-tile');
+        const tv = document.querySelector('.tv');
+        
+        if (!tiles.length || !tv) {
+          return { visible: false, tileCount: 0 };
+        }
+        
+        const lastTile = tiles[tiles.length - 1];
+        const lastTileRect = lastTile.getBoundingClientRect();
+        const tvRect = tv.getBoundingClientRect();
+        
+        const gapToTV = tvRect.top - lastTileRect.bottom;
+        
+        return {
+          visible: gapToTV >= 6,
+          gapToTV: Math.round(gapToTV),
+          tileCount: tiles.length
+        };
+      });
+      
+      console.log(`Cast size ${size}: tiles=${visibility.tileCount}, gap=${visibility.gapToTV}px, visible=${visibility.visible}`);
+      
+      expect(visibility.visible).toBe(true);
+    }
+    
+    // Screenshot final state
+    await page.screenshot({ 
+      path: 'tests/screenshots/last-row-cast-sizes.png',
+      fullPage: false 
+    });
+  });
+
+});

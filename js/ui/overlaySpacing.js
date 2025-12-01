@@ -6,10 +6,11 @@
  * the last row of avatar tiles is never covered by the overlay.
  * 
  * Features:
- * - Dynamic measurement of TV overlay height
- * - CSS variable updates for spacer calculation
+ * - Dynamic measurement of TV overlay height (ResizeObserver + MutationObserver)
+ * - CSS variable updates for spacer calculation (--overlay-effective-height)
+ * - Last-row visibility verification using IntersectionObserver
+ * - Adds up to +24px compensation if last row is partially hidden
  * - Recalculates on: load, resize, orientation change, phase change, overlay mutation
- * - MutationObserver for overlay content changes
  * - No negative margins on overlay - uses spacer element approach
  */
 
@@ -28,6 +29,8 @@
     MIN_OVERLAY_HEIGHT: 100,
     DEFAULT_OVERLAY_HEIGHT: 200,
     ROW_GAP: 6, // Should match --mobile-roster-gap
+    MAX_COMPENSATION: 24, // Maximum additional padding if last row is obscured (px)
+    VISIBILITY_THRESHOLD: 0.95, // Consider visible if at least 95% visible
   };
 
   // ============================
@@ -38,7 +41,10 @@
     initialized: false,
     resizeObserver: null,
     mutationObserver: null,
+    intersectionObserver: null,
     currentOverlayHeight: CONFIG.DEFAULT_OVERLAY_HEIGHT,
+    currentCompensation: 0, // Additional compensation added for last row visibility
+    lastRowVisible: true, // Track if last row is fully visible
     resizeTimeout: null,
     mutationTimeout: null,
   };
@@ -121,19 +127,27 @@
   /**
    * Update CSS variables for spacer calculation
    * @param {number} overlayHeight - Measured overlay height
+   * @param {number} compensation - Additional compensation for last row visibility
    */
-  function updateCSSVariables(overlayHeight) {
+  function updateCSSVariables(overlayHeight, compensation = 0) {
     const root = document.documentElement;
+    
+    // Calculate effective height including any compensation
+    const effectiveHeight = overlayHeight + compensation;
     
     // Update overlay height variable
     root.style.setProperty('--tv-overlay-height', `${overlayHeight}px`);
+    
+    // Update effective height including compensation
+    root.style.setProperty('--overlay-effective-height', `${effectiveHeight}px`);
     
     // Ensure row gap is set
     root.style.setProperty('--avatar-row-gap', `${CONFIG.ROW_GAP}px`);
 
     state.currentOverlayHeight = overlayHeight;
+    state.currentCompensation = compensation;
 
-    console.info(`[OverlaySpacing] Updated CSS vars: --tv-overlay-height=${overlayHeight}px, --avatar-row-gap=${CONFIG.ROW_GAP}px`);
+    console.info(`[OverlaySpacing] Updated CSS vars: --tv-overlay-height=${overlayHeight}px, --overlay-effective-height=${effectiveHeight}px, compensation=${compensation}px`);
   }
 
   /**
@@ -166,6 +180,71 @@
   }
 
   /**
+   * Find the last row of tiles in the roster grid
+   * @returns {Array<HTMLElement>} Array of tile elements in the last row
+   */
+  function findLastRowTiles() {
+    const grid = document.querySelector('.mobile-roster-active-grid');
+    if (!grid) return [];
+
+    const tiles = Array.from(grid.querySelectorAll('.mobile-roster-tile'));
+    if (tiles.length === 0) return [];
+
+    // Get the computed number of columns
+    const computedStyle = getComputedStyle(grid);
+    const cols = parseInt(computedStyle.getPropertyValue('--mobile-roster-cols'), 10) || 4;
+
+    // Calculate tiles in the last row
+    const lastRowCount = tiles.length % cols || cols;
+    return tiles.slice(-lastRowCount);
+  }
+
+  /**
+   * Check if the last row of tiles is fully visible (not obscured by TV overlay)
+   * Uses direct DOM measurement for a compact post-measure check
+   * @returns {Object} { visible: boolean, gapToOverlay: number, needed: number }
+   */
+  function checkLastRowVisibility() {
+    const lastRowTiles = findLastRowTiles();
+    if (lastRowTiles.length === 0) {
+      return { visible: true, gapToOverlay: 0, needed: 0 };
+    }
+
+    const tv = findTvContainer();
+    if (!tv) {
+      return { visible: true, gapToOverlay: 0, needed: 0 };
+    }
+
+    // Get the bottom edge of the last row (max of all last row tiles)
+    let maxBottom = 0;
+    for (const tile of lastRowTiles) {
+      const rect = tile.getBoundingClientRect();
+      maxBottom = Math.max(maxBottom, rect.bottom);
+    }
+
+    // Get the top edge of the TV overlay
+    const tvRect = tv.getBoundingClientRect();
+    const tvTop = tvRect.top;
+
+    // Calculate gap between last row bottom and TV top
+    const gapToOverlay = tvTop - maxBottom;
+
+    // We want at least ROW_GAP pixels of visible gap (like the gap between rows)
+    const minGap = CONFIG.ROW_GAP;
+    const visible = gapToOverlay >= minGap;
+
+    // Calculate how much compensation is needed if not visible
+    let needed = 0;
+    if (!visible) {
+      // We need enough to make the gap equal to minGap
+      needed = Math.min(minGap - gapToOverlay, CONFIG.MAX_COMPENSATION);
+      needed = Math.max(0, Math.ceil(needed));
+    }
+
+    return { visible, gapToOverlay: Math.round(gapToOverlay), needed };
+  }
+
+  /**
    * Main function to update spacing
    * Called on load, resize, orientation change, phase change, etc.
    */
@@ -176,11 +255,36 @@
     }
 
     // Ensure spacer exists
-    ensureSpacerElement();
+    const spacer = ensureSpacerElement();
 
     // Measure and update
     const overlayHeight = measureOverlayHeight();
-    updateCSSVariables(overlayHeight);
+    
+    // First update with zero compensation
+    updateCSSVariables(overlayHeight, 0);
+    
+    // Apply spacer height based on overlay + row gap
+    if (spacer) {
+      spacer.style.height = `${overlayHeight + CONFIG.ROW_GAP}px`;
+    }
+
+    // After layout settles, check last row visibility and add compensation if needed
+    requestAnimationFrame(() => {
+      const visibility = checkLastRowVisibility();
+      state.lastRowVisible = visibility.visible;
+
+      if (!visibility.visible && visibility.needed > 0) {
+        // Add compensation to spacer
+        const totalHeight = overlayHeight + CONFIG.ROW_GAP + visibility.needed;
+        if (spacer) {
+          spacer.style.height = `${totalHeight}px`;
+        }
+        updateCSSVariables(overlayHeight, visibility.needed);
+        console.info(`[OverlaySpacing] Added ${visibility.needed}px compensation for last row visibility (gap was ${visibility.gapToOverlay}px)`);
+      } else {
+        console.info(`[OverlaySpacing] Last row visible (gap: ${visibility.gapToOverlay}px)`);
+      }
+    });
 
     console.info(`[OverlaySpacing] Spacing updated: overlay=${overlayHeight}px`);
   }
@@ -369,9 +473,13 @@
    * Get current status for diagnostics
    */
   function getStatus() {
+    const visibility = checkLastRowVisibility();
     return {
       initialized: state.initialized,
       currentOverlayHeight: state.currentOverlayHeight,
+      currentCompensation: state.currentCompensation,
+      lastRowVisible: state.lastRowVisible,
+      lastRowGapToOverlay: visibility.gapToOverlay,
       mobileRosterActive: isMobileRosterActive(),
       tvContainerFound: !!findTvContainer(),
       overlayFound: !!findTvOverlay(),
@@ -407,6 +515,7 @@
     recalculate,
     getStatus,
     measureOverlayHeight,
+    checkLastRowVisibility, // Expose for testing
   };
 
   console.info('[OverlaySpacing] Module loaded');

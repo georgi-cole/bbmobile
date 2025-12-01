@@ -324,15 +324,52 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 
 /* Corner emoji badge - appears in upper-right of avatar after pill dismissal */
 .corner-emoji-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
+  position: relative; /* Changed from absolute for grouping support */
   font-size: 1rem;
   line-height: 1;
-  z-index: 4;
   pointer-events: none;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
   animation: corner-emoji-appear 0.3s ease-out;
+}
+
+/* Standalone corner emoji (legacy - when not in a group) */
+.mobile-roster-avatar-wrap > .corner-emoji-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 4;
+}
+
+/* Corner emoji group container for combo badges (HOH+POV, NOM+POV, etc.)
+ * Compact horizontal layout in top-right corner of avatar
+ */
+.corner-emoji-group {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* Emojis within a group - relative positioning */
+.corner-emoji-group .corner-emoji-badge {
+  position: relative;
+  top: 0;
+  right: 0;
+  font-size: 0.85rem; /* Slightly smaller in groups for compact display */
+}
+
+/* Adjust group positioning for 3+ emojis */
+.corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) {
+  gap: 1px;
+}
+
+.corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) .corner-emoji-badge {
+  font-size: 0.75rem; /* Even smaller for 3+ emojis */
 }
 
 @keyframes corner-emoji-appear {
