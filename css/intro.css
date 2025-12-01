@@ -75,6 +75,22 @@ body:not(.main-screen-built) .topbar {
   justify-content: center;
 }
 
+/* ===== Background Gating: Hide content until bg-ready ===== */
+/* Interactive groups remain hidden until background is fully loaded */
+.intro-screen:not(.bg-ready) .intro-screen__content > * {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Smooth fade-in when background is ready */
+.intro-screen.bg-ready .intro-screen__content > * {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 400ms ease-in-out, visibility 0ms linear 0ms;
+}
+
 /* ===== Quick Icons (Top-Right) ===== */
 .intro-screen__quick-icons {
   position: absolute;
@@ -612,5 +628,103 @@ body:not(.main-screen-built) .topbar {
   .intro-cta--animated,
   .intro-cta--animated::after {
     animation: none !important;
+  }
+}
+
+/* ===== Avatar Preload Overlay ===== */
+.intro-avatar-preload-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9992; /* Above intro screen (9990), below modals (10050) */
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+  pointer-events: none;
+}
+
+.intro-avatar-preload-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.intro-avatar-preload-overlay--hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Avatar preload spinner */
+.intro-avatar-preload-spinner {
+  width: 64px;
+  height: 64px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #00d4ff;
+  border-radius: 50%;
+  animation: intro-avatar-spin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+@keyframes intro-avatar-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Avatar preload text */
+.intro-avatar-preload-text {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* Avatar preload progress */
+.intro-avatar-preload-progress {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: center;
+  min-width: 80px;
+}
+
+/* ===== Responsive adjustments for avatar preload overlay ===== */
+@media (max-width: 768px) {
+  .intro-avatar-preload-spinner {
+    width: 48px;
+    height: 48px;
+    border-width: 3px;
+  }
+  
+  .intro-avatar-preload-text {
+    font-size: 16px;
+    padding: 0 20px;
+  }
+  
+  .intro-avatar-preload-progress {
+    font-size: 13px;
+  }
+}
+
+/* ===== Reduced motion for avatar preload overlay ===== */
+@media (prefers-reduced-motion: reduce) {
+  .intro-avatar-preload-overlay {
+    transition: opacity 100ms ease !important;
+  }
+  
+  .intro-avatar-preload-spinner {
+    animation: none !important;
+    /* Show a static indicator instead of spinning */
+    border-color: rgba(255, 255, 255, 0.3);
+    border-top-color: #00d4ff;
+    border-right-color: #00d4ff;
   }
 }

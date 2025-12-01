@@ -31,8 +31,9 @@ console.info('[IntroScreen] Script executing – pre-init');
   };
 
   const FADE_DURATION = 600; // ms
-  const PRELOAD_TIMEOUT = 1500; // ms - timeout for background preload
+  const PRELOAD_TIMEOUT = 4500; // ms - timeout for background preload (extended for slow networks)
   const LOADING_BUFFER_THRESHOLD = 300; // ms - show loading spinner if preload exceeds this
+  const AVATAR_PRELOAD_TIMEOUT = 6000; // ms - timeout for avatar preloading
 
   // ===== DOM BUILDING =====
 
@@ -143,10 +144,10 @@ console.info('[IntroScreen] Script executing – pre-init');
       btn.setAttribute('aria-label', label);
       btn.style.setProperty('--stagger-index', index);
 
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         console.info(`[IntroHub] action=${action} button="${label}"`);
         
-        // Handle Play button specially with idempotence guard
+        // Handle Play button specially with idempotence guard and avatar preload
         if (action === 'intro:play') {
           if (playButtonClicked) {
             console.warn('[IntroHub] Play button already clicked, ignoring duplicate click');
@@ -158,6 +159,18 @@ console.info('[IntroScreen] Script executing – pre-init');
           // This prevents Rules modal from showing after Play
           g.__bbPlayInitiated = true;
           console.info('[IntroHub] Set __bbPlayInitiated=true');
+          
+          try {
+            // Show avatar preload overlay and wait for completion
+            await performAvatarPreload();
+          } catch (err) {
+            // Log error but proceed anyway - game should still start
+            console.error('[IntroHub] Avatar preload error, proceeding to game:', err);
+          }
+          
+          // After preload completes (or fails), proceed with the play action
+          handleButtonAction(action, label);
+          return;
         }
         
         // Try direct global function calls first, fall back to bus events
@@ -585,7 +598,8 @@ console.info('[IntroScreen] Script executing – pre-init');
   /**
    * Preload the background image before showing the intro screen.
    * This prevents the flicker where buttons appear before the background.
-   * @returns {Promise} Resolves when preload completes or times out
+   * Uses extended timeout (4500ms) with fallback handling.
+   * @returns {Promise<Object>} Resolves with { url, timedOut, elapsed }
    */
   function preloadBackground() {
     return new Promise((resolve) => {
@@ -603,9 +617,10 @@ console.info('[IntroScreen] Script executing – pre-init');
       const img = new Image();
       let loadTimeout = null;
       let hasCompleted = false;
+      let timedOut = false;
       const startTime = Date.now();
 
-      const complete = () => {
+      const complete = (success = true, reason = 'loaded') => {
         if (hasCompleted) return;
         hasCompleted = true;
         
@@ -614,42 +629,78 @@ console.info('[IntroScreen] Script executing – pre-init');
         }
         
         const elapsed = Date.now() - startTime;
-        console.info(`[IntroScreen] Background preload completed in ${elapsed}ms`);
-        resolve(url);
+        
+        if (timedOut) {
+          console.warn(`[IntroHubBG] Background preload timeout after ${elapsed}ms - proceeding with fallback state`);
+          
+          // Log telemetry for timeout fallback
+          try {
+            if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+              g.Telemetry.log('intro_bg_preload_timeout', { elapsed, url });
+            }
+          } catch (e) {
+            // Non-blocking telemetry
+          }
+        } else if (!success) {
+          console.warn(`[IntroHubBG] Background preload failed (${reason}) - proceeding with fallback`);
+          
+          // Log telemetry for failure
+          try {
+            if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+              g.Telemetry.log('intro_bg_preload_failed', { elapsed, url, reason });
+            }
+          } catch (e) {
+            // Non-blocking telemetry
+          }
+        } else {
+          console.info(`[IntroScreen] Background preload completed in ${elapsed}ms`);
+          
+          // Log telemetry for success
+          try {
+            if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+              g.Telemetry.log('intro_bg_preload_success', { elapsed, url });
+            }
+          } catch (e) {
+            // Non-blocking telemetry
+          }
+        }
+        
+        resolve({ url, timedOut, elapsed });
       };
 
       img.onload = () => {
         // Use decode() for smoother rendering if available
         if (img.decode) {
           img.decode()
-            .then(complete)
+            .then(() => complete(true, 'loaded'))
             .catch(() => {
               console.warn('[IntroScreen] Image decode failed, proceeding anyway');
-              complete();
+              complete(true, 'decode-fallback');
             });
         } else {
-          complete();
+          complete(true, 'loaded');
         }
       };
 
       img.onerror = () => {
-        console.warn('[IntroScreen] Background preload failed:', url);
-        complete(); // Still proceed even if preload fails
+        console.warn('[IntroHubBG] Background preload error:', url);
+        complete(false, 'error'); // Still proceed even if preload fails
       };
 
       // Timeout after PRELOAD_TIMEOUT to prevent blocking
       loadTimeout = setTimeout(() => {
         if (!hasCompleted) {
-          console.warn(`[IntroScreen] Background preload timeout after ${PRELOAD_TIMEOUT}ms`);
+          timedOut = true;
+          console.warn(`[IntroHubBG] Background preload timeout after ${PRELOAD_TIMEOUT}ms`);
           img.onload = null;
           img.onerror = null;
-          complete();
+          complete(false, 'timeout');
         }
       }, PRELOAD_TIMEOUT);
 
       // Check if image is already cached
-      if (img.complete) {
-        complete();
+      if (img.complete && img.naturalWidth > 0) {
+        complete(true, 'cached');
       } else {
         img.src = url;
       }
@@ -728,6 +779,13 @@ console.info('[IntroScreen] Script executing – pre-init');
     // The show() function will set __bbHubShown = true after successful mount
     show();
     
+    // CRITICAL: Add bg-ready class AFTER show() to enable button visibility
+    // This ensures CSS gating hides buttons until background is loaded
+    if (container) {
+      container.classList.add('bg-ready');
+      console.info('[IntroScreen] Added bg-ready class - buttons now visible');
+    }
+    
     // Mark as visible and clear animating flag
     introScreenState.visible = true;
     introScreenState.animating = false;
@@ -783,6 +841,197 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
   }
 
+  // ===== AVATAR PRELOAD OVERLAY =====
+
+  /**
+   * Build and show the avatar preload overlay.
+   * Displays a spinner with "Preparing player photos..." text and progress %.
+   * @returns {HTMLElement} The overlay element
+   */
+  function buildAvatarPreloadOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'avatarPreloadOverlay';
+    overlay.className = 'intro-avatar-preload-overlay';
+    overlay.setAttribute('role', 'alert');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-busy', 'true');
+    
+    // Spinner with accessibility
+    const spinner = document.createElement('div');
+    spinner.className = 'intro-avatar-preload-spinner';
+    spinner.setAttribute('role', 'img');
+    spinner.setAttribute('aria-label', 'Loading avatars');
+    
+    // Text
+    const text = document.createElement('div');
+    text.className = 'intro-avatar-preload-text';
+    text.textContent = 'Preparing player photos...';
+    
+    // Progress percentage
+    const progress = document.createElement('div');
+    progress.className = 'intro-avatar-preload-progress';
+    progress.id = 'avatarPreloadProgress';
+    progress.setAttribute('aria-live', 'polite');
+    progress.textContent = '0%';
+    
+    overlay.appendChild(spinner);
+    overlay.appendChild(text);
+    overlay.appendChild(progress);
+    
+    return overlay;
+  }
+
+  /**
+   * Show the avatar preload overlay with fade-in animation.
+   * @returns {HTMLElement} The overlay element
+   */
+  function showAvatarPreloadOverlay() {
+    // Remove any existing overlay
+    const existing = document.getElementById('avatarPreloadOverlay');
+    if (existing) {
+      existing.remove();
+    }
+    
+    const overlay = buildAvatarPreloadOverlay();
+    document.body.appendChild(overlay);
+    
+    // Trigger fade-in (allow reflow first)
+    requestAnimationFrame(() => {
+      overlay.classList.add('intro-avatar-preload-overlay--visible');
+    });
+    
+    console.info('[IntroScreen] Avatar preload overlay shown');
+    return overlay;
+  }
+
+  /**
+   * Update the avatar preload overlay progress.
+   * @param {number} loaded - Number of avatars loaded
+   * @param {number} total - Total number of avatars
+   */
+  function updateAvatarPreloadProgress(loaded, total) {
+    const progress = document.getElementById('avatarPreloadProgress');
+    if (progress) {
+      const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+      progress.textContent = `${percent}%`;
+      progress.setAttribute('aria-valuenow', String(percent));
+    }
+  }
+
+  /**
+   * Hide and remove the avatar preload overlay with fade-out animation.
+   * @param {HTMLElement} overlay - The overlay element
+   * @returns {Promise} Resolves when animation completes
+   */
+  function hideAvatarPreloadOverlay(overlay) {
+    return new Promise((resolve) => {
+      if (!overlay) {
+        overlay = document.getElementById('avatarPreloadOverlay');
+      }
+      
+      if (!overlay) {
+        resolve();
+        return;
+      }
+      
+      overlay.setAttribute('aria-busy', 'false');
+      overlay.classList.remove('intro-avatar-preload-overlay--visible');
+      overlay.classList.add('intro-avatar-preload-overlay--hiding');
+      
+      // Wait for fade-out animation (300ms from CSS)
+      setTimeout(() => {
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+        console.info('[IntroScreen] Avatar preload overlay hidden');
+        resolve();
+      }, 300);
+    });
+  }
+
+  /**
+   * Perform avatar preloading with overlay display.
+   * Shows overlay, preloads avatars, updates progress, then hides overlay.
+   * @returns {Promise<Object>} The preload result summary
+   */
+  async function performAvatarPreload() {
+    console.info('[IntroScreen] Starting avatar preload workflow');
+    
+    // Get players from global game state
+    const players = g.game?.players || g.players || [];
+    
+    // If no players or preloadAvatars not available, skip with minimal delay
+    const preloadAvatars = g.preloadAvatars || window.preloadAvatars;
+    
+    if (!preloadAvatars) {
+      console.warn('[IntroScreen] preloadAvatars not available, skipping avatar preload');
+      return { loaded: 0, total: 0, timedOut: false, skipped: true };
+    }
+    
+    if (!players || players.length === 0) {
+      console.warn('[IntroScreen] No players to preload avatars for, skipping');
+      return { loaded: 0, total: 0, timedOut: false, skipped: true };
+    }
+    
+    // Show overlay
+    const overlay = showAvatarPreloadOverlay();
+    
+    // Log telemetry
+    try {
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('avatar_preload_workflow_start', { playerCount: players.length });
+      }
+    } catch (e) {
+      // Non-blocking telemetry
+    }
+    
+    try {
+      // Perform preload with progress callback
+      const result = await preloadAvatars(players, {
+        timeout: AVATAR_PRELOAD_TIMEOUT,
+        onProgress: (loaded, total) => {
+          updateAvatarPreloadProgress(loaded, total);
+        }
+      });
+      
+      console.info('[IntroScreen] Avatar preload complete:', result);
+      
+      // Log telemetry
+      try {
+        if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+          g.Telemetry.log('avatar_preload_workflow_done', result);
+        }
+      } catch (e) {
+        // Non-blocking telemetry
+      }
+      
+      // Small delay to let user see 100% before hiding
+      if (result.loaded > 0 && result.loaded === result.total) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      // Hide overlay with animation
+      await hideAvatarPreloadOverlay(overlay);
+      
+      return result;
+    } catch (err) {
+      console.error('[IntroScreen] Avatar preload error:', err);
+      
+      // Log telemetry for error
+      try {
+        if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+          g.Telemetry.log('avatar_preload_workflow_error', { error: err.message });
+        }
+      } catch (e) {
+        // Non-blocking telemetry
+      }
+      
+      // Hide overlay and proceed anyway
+      await hideAvatarPreloadOverlay(overlay);
+      
+      return { loaded: 0, total: players.length, timedOut: false, error: true };
+    }
+  }
 
 
   /**
@@ -1352,7 +1601,14 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Hide first if visible
     if (isVisible && container) {
       container.classList.remove('intro-screen--visible');
+      container.classList.remove('bg-ready');
       container.style.display = 'none';
+    }
+    
+    // Remove any avatar preload overlay
+    const avatarOverlay = document.getElementById('avatarPreloadOverlay');
+    if (avatarOverlay) {
+      avatarOverlay.remove();
     }
     
     // CRITICAL: Reset flags immediately during reset
