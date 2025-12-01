@@ -88,7 +88,8 @@
     avatarPreloadConcurrency: 8,    // Max concurrent avatar requests (mobile stability)
     avatarPreloadTimeoutMs: 7000,   // Timeout before forcing ready (ms)
     avatarReadyPercent: 0.99,       // Percentage of avatars needed before ready event
-    avatarLoadMode: 'batch'         // 'batch' (gate roster) | 'skeleton' (progressive load)
+    avatarLoadMode: 'batch',        // 'batch' (gate roster) | 'skeleton' (progressive load)
+    avatarLocalFolderEnabled: true  // When false, skip local ./avatars/* lookups (useful for GitHub Pages to avoid 404s)
   };
 
   // Load configuration from localStorage

@@ -37,6 +37,46 @@
   const AVATAR_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
   
   /**
+   * Check if running on GitHub Pages
+   * @returns {boolean} True if on GitHub Pages (*.github.io or /bbmobile/ path)
+   */
+  function isGitHubPages() {
+    try {
+      const hostname = window.location.hostname;
+      const pathname = window.location.pathname;
+      return hostname.includes('github.io') || pathname.startsWith(GITHUB_PAGES_PATH);
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  /**
+   * Check if local avatar folder lookups should be skipped
+   * Returns true if on GitHub Pages AND avatarLocalFolderEnabled is false
+   * This avoids 404 churn for local ./avatars/* requests on GitHub Pages
+   * @returns {boolean} True if local folder lookups should be skipped
+   */
+  function shouldSkipLocalFolderLookups() {
+    const cfg = g.game?.cfg || g.cfg || {};
+    // Default to enabled (don't skip) if config not set
+    const localFolderEnabled = cfg.avatarLocalFolderEnabled !== false;
+    
+    // Skip local lookups if: on GitHub Pages AND local folder is disabled
+    if (!localFolderEnabled && isGitHubPages()) {
+      console.info('[AvatarPreload] Skipping local folder lookups - GitHub Pages optimization');
+      return true;
+    }
+    
+    // Auto-detect: if on GitHub Pages with no explicit setting, prefer external
+    if (cfg.avatarLocalFolderEnabled === undefined && isGitHubPages()) {
+      console.info('[AvatarPreload] Auto-detected GitHub Pages - skipping local folder lookups');
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
    * Get project base path for GitHub Pages deployment
    * Returns the repository segment ("/bbmobile/") when deployed to GitHub Pages
    * @returns {string} Base path with leading/trailing slashes
@@ -233,33 +273,38 @@
       candidates.push(player.avatarUrl);
     }
     
-    // Generate candidates from player name with all variants and extensions
-    if (playerName && playerName !== String(playerId)) {
-      const nameVariants = generateNameVariants(playerName);
-      
-      for (const variant of nameVariants) {
-        for (const ext of AVATAR_EXTENSIONS) {
-          candidates.push(`./avatars/${variant}.${ext}`);
+    // Skip local folder lookups on GitHub Pages to avoid 404 churn
+    const skipLocal = shouldSkipLocalFolderLookups();
+    
+    if (!skipLocal) {
+      // Generate candidates from player name with all variants and extensions
+      if (playerName && playerName !== String(playerId)) {
+        const nameVariants = generateNameVariants(playerName);
+        
+        for (const variant of nameVariants) {
+          for (const ext of AVATAR_EXTENSIONS) {
+            candidates.push(`./avatars/${variant}.${ext}`);
+          }
         }
       }
-    }
-    
-    // ID-based candidates with all extensions
-    if (playerId) {
-      for (const ext of AVATAR_EXTENSIONS) {
-        candidates.push(`./avatars/${playerId}.${ext}`);
+      
+      // ID-based candidates with all extensions
+      if (playerId) {
+        for (const ext of AVATAR_EXTENSIONS) {
+          candidates.push(`./avatars/${playerId}.${ext}`);
+        }
       }
-    }
-    
-    // For human player, add You.png as a specific fallback
-    if (isHumanPlayer) {
-      for (const ext of AVATAR_EXTENSIONS) {
-        candidates.push(`./avatars/You.${ext}`);
+      
+      // For human player, add You.png as a specific fallback
+      if (isHumanPlayer) {
+        for (const ext of AVATAR_EXTENSIONS) {
+          candidates.push(`./avatars/You.${ext}`);
+        }
       }
+      
+      // Final fallback: placeholder.png
+      candidates.push('./avatars/placeholder.png');
     }
-    
-    // Final fallback: placeholder.png
-    candidates.push('./avatars/placeholder.png');
     
     // Return first candidate not in negative cache, with resolved path
     for (const candidate of candidates) {
