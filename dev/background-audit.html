@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Asset Audit - Dev Tool</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #00e0cc;
+      border-bottom: 2px solid #00e0cc;
+      padding-bottom: 10px;
+    }
+    .summary {
+      background: #16213e;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-stats {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      background: #0f3460;
+      padding: 15px 25px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-top: 5px;
+    }
+    .stat.passed .stat-value { color: #34d399; }
+    .stat.failed .stat-value { color: #ef4444; }
+    .stat.total .stat-value { color: #60a5fa; }
+    
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .asset-card {
+      background: #16213e;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    .asset-card.loading { border-color: #fbbf24; }
+    .asset-card.success { border-color: #34d399; }
+    .asset-card.failed { border-color: #ef4444; }
+    
+    .asset-preview {
+      height: 150px;
+      background: #0f3460;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .asset-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: cover;
+    }
+    .asset-preview .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #333;
+      border-top-color: #00e0cc;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .asset-preview .error-icon {
+      font-size: 3rem;
+      color: #ef4444;
+    }
+    
+    .asset-info {
+      padding: 15px;
+    }
+    .asset-filename {
+      font-weight: bold;
+      font-size: 0.95rem;
+      word-break: break-all;
+    }
+    .asset-status {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      padding: 4px 10px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .asset-status.loading {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+    .asset-status.success {
+      background: rgba(52, 211, 153, 0.2);
+      color: #34d399;
+    }
+    .asset-status.failed {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    .asset-error {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #ef4444;
+      font-family: monospace;
+    }
+    
+    .actions {
+      margin-bottom: 20px;
+    }
+    .btn {
+      background: #00e0cc;
+      color: #1a1a2e;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: #00b8a9;
+    }
+    .btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    
+    .console-log {
+      background: #0d1117;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 0;
+      border-bottom: 1px solid #222;
+    }
+    .log-entry.success { color: #34d399; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry.info { color: #60a5fa; }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🖼️ Background Asset Audit</h1>
+  
+  <div class="summary">
+    <h2>Summary</h2>
+    <div class="summary-stats">
+      <div class="stat total">
+        <div class="stat-value" id="totalCount">0</div>
+        <div class="stat-label">Total Assets</div>
+      </div>
+      <div class="stat passed">
+        <div class="stat-value" id="passedCount">0</div>
+        <div class="stat-label">Loaded OK</div>
+      </div>
+      <div class="stat failed">
+        <div class="stat-value" id="failedCount">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="actions">
+    <button class="btn" id="runAuditBtn">🔍 Run Asset Audit</button>
+  </div>
+  
+  <div class="asset-grid" id="assetGrid"></div>
+  
+  <div class="console-log" id="consoleLog">
+    <div class="log-entry info">Ready to audit background assets. Click "Run Asset Audit" to start.</div>
+  </div>
+
+  <script>
+    // Asset manifest (should match assets/background-manifest.json)
+    const ASSETS_BASE = '../assets/skins/';
+    const ASSET_MANIFEST = [
+      'sunrise-background.png',
+      'daily-background.png',
+      'sunset-background.png',
+      'night-background.png',
+      'rainy-background.png',
+      'night-snow-background.png',
+      'snowday-background.png',
+      'thunderstorm-background.png',
+      'xmas-day-background.png',
+      'xmas-eve-background.png',
+      'xmasy-night-background.png'
+    ];
+
+    const grid = document.getElementById('assetGrid');
+    const consoleLog = document.getElementById('consoleLog');
+    const runBtn = document.getElementById('runAuditBtn');
+    const totalCount = document.getElementById('totalCount');
+    const passedCount = document.getElementById('passedCount');
+    const failedCount = document.getElementById('failedCount');
+
+    let passed = 0;
+    let failed = 0;
+
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      consoleLog.appendChild(entry);
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+
+    function createAssetCard(filename) {
+      const card = document.createElement('div');
+      card.className = 'asset-card loading';
+      card.id = `card-${filename.replace(/[^a-z0-9]/gi, '-')}`;
+      
+      card.innerHTML = `
+        <div class="asset-preview">
+          <div class="loading-spinner"></div>
+        </div>
+        <div class="asset-info">
+          <div class="asset-filename">${filename}</div>
+          <div class="asset-status loading">Loading...</div>
+        </div>
+      `;
+      
+      return card;
+    }
+
+    function updateCardSuccess(card, filename, img) {
+      card.className = 'asset-card success';
+      const preview = card.querySelector('.asset-preview');
+      preview.innerHTML = '';
+      preview.appendChild(img);
+      
+      const status = card.querySelector('.asset-status');
+      status.className = 'asset-status success';
+      status.textContent = '✓ Loaded OK';
+      
+      passed++;
+      passedCount.textContent = passed;
+    }
+
+    function updateCardFailed(card, filename, error) {
+      card.className = 'asset-card failed';
+      const preview = card.querySelector('.asset-preview');
+      preview.innerHTML = '<div class="error-icon">✗</div>';
+      
+      const status = card.querySelector('.asset-status');
+      status.className = 'asset-status failed';
+      status.textContent = '✗ Failed';
+      
+      const info = card.querySelector('.asset-info');
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'asset-error';
+      errorDiv.textContent = error || '404 / Network Error';
+      info.appendChild(errorDiv);
+      
+      failed++;
+      failedCount.textContent = failed;
+    }
+
+    async function loadAsset(filename) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const url = ASSETS_BASE + filename;
+        
+        const timeout = setTimeout(() => {
+          log(`Timeout loading: ${filename}`, 'error');
+          resolve({ success: false, error: 'Timeout' });
+        }, 10000);
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          log(`✓ Loaded: ${filename}`, 'success');
+          resolve({ success: true, img });
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeout);
+          log(`✗ Failed: ${filename}`, 'error');
+          resolve({ success: false, error: '404 or network error' });
+        };
+        
+        img.src = url;
+      });
+    }
+
+    async function runAudit() {
+      // Reset state
+      grid.innerHTML = '';
+      passed = 0;
+      failed = 0;
+      passedCount.textContent = '0';
+      failedCount.textContent = '0';
+      totalCount.textContent = ASSET_MANIFEST.length;
+      
+      log('Starting asset audit...', 'info');
+      log(`Checking ${ASSET_MANIFEST.length} assets from manifest`, 'info');
+      
+      runBtn.disabled = true;
+      runBtn.textContent = 'Auditing...';
+      
+      // Create cards for all assets
+      for (const filename of ASSET_MANIFEST) {
+        const card = createAssetCard(filename);
+        grid.appendChild(card);
+      }
+      
+      // Load assets sequentially for cleaner logging
+      for (const filename of ASSET_MANIFEST) {
+        const card = document.getElementById(`card-${filename.replace(/[^a-z0-9]/gi, '-')}`);
+        const result = await loadAsset(filename);
+        
+        if (result.success) {
+          updateCardSuccess(card, filename, result.img);
+        } else {
+          updateCardFailed(card, filename, result.error);
+        }
+        
+        // Small delay between assets
+        await new Promise(r => setTimeout(r, 100));
+      }
+      
+      // Summary
+      log('─'.repeat(50), 'info');
+      log(`Audit complete: ${passed}/${ASSET_MANIFEST.length} passed, ${failed} failed`, 
+          failed > 0 ? 'error' : 'success');
+      
+      runBtn.disabled = false;
+      runBtn.textContent = '🔍 Run Asset Audit';
+    }
+
+    runBtn.addEventListener('click', runAudit);
+    
+    // Initial count
+    totalCount.textContent = ASSET_MANIFEST.length;
+  </script>
+</body>
+</html>

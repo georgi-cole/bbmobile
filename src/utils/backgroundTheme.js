@@ -5,28 +5,55 @@
 // 3. Seasonal fallback (winter snow, autumn rain chance)
 // 4. Time-of-day base (sunrise, day, sunset, night)
 //
+// Enhanced with:
+// - Fuzzy/typo-tolerant token matching for time-of-day and weather conditions
+// - Robust fallback handling for missing/404 background images
+// - Asset manifest validation
+// - Telemetry for asset selection and fallback scenarios
+//
 // Emits: theme:bg-change event with { key, url, anchor, reason }
 // Public API: init({ bus }), getCurrent(), updateTheme(), setAdaptive(), manualOverride()
+// Dev API: __bgTestAll() - validate all manifest assets
 
 (function(g) {
   'use strict';
 
   const ASSETS_BASE = 'assets/skins/';
+  const DEFAULT_THEME_KEY = 'day';
+  const DEFAULT_ASSET = 'daily-background.png';
   
-  // Background asset mapping (handling typo in snow asset)
+  // Background asset mapping - corrected to use actual filenames
+  // The snow asset was previously using a typo filename that doesn't exist
   const BACKGROUNDS = {
     sunrise: 'sunrise-background.png',
     day: 'daily-background.png',
     sunset: 'sunset-background.png',
     night: 'night-background.png',
     rain: 'rainy-background.png',
-    // TODO: Rename asset file from nisght-snow-background.png to night-snow-background.png
-    // For now, keep using the misspelled filename to avoid breaking the app
-    snow: 'nisght-snow-background.png',
+    // Fixed: use correct filename (night-snow-background.png exists in assets/skins/)
+    snow: 'night-snow-background.png',
+    snowday: 'snowday-background.png',
+    thunderstorm: 'thunderstorm-background.png',
     xmasDay: 'xmas-day-background.png',
-    xmasy: 'xmasy-background.png',
+    xmasEve: 'xmas-eve-background.png',
+    xmasy: 'xmas-day-background.png', // Alias to xmas-day for backwards compatibility
     xmasyNight: 'xmasy-night-background.png'
   };
+
+  // Asset manifest for validation - canonical list of existing files
+  const ASSET_MANIFEST = [
+    'sunrise-background.png',
+    'daily-background.png',
+    'sunset-background.png',
+    'night-background.png',
+    'rainy-background.png',
+    'night-snow-background.png',
+    'snowday-background.png',
+    'thunderstorm-background.png',
+    'xmas-day-background.png',
+    'xmas-eve-background.png',
+    'xmasy-night-background.png'
+  ];
 
   // Anchor suggestions per theme (CSS values for button column positioning)
   // These position the button column centered on screen with slight adjustments per theme
@@ -37,13 +64,17 @@
     night: { left: '50vw', top: '50vh' },
     rain: { left: '50vw', top: '50vh' },
     snow: { left: '50vw', top: '50vh' },
+    snowday: { left: '50vw', top: '50vh' },
+    thunderstorm: { left: '50vw', top: '50vh' },
     xmasDay: { left: '50vw', top: '50vh' },
+    xmasEve: { left: '50vw', top: '50vh' },
     xmasy: { left: '50vw', top: '50vh' },
     xmasyNight: { left: '50vw', top: '50vh' }
   };
 
   let bus = null;
   let currentTheme = null;
+  let lastSuccessfulTheme = null; // Track last successfully loaded theme for fallback
   let lastUpdate = 0;
   let weatherData = null;
   let weatherFetchTime = 0;
@@ -73,14 +104,149 @@
   }
 
   // Ensure alias is maintained in both namespaces
+  let aliasBootstrapRun = false; // Singleton guard for alias bootstrap
   function ensureAlias() {
     if (!g.game) {
       g.game = {};
     }
     if (!g.game.BackgroundTheme) {
       g.game.BackgroundTheme = g.BackgroundTheme;
-      console.info('[BackgroundTheme] Alias established: window.game.BackgroundTheme -> window.BackgroundTheme');
+      if (!aliasBootstrapRun) {
+        console.info('[BackgroundTheme] Alias established: window.game.BackgroundTheme -> window.BackgroundTheme');
+        aliasBootstrapRun = true;
+      } else {
+        // Log duplicate attempt for telemetry
+        logTelemetry('config_alias_bootstrap_duplicate_attempt', { suppressed: true });
+      }
     }
+  }
+
+  // ===== FUZZY TOKEN MATCHING =====
+  
+  /**
+   * Get FuzzyTokenMap utility if available
+   * Falls back to identity function if not loaded
+   */
+  function getFuzzyTokenMap() {
+    return g.FuzzyTokenMap || {
+      canonicalizeTimeToken: (raw) => ({ canonical: raw, fuzzyApplied: false, original: raw }),
+      canonicalizeConditionToken: (raw) => ({ canonical: raw, fuzzyApplied: false, original: raw })
+    };
+  }
+
+  // ===== ASSET VALIDATION & PRELOADING =====
+
+  /**
+   * Check if a filename exists in the asset manifest
+   * @param {string} filename - Asset filename to validate
+   * @returns {boolean} True if valid
+   */
+  function isValidAsset(filename) {
+    return ASSET_MANIFEST.includes(filename);
+  }
+
+  /**
+   * Preload an image with fallback handling
+   * Returns a promise that resolves with success status
+   * @param {string} url - Full URL to the image
+   * @param {number} timeout - Timeout in ms (default 5000)
+   * @returns {Promise<{success: boolean, url: string, error?: string}>}
+   */
+  function preloadImage(url, timeout = 5000) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      let resolved = false;
+
+      const timeoutId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          console.warn(`[BackgroundTheme] Image preload timeout: ${url}`);
+          logTelemetry('bg_asset_load_error', { url, error: 'timeout' });
+          resolve({ success: false, url, error: 'timeout' });
+        }
+      }, timeout);
+
+      img.onload = () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          logTelemetry('bg_asset_load_success', { url });
+          resolve({ success: true, url });
+        }
+      };
+
+      img.onerror = (err) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          const errorMsg = err?.message || '404/network error';
+          console.warn(`[BackgroundTheme] Image preload failed: ${url}`, errorMsg);
+          logTelemetry('bg_asset_load_error', { url, error: errorMsg });
+          resolve({ success: false, url, error: errorMsg });
+        }
+      };
+
+      img.src = url;
+    });
+  }
+
+  /**
+   * Resolve theme key with fuzzy matching and validation
+   * If the resolved asset doesn't exist, falls back to default
+   * @param {string} rawKey - Raw theme key (may contain typos)
+   * @returns {{ key: string, filename: string, fuzzyApplied: boolean, valid: boolean }}
+   */
+  function resolveThemeKey(rawKey) {
+    if (!rawKey) {
+      return { key: DEFAULT_THEME_KEY, filename: DEFAULT_ASSET, fuzzyApplied: false, valid: true };
+    }
+
+    const FuzzyTokenMap = getFuzzyTokenMap();
+    
+    // First, check if rawKey is a direct match
+    if (BACKGROUNDS[rawKey]) {
+      const filename = BACKGROUNDS[rawKey];
+      const valid = isValidAsset(filename);
+      
+      if (!valid) {
+        console.warn(`[BackgroundTheme] Asset not in manifest: ${filename}, using default`);
+        logTelemetry('bg_asset_invalid', { key: rawKey, filename, reason: 'not_in_manifest' });
+        return { key: DEFAULT_THEME_KEY, filename: DEFAULT_ASSET, fuzzyApplied: false, valid: true };
+      }
+      
+      return { key: rawKey, filename, fuzzyApplied: false, valid: true };
+    }
+
+    // Try fuzzy matching for time tokens
+    const timeResult = FuzzyTokenMap.canonicalizeTimeToken(rawKey);
+    if (timeResult.canonical && BACKGROUNDS[timeResult.canonical]) {
+      const filename = BACKGROUNDS[timeResult.canonical];
+      const valid = isValidAsset(filename);
+      
+      if (timeResult.fuzzyApplied) {
+        console.info(`[BackgroundTheme] Fuzzy matched time token: "${rawKey}" -> "${timeResult.canonical}"`);
+        logTelemetry('bg_asset_select', { 
+          rawToken: rawKey, 
+          canonicalToken: timeResult.canonical, 
+          filename, 
+          fuzzyApplied: true,
+          tokenType: 'time'
+        });
+      }
+      
+      if (!valid) {
+        console.warn(`[BackgroundTheme] Fuzzy-resolved asset not in manifest: ${filename}, using default`);
+        logTelemetry('bg_asset_invalid', { key: timeResult.canonical, filename, reason: 'fuzzy_not_in_manifest' });
+        return { key: DEFAULT_THEME_KEY, filename: DEFAULT_ASSET, fuzzyApplied: timeResult.fuzzyApplied, valid: true };
+      }
+      
+      return { key: timeResult.canonical, filename, fuzzyApplied: timeResult.fuzzyApplied, valid: true };
+    }
+
+    // Unknown key - log and use default
+    console.warn(`[BackgroundTheme] Unknown theme key: "${rawKey}", using default`);
+    logTelemetry('bg_asset_invalid', { key: rawKey, reason: 'unknown_key' });
+    return { key: DEFAULT_THEME_KEY, filename: DEFAULT_ASSET, fuzzyApplied: false, valid: true };
   }
 
   // Check if date falls within holiday period (Dec 20 – Jan 1)
@@ -276,8 +442,8 @@
           theme = 'snow';
           reason = 'weather (snow at night)';
         } else {
-          // Use xmas-day as temporary "snow day" visual
-          theme = 'xmasDay';
+          // Use snowday for daytime snow instead of xmasDay
+          theme = 'snowday';
           reason = `weather (snow during ${timeOfDay})`;
         }
         return { theme, reason };
@@ -351,30 +517,74 @@
       // Determine theme
       const { theme, reason } = determineTheme();
 
+      // Resolve and validate the theme key with fuzzy matching
+      const resolved = resolveThemeKey(theme);
+      const effectiveKey = resolved.key;
+      const effectiveFilename = resolved.filename;
+
       // Check if theme changed
-      if (currentTheme && currentTheme.key === theme) {
+      if (currentTheme && currentTheme.key === effectiveKey) {
         lastUpdate = now;
         return; // No change
       }
 
+      const url = ASSETS_BASE + effectiveFilename;
+
+      // Preload the image with fallback handling
+      const preloadResult = await preloadImage(url);
+      
+      let finalUrl = url;
+      let finalKey = effectiveKey;
+      let usedFallback = false;
+      
+      if (!preloadResult.success) {
+        console.warn(`[BackgroundTheme] Asset load failed: ${url}, using fallback`);
+        logTelemetry('bg_asset_fallback', { 
+          attemptedUrl: url, 
+          attemptedKey: effectiveKey,
+          error: preloadResult.error
+        });
+        
+        // Use last successful theme if available, otherwise default
+        if (lastSuccessfulTheme) {
+          finalUrl = lastSuccessfulTheme.url;
+          finalKey = lastSuccessfulTheme.key;
+          console.info(`[BackgroundTheme] Falling back to last successful theme: ${finalKey}`);
+        } else {
+          finalUrl = ASSETS_BASE + DEFAULT_ASSET;
+          finalKey = DEFAULT_THEME_KEY;
+          console.info(`[BackgroundTheme] Falling back to default theme: ${finalKey}`);
+        }
+        usedFallback = true;
+      }
+
       // Build theme data
       const themeData = {
-        key: theme,
-        url: ASSETS_BASE + BACKGROUNDS[theme],
-        anchor: ANCHORS[theme] || ANCHORS.day,
-        reason: reason
+        key: finalKey,
+        url: finalUrl,
+        anchor: ANCHORS[finalKey] || ANCHORS.day,
+        reason: usedFallback ? `${reason} (fallback)` : reason,
+        fuzzyApplied: resolved.fuzzyApplied,
+        usedFallback: usedFallback
       };
 
       currentTheme = themeData;
       lastUpdate = now;
+      
+      // Track successful theme for fallback
+      if (!usedFallback) {
+        lastSuccessfulTheme = { ...themeData };
+      }
 
       console.info('[BackgroundTheme] Theme updated:', themeData);
       
       // Log telemetry
       logTelemetry('bg_update', {
-        theme: theme,
-        reason: reason,
-        adaptiveEnabled: adaptiveEnabled
+        theme: finalKey,
+        reason: themeData.reason,
+        adaptiveEnabled: adaptiveEnabled,
+        fuzzyApplied: resolved.fuzzyApplied,
+        usedFallback: usedFallback
       });
 
       // Emit event
@@ -492,13 +702,82 @@
     };
   }
 
+  // ===== DEV UTILITIES =====
+
+  /**
+   * Dev utility: Test all manifest assets and verify they load without 404
+   * Iterates through the asset manifest and reports status for each
+   * 
+   * @returns {Promise<{passed: number, failed: number, results: Array}>}
+   */
+  async function testAllAssets() {
+    console.info('[BackgroundTheme] Testing all manifest assets...');
+    logTelemetry('bg_test_all_start', { assetCount: ASSET_MANIFEST.length });
+    
+    const results = [];
+    let passed = 0;
+    let failed = 0;
+    
+    for (const filename of ASSET_MANIFEST) {
+      const url = ASSETS_BASE + filename;
+      const result = await preloadImage(url, 10000); // 10s timeout for test
+      
+      if (result.success) {
+        passed++;
+        console.info(`[BackgroundTheme] ✓ ${filename}`);
+      } else {
+        failed++;
+        console.error(`[BackgroundTheme] ✗ ${filename}: ${result.error}`);
+      }
+      
+      results.push({
+        filename,
+        url,
+        success: result.success,
+        error: result.error
+      });
+    }
+    
+    const summary = {
+      passed,
+      failed,
+      total: ASSET_MANIFEST.length,
+      results
+    };
+    
+    console.info(`[BackgroundTheme] Asset test complete: ${passed}/${ASSET_MANIFEST.length} passed, ${failed} failed`);
+    logTelemetry('bg_test_all_complete', { passed, failed, total: ASSET_MANIFEST.length });
+    
+    return summary;
+  }
+
+  /**
+   * Get the asset manifest for external validation
+   * @returns {Array<string>} List of asset filenames
+   */
+  function getAssetManifest() {
+    return [...ASSET_MANIFEST];
+  }
+
+  /**
+   * Get all valid theme keys
+   * @returns {Array<string>} List of theme keys
+   */
+  function getValidThemeKeys() {
+    return Object.keys(BACKGROUNDS);
+  }
+
   // Export API to both window.BackgroundTheme and window.game.BackgroundTheme
   const API = {
     init,
     getCurrent,
     updateTheme,
     setAdaptive,
-    manualOverride
+    manualOverride,
+    // Dev utilities
+    testAllAssets,
+    getAssetManifest,
+    getValidThemeKeys
   };
 
   if (!g.BackgroundTheme) {
@@ -513,5 +792,9 @@
   setTimeout(() => {
     ensureAlias();
   }, 100);
+
+  // ===== GLOBAL DEV UTILITY =====
+  // Expose __bgTestAll for easy console access
+  g.__bgTestAll = testAllAssets;
 
 })(window);
