@@ -2233,18 +2233,6 @@
   }
   
   /**
-   * Handle player eviction event (legacy - redirects to new handler)
-   * NOTE: Evicted players STAY in the main grid with evicted styling (B&W, transparency, red X).
-   * They are NOT removed from state.activePlayers (which contains ALL players, including evicted).
-   * @deprecated Use handleEvictedEvent instead
-   */
-  // eslint-disable-next-line no-unused-vars
-  function handlePlayerEvicted(data) {
-    // Redirect to new handler
-    handleEvictedEvent(data);
-  }
-  
-  /**
    * Handle player update event
    */
   function handlePlayersUpdate(data) {
