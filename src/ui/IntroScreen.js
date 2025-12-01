@@ -160,10 +160,15 @@ console.info('[IntroScreen] Script executing – pre-init');
           g.__bbPlayInitiated = true;
           console.info('[IntroHub] Set __bbPlayInitiated=true');
           
-          // Show avatar preload overlay and wait for completion
-          await performAvatarPreload();
+          try {
+            // Show avatar preload overlay and wait for completion
+            await performAvatarPreload();
+          } catch (err) {
+            // Log error but proceed anyway - game should still start
+            console.error('[IntroHub] Avatar preload error, proceeding to game:', err);
+          }
           
-          // After preload completes, proceed with the play action
+          // After preload completes (or fails), proceed with the play action
           handleButtonAction(action, label);
           return;
         }
