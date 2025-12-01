@@ -472,15 +472,15 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 }
 
 /* Badge text overlay at bottom-center of avatar
- * NOTE: Badge is positioned as sibling of avatar-wrap to avoid overflow:hidden clipping.
- * Uses absolute positioning relative to tile, positioned above the name label.
+ * NOTE: Badge is now positioned INSIDE the avatar-wrap to prevent vertical layout shifts.
+ * Uses absolute positioning relative to avatar-wrap, positioned at bottom.
  * Single row container - no wrapping. Uses emoji fallback when text would overflow.
  * Per requirements: centered via left:50% translateX(-50%), z-index 3
  */
 .mobile-roster-badge-overlay {
   position: absolute;
-  /* Position above name label */
-  bottom: calc(var(--name-label-height, 18px) + 4px);
+  /* Position at bottom of avatar area */
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   /* Single row flex - no wrapping */

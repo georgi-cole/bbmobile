@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Roster - Badges &amp; Spacing Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../css/mobileRoster.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg, #1a1a2e);
+      color: var(--ink, #fff);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .test-controls {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10000;
+      background: rgba(20, 20, 40, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line, #333);
+    }
+    
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .controls-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .control-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--muted-2, #888);
+      min-width: 70px;
+    }
+    
+    .test-btn {
+      padding: 6px 12px;
+      background: var(--primary-2, #252540);
+      border: 1px solid var(--line, #333);
+      border-radius: 6px;
+      color: var(--ink, #fff);
+      cursor: pointer;
+      font-size: 0.7rem;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: var(--primary-3, #2a2a4a);
+      transform: translateY(-1px);
+    }
+    
+    .test-btn.hoh { background: #ff9800; color: #000; }
+    .test-btn.pov { background: #ffd700; color: #000; }
+    .test-btn.nom { background: #e74c3c; color: #fff; }
+    .test-btn.safe { background: #2ecc71; color: #fff; }
+    .test-btn.ffwd { background: #9b59b6; color: #fff; }
+    .test-btn.danger { background: #c0392b; color: #fff; }
+    
+    .metrics-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10000;
+      background: rgba(20, 20, 40, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 10px 12px;
+      border-top: 1px solid var(--line, #333);
+    }
+    
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+    
+    .metric {
+      padding: 8px;
+      background: var(--card-2, #252540);
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    .metric-label {
+      font-size: 0.65rem;
+      color: var(--muted-2, #888);
+      margin-bottom: 2px;
+    }
+    
+    .metric-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink, #fff);
+    }
+    
+    .metric-value.error { color: #e74c3c; }
+    .metric-value.success { color: #2ecc71; }
+    .metric-value.warning { color: #f39c12; }
+    
+    .game-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding-top: 90px; /* Space for controls */
+      padding-bottom: 90px; /* Space for metrics panel */
+    }
+    
+    /* Roster container positioning */
+    #rosterBar {
+      display: none;
+    }
+    
+    .mobile-roster-container {
+      display: flex !important;
+      flex: 1;
+    }
+    
+    /* Faux TV overlay at bottom of screen */
+    .tv-overlay-container {
+      position: fixed;
+      bottom: 90px; /* Above metrics panel */
+      left: 0;
+      right: 0;
+      z-index: 100;
+      pointer-events: none;
+    }
+    
+    .tv {
+      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.7) 60%, transparent);
+      padding: 20px;
+      min-height: var(--tv-overlay-height, 200px);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      pointer-events: auto;
+    }
+    
+    #tvNow {
+      text-align: center;
+      color: #fff;
+      padding: 10px;
+    }
+    
+    .tv-phase-label {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    
+    .tv-phase-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    /* Height slider */
+    .height-slider {
+      width: 80px;
+      height: 4px;
+    }
+    
+    /* Debug outline for overlap detection */
+    .debug-overlap-line {
+      position: fixed;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: red;
+      z-index: 9999;
+      pointer-events: none;
+      display: none;
+    }
+    
+    body[data-show-overlap-line="true"] .debug-overlap-line {
+      display: block;
+    }
+    
+    /* Event log */
+    .event-log {
+      position: fixed;
+      top: 100px;
+      right: 10px;
+      width: 200px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.8);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 0.65rem;
+      z-index: 9000;
+    }
+    
+    .event-log-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #888;
+    }
+    
+    .event-entry {
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin-bottom: 2px;
+      animation: eventFlash 0.5s ease-out;
+    }
+    
+    .event-entry.hoh { background: rgba(255, 152, 0, 0.3); }
+    .event-entry.pov { background: rgba(255, 215, 0, 0.3); }
+    .event-entry.nom { background: rgba(231, 76, 60, 0.3); }
+    .event-entry.safe { background: rgba(46, 204, 113, 0.3); }
+    .event-entry.ffwd { background: rgba(155, 89, 182, 0.3); }
+    
+    @keyframes eventFlash {
+      0% { transform: translateX(20px); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body data-mobile-roster-active="true">
+  
+  <!-- Test Controls Panel -->
+  <div class="test-controls">
+    <div class="controls-row">
+      <span class="control-label">Badge Events:</span>
+      <button class="test-btn hoh" onclick="triggerHOH()">👑 HOH</button>
+      <button class="test-btn pov" onclick="triggerPOV()">🛡️ POV</button>
+      <button class="test-btn nom" onclick="triggerNominate()">❓ NOM</button>
+      <button class="test-btn safe" onclick="triggerSafe()">✅ SAFE</button>
+      <button class="test-btn ffwd" onclick="triggerFastForward()">⏩ Fast Forward</button>
+    </div>
+    <div class="controls-row">
+      <span class="control-label">TV Height:</span>
+      <input type="range" class="height-slider" id="tvHeightSlider" min="100" max="350" value="200" onchange="updateTVHeight(this.value)">
+      <span id="tvHeightValue" style="font-size: 0.7rem; min-width: 50px;">200px</span>
+      <span class="control-label" style="margin-left: 16px;">Actions:</span>
+      <button class="test-btn" onclick="resetPlayers()">Reset Players</button>
+      <button class="test-btn danger" onclick="evictRandomPlayer()">Evict Random</button>
+      <button class="test-btn" onclick="toggleOverlapLine()">Toggle Debug Line</button>
+    </div>
+  </div>
+  
+  <!-- Debug overlap line (shows where TV overlay starts) -->
+  <div class="debug-overlap-line" id="overlapLine"></div>
+  
+  <!-- Event Log -->
+  <div class="event-log" id="eventLog">
+    <div class="event-log-title">📋 Event Log</div>
+  </div>
+  
+  <!-- Game Container -->
+  <div class="game-container">
+    <!-- Roster Bar (hidden - triggers mobile roster injection) -->
+    <div id="rosterBar"></div>
+    
+    <!-- Mobile roster will be injected here -->
+  </div>
+  
+  <!-- TV Overlay (positioned at bottom) -->
+  <div class="tv-overlay-container">
+    <div class="tv" id="tv">
+      <div id="tvNow">
+        <div class="tv-phase-label">Current Phase</div>
+        <div class="tv-phase-name" id="phaseName">HOH Competition</div>
+      </div>
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+  
+  <!-- Live Metrics Panel -->
+  <div class="metrics-panel">
+    <div class="metrics-grid">
+      <div class="metric">
+        <div class="metric-label">Row Gap</div>
+        <div class="metric-value" id="metricRowGap">6px</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">TV Overlay Height</div>
+        <div class="metric-value" id="metricOverlayHeight">200px</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Spacer Height</div>
+        <div class="metric-value" id="metricSpacerHeight">206px</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Last Row Bottom</div>
+        <div class="metric-value" id="metricLastRowBottom">0px</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Overlap Status</div>
+        <div class="metric-value success" id="metricOverlapStatus">✓ OK</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Active Badges</div>
+        <div class="metric-value" id="metricActiveBadges">0</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Mock game state BEFORE loading modules (required for auto-init) -->
+  <script>
+    // ========================
+    // Mock Game State & Event Bus - MUST be set up BEFORE module loading
+    // ========================
+    
+    // Force mobile roster mode for testing (bypass viewport detection)
+    window.FORCE_MOBILE_ROSTER = true;
+    
+    // Player names for mock players
+    const PLAYER_NAMES = [
+      'Alice', 'Bob', 'Carol', 'Dave', 'Emma', 'Frank', 'Grace', 'Henry',
+      'Iris', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Paul'
+    ];
+    
+    function createMockPlayers(count) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        players.push({
+          id: i + 1,
+          name: PLAYER_NAMES[i] || `Player ${i + 1}`,
+          evicted: false,
+          hoh: false,
+          nominated: false,
+          pov: false,
+          safe: false
+        });
+      }
+      return players;
+    }
+    
+    // Initialize with 16 players BEFORE module loads
+    window.game = { 
+      players: createMockPlayers(16), 
+      phase: 'hoh',
+      week: 1,
+      season: 1,
+      hohId: null,
+      vetoHolder: null,
+      nominees: []
+    };
+    window.g = { game: window.game };
+    
+    // Event bus
+    window.bbGameBus = {
+      listeners: new Map(),
+      on(event, callback) {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+      },
+      emit(event, data) {
+        if (window.logEvent) window.logEvent(event, data);
+        if (!this.listeners.has(event)) return;
+        this.listeners.get(event).forEach(cb => cb(data));
+      }
+    };
+    
+    // Mock avatar resolver
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    console.log('✓ Mock game state initialized with', window.game.players.length, 'players');
+  </script>
+  
+  <!-- Load overlay spacing module first -->
+  <script src="../js/ui/overlaySpacing.js"></script>
+  
+  <!-- Load mobile roster module -->
+  <script src="../js/ui/mobileRoster.js"></script>
+  
+  <script>
+    // ========================
+    // Event Actions (Mock game state already initialized above)
+    // ========================
+    
+    let lastHOH = null;
+    let lastPOV = null;
+    
+    function getRandomActivePlayer(exclude = []) {
+      const available = window.game.players.filter(p => 
+        !p.evicted && !exclude.includes(p.id)
+      );
+      if (available.length === 0) return null;
+      return available[Math.floor(Math.random() * available.length)];
+    }
+    
+    function triggerHOH() {
+      const player = getRandomActivePlayer([lastHOH]);
+      if (!player) return;
+      
+      lastHOH = player.id;
+      window.game.hohId = player.id;
+      window.bbGameBus.emit('player:hoh', { playerId: player.id });
+    }
+    
+    function triggerPOV() {
+      const player = getRandomActivePlayer([lastPOV]);
+      if (!player) return;
+      
+      lastPOV = player.id;
+      window.game.vetoHolder = player.id;
+      window.bbGameBus.emit('player:veto', { playerId: player.id });
+    }
+    
+    function triggerNominate() {
+      const player = getRandomActivePlayer([window.game.hohId]);
+      if (!player) return;
+      
+      window.game.nominees.push(player.id);
+      window.bbGameBus.emit('player:nominated', { playerId: player.id });
+    }
+    
+    function triggerSafe() {
+      const nominees = window.game.players.filter(p => p.nominated && !p.evicted);
+      if (nominees.length === 0) {
+        // If no nominees, pick random player
+        const player = getRandomActivePlayer();
+        if (player) {
+          window.bbGameBus.emit('player:safe', { playerId: player.id });
+        }
+        return;
+      }
+      const player = nominees[0];
+      window.bbGameBus.emit('player:safe', { playerId: player.id });
+    }
+    
+    function triggerFastForward() {
+      // Emit skip events that should dismiss all pills immediately
+      window.bbGameBus.emit('phase:skip', {});
+      window.bbGameBus.emit('game:fastforward', {});
+      
+      // Also dispatch custom event on window
+      window.dispatchEvent(new CustomEvent('bb:fastforward'));
+    }
+    
+    function evictRandomPlayer() {
+      const player = getRandomActivePlayer();
+      if (!player) return;
+      
+      player.evicted = true;
+      window.bbGameBus.emit('player:evicted', { 
+        playerId: player.id, 
+        week: Math.floor(Math.random() * 10) + 1 
+      });
+    }
+    
+    function resetPlayers() {
+      window.game.players = createMockPlayers(16);
+      window.game.hohId = null;
+      window.game.vetoHolder = null;
+      window.game.nominees = [];
+      lastHOH = null;
+      lastPOV = null;
+      
+      window.bbGameBus.emit('players:update', { players: window.game.players });
+      
+      // Clear event log
+      const log = document.getElementById('eventLog');
+      log.innerHTML = '<div class="event-log-title">📋 Event Log</div>';
+    }
+    
+    function updateTVHeight(value) {
+      const tv = document.querySelector('.tv');
+      if (tv) {
+        tv.style.minHeight = value + 'px';
+        document.documentElement.style.setProperty('--tv-overlay-height', value + 'px');
+      }
+      document.getElementById('tvHeightValue').textContent = value + 'px';
+      
+      // Trigger overlay spacing recalc
+      if (window.OverlaySpacing) {
+        window.OverlaySpacing.recalculate();
+      }
+      
+      // Update metrics
+      setTimeout(updateMetrics, 50);
+    }
+    
+    function toggleOverlapLine() {
+      const body = document.body;
+      const current = body.getAttribute('data-show-overlap-line');
+      body.setAttribute('data-show-overlap-line', current === 'true' ? 'false' : 'true');
+      updateOverlapLinePosition();
+    }
+    
+    function updateOverlapLinePosition() {
+      const tv = document.querySelector('.tv');
+      const line = document.getElementById('overlapLine');
+      if (tv && line) {
+        const tvRect = tv.getBoundingClientRect();
+        line.style.top = tvRect.top + 'px';
+      }
+    }
+    
+    // ========================
+    // Event Logging
+    // ========================
+    
+    function logEvent(event, data) {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      
+      let eventClass = '';
+      if (event.includes('hoh')) eventClass = 'hoh';
+      else if (event.includes('veto') || event.includes('pov')) eventClass = 'pov';
+      else if (event.includes('nominated') || event.includes('nom')) eventClass = 'nom';
+      else if (event.includes('safe')) eventClass = 'safe';
+      else if (event.includes('skip') || event.includes('fast')) eventClass = 'ffwd';
+      
+      entry.className = 'event-entry ' + eventClass;
+      entry.textContent = `${event}: ${JSON.stringify(data).slice(0, 30)}`;
+      
+      // Insert after title
+      const title = log.querySelector('.event-log-title');
+      if (title && title.nextSibling) {
+        log.insertBefore(entry, title.nextSibling);
+      } else {
+        log.appendChild(entry);
+      }
+      
+      // Keep max 20 entries
+      const entries = log.querySelectorAll('.event-entry');
+      if (entries.length > 20) {
+        entries[entries.length - 1].remove();
+      }
+    }
+    
+    // ========================
+    // Metrics Updates
+    // ========================
+    
+    function updateMetrics() {
+      const grid = document.querySelector('.mobile-roster-active-grid');
+      const spacer = document.querySelector('.mobile-roster-grid-spacer');
+      const tv = document.querySelector('.tv');
+      const tiles = document.querySelectorAll('.mobile-roster-tile');
+      
+      // Row gap
+      const rowGap = getComputedStyle(document.documentElement).getPropertyValue('--mobile-roster-gap') || '6px';
+      document.getElementById('metricRowGap').textContent = rowGap.trim();
+      
+      // TV overlay height
+      const overlayHeight = tv ? tv.offsetHeight : 0;
+      document.getElementById('metricOverlayHeight').textContent = overlayHeight + 'px';
+      
+      // Spacer height
+      const spacerHeight = spacer ? spacer.offsetHeight : 0;
+      document.getElementById('metricSpacerHeight').textContent = spacerHeight + 'px';
+      
+      // Last row bottom position
+      let lastRowBottom = 0;
+      if (tiles.length > 0) {
+        const lastTile = tiles[tiles.length - 1];
+        const rect = lastTile.getBoundingClientRect();
+        lastRowBottom = Math.round(rect.bottom);
+      }
+      document.getElementById('metricLastRowBottom').textContent = lastRowBottom + 'px';
+      
+      // Overlap status
+      const tvTop = tv ? tv.getBoundingClientRect().top : window.innerHeight;
+      const hasOverlap = lastRowBottom > tvTop;
+      const overlapEl = document.getElementById('metricOverlapStatus');
+      
+      if (hasOverlap) {
+        overlapEl.textContent = '✗ OVERLAP';
+        overlapEl.className = 'metric-value error';
+      } else {
+        const gapToTV = Math.round(tvTop - lastRowBottom);
+        if (gapToTV < 6) {
+          overlapEl.textContent = `⚠ ${gapToTV}px gap`;
+          overlapEl.className = 'metric-value warning';
+        } else {
+          overlapEl.textContent = `✓ ${gapToTV}px gap`;
+          overlapEl.className = 'metric-value success';
+        }
+      }
+      
+      // Active badges (pills)
+      const activePills = document.querySelectorAll('.badge-pill');
+      document.getElementById('metricActiveBadges').textContent = activePills.length;
+      
+      // Update overlap line position
+      updateOverlapLinePosition();
+    }
+    
+    // ========================
+    // Initialization
+    // ========================
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🧪 Mobile Roster Badges & Spacing Test Initialized');
+      
+      // Initialize mobile roster
+      if (window.MobileRoster) {
+        window.MobileRoster.init();
+        console.log('✓ MobileRoster initialized');
+      }
+      
+      // Update metrics regularly
+      setInterval(updateMetrics, 500);
+      
+      // Initial metrics update
+      setTimeout(updateMetrics, 100);
+    });
+    
+    // Expose test utilities globally
+    window.TestUtils = {
+      triggerHOH,
+      triggerPOV,
+      triggerNominate,
+      triggerSafe,
+      triggerFastForward,
+      evictRandomPlayer,
+      resetPlayers,
+      updateTVHeight,
+      updateMetrics
+    };
+  </script>
+  
+</body>
+</html>
