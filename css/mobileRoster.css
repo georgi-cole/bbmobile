@@ -860,24 +860,13 @@ body[data-mobile-roster-active="true"] #tvNow {
  * IMPORTANT: Use positive top margin (never negative) to prevent overlap with roster grid.
  * The margin must equal the grid gap to maintain visual consistency.
  * This ensures the TV overlay never covers the last roster row avatars or player names.
- * 
- * SAFEGUARD: Explicitly set margin-top to positive value and reset any negative margins
- * that could be inherited from other stylesheets. This prevents overlap at all times.
  */
 body[data-mobile-roster-active="true"] .tv {
-  margin-top: var(--mobile-roster-gap, 6px) !important; /* Match grid gap for consistent spacing */
-  margin-bottom: 0 !important; /* Prevent negative margin inheritance */
+  margin-top: var(--mobile-roster-gap, 6px); /* Match grid gap for consistent spacing */
   position: relative;
   overflow: hidden;
   /* Prevent the TV from intruding into the roster area */
   clear: both;
-}
-
-/* Safeguard: Ensure #tvNow and #tvOverlay never use negative margins when mobile roster is active */
-body[data-mobile-roster-active="true"] #tvNow,
-body[data-mobile-roster-active="true"] #tvOverlay {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
 }
 
 /* Faux TV player spotlight */
