@@ -845,15 +845,18 @@ console.info('[IntroScreen] Script executing – pre-init');
 
   /**
    * Build and show the avatar preload overlay.
-   * Displays a spinner with "Preparing player photos..." text and progress %.
+   * Displays a spinner with "Loading houseguest profiles…" text and progress %.
+   * Enhanced with role="dialog" aria-modal="true" for accessibility.
    * @returns {HTMLElement} The overlay element
    */
   function buildAvatarPreloadOverlay() {
     const overlay = document.createElement('div');
     overlay.id = 'avatarPreloadOverlay';
-    overlay.className = 'intro-avatar-preload-overlay';
-    overlay.setAttribute('role', 'alert');
-    overlay.setAttribute('aria-live', 'polite');
+    overlay.className = 'intro-avatar-preload-overlay avatar-preload-overlay';
+    // Enhanced accessibility: dialog with modal behavior
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'avatarPreloadText');
     overlay.setAttribute('aria-busy', 'true');
     
     // Spinner with accessibility
@@ -862,19 +865,31 @@ console.info('[IntroScreen] Script executing – pre-init');
     spinner.setAttribute('role', 'img');
     spinner.setAttribute('aria-label', 'Loading avatars');
     
-    // Text
+    // Live region for progress updates
+    const liveRegion = document.createElement('div');
+    liveRegion.className = 'avatar-preload-live-region sr-only';
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('aria-atomic', 'true');
+    liveRegion.id = 'avatarPreloadLiveRegion';
+    
+    // Text - updated message
     const text = document.createElement('div');
     text.className = 'intro-avatar-preload-text';
-    text.textContent = 'Preparing player photos...';
+    text.id = 'avatarPreloadText';
+    text.textContent = 'Loading houseguest profiles...';
     
     // Progress percentage
     const progress = document.createElement('div');
     progress.className = 'intro-avatar-preload-progress';
     progress.id = 'avatarPreloadProgress';
-    progress.setAttribute('aria-live', 'polite');
+    progress.setAttribute('role', 'progressbar');
+    progress.setAttribute('aria-valuemin', '0');
+    progress.setAttribute('aria-valuemax', '100');
+    progress.setAttribute('aria-valuenow', '0');
     progress.textContent = '0%';
     
     overlay.appendChild(spinner);
+    overlay.appendChild(liveRegion);
     overlay.appendChild(text);
     overlay.appendChild(progress);
     
@@ -898,6 +913,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Trigger fade-in (allow reflow first)
     requestAnimationFrame(() => {
       overlay.classList.add('intro-avatar-preload-overlay--visible');
+      overlay.classList.add('avatar-preload-overlay--visible');
     });
     
     console.info('[IntroScreen] Avatar preload overlay shown');
@@ -911,10 +927,20 @@ console.info('[IntroScreen] Script executing – pre-init');
    */
   function updateAvatarPreloadProgress(loaded, total) {
     const progress = document.getElementById('avatarPreloadProgress');
+    const liveRegion = document.getElementById('avatarPreloadLiveRegion');
+    
     if (progress) {
       const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
       progress.textContent = `${percent}%`;
       progress.setAttribute('aria-valuenow', String(percent));
+    }
+    
+    // Update live region for screen readers (every 25%)
+    if (liveRegion && total > 0) {
+      const percent = Math.round((loaded / total) * 100);
+      if (percent % 25 === 0 || percent === 100) {
+        liveRegion.textContent = `Loading: ${percent}% complete`;
+      }
     }
   }
 
@@ -936,7 +962,9 @@ console.info('[IntroScreen] Script executing – pre-init');
       
       overlay.setAttribute('aria-busy', 'false');
       overlay.classList.remove('intro-avatar-preload-overlay--visible');
+      overlay.classList.remove('avatar-preload-overlay--visible');
       overlay.classList.add('intro-avatar-preload-overlay--hiding');
+      overlay.classList.add('avatar-preload-overlay--hiding');
       
       // Wait for fade-out animation (300ms from CSS)
       setTimeout(() => {
@@ -951,7 +979,9 @@ console.info('[IntroScreen] Script executing – pre-init');
 
   /**
    * Perform avatar preloading with overlay display.
+   * Uses queued parallel loading from avatar-queue.js for better mobile stability.
    * Shows overlay, preloads avatars, updates progress, then hides overlay.
+   * Fires avatars:ready event when complete.
    * @returns {Promise<Object>} The preload result summary
    */
   async function performAvatarPreload() {
@@ -960,16 +990,32 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Get players from global game state
     const players = g.game?.players || g.players || [];
     
-    // If no players or preloadAvatars not available, skip with minimal delay
-    const preloadAvatars = g.preloadAvatars || window.preloadAvatars;
+    // Check for avatar-queue module (preferred) or legacy preloadAvatars
+    const AvatarQueue = g.AvatarQueue || window.AvatarQueue;
+    const preloadAvatarsQueued = AvatarQueue?.preloadAvatarsQueued;
+    const legacyPreloadAvatars = g.preloadAvatars || window.preloadAvatars;
     
-    if (!preloadAvatars) {
-      console.warn('[IntroScreen] preloadAvatars not available, skipping avatar preload');
+    // Get load mode from config
+    const cfg = g.game?.cfg || g.cfg || {};
+    const loadMode = cfg.avatarLoadMode || 'batch';
+    
+    // Skip if no players
+    if (!players || players.length === 0) {
+      console.warn('[IntroScreen] No players to preload avatars for, skipping');
+      // Dispatch avatars:ready event even if skipped
+      try {
+        if (AvatarQueue?.dispatchAvatarsReady) {
+          AvatarQueue.dispatchAvatarsReady({ loaded: 0, total: 0, timedOut: false, skipped: true });
+        }
+      } catch (e) {
+        // Non-blocking
+      }
       return { loaded: 0, total: 0, timedOut: false, skipped: true };
     }
     
-    if (!players || players.length === 0) {
-      console.warn('[IntroScreen] No players to preload avatars for, skipping');
+    // If neither preloader is available, skip with warning
+    if (!preloadAvatarsQueued && !legacyPreloadAvatars) {
+      console.warn('[IntroScreen] No avatar preloader available, skipping');
       return { loaded: 0, total: 0, timedOut: false, skipped: true };
     }
     
@@ -979,22 +1025,59 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Log telemetry
     try {
       if (g.Telemetry && typeof g.Telemetry.log === 'function') {
-        g.Telemetry.log('avatar_preload_workflow_start', { playerCount: players.length });
+        g.Telemetry.log('avatar_preload_workflow_start', { 
+          playerCount: players.length,
+          loadMode,
+          useQueuedPreloader: !!preloadAvatarsQueued
+        });
       }
     } catch (e) {
       // Non-blocking telemetry
     }
     
     try {
-      // Perform preload with progress callback
-      const result = await preloadAvatars(players, {
-        timeout: AVATAR_PRELOAD_TIMEOUT,
-        onProgress: (loaded, total) => {
-          updateAvatarPreloadProgress(loaded, total);
+      let result;
+      
+      if (preloadAvatarsQueued) {
+        // Use new queued preloader with concurrency control
+        console.info('[IntroScreen] Using queued avatar preloader');
+        result = await preloadAvatarsQueued(players, {
+          concurrency: cfg.avatarPreloadConcurrency || 8,
+          timeout: cfg.avatarPreloadTimeoutMs || AVATAR_PRELOAD_TIMEOUT,
+          readyPercent: cfg.avatarReadyPercent || 0.99,
+          onProgress: (loaded, total) => {
+            updateAvatarPreloadProgress(loaded, total);
+          }
+        });
+        
+        // Dispatch avatars:ready event
+        if (AvatarQueue?.dispatchAvatarsReady) {
+          AvatarQueue.dispatchAvatarsReady(result);
         }
-      });
+      } else {
+        // Fall back to legacy preloader
+        console.info('[IntroScreen] Using legacy avatar preloader');
+        result = await legacyPreloadAvatars(players, {
+          timeout: AVATAR_PRELOAD_TIMEOUT,
+          onProgress: (loaded, total) => {
+            updateAvatarPreloadProgress(loaded, total);
+          }
+        });
+      }
       
       console.info('[IntroScreen] Avatar preload complete:', result);
+      
+      // Log summary with timing and statistics
+      if (result) {
+        console.info('[RosterGate] Preload summary:', {
+          total: result.total,
+          loaded: result.loaded,
+          failed: result.failed || (result.total - result.loaded),
+          decodeSupported: result.decodeSupported,
+          timedOut: result.timedOut,
+          elapsedMs: result.elapsedMs
+        });
+      }
       
       // Log telemetry
       try {
@@ -1026,10 +1109,24 @@ console.info('[IntroScreen] Script executing – pre-init');
         // Non-blocking telemetry
       }
       
+      // Dispatch avatars:ready event with timeout flag on error
+      try {
+        if (AvatarQueue?.dispatchAvatarsReady) {
+          AvatarQueue.dispatchAvatarsReady({ 
+            loaded: 0, 
+            total: players.length, 
+            timedOut: true, 
+            error: true 
+          });
+        }
+      } catch (e) {
+        // Non-blocking
+      }
+      
       // Hide overlay and proceed anyway
       await hideAvatarPreloadOverlay(overlay);
       
-      return { loaded: 0, total: players.length, timedOut: false, error: true };
+      return { loaded: 0, total: players.length, timedOut: true, error: true };
     }
   }
 
