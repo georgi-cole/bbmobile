@@ -139,7 +139,7 @@
     if (!raw || typeof raw !== 'string') {
       return '';
     }
-    return raw.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    return raw.toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   /**

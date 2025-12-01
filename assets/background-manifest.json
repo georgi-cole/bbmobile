@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "description": "Manifest of valid background asset filenames for BackgroundTheme",
+  "description": "Manifest of valid background asset filenames for BackgroundTheme. Note: This replaces the previous typo 'nisght-snow-background.png' with the correct 'night-snow-background.png'.",
   "basePath": "assets/skins/",
   "defaultAsset": "daily-background.png",
   "assets": [
@@ -38,7 +38,8 @@
       "filename": "night-snow-background.png",
       "timeOfDay": "night",
       "condition": "snow",
-      "key": "snow"
+      "key": "snow",
+      "_note": "Corrected from previous typo 'nisght-snow-background.png'"
     },
     {
       "filename": "snowday-background.png",
