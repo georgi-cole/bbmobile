@@ -62,10 +62,14 @@
 .mobile-roster-container {
   display: none; /* Hidden by default, shown when mobile mode active */
   flex-direction: column;
-  gap: 16px;
+  gap: var(--mobile-roster-gap, 6px); /* Use consistent gap matching grid */
   padding: 12px;
+  /* Account for safe-area on mobile devices (notches, home indicators) */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   max-width: 100%;
   margin: 0 auto;
+  /* Prevent any margin that could cause overlap with TV overlay */
+  margin-bottom: 0;
 }
 
 /* Activate mobile roster when body has mobile-roster-active attribute */
@@ -91,8 +95,15 @@ body[data-mobile-roster-active="true"] #rosterBar {
   max-width: min(100%, 520px);
   margin: 0 auto;
   width: 100%;
-  /* Bottom padding equals grid gap for uniform spacing between last row and TV overlay */
-  padding-bottom: var(--mobile-roster-gap, 6px);
+  /* Bottom padding equals grid gap for uniform spacing between last row and TV overlay.
+   * CRITICAL: This ensures the space below the last row of avatars ALWAYS matches the 
+   * vertical gap between avatar rows—not more, not less. This prevents overlap, crowding, 
+   * or extra spacing with the TV overlay, regardless of cast size (12-16 players).
+   * Also accounts for safe-area insets on mobile devices with notches/home indicators.
+   */
+  padding-bottom: calc(var(--mobile-roster-gap, 6px) + env(safe-area-inset-bottom, 0px));
+  /* Prevent overflow issues on mobile that could cause scrolling or clipping */
+  overflow: visible;
 }
 
 /* Grid tiles */
@@ -800,12 +811,15 @@ body[data-mobile-roster-active="true"] #tvNow {
 
 /* When mobile roster is active, adjust faux TV positioning.
  * IMPORTANT: Use positive top margin (never negative) to prevent overlap with roster grid.
- * The small gap ensures TV overlay never covers last roster row avatars.
+ * The margin must equal the grid gap to maintain visual consistency.
+ * This ensures the TV overlay never covers the last roster row avatars or player names.
  */
 body[data-mobile-roster-active="true"] .tv {
-  margin-top: 8px; /* Small positive margin - tightened but never overlapping */
+  margin-top: var(--mobile-roster-gap, 6px); /* Match grid gap for consistent spacing */
   position: relative;
   overflow: hidden;
+  /* Prevent the TV from intruding into the roster area */
+  clear: both;
 }
 
 /* Faux TV player spotlight */
@@ -869,6 +883,8 @@ body[data-mobile-roster-active="true"] .tv {
   .mobile-roster-active-grid {
     grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
     gap: 6px;
+    /* Maintain consistent bottom padding on small screens */
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   }
   
   .mobile-roster-tile {
