@@ -1,0 +1,237 @@
+/**
+ * mobileRoster.badges.css
+ * 
+ * Badge-specific styles for the mobile roster view.
+ * Includes:
+ * - Badge pill styles (centered pill replacement for name footer)
+ * - Corner emoji group styles (compact layout for multiple emojis)
+ * - Badge overlay styles for combo displays
+ * 
+ * This file is a companion to mobileRoster.css and should be loaded after it.
+ * Styles here take precedence for badge-specific rendering.
+ */
+
+/* ============================
+   Badge Pill - Centered Name Replacement
+   When a badge-granting event occurs, the name footer is replaced
+   by a centered pill for up to 7 seconds, then corner emojis appear.
+   ============================ */
+
+/* Active state when pill is showing */
+.mobile-roster-name.badge-pill-active {
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  /* Ensure pill doesn't affect tile layout height */
+  min-height: 20px;
+}
+
+/* Badge pill base styles */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: badge-pill-appear 0.3s ease-out;
+  /* Ensure pill fills footer area */
+  min-width: 70%;
+  max-width: 100%;
+  white-space: nowrap;
+  /* Prevent layout shift */
+  box-sizing: border-box;
+}
+
+/* Mobile-specific badge pill sizing */
+@media (max-width: 768px) {
+  .mobile-roster-tile .mobile-roster-name.badge-pill-active .badge-pill {
+    min-width: 75%;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .mobile-roster-tile .mobile-roster-name.badge-pill-active .badge-pill {
+    min-width: 80%;
+    padding: 3px 8px;
+    font-size: 0.65rem;
+  }
+}
+
+/* Pill entrance animation */
+@keyframes badge-pill-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* HOH pill - gold/orange gradient */
+.badge-pill-hoh {
+  background: linear-gradient(135deg, #ffb142, #ff8c42);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 177, 66, 0.5);
+}
+
+/* POV pill - gold gradient */
+.badge-pill-pov {
+  background: linear-gradient(135deg, #f1c40f, #d4af37);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(241, 196, 15, 0.5);
+}
+
+/* NOM pill - red gradient */
+.badge-pill-nom {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.5);
+}
+
+/* SAFE pill - green gradient */
+.badge-pill-safe {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.5);
+}
+
+/* ============================
+   Corner Emoji Group - Combo Badges
+   Displays multiple emojis (👑+🛡️+❓) in top-right of avatar.
+   Used for combined statuses like HOH+POV, POV+NOM, etc.
+   ============================ */
+
+/* Corner emoji group container */
+.corner-emoji-group {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* Individual emoji within group */
+.corner-emoji-group .corner-emoji-badge {
+  position: relative;
+  top: 0;
+  right: 0;
+  font-size: 0.85rem;
+}
+
+/* Compact layout for 3+ emojis */
+.corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) {
+  gap: 1px;
+}
+
+.corner-emoji-group:has(.corner-emoji-badge:nth-child(3)) .corner-emoji-badge {
+  font-size: 0.75rem;
+}
+
+/* Fallback for browsers without :has() - uses data-badge-count */
+.corner-emoji-group[data-badge-count="3"],
+.corner-emoji-group[data-badge-count="4"] {
+  gap: 1px;
+}
+
+.corner-emoji-group[data-badge-count="3"] .corner-emoji-badge,
+.corner-emoji-group[data-badge-count="4"] .corner-emoji-badge {
+  font-size: 0.75rem;
+}
+
+/* Single corner emoji (standalone) */
+.corner-emoji-badge {
+  position: relative;
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  animation: corner-emoji-appear 0.3s ease-out;
+}
+
+/* Standalone corner emoji (when not in a group) */
+.mobile-roster-avatar-wrap > .corner-emoji-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 4;
+}
+
+/* Corner emoji entrance animation */
+@keyframes corner-emoji-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Emoji type-specific shadows for visual distinction */
+.corner-emoji-hoh {
+  filter: drop-shadow(0 1px 3px rgba(255, 177, 66, 0.7));
+}
+
+.corner-emoji-pov {
+  filter: drop-shadow(0 1px 3px rgba(241, 196, 15, 0.7));
+}
+
+.corner-emoji-nom {
+  filter: drop-shadow(0 1px 3px rgba(231, 76, 60, 0.7));
+}
+
+.corner-emoji-safe {
+  filter: drop-shadow(0 1px 3px rgba(46, 204, 113, 0.7));
+}
+
+/* ============================
+   SAFE-only Display Rule
+   SAFE emoji only renders if it's the sole badge token.
+   This is enforced by JS logic in mobileRoster.js.
+   ============================ */
+
+/* No additional CSS needed - JS handles this logic */
+
+/* ============================
+   Reduced Motion Support
+   ============================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-pill,
+  .corner-emoji-badge {
+    animation: none;
+  }
+}
+
+/* ============================
+   iOS Safari Specific Fixes
+   ============================ */
+
+@supports (-webkit-touch-callout: none) {
+  .badge-pill {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  .corner-emoji-badge {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
