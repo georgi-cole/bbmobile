@@ -1,0 +1,386 @@
+/* ============================================================================
+   DIARY ROOM MODAL & BUTTON
+   
+   Purpose: Styles for the DR button in the TV header pill row and the 
+            fullscreen Diary Room modal overlay
+   
+   Features:
+   - Pill-style DR button with door emoji in tvHead
+   - Fullscreen modal overlay for Diary Room logs
+   - Mobile-optimized with easy tap targets
+   - Accessibility support
+   ============================================================================ */
+
+:root {
+  --dr-btn-bg: linear-gradient(135deg, rgba(120, 180, 240, 0.3) 0%, rgba(90, 150, 210, 0.4) 100%);
+  --dr-btn-border: rgba(120, 180, 240, 0.4);
+  --dr-btn-text: #f0f8ff;
+  --dr-btn-hover-bg: linear-gradient(135deg, rgba(140, 200, 255, 0.4) 0%, rgba(110, 170, 230, 0.5) 100%);
+  --dr-modal-bg: rgba(10, 18, 28, 0.96);
+  --dr-modal-header-bg: linear-gradient(180deg, rgba(20, 35, 55, 0.9), rgba(15, 28, 45, 0.95));
+}
+
+/* ============================================================================
+   DR BUTTON IN TV HEAD
+   ============================================================================ */
+
+/* Adjust tvHead grid to accommodate DR button (4 columns now) */
+.tv .tvHead {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+/* DR Button - Pill style */
+.tvDrBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: var(--dr-btn-bg);
+  border: 1px solid var(--dr-btn-border);
+  color: var(--dr-btn-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* Ensure minimum tap target size */
+  min-width: 44px;
+  min-height: 32px;
+}
+
+.tvDrBtn:hover {
+  background: var(--dr-btn-hover-bg);
+  border-color: rgba(140, 200, 255, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(120, 180, 240, 0.3);
+}
+
+.tvDrBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.tvDrBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Mobile: Make button larger for easier tapping */
+@media (max-width: 768px) {
+  .tvDrBtn {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tvDrBtn {
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    /* Show only emoji on very small screens */
+  }
+  
+  .tv .tvHead {
+    gap: 6px;
+    padding: 8px 10px 6px;
+  }
+}
+
+/* ============================================================================
+   DIARY ROOM MODAL OVERLAY
+   ============================================================================ */
+
+.diaryRoomModal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: var(--dr-modal-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  animation: drModalFadeIn 0.25s ease-out;
+}
+
+@keyframes drModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal Header */
+.diaryRoomModal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--dr-modal-header-bg);
+  border-bottom: 1px solid rgba(120, 180, 240, 0.15);
+  flex-shrink: 0;
+}
+
+.diaryRoomModal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink, #e8f0ff);
+  margin: 0;
+}
+
+.diaryRoomModal-title-icon {
+  font-size: 1.2em;
+}
+
+.diaryRoomModal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--ink, #e8f0ff);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.diaryRoomModal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.diaryRoomModal-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Tab Bar */
+.diaryRoomModal-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(15, 25, 40, 0.8);
+  border-bottom: 1px solid rgba(120, 180, 240, 0.1);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  flex-shrink: 0;
+}
+
+.diaryRoomModal-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.diaryRoomModal-tabs::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.diaryRoomModal-tabs::-webkit-scrollbar-thumb {
+  background: rgba(120, 180, 240, 0.3);
+  border-radius: 2px;
+}
+
+.diaryRoomModal-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  min-height: 36px;
+}
+
+.diaryRoomModal-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.diaryRoomModal-tab.active {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  border-color: transparent;
+  color: var(--card, #0d1b2a);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.diaryRoomModal-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Log Content Area */
+.diaryRoomModal-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px;
+  background: rgba(10, 18, 28, 0.5);
+}
+
+/* Log panes inside modal */
+.diaryRoomModal-pane {
+  display: none;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.diaryRoomModal-pane.active {
+  display: block;
+}
+
+/* Log entries styling */
+.diaryRoomModal-pane > div {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border-left: 3px solid rgba(120, 180, 240, 0.3);
+}
+
+.diaryRoomModal-pane > div:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Empty state */
+.diaryRoomModal-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+/* ============================================================================
+   HIDE SIDECARD DIARY ROOM ON MOBILE (show DR button instead)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  /* Hide the original sideCard Diary Room section on mobile */
+  #sideCard {
+    display: none;
+  }
+  
+  /* Ensure the DR button is visible */
+  .tvDrBtn {
+    display: inline-flex;
+  }
+}
+
+/* On desktop, show both (sideCard visible, DR button also visible as shortcut) */
+@media (min-width: 769px) {
+  .tvDrBtn {
+    display: inline-flex;
+  }
+  
+  #sideCard {
+    display: block;
+  }
+}
+
+/* ============================================================================
+   JURY HOUSE SECTION IN MODAL
+   ============================================================================ */
+
+.diaryRoomModal-jurySection {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(60, 50, 80, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(130, 100, 180, 0.2);
+}
+
+.diaryRoomModal-juryTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent, #83bfff);
+  margin: 0 0 8px 0;
+}
+
+.diaryRoomModal-juryRoster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.diaryRoomModal-juror {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(130, 100, 180, 0.2);
+  border-radius: 16px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.diaryRoomModal-juror-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(130, 100, 180, 0.4);
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+/* Focus trap indicator */
+.diaryRoomModal[aria-modal="true"] {
+  /* Trap focus within modal */
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .diaryRoomModal {
+    animation: none;
+  }
+  
+  .tvDrBtn,
+  .diaryRoomModal-tab,
+  .diaryRoomModal-close {
+    transition: none;
+  }
+}
+
+/* High contrast */
+@media (prefers-contrast: high) {
+  .tvDrBtn,
+  .diaryRoomModal-tab {
+    border-width: 2px;
+  }
+  
+  .diaryRoomModal-close {
+    border-width: 2px;
+  }
+}

@@ -476,10 +476,14 @@
     const key=routeForPhase(g.game?.phase);
     const pane=getLogPaneByKey(key);
     if(pane && pane.id!=='log') writeToPane(pane,msg,cls);
+    // Refresh Diary Room Modal if open
+    if(g.DiaryRoomModal?.isOpen?.()) g.DiaryRoomModal.refresh();
   }
   function addJuryLog(msg,cls=''){
     ensureLogTabs();
     writeToPane(getLogPaneByKey('jury'),msg,cls);
+    // Refresh Diary Room Modal if open
+    if(g.DiaryRoomModal?.isOpen?.()) g.DiaryRoomModal.refresh();
   }
 
   /**
