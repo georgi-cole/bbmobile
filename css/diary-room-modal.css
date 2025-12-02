@@ -5,23 +5,21 @@
             fullscreen Diary Room modal overlay
    
    Features:
-   - Pill-style DR button with door emoji in tvHead
+   - Pill-style DR button matching compact-hud-chip styling
    - Fullscreen modal overlay for Diary Room logs
    - Mobile-optimized with easy tap targets
    - Accessibility support
    ============================================================================ */
 
 :root {
-  --dr-btn-bg: linear-gradient(135deg, rgba(120, 180, 240, 0.3) 0%, rgba(90, 150, 210, 0.4) 100%);
-  --dr-btn-border: rgba(120, 180, 240, 0.4);
-  --dr-btn-text: #f0f8ff;
-  --dr-btn-hover-bg: linear-gradient(135deg, rgba(140, 200, 255, 0.4) 0%, rgba(110, 170, 230, 0.5) 100%);
   --dr-modal-bg: rgba(10, 18, 28, 0.96);
   --dr-modal-header-bg: linear-gradient(180deg, rgba(20, 35, 55, 0.9), rgba(15, 28, 45, 0.95));
 }
 
 /* ============================================================================
    DR BUTTON IN TV HEAD
+   
+   Styled to match compact-hud-chip class (phase, week, player pills)
    ============================================================================ */
 
 /* Adjust tvHead grid to accommodate DR button (4 columns now) */
@@ -32,63 +30,70 @@
   gap: 10px;
 }
 
-/* DR Button - Pill style */
+/* DR Button - Match compact-hud-chip styling */
 .tvDrBtn {
+  /* Match compact-hud-chip base styles */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   padding: 6px 12px;
-  border-radius: 16px;
-  background: var(--dr-btn-bg);
-  border: 1px solid var(--dr-btn-border);
-  color: var(--dr-btn-text);
-  font-size: 0.72rem;
+  border-radius: 14px;
+  /* Use accent color like phase chip */
+  --chip-base: var(--accent, #83bfff);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 90%, var(--card, #0d1b2a)) 0%, 
+    color-mix(in srgb, var(--chip-base) 75%, var(--bg, #0a1018)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line, rgba(255,255,255,0.1)) 60%, var(--chip-base));
+  color: var(--card, #0d1b2a);
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   /* Ensure minimum tap target size */
   min-width: 44px;
   min-height: 32px;
 }
 
 .tvDrBtn:hover {
-  background: var(--dr-btn-hover-bg);
-  border-color: rgba(140, 200, 255, 0.6);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(120, 180, 240, 0.3);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
 .tvDrBtn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .tvDrBtn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent, #83bfff);
   outline-offset: 2px;
 }
 
-/* Mobile: Make button larger for easier tapping */
-@media (max-width: 768px) {
+/* Responsive behavior matching compact-hud */
+@media (min-width: 768px) {
   .tvDrBtn {
-    padding: 8px 14px;
-    font-size: 0.75rem;
-    min-height: 36px;
+    font-size: 0.8rem;
+    padding: 7px 14px;
   }
 }
 
-@media (max-width: 480px) {
+@media (min-width: 480px) and (max-width: 767px) {
   .tvDrBtn {
-    padding: 8px 12px;
+    font-size: 0.72rem;
+    padding: 6px 11px;
+  }
+}
+
+@media (max-width: 479px) {
+  .tvDrBtn {
     font-size: 0.7rem;
-    /* Show only emoji on very small screens */
+    padding: 5px 9px;
+    gap: 3px;
   }
   
   .tv .tvHead {
@@ -281,30 +286,17 @@
 }
 
 /* ============================================================================
-   HIDE SIDECARD DIARY ROOM ON MOBILE (show DR button instead)
+   HIDE SIDECARD DIARY ROOM (replaced by DR button modal)
    ============================================================================ */
 
-@media (max-width: 768px) {
-  /* Hide the original sideCard Diary Room section on mobile */
-  #sideCard {
-    display: none;
-  }
-  
-  /* Ensure the DR button is visible */
-  .tvDrBtn {
-    display: inline-flex;
-  }
+/* Hide the original sideCard Diary Room section on all screen sizes */
+#sideCard {
+  display: none !important;
 }
 
-/* On desktop, show both (sideCard visible, DR button also visible as shortcut) */
-@media (min-width: 769px) {
-  .tvDrBtn {
-    display: inline-flex;
-  }
-  
-  #sideCard {
-    display: block;
-  }
+/* Ensure the DR button is always visible */
+.tvDrBtn {
+  display: inline-flex;
 }
 
 /* ============================================================================
