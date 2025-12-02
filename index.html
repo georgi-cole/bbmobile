@@ -36,8 +36,8 @@
 <link rel="stylesheet" href="css/tv-inline-cards.css">
 <link rel="stylesheet" href="css/tv-sequence.css">
 <link rel="stylesheet" href="css/eviction-modal.css">
-<link rel="stylesheet" href="css/mobileRoster.css?v=mr-fix-1">
-<link rel="stylesheet" href="css/mobileRoster.badges.css?v=mr-fix-1">
+<link rel="stylesheet" href="css/mobileRoster.css?v=mr-hotfix-2">
+<link rel="stylesheet" href="css/mobileRoster.badges.css?v=mr-hotfix-2">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -257,34 +257,143 @@
 <script defer src="js/roster-visibility.js"></script>
 
 <!-- Mobile Roster View System -->
-<script defer src="js/ui/mobileRoster.js?v=mr-fix-1"></script>
+<script defer src="js/ui/mobileRoster.js?v=mr-hotfix-2"></script>
 <!-- Mobile Roster Badge Machine (pill→emoji orchestration + combo emojis) -->
-<script defer src="js/ui/mobileRoster.badge-machine.js?v=mr-fix-1"></script>
+<script defer src="js/ui/mobileRoster.badge-machine.js?v=mr-hotfix-2"></script>
 <!-- Mobile Roster Overlay Spacing (reactive overlay height + last-row guard) -->
-<script defer src="js/ui/overlaySpacing.js?v=mr-fix-1"></script>
-<script defer src="js/ui/mobileRoster.overlay-spacing-fix.js?v=mr-fix-1"></script>
+<script defer src="js/ui/overlaySpacing.js?v=mr-hotfix-2"></script>
+<script defer src="js/ui/mobileRoster.overlay-spacing-fix.js?v=mr-hotfix-2"></script>
 
-<!-- Mobile Roster Fallback Initializer -->
+<!-- Mobile Roster Fallback Initializer with Feature Detection Guard -->
 <script>
 (function() {
   'use strict';
-  // Redundant fallback to ensure Mobile Roster initializes on iOS Safari
-  window.addEventListener('load', function() {
+  
+  /**
+   * Feature detection guard for mobile roster modules.
+   * Only initializes when:
+   * 1. The roster container exists on the page
+   * 2. Mobile viewport conditions match (or FORCE_MOBILE_ROSTER is set)
+   * Logs clear console messages when modules initialize.
+   */
+  function initMobileRosterModules() {
     try {
       var ua = navigator.userAgent || '';
-      if (/iPhone|iPod|Android|Mobile/i.test(ua)) {
+      var isMobileUA = /iPhone|iPod|Android|Mobile/i.test(ua);
+      var isMobileViewport = window.innerWidth <= 768 || 
+                             (window.innerWidth <= 1400 && window.innerHeight > window.innerWidth);
+      
+      // Feature detection: Check if roster container will exist
+      var hasRosterBar = !!document.getElementById('rosterBar');
+      
+      // Set force flags for mobile UA
+      if (isMobileUA) {
         window.FORCE_MOBILE_ROSTER = true;
         window.MOBILE_ROSTER_DISABLE_SPOTLIGHT = true;
       }
+      
+      // Only proceed if mobile conditions are met or forced
+      if (!isMobileUA && !isMobileViewport && !window.FORCE_MOBILE_ROSTER) {
+        console.info('[MobileRoster Guard] Desktop viewport detected, modules will initialize when mobile view is active');
+        return;
+      }
+      
+      // Initialize MobileRoster if not already active
       if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
         if (!document.body.getAttribute('data-mobile-roster-active')) {
-          console.info('[MobileRoster Fallback] Forcing init on window.load');
+          console.info('[MobileRoster Guard] Initializing MobileRoster on mobile viewport');
           window.MobileRoster.init();
           window.MobileRoster.refresh && window.MobileRoster.refresh();
+        } else {
+          console.info('[MobileRoster Guard] MobileRoster already active');
         }
       }
-    } catch(e) { console.error('[MobileRoster Fallback] Error', e); }
-  });
+      
+      // Initialize OverlaySpacing if available
+      if (window.OverlaySpacing && typeof window.OverlaySpacing.init === 'function') {
+        var status = window.OverlaySpacing.getStatus && window.OverlaySpacing.getStatus();
+        if (!status || !status.initialized) {
+          console.info('[MobileRoster Guard] Initializing OverlaySpacing module');
+          window.OverlaySpacing.init();
+        }
+      }
+      
+      // Initialize BadgeMachine if available
+      if (window.BadgeMachine && typeof window.BadgeMachine.init === 'function') {
+        console.info('[MobileRoster Guard] Initializing BadgeMachine module');
+        window.BadgeMachine.init();
+      }
+      
+      // Log status summary
+      console.info('[MobileRoster Guard] Module status:', {
+        mobileRoster: !!window.MobileRoster,
+        overlaySpacing: !!window.OverlaySpacing,
+        badgeMachine: !!window.BadgeMachine,
+        viewportWidth: window.innerWidth,
+        isMobileUA: isMobileUA,
+        forceMobile: !!window.FORCE_MOBILE_ROSTER
+      });
+      
+    } catch(e) { 
+      console.error('[MobileRoster Guard] Error during initialization:', e); 
+    }
+  }
+  
+  // Run on window load to ensure all deferred scripts have loaded
+  window.addEventListener('load', initMobileRosterModules);
+  
+  /**
+   * Verification helper - paste this in console to confirm assets are loaded:
+   * 
+   * window.verifyMobileRosterAssets()
+   * 
+   * Returns an object with:
+   * - loaded: boolean - true if all assets are loaded
+   * - modules: object - status of each module
+   * - spacerVars: object - CSS variable values
+   * - diagnostics: object - detailed diagnostics
+   */
+  window.verifyMobileRosterAssets = function() {
+    var root = document.documentElement;
+    var computedStyle = getComputedStyle(root);
+    
+    var result = {
+      loaded: false,
+      modules: {
+        mobileRoster: !!window.MobileRoster,
+        mobileRosterActive: document.body.hasAttribute('data-mobile-roster-active'),
+        badgeMachine: !!window.BadgeMachine,
+        overlaySpacing: !!window.OverlaySpacing,
+        overlaySpacingFix: !!window.OverlaySpacingFix
+      },
+      spacerVars: {
+        tvOverlayHeight: computedStyle.getPropertyValue('--tv-overlay-height') || 'not set',
+        overlayEffectiveHeight: computedStyle.getPropertyValue('--overlay-effective-height') || 'not set',
+        avatarRowGap: computedStyle.getPropertyValue('--avatar-row-gap') || 'not set'
+      },
+      diagnostics: {}
+    };
+    
+    // Get detailed diagnostics if available
+    if (window.MobileRosterDiagnostics && window.MobileRosterDiagnostics.getStatus) {
+      result.diagnostics.mobileRoster = window.MobileRosterDiagnostics.getStatus();
+    }
+    if (window.OverlaySpacing && window.OverlaySpacing.getStatus) {
+      result.diagnostics.overlaySpacing = window.OverlaySpacing.getStatus();
+    }
+    
+    // Determine if all critical modules are loaded
+    result.loaded = result.modules.mobileRoster && 
+                    result.modules.overlaySpacing && 
+                    result.modules.badgeMachine;
+    
+    console.table(result.modules);
+    console.table(result.spacerVars);
+    console.log('Diagnostics:', result.diagnostics);
+    
+    return result;
+  };
+  
 })();
 </script>
 
