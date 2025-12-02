@@ -67,7 +67,7 @@
 .mobile-roster-container {
   display: none; /* Hidden by default, shown when mobile mode active */
   flex-direction: column;
-  gap: var(--mobile-roster-gap, 6px); /* Use consistent gap matching grid */
+  gap: var(--mobile-roster-gap, 4px); /* Use consistent gap matching grid */
   padding: 12px;
   /* Account for safe-area on mobile devices (notches, home indicators) */
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
@@ -94,14 +94,14 @@ body[data-mobile-roster-active="true"] #rosterBar {
 .mobile-roster-active-grid {
   display: grid;
   grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
-  gap: var(--mobile-roster-gap, 6px);
+  gap: var(--mobile-roster-gap, 4px);
   justify-content: center;
   align-items: start;
   max-width: min(100%, 520px);
   margin: 0 auto;
   width: 100%;
   /* Minimal bottom padding - actual spacing is handled by the spacer element */
-  padding-bottom: var(--mobile-roster-gap, 6px);
+  padding-bottom: var(--mobile-roster-gap, 4px);
   /* Prevent overflow issues on mobile that could cause scrolling or clipping */
   overflow: visible;
 }
@@ -120,8 +120,8 @@ body[data-mobile-roster-active="true"] #rosterBar {
    * This ensures consistent spacing between last row and overlay at all times.
    * The JS overlaySpacing module updates --tv-overlay-height dynamically.
    */
-  height: calc(var(--tv-overlay-height, 200px) + var(--avatar-row-gap, 6px));
-  min-height: calc(var(--avatar-row-gap, 6px) + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--tv-overlay-height, 200px) + var(--avatar-row-gap, 4px));
+  min-height: calc(var(--avatar-row-gap, 4px) + env(safe-area-inset-bottom, 0px));
   /* Invisible spacer */
   pointer-events: none;
   /* Debug: uncomment to visualize spacer */
@@ -914,7 +914,7 @@ body[data-mobile-roster-active="true"] #tvNow {
  * This ensures the TV overlay never covers the last roster row avatars or player names.
  */
 body[data-mobile-roster-active="true"] .tv {
-  margin-top: var(--mobile-roster-gap, 6px); /* Match grid gap for consistent spacing */
+  margin-top: var(--mobile-roster-gap, 4px); /* Match grid gap for consistent spacing */
   position: relative;
   overflow: hidden;
   /* Prevent the TV from intruding into the roster area */
