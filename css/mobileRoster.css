@@ -12,10 +12,10 @@
   --evicted-color: #e74c3c;
   --evicted-color-dark: #c0392b;
   --evicted-color-rgb: 231, 76, 60;
-  --mobile-roster-gap: 6px; /* Reduced from 8px for tighter layout */
+  --mobile-roster-gap: 4px; /* Reduced for tighter layout */
   --mobile-roster-tile-scale: 1; /* For future fine-tuning */
   --mobile-roster-tile-padding: 2px; /* Tile internal padding */
-  --mobile-roster-tile-gap: 6px; /* Gap between avatar and name in tile */
+  --mobile-roster-tile-gap: 2px; /* Minimal gap between avatar and name */
   
   /* Badge sizing variables with defaults */
   --badge-size: 28px;
@@ -29,7 +29,7 @@
   /* TV overlay spacing variables - used for dynamic spacer calculation */
   /* These are updated by JS overlaySpacing module */
   --tv-overlay-height: 200px; /* Default, updated dynamically */
-  --avatar-row-gap: 6px; /* Matches --mobile-roster-gap */
+  --avatar-row-gap: 4px; /* Matches --mobile-roster-gap */
 }
 
 /* ============================
@@ -139,23 +139,23 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
   isolation: isolate;
   aspect-ratio: unset; /* Remove fixed aspect ratio to allow name footer space */
   min-width: 56px; /* Minimum tap target size */
-  max-width: 100px;
+  max-width: 110px; /* Increased to allow larger photos */
   
   /* Theme-aware gradient background */
   background: linear-gradient(145deg, var(--roster-gradient-1, #182636), var(--roster-gradient-2, #101a28));
   /* Ultra-thin border per requirements: 0.5px with very faint color */
   border: 0.5px solid rgba(32, 32, 32, 0.10);
-  border-radius: 8px;
+  border-radius: 6px; /* Slightly smaller for compact look */
   padding: var(--mobile-roster-tile-padding, 2px); /* Ultra-thin padding so photos appear bigger */
   
   /* Columnar tile layout to reserve space for name footer */
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--mobile-roster-tile-gap, 4px); /* Reduced gap for tighter design */
+  gap: var(--mobile-roster-tile-gap, 2px); /* Minimal gap for tighter design */
   
   /* CSS variable for name label height - used by badge positioning */
-  --name-label-height: 18px;
+  --name-label-height: 16px;
   
   /* Interactions */
   cursor: pointer;
@@ -192,10 +192,10 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 /* Avatar container */
 .mobile-roster-avatar-wrap {
   position: relative;
-  flex: 0 0 auto; /* Prevent shrinking/growing to reserve space for name footer */
+  flex: 1 1 auto; /* Allow avatar to grow and take available space */
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 5px; /* Per requirements: smaller border radius */
+  border-radius: 4px; /* Smaller border radius for compact look */
   /* Per requirements D: overflow visible for badge overlays */
   overflow: visible;
   background: var(--card);
@@ -221,7 +221,7 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
   position: relative;
   z-index: 1;
   /* Clip avatar to border-radius of container */
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .mobile-roster-tile:hover .mobile-roster-avatar {
@@ -229,24 +229,25 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
   transform: scale(1.05);
 }
 
-/* Name label (tile footer) - always visible regardless of cast size
- * Requirements: min-height guaranteed, no clipping, centered, ellipsis for long names
- * Acts as the tile footer - reserved space for name below avatar
+/* Name label (tile footer) - single line with ellipsis for overflow
+ * Requirements: compact height, no clipping, centered, ellipsis for long names
+ * Acts as the tile footer - minimal reserved space for name below avatar
  */
 .mobile-roster-name {
   flex: 0 0 auto; /* Prevent shrinking to ensure name footer space */
-  font-size: 13px; /* Consistent readable size per requirements */
+  font-size: 11px; /* Compact readable size */
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   color: var(--ink);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
-  line-height: 1.2;
-  min-height: 20px; /* Guarantee minimum height for name visibility */
-  padding: 6px 8px 8px; /* Proper padding for footer per requirements */
+  line-height: 1.1;
+  min-height: 14px; /* Compact minimum height for single line */
+  max-height: 16px; /* Enforce single line display */
+  padding: 2px 4px 3px; /* Minimal padding for tight layout */
 }
 
 /* Badge pill animation - replaces name when badge event triggers */
@@ -258,17 +259,19 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
   justify-content: center;
   /* Remove default text styling */
   text-align: center;
+  /* Keep compact height for pill */
+  max-height: none;
 }
 
 .badge-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   animation: badge-pill-appear 0.3s ease-out;
   /* Ensure pill expands to fill footer area on mobile */
@@ -282,8 +285,8 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 @media (max-width: 768px) {
   .mobile-roster-tile .mobile-roster-name.badge-pill-active .badge-pill {
     min-width: 75%;
-    padding: 4px 10px;
-    font-size: 0.7rem;
+    padding: 2px 6px;
+    font-size: 0.6rem;
   }
 }
 
@@ -978,21 +981,22 @@ body[data-mobile-roster-active="true"] .tv {
 @media (max-width: 520px) {
   .mobile-roster-active-grid {
     grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
-    gap: 6px;
+    gap: 4px;
     /* Maintain consistent bottom padding on small screens */
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
   }
   
   .mobile-roster-tile {
     min-width: 60px;
-    padding: 4px;
+    padding: 2px;
   }
   
-  /* Name always visible - ensure min-height on small screens */
+  /* Name always visible - compact single line on small screens */
   .mobile-roster-name {
-    font-size: 11px; /* Slightly smaller on small screens but still readable */
-    min-height: 18px;
-    padding: 4px 6px 6px;
+    font-size: 10px; /* Compact size for small screens */
+    min-height: 13px;
+    max-height: 15px;
+    padding: 2px 3px 2px;
   }
   
   .mobile-roster-badge {
@@ -1051,11 +1055,12 @@ body[data-mobile-roster-active="true"] .tv {
     min-width: 56px;
   }
   
-  /* Name always visible - ensure min-height on very small screens */
+  /* Name always visible - compact single line on very small screens */
   .mobile-roster-name {
-    font-size: 10px; /* Minimum readable size for very small screens */
-    min-height: 16px;
-    padding: 3px 4px 5px;
+    font-size: 9px; /* Minimum readable size for very small screens */
+    min-height: 12px;
+    max-height: 14px;
+    padding: 1px 2px 2px;
   }
   
   .mobile-roster-badge {
