@@ -276,15 +276,24 @@
    * 2. Mobile viewport conditions match (or FORCE_MOBILE_ROSTER is set)
    * Logs clear console messages when modules initialize.
    */
+  // Breakpoint constants (matching mobileRoster.js CONFIG values)
+  var MOBILE_BREAKPOINT = 768;    // Standard mobile width threshold
+  var PORTRAIT_BREAKPOINT = 1400; // Enhanced portrait detection threshold
+  
   function initMobileRosterModules() {
     try {
       var ua = navigator.userAgent || '';
       var isMobileUA = /iPhone|iPod|Android|Mobile/i.test(ua);
-      var isMobileViewport = window.innerWidth <= 768 || 
-                             (window.innerWidth <= 1400 && window.innerHeight > window.innerWidth);
+      // Mobile viewport: either below standard mobile breakpoint OR in portrait mode below enhanced threshold
+      var isMobileViewport = window.innerWidth <= MOBILE_BREAKPOINT || 
+                             (window.innerWidth <= PORTRAIT_BREAKPOINT && window.innerHeight > window.innerWidth);
       
-      // Feature detection: Check if roster container will exist
+      // Feature detection: Check if roster container exists (required for mobile roster)
       var hasRosterBar = !!document.getElementById('rosterBar');
+      if (!hasRosterBar) {
+        console.info('[MobileRoster Guard] Roster bar not found, skipping initialization');
+        return;
+      }
       
       // Set force flags for mobile UA
       if (isMobileUA) {
@@ -343,7 +352,8 @@
   window.addEventListener('load', initMobileRosterModules);
   
   /**
-   * Verification helper - paste this in console to confirm assets are loaded:
+   * Verification helper for PR review and debugging.
+   * Intentionally exposed globally so reviewers can paste in console:
    * 
    * window.verifyMobileRosterAssets()
    * 
@@ -352,6 +362,9 @@
    * - modules: object - status of each module
    * - spacerVars: object - CSS variable values
    * - diagnostics: object - detailed diagnostics
+   * 
+   * Note: This function is exposed for diagnostics purposes as per the PR requirements.
+   * It only reads state and does not modify any application behavior.
    */
   window.verifyMobileRosterAssets = function() {
     var root = document.documentElement;
