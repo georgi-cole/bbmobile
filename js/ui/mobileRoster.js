@@ -25,8 +25,8 @@
     MAX_COLS_PORTRAIT: 4,          // Maximum columns in portrait
     MAX_COLS_LANDSCAPE: 5,         // Maximum columns in landscape
     MIN_TILE_SIZE: 56,             // Minimum tap target (px)
-    MAX_TILE_SIZE: 100,            // Maximum tile size (px)
-    GAP_SIZE: 6,                   // Default gap between tiles (px) - reduced from 8
+    MAX_TILE_SIZE: 110,            // Maximum tile size (px) - increased for larger photos
+    GAP_SIZE: 4,                   // Default gap between tiles (px) - reduced for compact layout
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
     HOLD_DEBOUNCE_MS: 600,         // Hold debounce for profile sheet (ms) - reduced for faster response
