@@ -34,6 +34,8 @@ console.info('[IntroScreen] Script executing – pre-init');
   const PRELOAD_TIMEOUT = 4500; // ms - timeout for background preload (extended for slow networks)
   const LOADING_BUFFER_THRESHOLD = 300; // ms - show loading spinner if preload exceeds this
   const AVATAR_PRELOAD_TIMEOUT = 6000; // ms - timeout for avatar preloading
+  const PLAYERS_READY_TIMEOUT = 8000; // ms - max wait for players to be ready
+  const PLAYERS_READY_POLL_INTERVAL = 200; // ms - polling interval for player availability check
 
   // ===== DOM BUILDING =====
 
@@ -978,17 +980,103 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   /**
+   * Wait for players to be ready (built and available)
+   * Uses players-ready event or polls for player existence
+   * @returns {Promise<Array>} Resolved with array of players
+   */
+  function waitForPlayersReady() {
+    return new Promise((resolve) => {
+      // Check if players are already available
+      const existingPlayers = g.game?.players || g.players || [];
+      if (existingPlayers.length > 0) {
+        console.info('[AvatarPreload] Players already available:', existingPlayers.length);
+        resolve(existingPlayers);
+        return;
+      }
+      
+      console.info('[AvatarPreload] Waiting for players to be ready...');
+      
+      let resolved = false;
+      let pollTimer = null;
+      let timeoutTimer = null;
+      let eventHandler = null;
+      
+      // Cleanup function
+      function cleanup() {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        if (timeoutTimer) {
+          clearTimeout(timeoutTimer);
+          timeoutTimer = null;
+        }
+        if (eventHandler) {
+          window.removeEventListener('players-ready', eventHandler);
+          eventHandler = null;
+        }
+      }
+      
+      // Completion handler
+      function complete(players, source) {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        console.info(`[AvatarPreload] Players ready (${source}):`, players.length);
+        
+        // Log telemetry
+        try {
+          if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+            g.Telemetry.log('players_ready_for_avatars', { count: players.length, source });
+          }
+        } catch (e) {
+          // Non-blocking
+        }
+        
+        resolve(players);
+      }
+      
+      // Handler for players-ready event
+      eventHandler = function(event) {
+        const players = event?.detail?.players || g.game?.players || g.players || [];
+        complete(players, 'event');
+      };
+      
+      // Listen for players-ready event
+      window.addEventListener('players-ready', eventHandler);
+      
+      // Polling fallback - check periodically for players
+      pollTimer = setInterval(() => {
+        if (resolved) return;
+        
+        const players = g.game?.players || g.players || [];
+        if (players.length > 0) {
+          complete(players, 'polling');
+        }
+      }, PLAYERS_READY_POLL_INTERVAL);
+      
+      // Timeout - resolve with whatever we have after max wait
+      timeoutTimer = setTimeout(() => {
+        const players = g.game?.players || g.players || [];
+        console.warn('[AvatarPreload] Timeout waiting for players, proceeding with:', players.length);
+        complete(players, 'timeout');
+      }, PLAYERS_READY_TIMEOUT);
+    });
+  }
+
+  /**
    * Perform avatar preloading with overlay display.
    * Uses queued parallel loading from avatar-queue.js for better mobile stability.
-   * Shows overlay, preloads avatars, updates progress, then hides overlay.
+   * Shows overlay, waits for players to be ready, preloads avatars, updates progress, then hides overlay.
    * Fires avatars:ready event when complete.
    * @returns {Promise<Object>} The preload result summary
    */
   async function performAvatarPreload() {
-    console.info('[IntroScreen] Starting avatar preload workflow');
+    console.info('[AvatarPreload] Starting avatar preload workflow');
     
-    // Get players from global game state
-    const players = g.game?.players || g.players || [];
+    // Show overlay immediately so user sees feedback
+    const overlay = showAvatarPreloadOverlay();
+    updateAvatarPreloadProgress(0, 1); // Show 0% while waiting
     
     // Check for avatar-queue module (preferred) or legacy preloadAvatars
     const AvatarQueue = g.AvatarQueue || window.AvatarQueue;
@@ -999,9 +1087,23 @@ console.info('[IntroScreen] Script executing – pre-init');
     const cfg = g.game?.cfg || g.cfg || {};
     const loadMode = cfg.avatarLoadMode || 'batch';
     
-    // Skip if no players
+    // Wait for players to be ready before proceeding
+    const players = await waitForPlayersReady();
+    
+    // Log telemetry for start
+    try {
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('avatar_preload_start', { 
+          playerCount: players.length
+        });
+      }
+    } catch (e) {
+      // Non-blocking
+    }
+    
+    // Skip if no players after waiting
     if (!players || players.length === 0) {
-      console.warn('[IntroScreen] No players to preload avatars for, skipping');
+      console.warn('[AvatarPreload] No players to preload avatars for after waiting, skipping');
       // Dispatch avatars:ready event even if skipped
       try {
         if (AvatarQueue?.dispatchAvatarsReady) {
@@ -1010,19 +1112,18 @@ console.info('[IntroScreen] Script executing – pre-init');
       } catch (e) {
         // Non-blocking
       }
+      await hideAvatarPreloadOverlay(overlay);
       return { loaded: 0, total: 0, timedOut: false, skipped: true };
     }
     
     // If neither preloader is available, skip with warning
     if (!preloadAvatarsQueued && !legacyPreloadAvatars) {
-      console.warn('[IntroScreen] No avatar preloader available, skipping');
+      console.warn('[AvatarPreload] No avatar preloader available, skipping');
+      await hideAvatarPreloadOverlay(overlay);
       return { loaded: 0, total: 0, timedOut: false, skipped: true };
     }
     
-    // Show overlay
-    const overlay = showAvatarPreloadOverlay();
-    
-    // Log telemetry
+    // Log telemetry for workflow start
     try {
       if (g.Telemetry && typeof g.Telemetry.log === 'function') {
         g.Telemetry.log('avatar_preload_workflow_start', { 
@@ -1040,7 +1141,7 @@ console.info('[IntroScreen] Script executing – pre-init');
       
       if (preloadAvatarsQueued) {
         // Use new queued preloader with concurrency control
-        console.info('[IntroScreen] Using queued avatar preloader');
+        console.info('[AvatarPreload] Using queued avatar preloader');
         result = await preloadAvatarsQueued(players, {
           concurrency: cfg.avatarPreloadConcurrency || 8,
           timeout: cfg.avatarPreloadTimeoutMs || AVATAR_PRELOAD_TIMEOUT,
@@ -1056,7 +1157,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         }
       } else {
         // Fall back to legacy preloader
-        console.info('[IntroScreen] Using legacy avatar preloader');
+        console.info('[AvatarPreload] Using legacy avatar preloader');
         result = await legacyPreloadAvatars(players, {
           timeout: AVATAR_PRELOAD_TIMEOUT,
           onProgress: (loaded, total) => {
@@ -1065,7 +1166,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         });
       }
       
-      console.info('[IntroScreen] Avatar preload complete:', result);
+      console.info('[AvatarPreload] Avatar preload complete:', result);
       
       // Log summary with timing and statistics
       if (result) {
@@ -1079,10 +1180,15 @@ console.info('[IntroScreen] Script executing – pre-init');
         });
       }
       
-      // Log telemetry
+      // Log telemetry for avatars_ready_event
       try {
         if (g.Telemetry && typeof g.Telemetry.log === 'function') {
-          g.Telemetry.log('avatar_preload_workflow_done', result);
+          g.Telemetry.log('avatars_ready_event', {
+            loaded: result?.loaded || 0,
+            total: result?.total || 0,
+            timedOut: result?.timedOut || false,
+            elapsedMs: result?.elapsedMs || 0
+          });
         }
       } catch (e) {
         // Non-blocking telemetry
@@ -1098,7 +1204,7 @@ console.info('[IntroScreen] Script executing – pre-init');
       
       return result;
     } catch (err) {
-      console.error('[IntroScreen] Avatar preload error:', err);
+      console.error('[AvatarPreload] Avatar preload error:', err);
       
       // Log telemetry for error
       try {
