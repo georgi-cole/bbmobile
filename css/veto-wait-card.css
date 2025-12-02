@@ -19,7 +19,7 @@
    ============================================================================ */
 
 :root {
-  --vwc-bg: rgba(24, 34, 50, 0.75); /* 75% transparency */
+  --vwc-bg: rgba(28, 43, 62, 0.75); /* 75% transparency - matches TV inline card spec */
   --vwc-text: #d7e5f7;
   --vwc-heading: #60a5fa; /* Consistent with intermission cards */
   --vwc-btn-yes: #2f8651;
@@ -37,7 +37,7 @@
   position: relative;
   margin: 12px auto;
   /* TV Inline Card Spec: 75% transparency background */
-  background: rgba(28, 43, 62, 0.75);
+  background: var(--vwc-bg);
   /* TV Inline Card Spec: No border/outline */
   border: none;
   outline: none;

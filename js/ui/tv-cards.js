@@ -56,6 +56,23 @@
   }
 
   /**
+   * Apply consistent button styling for TV decision cards.
+   * Ensures buttons have proper min/max sizing and flex layout.
+   * @param {HTMLButtonElement} btn - The button element to style
+   */
+  function applyDecisionButtonStyle(btn){
+    btn.style.minHeight = '44px';
+    btn.style.maxHeight = '44px';
+    btn.style.minWidth = '80px';
+    btn.style.maxWidth = '180px';
+    btn.style.flex = '1 1 auto';
+    btn.style.boxSizing = 'border-box';
+    btn.style.whiteSpace = 'nowrap';
+    btn.style.overflow = 'hidden';
+    btn.style.textOverflow = 'ellipsis';
+  }
+
+  /**
    * Create ESC key dismissal handler for cards.
    * @param {Function} onDismiss - Callback to execute when ESC is pressed
    * @returns {Function} The event handler function (for cleanup if needed)
@@ -772,9 +789,8 @@
           b.textContent = btn.label;
           // Use ariaLabel if provided, otherwise fall back to label
           b.setAttribute('aria-label', btn.ariaLabel || btn.label);
-          // Button sizing: min/max height 44px, flex scaling, prevent overflow
-          b.style.cssText = 'min-height:44px;max-height:44px;min-width:80px;max-width:180px;' +
-            'flex:1 1 auto;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+          // Apply consistent button styling
+          applyDecisionButtonStyle(b);
           b.onclick = function(){
             disableAll();
             clearTVOverlay();
@@ -1168,9 +1184,8 @@
           b.className = btn.primary ? 'btn primary' : 'btn';
           b.textContent = btn.label;
           b.setAttribute('aria-label', btn.ariaLabel || btn.label);
-          // Button sizing: min/max height 44px, flex scaling, prevent overflow
-          b.style.cssText = 'min-height:44px;max-height:44px;min-width:80px;max-width:180px;' +
-            'flex:1 1 auto;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+          // Apply consistent button styling
+          applyDecisionButtonStyle(b);
           b.onclick = function(){
             disableAll();
             clearTVOverlay();
