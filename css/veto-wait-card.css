@@ -19,7 +19,7 @@
    ============================================================================ */
 
 :root {
-  --vwc-bg: rgba(24, 34, 50, 0.75); /* 75% transparency */
+  --vwc-bg: rgba(28, 43, 62, 0.75); /* 75% transparency - matches TV inline card spec */
   --vwc-text: #d7e5f7;
   --vwc-heading: #60a5fa; /* Consistent with intermission cards */
   --vwc-btn-yes: #2f8651;
@@ -35,39 +35,36 @@
 
 .veto-wait-card {
   position: relative;
-  margin: 12px auto;
+  margin: 8px auto;
   /* TV Inline Card Spec: 75% transparency background */
   background: var(--vwc-bg);
   /* TV Inline Card Spec: No border/outline */
   border: none;
   outline: none;
-  border-radius: 14px;
-  padding: 14px 16px;
-  /* TV Inline Card Spec: max-width 780px */
-  max-width: min(780px, 90%);
-  width: 90%;
-  box-shadow: 0 6px 20px -6px var(--vwc-shadow);
+  border-radius: 12px;
+  padding: 16px 20px;
+  /* Compact card - fits mobile screens */
+  max-width: min(320px, 90%);
+  width: auto;
+  box-shadow: 0 4px 16px -4px var(--vwc-shadow);
   color: var(--vwc-text);
   font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   animation: vwcFadeIn 300ms ease-out;
-  /* TV Inline Card Spec: safe max-height with overflow */
-  max-height: calc(100% - 24px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 /* Tablet breakpoint */
 @media (min-width: 641px) and (max-width: 860px) {
   .veto-wait-card {
-    max-width: min(780px, 85%);
+    max-width: min(340px, 85%);
   }
 }
 
 /* Mobile breakpoint */
 @media (max-width: 640px) {
   .veto-wait-card {
-    max-width: min(780px, 92%);
-    padding: 12px 14px;
+    max-width: min(300px, 92%);
+    padding: 14px 16px;
   }
 }
 
@@ -78,7 +75,8 @@
 .vwc-inner {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  align-items: center;
 }
 
 /* ============================================================================
@@ -86,10 +84,10 @@
    ============================================================================ */
 
 .vwc-heading {
-  margin: 0 0 4px;
-  font-size: clamp(1.0rem, 4vw, 1.25rem);
+  margin: 0;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--vwc-heading);
+  color: var(--vwc-text);
   text-align: center;
   line-height: 1.3;
 }
@@ -99,12 +97,12 @@
    ============================================================================ */
 
 .vwc-desc {
-  margin: 0 0 8px;
-  font-size: clamp(0.85rem, 3vw, 1rem);
+  margin: 0 0 4px;
+  font-size: 0.9rem;
   color: var(--vwc-text);
   text-align: center;
   line-height: 1.4;
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 /* ============================================================================
@@ -114,70 +112,29 @@
 .vwc-buttons {
   display: flex;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: 8px;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 /* Stack buttons vertically on very narrow screens */
 @media (max-width: 300px) {
   .vwc-buttons {
     flex-direction: column;
+    align-items: stretch;
   }
 }
 
 /* ============================================================================
-   BUTTONS
+   BUTTONS - Use standard .btn classes for consistent styling
    ============================================================================ */
 
-.vwc-btn {
-  flex: 1;
-  max-width: 160px;
-  background: var(--vwc-btn-no);
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-  min-height: 44px; /* Ensure touch-friendly target size */
-}
-
-/* Yes button styling */
-.vwc-btn.vwc-yes {
-  background: var(--vwc-btn-yes);
-}
-
-/* Hover states */
-.vwc-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.vwc-btn.vwc-yes:hover:not(:disabled) {
-  background: var(--vwc-btn-yes-hover);
-}
-
-.vwc-btn.vwc-no:hover:not(:disabled) {
-  background: var(--vwc-btn-no-hover);
-}
-
-/* Active/pressed state */
-.vwc-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-/* Disabled state */
-.vwc-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Focus state for accessibility */
-.vwc-btn:focus-visible {
-  outline: 2px solid var(--vwc-heading);
-  outline-offset: 2px;
+/* Button sizing within veto-wait-card */
+.veto-wait-card .btn {
+  min-width: 70px;
+  padding: 8px 20px;
+  font-size: 0.72rem;
 }
 
 /* ============================================================================

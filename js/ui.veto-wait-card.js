@@ -54,14 +54,14 @@
     card.setAttribute('aria-labelledby', 'vetoWaitHeading');
     card.setAttribute('aria-describedby', 'vetoWaitDesc');
 
-    // Build card content
+    // Build card content - keep it simple and compact
     card.innerHTML = `
       <div class="vwc-inner">
-        <h3 id="vetoWaitHeading" class="vwc-heading">Wanna play a game instead?</h3>
-        <p id="vetoWaitDesc" class="vwc-desc">Pass the time with Dots and Boxes while the competition is ongoing</p>
+        <p id="vetoWaitHeading" class="vwc-heading">You are ineligible to compete.</p>
+        <p id="vetoWaitDesc" class="vwc-desc">Play Dots and Boxes instead?</p>
         <div class="vwc-buttons">
-          <button type="button" class="vwc-btn vwc-yes" aria-label="Yes, play game">Yes</button>
-          <button type="button" class="vwc-btn vwc-no" aria-label="No, just wait">No</button>
+          <button type="button" class="btn primary" aria-label="Yes, play game">Yes</button>
+          <button type="button" class="btn" aria-label="No, just wait">No</button>
         </div>
       </div>
     `;
@@ -71,8 +71,8 @@
     global.__vetoWaitCard = card;
 
     // Wire up button event handlers
-    const yesBtn = card.querySelector('.vwc-yes');
-    const noBtn = card.querySelector('.vwc-no');
+    const yesBtn = card.querySelector('.btn.primary');
+    const noBtn = card.querySelector('.btn:not(.primary)');
 
     // Yes button: launch intermission game
     if(yesBtn){

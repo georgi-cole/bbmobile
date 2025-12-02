@@ -8089,3 +8089,99 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
     margin-bottom: 0; /* spacer handles bottom offset */
   }
 }
+
+/* ============================================================================
+   HOH/POV INTERMISSION CARD STYLING (TV Overlay)
+   - "You cannot compete" cards shown inside faux TV overlay
+   - max-width: 780px, background: rgba(28,43,62,0.75), no outlines, rounded
+   - max-height relative to TV overlay (calc(100vh - 120px))
+   - Button row: flex, wrap, gap:12px, center-justified
+   - Buttons: max-height 44px, font-size scales on narrow screens
+   ============================================================================ */
+
+/* Intermission TV Card base container */
+#tvOverlay .intermission-tv-card,
+#tvOverlay .veto-wait-card {
+  max-width: min(780px, 92%) !important;
+  background: rgba(28, 43, 62, 0.75) !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: 14px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding: 18px 22px;
+  margin: 0 auto;
+}
+
+/* Ensure button rows in intermission cards wrap properly */
+#tvOverlay .intermission-tv-card .veto-decision-row,
+#tvOverlay .veto-wait-card .vwc-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+  margin-top: 12px;
+}
+
+/* Button styling for intermission cards - ensure no overflow */
+#tvOverlay .intermission-tv-card .veto-decision-row button,
+#tvOverlay .intermission-tv-card button.btn,
+#tvOverlay .veto-wait-card .vwc-btn {
+  flex: 1 1 auto;
+  min-width: 80px;
+  max-width: 180px;
+  min-height: 44px;
+  max-height: 44px;
+  font-size: clamp(0.8rem, 3vw, 0.95rem);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+
+/* Mobile: tighter padding, smaller fonts */
+@media (max-width: 480px) {
+  #tvOverlay .intermission-tv-card,
+  #tvOverlay .veto-wait-card {
+    padding: 14px 16px;
+    max-height: calc(100vh - 100px);
+  }
+  
+  #tvOverlay .intermission-tv-card .veto-decision-row button,
+  #tvOverlay .intermission-tv-card button.btn,
+  #tvOverlay .veto-wait-card .vwc-btn {
+    font-size: clamp(0.75rem, 3.5vw, 0.85rem);
+    padding: 8px 12px;
+    min-width: 70px;
+    max-width: 160px;
+  }
+}
+
+/* Landscape mobile: reduce max-height further */
+@media (max-height: 500px) and (orientation: landscape) {
+  #tvOverlay .intermission-tv-card,
+  #tvOverlay .veto-wait-card {
+    max-height: calc(100vh - 80px);
+    padding: 12px 14px;
+  }
+  
+  #tvOverlay .intermission-tv-card h3,
+  #tvOverlay .veto-wait-card .vwc-heading {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  
+  #tvOverlay .intermission-tv-card p,
+  #tvOverlay .veto-wait-card .vwc-desc {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+}
