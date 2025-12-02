@@ -46,16 +46,44 @@
 
   /**
    * Handle avatars:ready event - ungate roster and trigger render
+   * Only ungates if loaded/total >= readyPercent OR timeout occurred
    * @param {CustomEvent} event - The avatars:ready event
    */
   function handleAvatarsReady(event){
     const detail = event?.detail || {};
+    const cfg = g.game?.cfg || g.cfg || {};
+    const readyPercent = cfg.avatarReadyPercent || 0.99;
     
     console.info('[RosterGate] avatars:ready event received:', detail);
+    
+    // Calculate if threshold is met
+    const loaded = detail.loaded || 0;
+    const total = detail.total || 0;
+    const percentLoaded = total > 0 ? loaded / total : 1;
+    const thresholdMet = percentLoaded >= readyPercent;
+    
+    // Only ungate if threshold met OR timeout occurred OR explicitly ready
+    const shouldUngate = thresholdMet || detail.timedOut || detail.isReady || detail.earlyComplete;
+    
+    if (!shouldUngate) {
+      console.warn(`[RosterGate] Threshold not met (${(percentLoaded * 100).toFixed(1)}% < ${readyPercent * 100}%), waiting...`);
+      return;
+    }
     
     rosterGateState.avatarsReady = true;
     rosterGateState.timedOut = !!detail.timedOut;
     rosterGateState.summary = detail;
+    
+    // Log summary with details
+    console.info('[RosterGate] Roster ungated:', {
+      total: detail.total,
+      loaded: detail.loaded,
+      failed: detail.failed,
+      timedOut: detail.timedOut,
+      decodeSupported: detail.decodeSupported,
+      elapsedMs: detail.elapsedMs,
+      percentLoaded: (percentLoaded * 100).toFixed(1) + '%'
+    });
     
     // Log warning if timed out
     if(detail.timedOut){
