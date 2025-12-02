@@ -309,18 +309,30 @@
     // Update roster
     const rosterEl = jurySection.querySelector('.diaryRoomModal-juryRoster');
     if (rosterEl) {
-      rosterEl.innerHTML = juryHouse.map(jurorId => {
+      rosterEl.innerHTML = '';
+      juryHouse.forEach(jurorId => {
         const player = (game.players || []).find(p => p.id === jurorId);
         const name = player?.name || `Juror ${jurorId}`;
         const avatar = global.resolveAvatar?.(player) || player?.avatar || '';
         
-        return `
-          <div class="diaryRoomModal-juror">
-            ${avatar ? `<img class="diaryRoomModal-juror-avatar" src="${avatar}" alt="${name}" onerror="this.style.display='none'">` : ''}
-            <span>${name}</span>
-          </div>
-        `;
-      }).join('');
+        const jurorDiv = document.createElement('div');
+        jurorDiv.className = 'diaryRoomModal-juror';
+        
+        if (avatar) {
+          const img = document.createElement('img');
+          img.className = 'diaryRoomModal-juror-avatar';
+          img.src = avatar;
+          img.alt = name;
+          img.onerror = function() { this.style.display = 'none'; };
+          jurorDiv.appendChild(img);
+        }
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = name; // Safe: uses textContent
+        jurorDiv.appendChild(nameSpan);
+        
+        rosterEl.appendChild(jurorDiv);
+      });
     }
   }
 
