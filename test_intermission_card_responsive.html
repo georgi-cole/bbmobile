@@ -347,11 +347,11 @@
       log('Showing Yes/No intermission card');
       if (window.TVCards && window.TVCards.showTVIntermissionCard) {
         window.TVCards.showTVIntermissionCard({
-          title: 'You cannot compete',
-          lines: ['You are ineligible to participate in this HOH competition.'],
+          title: 'You are ineligible to compete.',
+          lines: ['Wanna play Dots and Boxes instead?'],
           buttons: [
-            { label: 'Yes', value: 'yes', primary: true, ariaLabel: 'Yes, continue' },
-            { label: 'No', value: 'no', primary: false, ariaLabel: 'No, cancel' }
+            { label: 'Yes', value: 'yes', primary: true, ariaLabel: 'Yes, play game' },
+            { label: 'No', value: 'no', primary: false, ariaLabel: 'No, just wait' }
           ]
         }).then(function(result) {
           log('User selected: ' + result, 'success');

@@ -1130,40 +1130,35 @@
       clearTVOverlay();
       
       var card = document.createElement('div');
-      // TV inline card classes: base styling, reveal animation, diary room theme, typography, component identifier
-      card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody intermission-tv-card';
+      // Compact intermission card - matching veto-wait-card style
+      card.className = 'veto-wait-card';
       
       // ARIA for accessibility
       card.setAttribute('role', 'dialog');
       card.setAttribute('aria-label', cardTitle);
       card.setAttribute('tabindex', '0');
       
-      // Title
-      var h3 = document.createElement('h3');
-      h3.textContent = cardTitle;
-      h3.style.cssText = 'text-align:center;margin-bottom:12px;color:#60a5fa;';
-      card.appendChild(h3);
+      // Inner container
+      var inner = document.createElement('div');
+      inner.className = 'vwc-inner';
       
-      // Lines
+      // Title line
+      var titleP = document.createElement('p');
+      titleP.className = 'vwc-heading';
+      titleP.textContent = cardTitle;
+      inner.appendChild(titleP);
+      
+      // Description lines
       for(var i = 0; i < cardLines.length; i++){
         var p = document.createElement('p');
-        if(i === 0) p.className = 'big';
+        p.className = 'vwc-desc';
         p.textContent = cardLines[i];
-        p.style.textAlign = 'center';
-        card.appendChild(p);
-      }
-      
-      // Spacer before buttons
-      if(cardLines.length > 0){
-        var spacer = document.createElement('div');
-        spacer.style.height = '16px';
-        card.appendChild(spacer);
+        inner.appendChild(p);
       }
       
       // Buttons row
       var btnRow = document.createElement('div');
-      btnRow.className = 'veto-decision-row';
-      btnRow.style.cssText = 'display:flex;gap:12px;justify-content:center;flex-wrap:wrap;';
+      btnRow.className = 'vwc-buttons';
       
       function disableAll(){
         var btns = btnRow.querySelectorAll('button');
@@ -1181,11 +1176,10 @@
       for(var k = 0; k < decisionButtons.length; k++){
         (function(btn){
           var b = document.createElement('button');
-          b.className = btn.primary ? 'btn primary' : 'btn';
+          // Use vwc-btn class for consistent compact button styling
+          b.className = btn.primary ? 'vwc-btn vwc-yes' : 'vwc-btn vwc-no';
           b.textContent = btn.label;
           b.setAttribute('aria-label', btn.ariaLabel || btn.label);
-          // Apply consistent button styling
-          applyDecisionButtonStyle(b);
           b.onclick = function(){
             disableAll();
             clearTVOverlay();
@@ -1204,15 +1198,12 @@
         })(decisionButtons[k]);
       }
       
-      card.appendChild(btnRow);
+      inner.appendChild(btnRow);
+      card.appendChild(inner);
       content.appendChild(card);
       
       var tv = document.getElementById('tv');
       if(tv) tv.classList.add('tvTall');
-      
-      // Downscale font if card is too tall
-      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
-      if(fitTVCardText) fitTVCardText(card);
       
       // Focus first button for accessibility
       setTimeout(function(){
