@@ -165,9 +165,10 @@
           failed++;
         }
 
-        // Progress callback - use completed count for UI progress (counts both success and failure)
+        // Progress callback - pass completed count for UI progress (counts both success and failure)
+        // This ensures the progress bar fills up even when some avatars fail to load
         if (typeof onProgress === 'function') {
-          onProgress(loaded, total, result);
+          onProgress(completed, total, result);
         }
 
         // Check for early completion (threshold met)
@@ -314,17 +315,22 @@
     });
 
     // Create preload promise with early completion support
+    // Note: The progress callback now receives 'completed' count (success + fail) for smooth UI
+    let completed = 0;
     const preloadPromise = runQueue(
       items, 
       concurrency, 
-      (currentLoaded, currentTotal, item) => {
-        loaded = currentLoaded;
-        if (item.success && item.decoded) {
-          decoded++;
+      (currentCompleted, currentTotal, item) => {
+        completed = currentCompleted;
+        if (item.success) {
+          loaded++;
+          if (item.decoded) decoded++;
+        } else {
+          failed++;
         }
 
-        // Progress callback - update UI with current loaded count
-        onProgress(loaded, total);
+        // Progress callback - update UI with completed count for smooth progress
+        onProgress(completed, total);
 
         // Per-item callback for skeleton mode
         onItemComplete(item);

@@ -47,6 +47,8 @@
   /**
    * Handle avatars:ready event - ungate roster and trigger render
    * Only ungates if loaded/total >= readyPercent OR timeout occurred
+   * Note: The avatar-queue.js sets isReady/timedOut/earlyComplete appropriately,
+   * so this check is a secondary safeguard.
    * @param {CustomEvent} event - The avatars:ready event
    */
   function handleAvatarsReady(event){
@@ -56,18 +58,24 @@
     
     console.info('[RosterGate] avatars:ready event received:', detail);
     
+    // If already ungated, skip
+    if(rosterGateState.avatarsReady){
+      console.info('[RosterGate] Already ungated, skipping');
+      return;
+    }
+    
     // Calculate if threshold is met
     const loaded = detail.loaded || 0;
     const total = detail.total || 0;
     const percentLoaded = total > 0 ? loaded / total : 1;
     const thresholdMet = percentLoaded >= readyPercent;
     
-    // Only ungate if threshold met OR timeout occurred OR explicitly ready
-    const shouldUngate = thresholdMet || detail.timedOut || detail.isReady || detail.earlyComplete;
+    // Ungate if: threshold met OR timeout OR explicitly ready OR early complete OR skipped (no players)
+    const shouldUngate = thresholdMet || detail.timedOut || detail.isReady || detail.earlyComplete || detail.skipped;
     
     if (!shouldUngate) {
-      console.warn(`[RosterGate] Threshold not met (${(percentLoaded * 100).toFixed(1)}% < ${readyPercent * 100}%), waiting...`);
-      return;
+      // Safeguard: Still ungate but log warning
+      console.warn(`[RosterGate] Threshold not met (${(percentLoaded * 100).toFixed(1)}% < ${readyPercent * 100}%), ungating anyway`);
     }
     
     rosterGateState.avatarsReady = true;
