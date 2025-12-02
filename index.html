@@ -36,7 +36,8 @@
 <link rel="stylesheet" href="css/tv-inline-cards.css">
 <link rel="stylesheet" href="css/tv-sequence.css">
 <link rel="stylesheet" href="css/eviction-modal.css">
-<link rel="stylesheet" href="css/mobileRoster.css?v=rt-badges-2">
+<link rel="stylesheet" href="css/mobileRoster.css?v=mr-fix-1">
+<link rel="stylesheet" href="css/mobileRoster.badges.css?v=mr-fix-1">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -256,7 +257,12 @@
 <script defer src="js/roster-visibility.js"></script>
 
 <!-- Mobile Roster View System -->
-<script defer src="js/ui/mobileRoster.js?v=rt-badges-2"></script>
+<script defer src="js/ui/mobileRoster.js?v=mr-fix-1"></script>
+<!-- Mobile Roster Badge Machine (pill→emoji orchestration + combo emojis) -->
+<script defer src="js/ui/mobileRoster.badge-machine.js?v=mr-fix-1"></script>
+<!-- Mobile Roster Overlay Spacing (reactive overlay height + last-row guard) -->
+<script defer src="js/ui/overlaySpacing.js?v=mr-fix-1"></script>
+<script defer src="js/ui/mobileRoster.overlay-spacing-fix.js?v=mr-fix-1"></script>
 
 <!-- Mobile Roster Fallback Initializer -->
 <script>
