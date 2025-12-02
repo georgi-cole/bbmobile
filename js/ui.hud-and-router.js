@@ -46,16 +46,52 @@
 
   /**
    * Handle avatars:ready event - ungate roster and trigger render
+   * Only ungates if loaded/total >= readyPercent OR timeout occurred
+   * Note: The avatar-queue.js sets isReady/timedOut/earlyComplete appropriately,
+   * so this check is a secondary safeguard.
    * @param {CustomEvent} event - The avatars:ready event
    */
   function handleAvatarsReady(event){
     const detail = event?.detail || {};
+    const cfg = g.game?.cfg || g.cfg || {};
+    const readyPercent = cfg.avatarReadyPercent || 0.99;
     
     console.info('[RosterGate] avatars:ready event received:', detail);
+    
+    // If already ungated, skip
+    if(rosterGateState.avatarsReady){
+      console.info('[RosterGate] Already ungated, skipping');
+      return;
+    }
+    
+    // Calculate if threshold is met
+    const loaded = detail.loaded || 0;
+    const total = detail.total || 0;
+    const percentLoaded = total > 0 ? loaded / total : 1;
+    const thresholdMet = percentLoaded >= readyPercent;
+    
+    // Ungate if: threshold met OR timeout OR explicitly ready OR early complete OR skipped (no players)
+    const shouldUngate = thresholdMet || detail.timedOut || detail.isReady || detail.earlyComplete || detail.skipped;
+    
+    if (!shouldUngate) {
+      // Safeguard: Still ungate but log warning
+      console.warn(`[RosterGate] Threshold not met (${(percentLoaded * 100).toFixed(1)}% < ${readyPercent * 100}%), ungating anyway`);
+    }
     
     rosterGateState.avatarsReady = true;
     rosterGateState.timedOut = !!detail.timedOut;
     rosterGateState.summary = detail;
+    
+    // Log summary with details
+    console.info('[RosterGate] Roster ungated:', {
+      total: detail.total,
+      loaded: detail.loaded,
+      failed: detail.failed,
+      timedOut: detail.timedOut,
+      decodeSupported: detail.decodeSupported,
+      elapsedMs: detail.elapsedMs,
+      percentLoaded: (percentLoaded * 100).toFixed(1) + '%'
+    });
     
     // Log warning if timed out
     if(detail.timedOut){

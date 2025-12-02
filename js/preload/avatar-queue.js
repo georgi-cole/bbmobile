@@ -119,23 +119,35 @@
   }
 
   /**
-   * Run preloader queue with configurable concurrency
+   * Run preloader queue with configurable concurrency and early completion
    * @param {Array<{playerId, url}>} items - Items to preload
    * @param {number} concurrency - Max concurrent requests
    * @param {Function} onProgress - Progress callback (loaded, total, item)
-   * @returns {Promise<Array>} Results array
+   * @param {Object} opts - Optional settings
+   * @param {number} opts.readyPercent - Threshold for early completion (default: 1.0)
+   * @param {Function} opts.onEarlyComplete - Called when readyPercent threshold is met
+   * @returns {Promise<Object>} Results object { results, loaded, failed, earlyComplete }
    */
-  async function runQueue(items, concurrency, onProgress) {
+  async function runQueue(items, concurrency, onProgress, opts = {}) {
     const results = [];
     let loaded = 0;
+    let failed = 0;
+    let completed = 0;
     let index = 0;
     const total = items.length;
+    const readyPercent = opts.readyPercent || 1.0;
+    const onEarlyComplete = typeof opts.onEarlyComplete === 'function' ? opts.onEarlyComplete : null;
+    let earlyComplete = false;
+    let earlyCompleteTriggered = false;
 
     if (total === 0) {
-      return results;
+      return { results, loaded: 0, failed: 0, earlyComplete: false };
     }
 
-    logInfo(`Starting queue: ${total} items, concurrency=${concurrency}`);
+    logInfo(`Starting queue: ${total} items, concurrency=${concurrency}, readyPercent=${readyPercent}`);
+
+    // Calculate threshold for early completion
+    const readyThreshold = Math.ceil(total * readyPercent);
 
     // Worker function - picks next item from queue
     async function worker() {
@@ -145,14 +157,28 @@
 
         const result = await preloadSingleAvatar(item.url, item.playerId);
         results[currentIndex] = result;
+        completed++;
 
         if (result.success) {
           loaded++;
+        } else {
+          failed++;
         }
 
-        // Progress callback
+        // Progress callback - pass completed count for UI progress (counts both success and failure)
+        // This ensures the progress bar fills up even when some avatars fail to load
         if (typeof onProgress === 'function') {
-          onProgress(loaded, total, result);
+          onProgress(completed, total, result);
+        }
+
+        // Check for early completion (threshold met)
+        if (!earlyCompleteTriggered && loaded >= readyThreshold) {
+          earlyCompleteTriggered = true;
+          earlyComplete = true;
+          logInfo(`Early complete: ${loaded}/${total} loaded (threshold: ${readyThreshold})`);
+          if (onEarlyComplete) {
+            onEarlyComplete({ loaded, failed, completed, total });
+          }
         }
       }
     }
@@ -166,7 +192,7 @@
 
     await Promise.all(workers);
 
-    return results;
+    return { results, loaded, failed, earlyComplete };
   }
 
   /**
@@ -271,7 +297,7 @@
       };
     }
 
-    // Initial progress callback
+    // Initial progress callback (important: show 0% to user immediately)
     onProgress(0, total);
 
     // Track loading stats
@@ -279,6 +305,7 @@
     let failed = 0;
     let decoded = 0;
     let timedOut = false;
+    let earlyComplete = false;
 
     // Create timeout promise
     const timeoutPromise = new Promise((resolve) => {
@@ -287,30 +314,57 @@
       }, timeout);
     });
 
-    // Create preload promise
-    const preloadPromise = runQueue(items, concurrency, (currentLoaded, currentTotal, item) => {
-      if (item.success) {
-        loaded = currentLoaded;
-        if (item.decoded) decoded++;
-      } else {
-        failed++;
+    // Create preload promise with early completion support
+    // Note: The progress callback now receives 'completed' count (success + fail) for smooth UI
+    let completed = 0;
+    const preloadPromise = runQueue(
+      items, 
+      concurrency, 
+      (currentCompleted, currentTotal, item) => {
+        completed = currentCompleted;
+        if (item.success) {
+          loaded++;
+          if (item.decoded) decoded++;
+        } else {
+          failed++;
+        }
+
+        // Progress callback - update UI with completed count for smooth progress
+        onProgress(completed, total);
+
+        // Per-item callback for skeleton mode
+        onItemComplete(item);
+      },
+      {
+        readyPercent,
+        onEarlyComplete: (stats) => {
+          earlyComplete = true;
+          logInfo(`Early completion triggered: ${stats.loaded}/${stats.total} loaded`);
+        }
       }
-
-      // Progress callback
-      onProgress(loaded, total);
-
-      // Per-item callback for skeleton mode
-      onItemComplete(item);
-    });
+    );
 
     // Race between preload and timeout
     const race = await Promise.race([
-      preloadPromise.then(results => ({ results, timedOut: false })),
+      preloadPromise.then(queueResult => ({ 
+        results: queueResult.results, 
+        loaded: queueResult.loaded,
+        failed: queueResult.failed,
+        earlyComplete: queueResult.earlyComplete,
+        timedOut: false 
+      })),
       timeoutPromise
     ]);
 
     // Calculate elapsed time
     const elapsedMs = Date.now() - startTime;
+
+    // Update final counts from race result
+    if (!race.timedOut) {
+      loaded = race.loaded;
+      failed = race.failed;
+      earlyComplete = race.earlyComplete || false;
+    }
 
     // Check if we timed out or finished
     if (race.timedOut) {
@@ -325,7 +379,7 @@
       });
     } else {
       // Finished within timeout
-      logInfo(`Completed in ${elapsedMs}ms: ${loaded}/${total} loaded, ${decoded} decoded`);
+      logInfo(`Completed in ${elapsedMs}ms: ${loaded}/${total} loaded, ${decoded} decoded, earlyComplete=${earlyComplete}`);
 
       telemetry('avatar_preload_batch_done', {
         loaded,
@@ -333,13 +387,14 @@
         failed,
         decoded,
         elapsedMs,
-        decodeSupported
+        decodeSupported,
+        earlyComplete
       });
     }
 
     // Calculate if ready threshold met
     const percentLoaded = total > 0 ? loaded / total : 1;
-    const isReady = percentLoaded >= readyPercent || timedOut;
+    const isReady = percentLoaded >= readyPercent || timedOut || earlyComplete;
 
     // Build summary
     const summary = {
@@ -352,6 +407,7 @@
       elapsedMs,
       percentLoaded,
       isReady,
+      earlyComplete,
       results: race.results || []
     };
 
