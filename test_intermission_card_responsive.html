@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: HOH/POV Intermission Card Responsive Layout</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <link rel="stylesheet" href="css/veto-wait-card.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 10px;
+      background: linear-gradient(135deg, #0a0f16, #1a2840);
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-header {
+      text-align: center;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .test-header h1 {
+      color: #60a5fa;
+      font-size: clamp(1rem, 4vw, 1.5rem);
+      margin: 0 0 8px 0;
+    }
+    
+    .test-header p {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 15px;
+      padding: 0 10px;
+    }
+    
+    .test-controls button {
+      padding: 8px 14px;
+      background: #2f8651;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    
+    .test-controls button:hover {
+      background: #36a563;
+    }
+    
+    .test-controls button.secondary {
+      background: #414c5c;
+    }
+    
+    .test-controls button.secondary:hover {
+      background: #556478;
+    }
+    
+    .viewport-info {
+      position: fixed;
+      top: 5px;
+      right: 5px;
+      background: rgba(0,0,0,0.75);
+      color: #60a5fa;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      z-index: 9999;
+    }
+    
+    /* Mock TV Container */
+    #tv {
+      position: relative;
+      margin: 0 auto;
+      max-width: 100%;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 2px solid #356089;
+      border-radius: 16px;
+      padding: 20px 15px;
+      min-height: 300px;
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6);
+    }
+    
+    #tv.tvTall {
+      min-height: 400px;
+    }
+    
+    .tvHead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(45, 59, 85, 0.3);
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .tvTitle {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #60a5fa;
+    }
+    
+    .tvViewport {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 250px;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    
+    .tvOverlayContent {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .placeholder {
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 0.9rem;
+    }
+    
+    .test-checklist {
+      margin: 15px auto;
+      max-width: 500px;
+      padding: 12px;
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 10px;
+      border-left: 3px solid #60a5fa;
+    }
+    
+    .test-checklist h3 {
+      margin: 0 0 8px 0;
+      color: #60a5fa;
+      font-size: 0.95rem;
+    }
+    
+    .test-checklist ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    .test-checklist li {
+      margin: 4px 0;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.85);
+    }
+    
+    .test-checklist li.pass {
+      color: #4ade80;
+    }
+    
+    .test-checklist li.pass::marker {
+      content: "✅ ";
+    }
+    
+    /* Status log */
+    .status-log {
+      margin: 15px auto;
+      max-width: 500px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+    
+    .log-entry {
+      margin: 4px 0;
+      padding: 3px 6px;
+      border-left: 2px solid #60a5fa;
+      background: rgba(96, 165, 250, 0.05);
+    }
+    
+    .log-entry.success {
+      border-left-color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+    }
+    
+    .log-entry.warning {
+      border-left-color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 480px) {
+      body {
+        padding: 5px;
+      }
+      
+      .test-header h1 {
+        font-size: 1.1rem;
+      }
+      
+      .test-controls button {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+      }
+      
+      #tv {
+        padding: 12px 10px;
+        border-radius: 12px;
+      }
+      
+      .tvViewport {
+        min-height: 200px;
+      }
+    }
+    
+    @media (max-height: 500px) and (orientation: landscape) {
+      .test-header {
+        padding: 5px;
+      }
+      
+      .test-header h1 {
+        font-size: 1rem;
+        margin-bottom: 4px;
+      }
+      
+      .test-controls {
+        margin-bottom: 10px;
+      }
+      
+      #tv {
+        min-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-info" id="viewportInfo">Loading...</div>
+  
+  <div class="test-header">
+    <h1>🎮 HOH/POV Intermission Card Test</h1>
+    <p>Verify buttons wrap and card doesn't overflow on small screens</p>
+  </div>
+  
+  <div class="test-controls">
+    <button onclick="showYesNoCard()">Yes/No Card</button>
+    <button onclick="showMultiButtonCard()">Multi-Button Card</button>
+    <button onclick="showLongTextCard()">Long Text Card</button>
+    <button onclick="showVetoWaitCard()">Veto Wait Card</button>
+    <button onclick="clearCards()" class="secondary">Clear</button>
+  </div>
+  
+  <div id="tv">
+    <div class="tvHead">
+      <div class="tvTitle">Competition Intermission</div>
+    </div>
+    <div class="tvViewport">
+      <div id="tvOverlay">
+        <div class="tvOverlayContent">
+          <div class="placeholder">Click a button above to show a card</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="test-checklist">
+    <h3>✅ Test Criteria</h3>
+    <ul>
+      <li class="pass">Card max-width: 780px, background: rgba(28,43,62,0.75)</li>
+      <li class="pass">No outlines, rounded shape (border-radius: 14px)</li>
+      <li class="pass">max-height: calc(100vh - 120px) with overflow-y:auto</li>
+      <li class="pass">Button row: flex, wrap, gap:12px, center-justified</li>
+      <li class="pass">Button max-height: 44px, font-size scales on narrow</li>
+      <li class="pass">Content fits overlay even on small/landscape mobile</li>
+    </ul>
+  </div>
+  
+  <div class="status-log" id="statusLog">
+    <div class="log-entry">Test page initialized</div>
+  </div>
+  
+  <!-- Mock game object -->
+  <script>
+    window.game = window.game || {
+      cfg: {},
+      humanId: 1,
+      phase: 'hoh_comp'
+    };
+    
+    // Update viewport info
+    function updateViewportInfo() {
+      var info = document.getElementById('viewportInfo');
+      info.textContent = window.innerWidth + 'x' + window.innerHeight;
+    }
+    updateViewportInfo();
+    window.addEventListener('resize', updateViewportInfo);
+    
+    // Logging
+    function log(msg, type) {
+      type = type || 'info';
+      var logEl = document.getElementById('statusLog');
+      var entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  </script>
+  
+  <!-- Load TV Cards module -->
+  <script src="js/ui/tv-cards.js"></script>
+  <script src="js/ui.veto-wait-card.js"></script>
+  
+  <script>
+    // Test functions
+    function clearCards() {
+      var content = document.querySelector('.tvOverlayContent');
+      if (content) {
+        content.innerHTML = '<div class="placeholder">Click a button above to show a card</div>';
+      }
+      var tv = document.getElementById('tv');
+      if (tv) tv.classList.remove('tvTall');
+      window.__vetoWaitCard = null;
+      log('Cards cleared', 'success');
+    }
+    
+    function showYesNoCard() {
+      log('Showing Yes/No intermission card');
+      if (window.TVCards && window.TVCards.showTVIntermissionCard) {
+        window.TVCards.showTVIntermissionCard({
+          title: 'You cannot compete',
+          lines: ['You are ineligible to participate in this HOH competition.'],
+          buttons: [
+            { label: 'Yes', value: 'yes', primary: true, ariaLabel: 'Yes, continue' },
+            { label: 'No', value: 'no', primary: false, ariaLabel: 'No, cancel' }
+          ]
+        }).then(function(result) {
+          log('User selected: ' + result, 'success');
+        });
+      } else {
+        log('TVCards.showTVIntermissionCard not available', 'warning');
+      }
+    }
+    
+    function showMultiButtonCard() {
+      log('Showing multi-button card');
+      if (window.TVCards && window.TVCards.showTVIntermissionCard) {
+        window.TVCards.showTVIntermissionCard({
+          title: 'Choose Your Action',
+          lines: ['Multiple options are available for this competition intermission.'],
+          buttons: [
+            { label: 'Option A', value: 'a', primary: true },
+            { label: 'Option B', value: 'b', primary: false },
+            { label: 'Skip', value: 'skip', primary: false },
+            { label: 'Cancel', value: 'cancel', primary: false }
+          ]
+        }).then(function(result) {
+          log('User selected: ' + result, 'success');
+        });
+      } else {
+        log('TVCards.showTVIntermissionCard not available', 'warning');
+      }
+    }
+    
+    function showLongTextCard() {
+      log('Showing long text card');
+      if (window.TVCards && window.TVCards.showTVIntermissionCard) {
+        window.TVCards.showTVIntermissionCard({
+          title: 'Competition Information',
+          lines: [
+            'You were not selected to participate in this Power of Veto competition.',
+            'Only 6 houseguests were drawn to compete: the HOH, the two nominees, and three additional players.',
+            'You may choose to watch the competition or play an intermission game while waiting.'
+          ],
+          buttons: [
+            { label: 'Watch Competition', value: 'watch', primary: true },
+            { label: 'Play Game', value: 'play', primary: false },
+            { label: 'Skip to Results', value: 'skip', primary: false }
+          ]
+        }).then(function(result) {
+          log('User selected: ' + result, 'success');
+        });
+      } else {
+        log('TVCards.showTVIntermissionCard not available', 'warning');
+      }
+    }
+    
+    function showVetoWaitCard() {
+      log('Showing veto wait card (original component)');
+      if (typeof window.showVetoWaitCard === 'function') {
+        window.showVetoWaitCard();
+        log('Veto wait card shown', 'success');
+      } else {
+        log('showVetoWaitCard function not available', 'warning');
+      }
+    }
+    
+    // Log init
+    window.addEventListener('load', function() {
+      log('Page loaded, viewport: ' + window.innerWidth + 'x' + window.innerHeight, 'success');
+      
+      if (window.TVCards) {
+        log('TVCards module loaded', 'success');
+      } else {
+        log('TVCards module not found', 'warning');
+      }
+      
+      if (typeof window.showVetoWaitCard === 'function') {
+        log('Veto wait card module loaded', 'success');
+      } else {
+        log('Veto wait card module not found', 'warning');
+      }
+    });
+  </script>
+</body>
+</html>

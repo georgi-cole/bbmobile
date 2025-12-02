@@ -749,6 +749,8 @@
       
       var btnRow = document.createElement('div');
       btnRow.className = 'veto-decision-row';
+      // Ensure button row has proper flex layout
+      btnRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;max-width:100%;';
       
       function disableAll(){
         var btns = btnRow.querySelectorAll('button');
@@ -770,6 +772,9 @@
           b.textContent = btn.label;
           // Use ariaLabel if provided, otherwise fall back to label
           b.setAttribute('aria-label', btn.ariaLabel || btn.label);
+          // Button sizing: min/max height 44px, flex scaling, prevent overflow
+          b.style.cssText = 'min-height:44px;max-height:44px;min-width:80px;max-width:180px;' +
+            'flex:1 1 auto;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
           b.onclick = function(){
             disableAll();
             clearTVOverlay();
@@ -1163,8 +1168,9 @@
           b.className = btn.primary ? 'btn primary' : 'btn';
           b.textContent = btn.label;
           b.setAttribute('aria-label', btn.ariaLabel || btn.label);
-          b.style.minHeight = '44px';
-          b.style.minWidth = '80px';
+          // Button sizing: min/max height 44px, flex scaling, prevent overflow
+          b.style.cssText = 'min-height:44px;max-height:44px;min-width:80px;max-width:180px;' +
+            'flex:1 1 auto;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
           b.onclick = function(){
             disableAll();
             clearTVOverlay();
