@@ -58,10 +58,10 @@
     card.innerHTML = `
       <div class="vwc-inner">
         <p id="vetoWaitHeading" class="vwc-heading">You are ineligible to compete.</p>
-        <p id="vetoWaitDesc" class="vwc-desc">Wanna play Dots and Boxes instead?</p>
+        <p id="vetoWaitDesc" class="vwc-desc">Play Dots and Boxes instead?</p>
         <div class="vwc-buttons">
-          <button type="button" class="vwc-btn vwc-yes" aria-label="Yes, play game">Yes</button>
-          <button type="button" class="vwc-btn vwc-no" aria-label="No, just wait">No</button>
+          <button type="button" class="btn primary" aria-label="Yes, play game">Yes</button>
+          <button type="button" class="btn" aria-label="No, just wait">No</button>
         </div>
       </div>
     `;
@@ -71,8 +71,8 @@
     global.__vetoWaitCard = card;
 
     // Wire up button event handlers
-    const yesBtn = card.querySelector('.vwc-yes');
-    const noBtn = card.querySelector('.vwc-no');
+    const yesBtn = card.querySelector('.btn.primary');
+    const noBtn = card.querySelector('.btn:not(.primary)');
 
     // Yes button: launch intermission game
     if(yesBtn){

@@ -111,8 +111,8 @@
 
 .vwc-buttons {
   display: flex;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 12px;
+  margin-top: 8px;
   justify-content: center;
   flex-wrap: nowrap;
   align-items: center;
@@ -127,58 +127,14 @@
 }
 
 /* ============================================================================
-   BUTTONS
+   BUTTONS - Use standard .btn classes for consistent styling
    ============================================================================ */
 
-.vwc-btn {
-  min-width: 60px;
-  max-width: 100px;
-  background: var(--vwc-btn-no);
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-  min-height: 36px;
-  box-sizing: border-box;
-}
-
-/* Yes button styling */
-.vwc-btn.vwc-yes {
-  background: var(--vwc-btn-yes);
-}
-
-/* Hover states */
-.vwc-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.vwc-btn.vwc-yes:hover:not(:disabled) {
-  background: var(--vwc-btn-yes-hover);
-}
-
-.vwc-btn.vwc-no:hover:not(:disabled) {
-  background: var(--vwc-btn-no-hover);
-}
-
-/* Active/pressed state */
-.vwc-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-/* Disabled state */
-.vwc-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Focus state for accessibility */
-.vwc-btn:focus-visible {
-  outline: 2px solid var(--vwc-heading);
-  outline-offset: 2px;
+/* Button sizing within veto-wait-card */
+.veto-wait-card .btn {
+  min-width: 70px;
+  padding: 8px 20px;
+  font-size: 0.72rem;
 }
 
 /* ============================================================================
