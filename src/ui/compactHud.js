@@ -87,6 +87,11 @@
     phaseChip = hudContainer.querySelector('.compact-hud-chip.phase');
     seasonWeekChip = hudContainer.querySelector('.compact-hud-chip.season-week');
     playersChip = document.getElementById('playersChipInline'); // Reference inline chip in header
+    
+    if (!playersChip) {
+      console.warn('[CompactHud] Player count chip not found in DOM');
+    }
+    
     drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');
     selfEvictButton = hudContainer.querySelector('.compact-hud-chip.self-evict-button');
 
@@ -140,15 +145,9 @@
           return;
         }
         
-        // Use centralized self-eviction handler if available
+        // Use centralized self-eviction handler (includes built-in confirmation)
         if (typeof global.selfEviction !== 'undefined' && typeof global.selfEviction.requestHuman === 'function') {
           await global.selfEviction.requestHuman(humanId);
-        } else if (typeof global.handleSelfEviction === 'function') {
-          // Fallback to legacy handler with confirmation
-          const confirmed = confirm('Are you sure you want to self-evict? This cannot be undone!');
-          if (confirmed) {
-            global.handleSelfEviction(humanId, 'human');
-          }
         } else {
           console.warn('[CompactHud] Self-eviction handler not available');
         }
@@ -310,7 +309,7 @@
     const week = game.week || 0;
     const phase = game.phase;
 
-    // Show button when week 1 or later has started (not in lobby)
+    // Show button when week 1 or later has started (not in lobby or finale)
     const shouldShow = week >= 1 && phase !== 'lobby' && phase !== 'finale';
     
     if (shouldShow) {

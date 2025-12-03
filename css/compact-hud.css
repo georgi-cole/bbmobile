@@ -48,6 +48,7 @@
 }
 
 /* Inline player count chip (beside h1) */
+/* flex-shrink: 0 prevents chip from shrinking when header wraps on narrow viewports */
 .compact-hud-chip.players-inline {
   flex-shrink: 0;
 }
