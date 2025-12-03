@@ -14,6 +14,12 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* White dots/icon for better contrast on red background */
+.compact-hud-chip.action-menu-chip .compact-hud-chip-icon {
+  color: #ffffff;
+  opacity: 0.95;
+}
+
 .compact-hud-chip.action-menu-chip:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);

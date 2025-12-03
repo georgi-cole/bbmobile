@@ -39,9 +39,11 @@
   let hudContainer = null;
   let phaseChip = null;
   let seasonWeekChip = null;
-  let playersChip = null;
+  let playersChip = null; // Now references the inline chip in header
   let drButton = null;
+  let selfEvictButton = null;
   let drButtonHandler = null;
+  let selfEvictButtonHandler = null;
   let resizeObserver = null;
   let lastPhase = null;
   let lastPlayers = null;
@@ -58,7 +60,7 @@
 
     hudContainer = container;
 
-    // Create HUD markup
+    // Create HUD markup (without players chip - moved to header)
     hudContainer.innerHTML = `
       <div class="compact-hud-chip phase" role="status" aria-live="polite" aria-atomic="true" title="">
         <span class="compact-hud-chip-icon">📍</span>
@@ -68,13 +70,13 @@
         <span class="compact-hud-chip-icon">📅</span>
         <span class="compact-hud-chip-label">S1W1</span>
       </div>
-      <div class="compact-hud-chip players" role="status" aria-live="polite" aria-atomic="true" title="">
-        <span class="compact-hud-chip-icon">👥</span>
-        <span class="compact-hud-chip-label">0/0</span>
-      </div>
       <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
         <span class="compact-hud-chip-icon">🚪</span>
         <span class="compact-hud-chip-label">DR</span>
+      </button>
+      <button class="compact-hud-chip self-evict-button" id="btnSelfEvictHud" aria-label="Self-Evict (Exit Game)" title="Self-Evict" style="display:none;">
+        <span class="compact-hud-chip-icon">🚪</span>
+        <span class="compact-hud-chip-label">Exit</span>
       </button>
       <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
         <span class="compact-hud-chip-icon">⋮</span>
@@ -84,8 +86,9 @@
     // Get chip references
     phaseChip = hudContainer.querySelector('.compact-hud-chip.phase');
     seasonWeekChip = hudContainer.querySelector('.compact-hud-chip.season-week');
-    playersChip = hudContainer.querySelector('.compact-hud-chip.players');
+    playersChip = document.getElementById('playersChipInline'); // Reference inline chip in header
     drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');
+    selfEvictButton = hudContainer.querySelector('.compact-hud-chip.self-evict-button');
 
     // Setup DR button click handler
     if (drButton) {
@@ -98,6 +101,51 @@
         }
       };
       drButton.addEventListener('click', drButtonHandler);
+    }
+
+    // Setup Self-Evict button click handler
+    if (selfEvictButton) {
+      selfEvictButtonHandler = async () => {
+        const g = global.game;
+        if (!g) return;
+        
+        // Only show for human player when game is active
+        if (g.phase === 'lobby' || g.phase === 'finale') {
+          alert('Self-eviction is only available during active gameplay.');
+          return;
+        }
+        
+        const humanId = g.humanId;
+        if (!humanId) {
+          alert('No human player found.');
+          return;
+        }
+        
+        const human = global.getP ? global.getP(humanId) : null;
+        if (!human) {
+          alert('Cannot find human player data.');
+          return;
+        }
+        
+        if (human.evicted) {
+          alert('You have already been evicted.');
+          return;
+        }
+        
+        // Use centralized self-eviction handler if available
+        if (typeof global.selfEviction !== 'undefined' && typeof global.selfEviction.requestHuman === 'function') {
+          await global.selfEviction.requestHuman(humanId);
+        } else if (typeof global.handleSelfEviction === 'function') {
+          // Fallback to legacy handler with confirmation
+          const confirmed = confirm('Are you sure you want to self-evict? This cannot be undone!');
+          if (confirmed) {
+            global.handleSelfEviction(humanId, 'human');
+          }
+        } else {
+          console.warn('[CompactHud] Self-eviction handler not available');
+        }
+      };
+      selfEvictButton.addEventListener('click', selfEvictButtonHandler);
     }
 
     // Setup ResizeObserver for phase compression
@@ -241,6 +289,27 @@
     updatePhase();
     updateSeasonWeek();
     updatePlayers();
+    updateSelfEvictButton();
+  }
+
+  /**
+   * Update Self-Evict button visibility (show when game started, week >= 1)
+   */
+  function updateSelfEvictButton() {
+    if (!selfEvictButton) return;
+
+    const game = global.game || {};
+    const week = game.week || 0;
+    const phase = game.phase;
+
+    // Show button when week 1 or later has started (not in lobby)
+    const shouldShow = week >= 1 && phase !== 'lobby' && phase !== 'finale';
+    
+    if (shouldShow) {
+      selfEvictButton.style.display = '';
+    } else {
+      selfEvictButton.style.display = 'none';
+    }
   }
 
   /**
@@ -320,7 +389,6 @@
   function updatePlayers() {
     if (!playersChip) return;
 
-    const game = global.game || {};
     let aliveCount = 0;
     
     try {
@@ -356,6 +424,12 @@
       drButtonHandler = null;
     }
 
+    // Remove Self-Evict button event listener
+    if (selfEvictButton && selfEvictButtonHandler) {
+      selfEvictButton.removeEventListener('click', selfEvictButtonHandler);
+      selfEvictButtonHandler = null;
+    }
+
     if (hudContainer) {
       hudContainer.innerHTML = '';
     }
@@ -364,6 +438,7 @@
     seasonWeekChip = null;
     playersChip = null;
     drButton = null;
+    selfEvictButton = null;
     hudContainer = null;
     lastPhase = null;
     lastPlayers = null;
