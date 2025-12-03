@@ -40,6 +40,8 @@
   let phaseChip = null;
   let seasonWeekChip = null;
   let playersChip = null;
+  let drButton = null;
+  let drButtonHandler = null;
   let resizeObserver = null;
   let lastPhase = null;
   let lastPlayers = null;
@@ -70,12 +72,30 @@
         <span class="compact-hud-chip-icon">👥</span>
         <span class="compact-hud-chip-label">0/0</span>
       </div>
+      <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
+        <span class="compact-hud-chip-icon">🚪</span>
+        <span class="compact-hud-chip-label">DR</span>
+      </button>
     `;
 
     // Get chip references
     phaseChip = hudContainer.querySelector('.compact-hud-chip.phase');
     seasonWeekChip = hudContainer.querySelector('.compact-hud-chip.season-week');
     playersChip = hudContainer.querySelector('.compact-hud-chip.players');
+    drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');
+
+    // Setup DR button click handler
+    if (drButton) {
+      drButtonHandler = () => {
+        // Call DiaryRoomModal.open() directly if available
+        if (typeof global.DiaryRoomModal !== 'undefined' && typeof global.DiaryRoomModal.open === 'function') {
+          global.DiaryRoomModal.open();
+        } else {
+          console.warn('[CompactHud] DiaryRoomModal not available');
+        }
+      };
+      drButton.addEventListener('click', drButtonHandler);
+    }
 
     // Setup ResizeObserver for phase compression
     setupResizeObserver();
@@ -327,6 +347,12 @@
       resizeObserver = null;
     }
 
+    // Remove DR button event listener to prevent memory leaks
+    if (drButton && drButtonHandler) {
+      drButton.removeEventListener('click', drButtonHandler);
+      drButtonHandler = null;
+    }
+
     if (hudContainer) {
       hudContainer.innerHTML = '';
     }
@@ -334,6 +360,7 @@
     phaseChip = null;
     seasonWeekChip = null;
     playersChip = null;
+    drButton = null;
     hudContainer = null;
     lastPhase = null;
     lastPlayers = null;

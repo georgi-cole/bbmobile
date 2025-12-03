@@ -68,9 +68,9 @@
   display: none; /* Hidden by default, shown when mobile mode active */
   flex-direction: column;
   gap: var(--mobile-roster-gap, 4px); /* Use consistent gap matching grid */
-  padding: 12px;
+  padding: 12px; /* Horizontal and top padding */
   /* Account for safe-area on mobile devices (notches, home indicators) */
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   max-width: 100%;
   margin: 0 auto;
   /* Prevent any margin that could cause overlap with TV overlay */
@@ -116,12 +116,12 @@ body[data-mobile-roster-active="true"] #rosterBar {
 .mobile-roster-grid-spacer {
   flex: 0 0 auto;
   width: 100%;
-  /* Height = TV overlay height + one row gap
-   * This ensures consistent spacing between last row and overlay at all times.
+  /* Height = TV overlay height + extra buffer to prevent any overlap
+   * Increased from 1x row gap to 2x row gap + 8px for extra safety margin
    * The JS overlaySpacing module updates --tv-overlay-height dynamically.
    */
-  height: calc(var(--tv-overlay-height, 200px) + var(--avatar-row-gap, 4px));
-  min-height: calc(var(--avatar-row-gap, 4px) + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 4px) * 2) + 8px);
+  min-height: calc((var(--avatar-row-gap, 4px) * 2) + 8px + env(safe-area-inset-bottom, 0px));
   /* Invisible spacer */
   pointer-events: none;
   /* Debug: uncomment to visualize spacer */
@@ -982,8 +982,12 @@ body[data-mobile-roster-active="true"] .tv {
   .mobile-roster-active-grid {
     grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
     gap: 4px;
-    /* Maintain consistent bottom padding on small screens */
-    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    /* Remove bottom padding since spacer handles it */
+    padding-bottom: 0;
+  }
+  
+  .mobile-roster-container {
+    padding: 8px 12px 4px; /* Further reduced top padding */
   }
   
   .mobile-roster-tile {
