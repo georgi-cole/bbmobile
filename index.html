@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="css/eviction-modal.css">
 <link rel="stylesheet" href="css/mobileRoster.css?v=mr-fix-1">
 <link rel="stylesheet" href="css/mobileRoster.badges.css?v=mr-fix-1">
+<link rel="stylesheet" href="css/diary-room-modal.css">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -132,6 +133,7 @@
       <div class="tvHead">
         <div class="tvTitle">House Network Live</div>
         <div class="tvTimer" id="tvTimer">00:00</div>
+        <button class="tvDrBtn" id="btnDiaryRoom" aria-label="Open Diary Room" title="Diary Room">🚪 DR</button>
       </div>
       <div class="tvViewport" data-sm-faux-tv>
         <div id="tvNow" class="tvNow">Welcome to the season.</div>
@@ -263,6 +265,9 @@
 <!-- Mobile Roster Overlay Spacing (reactive overlay height + last-row guard) -->
 <script defer src="js/ui/overlaySpacing.js?v=mr-fix-1"></script>
 <script defer src="js/ui/mobileRoster.overlay-spacing-fix.js?v=mr-fix-1"></script>
+
+<!-- Diary Room Modal (fullscreen overlay for mobile) -->
+<script defer src="js/ui/diaryRoomModal.js"></script>
 
 <!-- Mobile Roster Fallback Initializer -->
 <script>

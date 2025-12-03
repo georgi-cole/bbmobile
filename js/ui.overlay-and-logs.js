@@ -469,6 +469,11 @@
     CardQueue.setTurboMs(ms ?? (ensureCfg().skipTurboWindowMs||4500));
   }
 
+  // Helper: Refresh Diary Room Modal if open
+  function refreshDiaryRoomModal() {
+    if(g.DiaryRoomModal?.isOpen?.()) g.DiaryRoomModal.refresh();
+  }
+
   // Logs
   function addLog(msg,cls=''){
     ensureLogTabs();
@@ -476,10 +481,12 @@
     const key=routeForPhase(g.game?.phase);
     const pane=getLogPaneByKey(key);
     if(pane && pane.id!=='log') writeToPane(pane,msg,cls);
+    refreshDiaryRoomModal();
   }
   function addJuryLog(msg,cls=''){
     ensureLogTabs();
     writeToPane(getLogPaneByKey('jury'),msg,cls);
+    refreshDiaryRoomModal();
   }
 
   /**
