@@ -3,9 +3,9 @@
  * Consolidates multiple action buttons into a single menu for decluttered mobile UI
  */
 
-/* Action menu chip in compact HUD - styled to match other chips with dark red */
+/* Action menu chip in compact HUD - styled to match other chips with danger color */
 .compact-hud-chip.action-menu-chip {
-  --chip-base: #c0392b; /* Dark red */
+  --chip-base: var(--danger, #c0392b); /* Use danger color variable with fallback */
   background: linear-gradient(135deg, 
     color-mix(in srgb, var(--chip-base) 90%, var(--card)) 0%, 
     color-mix(in srgb, var(--chip-base) 75%, var(--bg)) 100%);
@@ -33,7 +33,7 @@
   background: linear-gradient(135deg, 
     color-mix(in srgb, var(--chip-base) 100%, var(--card)) 0%, 
     color-mix(in srgb, var(--chip-base) 85%, var(--bg)) 100%);
-  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.4);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--chip-base) 40%, transparent);
 }
 
 /* Legacy topbar button styles (kept for backwards compatibility) */
