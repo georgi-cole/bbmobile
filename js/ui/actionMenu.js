@@ -24,6 +24,8 @@
       { id: 'btnRules', icon: '📋', label: 'Rules' },
       { id: 'btnProfile', icon: '👤', label: 'Profile' },
       { id: 'btnStartQuick', icon: '▶', label: 'Restart' },
+      // Note: dynamic flag indicates button state changes, but we use static icon
+      // in menu since the original button handles its own icon updates
       { id: 'btnMuteToggle', icon: '🔊', label: 'Sound', dynamic: true },
       { id: 'xpLeaderboardBadge', icon: '📊', label: 'Leaderboard' },
     ],
