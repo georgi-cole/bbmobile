@@ -75,7 +75,7 @@
         <span class="compact-hud-chip-label">DR</span>
       </button>
       <button class="compact-hud-chip self-evict-button" id="btnSelfEvictHud" aria-label="Self-Evict (Exit Game)" title="Self-Evict" style="display:none;">
-        <span class="compact-hud-chip-icon">🚪</span>
+        <span class="compact-hud-chip-icon">🚫</span>
         <span class="compact-hud-chip-label">Exit</span>
       </button>
       <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
@@ -109,26 +109,34 @@
         const g = global.game;
         if (!g) return;
         
-        // Only show for human player when game is active
+        // Only allow during active gameplay
         if (g.phase === 'lobby' || g.phase === 'finale') {
-          alert('Self-eviction is only available during active gameplay.');
+          if (typeof global.showCard === 'function') {
+            global.showCard('Not Available', ['Self-eviction is only available during active gameplay.'], 'warn', 3000);
+          }
           return;
         }
         
         const humanId = g.humanId;
         if (!humanId) {
-          alert('No human player found.');
+          if (typeof global.showCard === 'function') {
+            global.showCard('Error', ['No human player found.'], 'danger', 3000);
+          }
           return;
         }
         
         const human = global.getP ? global.getP(humanId) : null;
         if (!human) {
-          alert('Cannot find human player data.');
+          if (typeof global.showCard === 'function') {
+            global.showCard('Error', ['Cannot find human player data.'], 'danger', 3000);
+          }
           return;
         }
         
         if (human.evicted) {
-          alert('You have already been evicted.');
+          if (typeof global.showCard === 'function') {
+            global.showCard('Already Evicted', ['You have already been evicted.'], 'info', 3000);
+          }
           return;
         }
         
