@@ -70,7 +70,8 @@
   gap: var(--mobile-roster-gap, 4px); /* Use consistent gap matching grid */
   padding: 12px; /* Horizontal and top padding */
   /* Account for safe-area on mobile devices (notches, home indicators) */
-  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  /* Increased bottom padding to 12px for better clearance with 16 players */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   max-width: 100%;
   margin: 0 auto;
   /* Prevent any margin that could cause overlap with TV overlay */
@@ -117,11 +118,11 @@ body[data-mobile-roster-active="true"] #rosterBar {
   flex: 0 0 auto;
   width: 100%;
   /* Height = TV overlay height + extra buffer to prevent any overlap
-   * Increased from 1x row gap to 2x row gap + 8px for extra safety margin
+   * Increased to 3x row gap + 16px for extra safety margin to handle 16 players
    * The JS overlaySpacing module updates --tv-overlay-height dynamically.
    */
-  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 4px) * 2) + 8px);
-  min-height: calc((var(--avatar-row-gap, 4px) * 2) + 8px + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 4px) * 3) + 16px);
+  min-height: calc((var(--avatar-row-gap, 4px) * 3) + 16px + env(safe-area-inset-bottom, 0px));
   /* Invisible spacer */
   pointer-events: none;
   /* Debug: uncomment to visualize spacer */

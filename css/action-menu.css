@@ -1,0 +1,213 @@
+/* action-menu.css
+ * Grouped action menu button for top toolbar
+ * Consolidates multiple action buttons into a single menu for decluttered mobile UI
+ */
+
+/* Menu button (vertical ellipsis icon) */
+.action-menu-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  background: var(--card, #1e2936);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: var(--ink, #e0e6ed);
+  transition: all 0.2s ease;
+  padding: 8px;
+  /* Ensure proper touch target size on mobile */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.action-menu-btn:hover,
+.action-menu-btn:focus {
+  background: var(--accent, #305074);
+  border-color: var(--accent, #305074);
+  transform: scale(1.05);
+}
+
+.action-menu-btn:active {
+  transform: scale(0.98);
+}
+
+.action-menu-btn:focus-visible {
+  outline: 2px solid var(--accent, #83bfff);
+  outline-offset: 2px;
+}
+
+/* Menu button when active/open */
+.action-menu-btn[aria-expanded="true"] {
+  background: var(--accent, #305074);
+  border-color: var(--accent, #305074);
+}
+
+/* Popover menu container */
+.action-menu-popover {
+  position: fixed;
+  top: 60px; /* Position below toolbar */
+  right: 12px;
+  z-index: 10000;
+  background: var(--card, #1e2936);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 
+              0 4px 8px rgba(0, 0, 0, 0.2);
+  min-width: 200px;
+  max-width: 280px;
+  overflow: hidden;
+  /* Animation */
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+/* Popover visible state */
+.action-menu-popover.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Menu items list */
+.action-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+}
+
+/* Individual menu item */
+.action-menu-item {
+  margin: 0;
+  padding: 0;
+}
+
+/* Menu item button */
+.action-menu-item button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--ink, #e0e6ed);
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  /* Ensure proper touch target */
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-menu-item button:hover,
+.action-menu-item button:focus {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.action-menu-item button:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.action-menu-item button:focus-visible {
+  outline: 2px solid var(--accent, #83bfff);
+  outline-offset: -2px;
+}
+
+/* Menu item icon */
+.action-menu-item-icon {
+  flex-shrink: 0;
+  font-size: 1.2rem;
+  width: 24px;
+  text-align: center;
+}
+
+/* Menu item label */
+.action-menu-item-label {
+  flex: 1;
+}
+
+/* Divider between menu items */
+.action-menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Backdrop overlay (for click-outside detection) */
+.action-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: transparent;
+  display: none;
+}
+
+.action-menu-backdrop.visible {
+  display: block;
+}
+
+/* Theme-aware styling */
+body[data-theme="modernhouse"] .action-menu-popover,
+body[data-theme="apartment"] .action-menu-popover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+body[data-theme="modernhouse"] .action-menu-btn,
+body[data-theme="apartment"] .action-menu-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1e2936;
+}
+
+body[data-theme="modernhouse"] .action-menu-item button,
+body[data-theme="apartment"] .action-menu-item button {
+  color: #1e2936;
+}
+
+body[data-theme="modernhouse"] .action-menu-item button:hover,
+body[data-theme="apartment"] .action-menu-item button:hover,
+body[data-theme="modernhouse"] .action-menu-item button:focus,
+body[data-theme="apartment"] .action-menu-item button:focus {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .action-menu-popover {
+    right: 8px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .action-menu-btn,
+  .action-menu-popover,
+  .action-menu-item button {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .action-menu-btn {
+    border-width: 2px;
+  }
+  
+  .action-menu-popover {
+    border-width: 2px;
+  }
+}
