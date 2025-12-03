@@ -40,6 +40,7 @@
     popover: null,
     backdrop: null,
     initAttempts: 0,
+    initTimer: null, // Track initialization timer
   };
 
   // ============================
@@ -116,13 +117,18 @@
     list.className = 'action-menu-list';
     list.setAttribute('role', 'none');
 
-    // Add menu items for each grouped button
-    CONFIG.GROUPED_BUTTONS.forEach((buttonConfig, index) => {
-      const originalButton = document.getElementById(buttonConfig.id);
-      if (!originalButton) {
+    // Filter to only include buttons that exist
+    const validButtons = CONFIG.GROUPED_BUTTONS.filter(buttonConfig => {
+      const exists = !!document.getElementById(buttonConfig.id);
+      if (!exists) {
         console.warn(`[ActionMenu] Original button not found: ${buttonConfig.id}`);
-        return;
       }
+      return exists;
+    });
+
+    // Add menu items for each grouped button
+    validButtons.forEach((buttonConfig, index) => {
+      const originalButton = document.getElementById(buttonConfig.id);
 
       // Create menu item
       const item = document.createElement('li');
@@ -157,8 +163,8 @@
 
       list.appendChild(item);
 
-      // Add divider after Settings (first item)
-      if (index === 0) {
+      // Add divider after first item (Settings)
+      if (index === 0 && validButtons.length > 1) {
         const divider = document.createElement('div');
         divider.className = 'action-menu-divider';
         divider.setAttribute('role', 'separator');
@@ -267,16 +273,13 @@
     if (state.popover) {
       state.popover.classList.add('visible');
       
-      // Focus first menu item after animation
-      // Use shorter delay for better responsiveness
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          const firstItem = state.popover.querySelector('.action-menu-item-btn');
-          if (firstItem) {
-            firstItem.focus();
-          }
-        }, 50);
-      });
+      // Focus first menu item after animation (simplified timing)
+      setTimeout(() => {
+        const firstItem = state.popover.querySelector('.action-menu-item-btn');
+        if (firstItem) {
+          firstItem.focus();
+        }
+      }, 50);
     }
 
     // Show backdrop
@@ -459,6 +462,17 @@
   // Initialize when DOM is ready
   // Use more robust approach with polling for required elements
   function tryInit() {
+    // Guard against duplicate initialization
+    if (state.initialized) {
+      return;
+    }
+
+    // Clear any existing timer to prevent buildup
+    if (state.initTimer) {
+      clearTimeout(state.initTimer);
+      state.initTimer = null;
+    }
+
     const toolbar = document.querySelector('.topbar');
     const requiredButtons = CONFIG.GROUPED_BUTTONS
       .map(b => document.getElementById(b.id))
@@ -469,11 +483,11 @@
       init();
     } else if (!state.initialized) {
       // Retry with exponential backoff
-      const retryDelay = Math.min(100 * Math.pow(1.5, state.initAttempts || 0), 1000);
-      state.initAttempts = (state.initAttempts || 0) + 1;
+      const retryDelay = Math.min(100 * Math.pow(1.5, state.initAttempts), 1000);
+      state.initAttempts += 1;
       
       if (state.initAttempts < 10) {
-        setTimeout(tryInit, retryDelay);
+        state.initTimer = setTimeout(tryInit, retryDelay);
       } else {
         console.warn('[ActionMenu] Failed to initialize after 10 attempts');
       }

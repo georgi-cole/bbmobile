@@ -159,7 +159,7 @@
   display: block;
 }
 
-/* Theme-aware styling */
+/* Theme-aware styling (light themes) */
 body[data-theme="modernhouse"] .action-menu-popover,
 body[data-theme="apartment"] .action-menu-popover {
   background: rgba(255, 255, 255, 0.95);
@@ -178,8 +178,8 @@ body[data-theme="apartment"] .action-menu-item button {
 }
 
 body[data-theme="modernhouse"] .action-menu-item button:hover,
-body[data-theme="apartment"] .action-menu-item button:hover,
 body[data-theme="modernhouse"] .action-menu-item button:focus,
+body[data-theme="apartment"] .action-menu-item button:hover,
 body[data-theme="apartment"] .action-menu-item button:focus {
   background: rgba(0, 0, 0, 0.05);
 }
