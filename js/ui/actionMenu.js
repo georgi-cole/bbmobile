@@ -85,30 +85,18 @@
   }
 
   /**
-   * Create the menu button (vertical ellipsis)
+   * Get reference to the menu button (now created by CompactHUD)
    */
   function createMenuButton() {
-    const toolbar = document.querySelector('.topbar');
-    if (!toolbar) {
-      console.error('[ActionMenu] Toolbar not found');
-      return;
+    // Button is created by CompactHUD, just get a reference to it
+    const button = document.getElementById(CONFIG.MENU_BUTTON_ID);
+    
+    if (button) {
+      state.menuButton = button;
+      console.info('[ActionMenu] Button found in compact HUD');
+    } else {
+      console.error('[ActionMenu] Action menu button not found in DOM');
     }
-
-    // Create button
-    const button = document.createElement('button');
-    button.id = CONFIG.MENU_BUTTON_ID;
-    button.className = 'btn iconOnly action-menu-btn';
-    button.textContent = CONFIG.MENU_ICON;
-    button.setAttribute('aria-label', 'Actions menu');
-    button.setAttribute('aria-haspopup', 'true');
-    button.setAttribute('aria-expanded', 'false');
-    button.setAttribute('title', 'Actions');
-    button.type = 'button';
-
-    // Insert at the end of toolbar (far right)
-    toolbar.appendChild(button);
-
-    state.menuButton = button;
   }
 
   /**
@@ -489,13 +477,14 @@
     // Clear any existing timer to prevent buildup
     clearInitTimer();
 
-    const toolbar = document.querySelector('.topbar');
+    // Check for action menu button (created by CompactHUD)
+    const menuButton = document.getElementById(CONFIG.MENU_BUTTON_ID);
     const requiredButtons = CONFIG.GROUPED_BUTTONS
       .map(b => document.getElementById(b.id))
       .filter(b => b);
     
-    // Only init if toolbar and at least some buttons exist
-    if (toolbar && requiredButtons.length > 0) {
+    // Only init if menu button and at least some grouped buttons exist
+    if (menuButton && requiredButtons.length > 0) {
       init();
     } else if (!state.initialized) {
       // Retry with exponential backoff

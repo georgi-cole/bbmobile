@@ -1,9 +1,42 @@
 /* action-menu.css
- * Grouped action menu button for top toolbar
+ * Grouped action menu button in compact HUD
  * Consolidates multiple action buttons into a single menu for decluttered mobile UI
  */
 
-/* Menu button (vertical ellipsis icon) */
+/* Action menu chip in compact HUD - styled to match other chips with dark red */
+.compact-hud-chip.action-menu-chip {
+  --chip-base: #c0392b; /* Dark red */
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 90%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 75%, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.compact-hud-chip.action-menu-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.compact-hud-chip.action-menu-chip:active {
+  transform: scale(0.98);
+}
+
+.compact-hud-chip.action-menu-chip:focus-visible {
+  outline: 2px solid var(--chip-base);
+  outline-offset: 2px;
+}
+
+/* Menu button when active/open */
+.compact-hud-chip.action-menu-chip[aria-expanded="true"] {
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 100%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 85%, var(--bg)) 100%);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.4);
+}
+
+/* Legacy topbar button styles (kept for backwards compatibility) */
 .action-menu-btn {
   position: relative;
   display: inline-flex;
@@ -19,38 +52,15 @@
   color: var(--ink, #e0e6ed);
   transition: all 0.2s ease;
   padding: 8px;
-  /* Ensure proper touch target size on mobile */
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
 
-.action-menu-btn:hover,
-.action-menu-btn:focus {
-  background: var(--accent, #305074);
-  border-color: var(--accent, #305074);
-  transform: scale(1.05);
-}
-
-.action-menu-btn:active {
-  transform: scale(0.98);
-}
-
-.action-menu-btn:focus-visible {
-  outline: 2px solid var(--accent, #83bfff);
-  outline-offset: 2px;
-}
-
-/* Menu button when active/open */
-.action-menu-btn[aria-expanded="true"] {
-  background: var(--accent, #305074);
-  border-color: var(--accent, #305074);
-}
-
 /* Popover menu container */
 .action-menu-popover {
   position: fixed;
-  top: 60px; /* Position below toolbar */
+  top: 120px; /* Position below compact HUD */
   right: 12px;
   z-index: 10000;
   background: var(--card, #1e2936);
