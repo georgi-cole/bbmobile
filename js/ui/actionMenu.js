@@ -39,6 +39,7 @@
     menuButton: null,
     popover: null,
     backdrop: null,
+    initAttempts: 0,
   };
 
   // ============================
@@ -266,13 +267,16 @@
     if (state.popover) {
       state.popover.classList.add('visible');
       
-      // Focus first menu item
-      setTimeout(() => {
-        const firstItem = state.popover.querySelector('.action-menu-item-btn');
-        if (firstItem) {
-          firstItem.focus();
-        }
-      }, 150);
+      // Focus first menu item after animation
+      // Use shorter delay for better responsiveness
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const firstItem = state.popover.querySelector('.action-menu-item-btn');
+          if (firstItem) {
+            firstItem.focus();
+          }
+        }, 50);
+      });
     }
 
     // Show backdrop
@@ -320,10 +324,10 @@
     // Find and trigger the original button
     const originalButton = document.getElementById(originalButtonId);
     if (originalButton) {
-      // Small delay to let menu close animation complete
-      setTimeout(() => {
+      // Use requestAnimationFrame for better responsiveness
+      requestAnimationFrame(() => {
         originalButton.click();
-      }, 100);
+      });
     } else {
       console.warn(`[ActionMenu] Original button not found: ${originalButtonId}`);
     }
@@ -453,19 +457,39 @@
   // ============================
 
   // Initialize when DOM is ready
+  // Use more robust approach with polling for required elements
+  function tryInit() {
+    const toolbar = document.querySelector('.topbar');
+    const requiredButtons = CONFIG.GROUPED_BUTTONS
+      .map(b => document.getElementById(b.id))
+      .filter(b => b);
+    
+    // Only init if toolbar and at least some buttons exist
+    if (toolbar && requiredButtons.length > 0) {
+      init();
+    } else if (!state.initialized) {
+      // Retry with exponential backoff
+      const retryDelay = Math.min(100 * Math.pow(1.5, state.initAttempts || 0), 1000);
+      state.initAttempts = (state.initAttempts || 0) + 1;
+      
+      if (state.initAttempts < 10) {
+        setTimeout(tryInit, retryDelay);
+      } else {
+        console.warn('[ActionMenu] Failed to initialize after 10 attempts');
+      }
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      // Wait for other scripts to load and create buttons
-      setTimeout(init, 100);
-    });
+    document.addEventListener('DOMContentLoaded', tryInit);
   } else {
-    setTimeout(init, 100);
+    tryInit();
   }
 
   // Also try on window load as fallback
   window.addEventListener('load', () => {
     if (!state.initialized) {
-      init();
+      tryInit();
     }
   });
 
