@@ -76,6 +76,9 @@
         <span class="compact-hud-chip-icon">🚪</span>
         <span class="compact-hud-chip-label">DR</span>
       </button>
+      <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
+        <span class="compact-hud-chip-icon">⋮</span>
+      </button>
     `;
 
     // Get chip references
