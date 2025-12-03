@@ -28,8 +28,8 @@
     MUTATION_DEBOUNCE_MS: 50,
     MIN_OVERLAY_HEIGHT: 100,
     DEFAULT_OVERLAY_HEIGHT: 200,
-    ROW_GAP: 6, // Should match --mobile-roster-gap
-    MAX_COMPENSATION: 48, // Maximum additional padding if last row is obscured (px)
+    ROW_GAP: 4, // Should match --mobile-roster-gap
+    MAX_COMPENSATION: 24, // Maximum additional padding if last row is obscured (px)
     VISIBILITY_THRESHOLD: 0.95, // Consider visible if at least 95% visible
   };
 
