@@ -924,29 +924,26 @@ console.info('[IntroScreen] Script executing – pre-init');
 
   /**
    * Update the avatar preload overlay progress.
-   * Uses requestAnimationFrame for smooth updates.
    * @param {number} loaded - Number of avatars loaded
    * @param {number} total - Total number of avatars
    */
   function updateAvatarPreloadProgress(loaded, total) {
-    requestAnimationFrame(() => {
-      const progress = document.getElementById('avatarPreloadProgress');
-      const liveRegion = document.getElementById('avatarPreloadLiveRegion');
-      
-      if (progress) {
-        const percent = total > 0 ? Math.floor((loaded / total) * 100) : 0;
-        progress.textContent = `${percent}%`;
-        progress.setAttribute('aria-valuenow', String(percent));
+    const progress = document.getElementById('avatarPreloadProgress');
+    const liveRegion = document.getElementById('avatarPreloadLiveRegion');
+    
+    if (progress) {
+      const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+      progress.textContent = `${percent}%`;
+      progress.setAttribute('aria-valuenow', String(percent));
+    }
+    
+    // Update live region for screen readers (every 25%)
+    if (liveRegion && total > 0) {
+      const percent = Math.round((loaded / total) * 100);
+      if (percent % 25 === 0 || percent === 100) {
+        liveRegion.textContent = `Loading: ${percent}% complete`;
       }
-      
-      // Update live region for screen readers (every 25%)
-      if (liveRegion && total > 0) {
-        const percent = Math.floor((loaded / total) * 100);
-        if (percent % 25 === 0 || percent === 100) {
-          liveRegion.textContent = `Loading: ${percent}% complete`;
-        }
-      }
-    });
+    }
   }
 
   /**
