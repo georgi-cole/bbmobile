@@ -41,6 +41,7 @@
   let seasonWeekChip = null;
   let playersChip = null;
   let drButton = null;
+  let drButtonHandler = null;
   let resizeObserver = null;
   let lastPhase = null;
   let lastPlayers = null;
@@ -85,14 +86,15 @@
 
     // Setup DR button click handler
     if (drButton) {
-      drButton.addEventListener('click', () => {
+      drButtonHandler = () => {
         // Call DiaryRoomModal.open() directly if available
         if (typeof global.DiaryRoomModal !== 'undefined' && typeof global.DiaryRoomModal.open === 'function') {
           global.DiaryRoomModal.open();
         } else {
           console.warn('[CompactHud] DiaryRoomModal not available');
         }
-      });
+      };
+      drButton.addEventListener('click', drButtonHandler);
     }
 
     // Setup ResizeObserver for phase compression
@@ -343,6 +345,12 @@
     if (resizeObserver) {
       resizeObserver.disconnect();
       resizeObserver = null;
+    }
+
+    // Remove DR button event listener to prevent memory leaks
+    if (drButton && drButtonHandler) {
+      drButton.removeEventListener('click', drButtonHandler);
+      drButtonHandler = null;
     }
 
     if (hudContainer) {
