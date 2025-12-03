@@ -159,7 +159,10 @@
   display: block;
 }
 
-/* Theme-aware styling (light themes) */
+/* Theme-aware styling
+ * Light themes: modernhouse, apartment
+ * Dark themes (use default): tvstudio, matrix, rainbow, sunsetbeach
+ */
 body[data-theme="modernhouse"] .action-menu-popover,
 body[data-theme="apartment"] .action-menu-popover {
   background: rgba(255, 255, 255, 0.95);

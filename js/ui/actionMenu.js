@@ -18,6 +18,13 @@
     POPOVER_ID: 'actionMenuPopover',
     BACKDROP_ID: 'actionMenuBackdrop',
     MENU_ICON: '⋮', // Vertical ellipsis
+    // Timing constants
+    FOCUS_ANIMATION_DELAY: 50, // Delay for menu item focus after animation (ms)
+    // Initialization retry constants
+    RETRY_BASE_DELAY: 100, // Base delay for retry attempts (ms)
+    RETRY_MULTIPLIER: 1.5, // Exponential backoff multiplier
+    MAX_RETRY_DELAY: 1000, // Maximum retry delay (ms)
+    MAX_RETRY_ATTEMPTS: 10, // Maximum number of initialization attempts
     // Buttons to group into the menu (in order)
     GROUPED_BUTTONS: [
       { id: 'btnOpenSettings', icon: '⚙️', label: 'Settings' },
@@ -275,13 +282,13 @@
     if (state.popover) {
       state.popover.classList.add('visible');
       
-      // Focus first menu item after animation (simplified timing)
+      // Focus first menu item after animation
       setTimeout(() => {
         const firstItem = state.popover.querySelector('.action-menu-item-btn');
         if (firstItem) {
           firstItem.focus();
         }
-      }, 50);
+      }, CONFIG.FOCUS_ANIMATION_DELAY);
     }
 
     // Show backdrop
@@ -461,6 +468,16 @@
   // Auto-initialization
   // ============================
 
+  /**
+   * Clear initialization timer
+   */
+  function clearInitTimer() {
+    if (state.initTimer) {
+      clearTimeout(state.initTimer);
+      state.initTimer = null;
+    }
+  }
+
   // Initialize when DOM is ready
   // Use more robust approach with polling for required elements
   function tryInit() {
@@ -470,10 +487,7 @@
     }
 
     // Clear any existing timer to prevent buildup
-    if (state.initTimer) {
-      clearTimeout(state.initTimer);
-      state.initTimer = null;
-    }
+    clearInitTimer();
 
     const toolbar = document.querySelector('.topbar');
     const requiredButtons = CONFIG.GROUPED_BUTTONS
@@ -485,13 +499,16 @@
       init();
     } else if (!state.initialized) {
       // Retry with exponential backoff
-      const retryDelay = Math.min(100 * Math.pow(1.5, state.initAttempts), 1000);
+      const retryDelay = Math.min(
+        CONFIG.RETRY_BASE_DELAY * Math.pow(CONFIG.RETRY_MULTIPLIER, state.initAttempts),
+        CONFIG.MAX_RETRY_DELAY
+      );
       state.initAttempts += 1;
       
-      if (state.initAttempts < 10) {
+      if (state.initAttempts < CONFIG.MAX_RETRY_ATTEMPTS) {
         state.initTimer = setTimeout(tryInit, retryDelay);
       } else {
-        console.warn('[ActionMenu] Failed to initialize after 10 attempts');
+        console.warn(`[ActionMenu] Failed to initialize after ${CONFIG.MAX_RETRY_ATTEMPTS} attempts`);
       }
     }
   }
