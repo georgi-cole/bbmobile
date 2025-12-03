@@ -68,7 +68,7 @@
   display: none; /* Hidden by default, shown when mobile mode active */
   flex-direction: column;
   gap: var(--mobile-roster-gap, 4px); /* Use consistent gap matching grid */
-  padding: 12px 12px 6px; /* Reduced top padding for tighter layout */
+  padding: 12px; /* Horizontal and top padding */
   /* Account for safe-area on mobile devices (notches, home indicators) */
   padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   max-width: 100%;

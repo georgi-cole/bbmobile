@@ -86,12 +86,11 @@
     // Setup DR button click handler
     if (drButton) {
       drButton.addEventListener('click', () => {
-        // Reuse existing Diary Room modal handler
+        // Call DiaryRoomModal.open() directly if available
         if (typeof global.DiaryRoomModal !== 'undefined' && typeof global.DiaryRoomModal.open === 'function') {
           global.DiaryRoomModal.open();
-        } else if (document.getElementById('btnDiaryRoom')) {
-          // Fallback: trigger the old DR button if it exists
-          document.getElementById('btnDiaryRoom').click();
+        } else {
+          console.warn('[CompactHud] DiaryRoomModal not available');
         }
       });
     }

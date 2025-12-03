@@ -48,8 +48,6 @@
   top: 0;
   z-index: 100;
   flex-wrap: wrap;
-  /* Reduce top margin to tighten spacing from h1 */
-  margin-top: -0.35em;
 }
 
 /* Individual HUD Chips */
@@ -365,15 +363,14 @@
 
 /* Reduce spacing on mobile viewports */
 @media (max-width: 768px) {
-  /* Tighten spacing between h1 and compact-hud */
+  /* Tighten spacing between h1 and compact-hud by reducing h1 bottom margin */
   #actionCard h1 {
-    margin-bottom: 0.4em;
+    margin-bottom: 0.35em;
   }
   
-  /* Reduce compact-hud bottom padding */
+  /* Reduce compact-hud padding */
   .compact-hud {
-    padding-bottom: 8px;
-    margin-bottom: 6px;
+    padding: 8px 12px;
   }
   
   /* Reduce mobile roster container top padding */
@@ -385,13 +382,12 @@
 @media (max-width: 520px) {
   /* Even tighter spacing on small mobile screens */
   #actionCard h1 {
-    margin-bottom: 0.3em;
+    margin-bottom: 0.25em;
     font-size: 1.4rem;
   }
   
   .compact-hud {
-    padding: 8px 10px 6px;
-    margin-bottom: 4px;
+    padding: 6px 10px;
   }
   
   .mobile-roster-container {
