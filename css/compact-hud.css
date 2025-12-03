@@ -47,7 +47,8 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Prevent wrapping - keep all chips in one row */
+  overflow-x: auto; /* Allow horizontal scroll if needed on very small screens */
 }
 
 /* Individual HUD Chips */
