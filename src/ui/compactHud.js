@@ -40,6 +40,7 @@
   let phaseChip = null;
   let seasonWeekChip = null;
   let playersChip = null;
+  let drButton = null;
   let resizeObserver = null;
   let lastPhase = null;
   let lastPlayers = null;
@@ -70,12 +71,30 @@
         <span class="compact-hud-chip-icon">👥</span>
         <span class="compact-hud-chip-label">0/0</span>
       </div>
+      <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
+        <span class="compact-hud-chip-icon">🚪</span>
+        <span class="compact-hud-chip-label">DR</span>
+      </button>
     `;
 
     // Get chip references
     phaseChip = hudContainer.querySelector('.compact-hud-chip.phase');
     seasonWeekChip = hudContainer.querySelector('.compact-hud-chip.season-week');
     playersChip = hudContainer.querySelector('.compact-hud-chip.players');
+    drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');
+
+    // Setup DR button click handler
+    if (drButton) {
+      drButton.addEventListener('click', () => {
+        // Reuse existing Diary Room modal handler
+        if (typeof global.DiaryRoomModal !== 'undefined' && typeof global.DiaryRoomModal.open === 'function') {
+          global.DiaryRoomModal.open();
+        } else if (document.getElementById('btnDiaryRoom')) {
+          // Fallback: trigger the old DR button if it exists
+          document.getElementById('btnDiaryRoom').click();
+        }
+      });
+    }
 
     // Setup ResizeObserver for phase compression
     setupResizeObserver();
@@ -334,6 +353,7 @@
     phaseChip = null;
     seasonWeekChip = null;
     playersChip = null;
+    drButton = null;
     hudContainer = null;
     lastPhase = null;
     lastPlayers = null;

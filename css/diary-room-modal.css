@@ -22,85 +22,20 @@
    Styled to match compact-hud-chip class (phase, week, player pills)
    ============================================================================ */
 
-/* Adjust tvHead grid to accommodate DR button (4 columns now) */
+/* Restore tvHead grid to 3 columns (DR button moved to compact HUD) */
 .tv .tvHead {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
 }
 
-/* DR Button - Match compact-hud-chip styling */
+/* Hide DR Button from TV Head - now in compact HUD */
 .tvDrBtn {
-  /* Match compact-hud-chip base styles */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 14px;
-  /* Use accent color like phase chip */
-  --chip-base: var(--accent, #83bfff);
-  background: linear-gradient(135deg, 
-    color-mix(in srgb, var(--chip-base) 90%, var(--card, #0d1b2a)) 0%, 
-    color-mix(in srgb, var(--chip-base) 75%, var(--bg, #0a1018)) 100%);
-  border: 1px solid color-mix(in srgb, var(--line, rgba(255,255,255,0.1)) 60%, var(--chip-base));
-  color: var(--card, #0d1b2a);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  /* Ensure minimum tap target size */
-  min-width: 44px;
-  min-height: 32px;
+  display: none !important;
 }
 
-.tvDrBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-}
-
-.tvDrBtn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.tvDrBtn:focus-visible {
-  outline: 2px solid var(--accent, #83bfff);
-  outline-offset: 2px;
-}
-
-/* Responsive behavior matching compact-hud */
-@media (min-width: 768px) {
-  .tvDrBtn {
-    font-size: 0.8rem;
-    padding: 7px 14px;
-  }
-}
-
-@media (min-width: 480px) and (max-width: 767px) {
-  .tvDrBtn {
-    font-size: 0.72rem;
-    padding: 6px 11px;
-  }
-}
-
-@media (max-width: 479px) {
-  .tvDrBtn {
-    font-size: 0.7rem;
-    padding: 5px 9px;
-    gap: 3px;
-  }
-  
-  .tv .tvHead {
-    gap: 6px;
-    padding: 8px 10px 6px;
-  }
-}
+/* DR button styles removed - now styled as compact-hud-chip */
 
 /* ============================================================================
    DIARY ROOM MODAL OVERLAY
@@ -294,10 +229,7 @@
   display: none !important;
 }
 
-/* Ensure the DR button is always visible */
-.tvDrBtn {
-  display: inline-flex;
-}
+/* DR button now in compact HUD - no longer in TV header */
 
 /* ============================================================================
    JURY HOUSE SECTION IN MODAL
