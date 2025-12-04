@@ -50,7 +50,7 @@
     scroll-margin-top: 80px; /* Scroll anchor offset */
     /* Ensure content stays within TV viewport bounds */
     max-height: calc(100% - 32px); /* Account for top + bottom margins */
-    overflow: visible; /* Allow content to be visible but contained */
+    overflow: auto; /* Allow scrolling if content exceeds max-height */
   }
 }
 
