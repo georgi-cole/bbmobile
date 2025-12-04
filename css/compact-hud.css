@@ -33,6 +33,26 @@
   }
 }
 
+/* Houseguests header with inline player count */
+.houseguests-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 0.5em;
+}
+
+.houseguests-header h1 {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Inline player count chip (beside h1) */
+/* flex-shrink: 0 prevents chip from shrinking when header wraps on narrow viewports */
+.compact-hud-chip.players-inline {
+  flex-shrink: 0;
+}
+
 /* HUD Container - sticky within Houseguests card */
 .compact-hud {
   display: flex;
@@ -118,6 +138,21 @@
   outline-offset: 2px;
 }
 
+/* Self-Evict button chip - styled as danger/red pill */
+.compact-hud-chip.self-evict-button {
+  --chip-base: var(--danger, #c0392b);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 90%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 75%, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
+  cursor: pointer;
+}
+
+.compact-hud-chip.self-evict-button:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
 /* Icon support (optional) */
 .compact-hud-chip-icon {
   font-size: 0.9em;
@@ -147,6 +182,10 @@
 
 /* Mobile: compress phase to 3-letter code, keep SxWx and X/X readable */
 @media (max-width: 479px) {
+  .houseguests-header {
+    gap: 8px;
+  }
+  
   .compact-hud {
     gap: 6px;
     padding: 8px 10px;
@@ -364,8 +403,8 @@
 
 /* Reduce spacing on mobile viewports */
 @media (max-width: 768px) {
-  /* Tighten spacing between h1 and compact-hud by reducing h1 bottom margin */
-  #actionCard h1 {
+  /* Tighten spacing for houseguests header */
+  .houseguests-header {
     margin-bottom: 0.35em;
   }
   
@@ -382,8 +421,11 @@
 
 @media (max-width: 520px) {
   /* Even tighter spacing on small mobile screens */
-  #actionCard h1 {
+  .houseguests-header {
     margin-bottom: 0.25em;
+  }
+  
+  .houseguests-header h1 {
     font-size: 1.4rem;
   }
   

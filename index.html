@@ -125,8 +125,14 @@
 <div class="wrap">
   <!-- Show / Center -->
   <div class="card" id="actionCard">
-    <h1>Houseguests</h1>
-    <!-- Compact HUD (Phase, Season/Week, Players) -->
+    <div class="houseguests-header">
+      <h1>Houseguests</h1>
+      <div class="compact-hud-chip players-inline" role="status" aria-live="polite" aria-atomic="true" title="" id="playersChipInline">
+        <span class="compact-hud-chip-icon">👥</span>
+        <span class="compact-hud-chip-label">0/0</span>
+      </div>
+    </div>
+    <!-- Compact HUD (Phase, Season/Week, Pills) -->
     <div class="compact-hud" id="compactHud"></div>
     <!-- Roster Bar (above TV) -->
     <div id="rosterBar"></div>
