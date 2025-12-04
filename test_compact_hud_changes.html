@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compact HUD Changes Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/compact-hud.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--card);
+      border-radius: 8px;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .pass {
+      background: rgba(119, 213, 141, 0.2);
+      border: 1px solid var(--good);
+    }
+    .fail {
+      background: rgba(255, 109, 109, 0.2);
+      border: 1px solid var(--bad);
+    }
+  </style>
+</head>
+<body>
+  <h1>Compact HUD Changes Test</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Self-Evict Button Removed</h2>
+    <p>The self-evict button should NOT be present in the compact HUD.</p>
+    
+    <div class="houseguests-header">
+      <h1>Houseguests</h1>
+      <div class="compact-hud-chip players-inline" role="status" aria-live="polite" aria-atomic="true" title="12 alive of 16 total" id="playersChipInline">
+        <span class="compact-hud-chip-icon">👥</span>
+        <span class="compact-hud-chip-label">12/16</span>
+      </div>
+    </div>
+    <div class="compact-hud" id="compactHudTest"></div>
+    
+    <div id="test1Result" class="test-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: DR Button Still Present</h2>
+    <p>The DR (Diary Room) button should still be visible in the compact HUD.</p>
+    <div id="test2Result" class="test-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: CSS Self-Evict Button Styles Removed</h2>
+    <p>The CSS for .compact-hud-chip.self-evict-button should not exist.</p>
+    <div id="test3Result" class="test-result"></div>
+  </div>
+
+  <script src="src/ui/compactHud.js"></script>
+  <script>
+    // Mock minimal game state
+    window.game = {
+      phase: 'hoh',
+      season: 1,
+      week: 2,
+      players: Array.from({length: 16}, (_, i) => ({
+        id: i,
+        name: `Player ${i+1}`,
+        evicted: i >= 12
+      })),
+      humanId: 0
+    };
+
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    
+    // Initialize compact HUD
+    const hudContainer = document.getElementById('compactHudTest');
+    if (window.CompactHud && window.CompactHud.init) {
+      window.CompactHud.init(hudContainer);
+    }
+
+    // Test 1: Check if self-evict button exists
+    setTimeout(() => {
+      const selfEvictBtn = document.querySelector('.compact-hud-chip.self-evict-button');
+      const test1Result = document.getElementById('test1Result');
+      
+      if (!selfEvictBtn) {
+        test1Result.className = 'test-result pass';
+        test1Result.textContent = '✓ PASS: Self-evict button is not present in the DOM';
+      } else {
+        test1Result.className = 'test-result fail';
+        test1Result.textContent = '✗ FAIL: Self-evict button still exists in the DOM';
+      }
+    }, 100);
+
+    // Test 2: Check if DR button exists
+    setTimeout(() => {
+      const drBtn = document.querySelector('.compact-hud-chip.dr-button');
+      const test2Result = document.getElementById('test2Result');
+      
+      if (drBtn) {
+        test2Result.className = 'test-result pass';
+        test2Result.textContent = '✓ PASS: DR button is present and visible';
+      } else {
+        test2Result.className = 'test-result fail';
+        test2Result.textContent = '✗ FAIL: DR button is missing';
+      }
+    }, 100);
+
+    // Test 3: Check if CSS for self-evict button is removed
+    setTimeout(() => {
+      const test3Result = document.getElementById('test3Result');
+      
+      // Check if the CSS file contains the removed styles by examining loaded stylesheets
+      let foundSelfEvictStyles = false;
+      
+      for (const sheet of document.styleSheets) {
+        try {
+          const rules = sheet.cssRules || sheet.rules;
+          for (const rule of rules) {
+            if (rule.selectorText && rule.selectorText.includes('self-evict-button')) {
+              foundSelfEvictStyles = true;
+              break;
+            }
+          }
+        } catch (e) {
+          // Cross-origin stylesheets may throw errors, skip them
+          continue;
+        }
+        if (foundSelfEvictStyles) break;
+      }
+      
+      if (!foundSelfEvictStyles) {
+        test3Result.className = 'test-result pass';
+        test3Result.textContent = '✓ PASS: Self-evict button CSS styles have been removed';
+      } else {
+        test3Result.className = 'test-result fail';
+        test3Result.textContent = '✗ FAIL: Self-evict button CSS styles still exist';
+      }
+    }, 100);
+  </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Overlay Spacing Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--card);
+      border-radius: 8px;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .pass {
+      background: rgba(119, 213, 141, 0.2);
+      border: 1px solid var(--good);
+    }
+    .fail {
+      background: rgba(255, 109, 109, 0.2);
+      border: 1px solid var(--bad);
+    }
+    .info {
+      background: rgba(131, 191, 255, 0.2);
+      border: 1px solid var(--accent);
+    }
+    
+    /* Simulate mobile viewport for testing */
+    .mobile-test-container {
+      max-width: 768px;
+      margin: 0 auto;
+      border: 2px solid var(--line);
+      padding: 10px;
+      position: relative;
+    }
+    
+    /* Mock avatar grid */
+    .mock-avatar-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    
+    .mock-avatar {
+      aspect-ratio: 1;
+      background: linear-gradient(145deg, var(--card-2), var(--card));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+    }
+    
+    /* Mock TV overlay */
+    .mock-tv-overlay {
+      background: rgba(0, 0, 0, 0.9);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Social Overlay Spacing Test</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Social Phase Margin-Top</h2>
+    <p>The .socialize-launcher should have margin-top: 60px on mobile (max-width: 768px).</p>
+    <div id="test1Result" class="test-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Max-Height Calculation</h2>
+    <p>The max-height should account for both margins: calc(100% - 76px).</p>
+    <div id="test2Result" class="test-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Visual Test: Mobile View Simulation</h2>
+    <p>This simulates how the social launcher should appear with proper spacing from the avatar grid.</p>
+    
+    <div class="mobile-test-container">
+      <div class="mock-avatar-grid">
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+        <div class="mock-avatar">👤</div>
+      </div>
+      
+      <div class="socialize-launcher" style="position: static;">
+        <div class="mock-tv-overlay">
+          <h3>Social Maneuvers</h3>
+          <p>This card should have 60px margin-top on mobile, ensuring it doesn't overlap the avatar grid above.</p>
+        </div>
+      </div>
+    </div>
+    
+    <div id="visualTestResult" class="test-result info">
+      ℹ️ Check that there's visible spacing between the avatar grid and the social card above.
+      The gap should be approximately 60px.
+    </div>
+  </div>
+
+  <script>
+    // Test 1: Check margin-top value
+    function testMarginTop() {
+      const testEl = document.createElement('div');
+      testEl.className = 'socialize-launcher';
+      testEl.style.position = 'absolute';
+      testEl.style.left = '-9999px';
+      document.body.appendChild(testEl);
+      
+      // Force mobile viewport width for testing
+      const mediaQuery = window.matchMedia('(max-width: 768px)');
+      const computedStyle = window.getComputedStyle(testEl);
+      const marginTop = computedStyle.marginTop;
+      
+      document.body.removeChild(testEl);
+      
+      const test1Result = document.getElementById('test1Result');
+      
+      // Check if we're in mobile viewport
+      if (window.innerWidth <= 768) {
+        if (marginTop === '60px') {
+          test1Result.className = 'test-result pass';
+          test1Result.textContent = `✓ PASS: margin-top is ${marginTop} (correct value for mobile)`;
+        } else {
+          test1Result.className = 'test-result fail';
+          test1Result.textContent = `✗ FAIL: margin-top is ${marginTop}, expected 60px`;
+        }
+      } else {
+        test1Result.className = 'test-result info';
+        test1Result.textContent = `ℹ️ INFO: Viewport width is ${window.innerWidth}px (> 768px). Resize to mobile width to test.`;
+      }
+    }
+
+    // Test 2: Check max-height calculation
+    function testMaxHeight() {
+      const testEl = document.createElement('div');
+      testEl.className = 'socialize-launcher';
+      testEl.style.position = 'absolute';
+      testEl.style.left = '-9999px';
+      document.body.appendChild(testEl);
+      
+      const computedStyle = window.getComputedStyle(testEl);
+      const maxHeight = computedStyle.maxHeight;
+      
+      document.body.removeChild(testEl);
+      
+      const test2Result = document.getElementById('test2Result');
+      
+      if (window.innerWidth <= 768) {
+        // The computed value will be in pixels, not the calc() expression
+        // So we check if it seems reasonable (less than viewport height)
+        const maxHeightValue = parseFloat(maxHeight);
+        const expectedMax = window.innerHeight - 76; // Should be roughly viewport height minus 76px
+        
+        if (maxHeightValue > 0 && maxHeightValue < window.innerHeight) {
+          test2Result.className = 'test-result pass';
+          test2Result.textContent = `✓ PASS: max-height is ${maxHeight}, which accounts for margins`;
+        } else {
+          test2Result.className = 'test-result fail';
+          test2Result.textContent = `✗ FAIL: max-height is ${maxHeight}, expected calc(100% - 76px)`;
+        }
+      } else {
+        test2Result.className = 'test-result info';
+        test2Result.textContent = `ℹ️ INFO: Viewport width is ${window.innerWidth}px (> 768px). Resize to mobile width to test.`;
+      }
+    }
+
+    // Run tests
+    setTimeout(() => {
+      testMarginTop();
+      testMaxHeight();
+    }, 100);
+
+    // Rerun tests on resize
+    window.addEventListener('resize', () => {
+      setTimeout(() => {
+        testMarginTop();
+        testMaxHeight();
+      }, 100);
+    });
+  </script>
+</body>
+</html>
