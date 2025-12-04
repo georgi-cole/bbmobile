@@ -45,11 +45,11 @@
     margin: 0 auto;
     padding-left: max(env(safe-area-inset-left), 16px);
     padding-right: max(env(safe-area-inset-right), 16px);
-    margin-top: 16px; /* Reduced from 60px to prevent expansion beyond TV frame */
+    margin-top: 60px; /* Restored to maintain fixed gap from avatar grid */
     margin-bottom: 16px; /* Add bottom margin for balance and prevent covering last row */
     scroll-margin-top: 80px; /* Scroll anchor offset */
     /* Ensure content stays within TV viewport bounds */
-    max-height: calc(100% - 32px); /* Account for top + bottom margins */
+    max-height: calc(100% - 76px); /* Account for top (60px) + bottom (16px) margins */
     overflow: auto; /* Allow scrolling if content exceeds max-height */
   }
 }

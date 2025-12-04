@@ -41,9 +41,7 @@
   let seasonWeekChip = null;
   let playersChip = null; // Now references the inline chip in header
   let drButton = null;
-  let selfEvictButton = null;
   let drButtonHandler = null;
-  let selfEvictButtonHandler = null;
   let resizeObserver = null;
   let lastPhase = null;
   let lastPlayers = null;
@@ -74,10 +72,6 @@
         <span class="compact-hud-chip-icon">🚪</span>
         <span class="compact-hud-chip-label">DR</span>
       </button>
-      <button class="compact-hud-chip self-evict-button" id="btnSelfEvictHud" aria-label="Self-Evict (Exit Game)" title="Self-Evict" style="display:none;">
-        <span class="compact-hud-chip-icon">🚫</span>
-        <span class="compact-hud-chip-label">Exit</span>
-      </button>
       <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
         <span class="compact-hud-chip-icon">⋮</span>
       </button>
@@ -93,7 +87,6 @@
     }
     
     drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');
-    selfEvictButton = hudContainer.querySelector('.compact-hud-chip.self-evict-button');
 
     // Setup DR button click handler
     if (drButton) {
@@ -106,53 +99,6 @@
         }
       };
       drButton.addEventListener('click', drButtonHandler);
-    }
-
-    // Setup Self-Evict button click handler
-    if (selfEvictButton) {
-      selfEvictButtonHandler = async () => {
-        const g = global.game;
-        if (!g) return;
-        
-        // Only allow during active gameplay
-        if (g.phase === 'lobby' || g.phase === 'finale') {
-          if (typeof global.showCard === 'function') {
-            global.showCard('Not Available', ['Self-eviction is only available during active gameplay.'], 'warn', 3000);
-          }
-          return;
-        }
-        
-        const humanId = g.humanId;
-        if (!humanId) {
-          if (typeof global.showCard === 'function') {
-            global.showCard('Error', ['No human player found.'], 'danger', 3000);
-          }
-          return;
-        }
-        
-        const human = global.getP ? global.getP(humanId) : null;
-        if (!human) {
-          if (typeof global.showCard === 'function') {
-            global.showCard('Error', ['Cannot find human player data.'], 'danger', 3000);
-          }
-          return;
-        }
-        
-        if (human.evicted) {
-          if (typeof global.showCard === 'function') {
-            global.showCard('Already Evicted', ['You have already been evicted.'], 'info', 3000);
-          }
-          return;
-        }
-        
-        // Use centralized self-eviction handler (includes built-in confirmation)
-        if (typeof global.selfEviction !== 'undefined' && typeof global.selfEviction.requestHuman === 'function') {
-          await global.selfEviction.requestHuman(humanId);
-        } else {
-          console.warn('[CompactHud] Self-eviction handler not available');
-        }
-      };
-      selfEvictButton.addEventListener('click', selfEvictButtonHandler);
     }
 
     // Setup ResizeObserver for phase compression
@@ -296,27 +242,6 @@
     updatePhase();
     updateSeasonWeek();
     updatePlayers();
-    updateSelfEvictButton();
-  }
-
-  /**
-   * Update Self-Evict button visibility (show when game started, week >= 1)
-   */
-  function updateSelfEvictButton() {
-    if (!selfEvictButton) return;
-
-    const game = global.game || {};
-    const week = game.week || 0;
-    const phase = game.phase;
-
-    // Show button when week 1 or later has started (not in lobby or finale)
-    const shouldShow = week >= 1 && phase !== 'lobby' && phase !== 'finale';
-    
-    if (shouldShow) {
-      selfEvictButton.style.display = '';
-    } else {
-      selfEvictButton.style.display = 'none';
-    }
   }
 
   /**
@@ -431,12 +356,6 @@
       drButtonHandler = null;
     }
 
-    // Remove Self-Evict button event listener
-    if (selfEvictButton && selfEvictButtonHandler) {
-      selfEvictButton.removeEventListener('click', selfEvictButtonHandler);
-      selfEvictButtonHandler = null;
-    }
-
     if (hudContainer) {
       hudContainer.innerHTML = '';
     }
@@ -445,7 +364,6 @@
     seasonWeekChip = null;
     playersChip = null;
     drButton = null;
-    selfEvictButton = null;
     hudContainer = null;
     lastPhase = null;
     lastPlayers = null;
