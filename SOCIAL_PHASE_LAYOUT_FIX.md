@@ -331,6 +331,6 @@ The fixes use standard CSS properties that are well-supported across all modern 
 
 ---
 
-**Last Updated**: 2025-12-04  
+**Last Updated**: December 4, 2025  
 **Author**: GitHub Copilot (via georgi-cole)  
 **Version**: 1.0

@@ -703,6 +703,7 @@ button:focus-visible,.btn:focus-visible{
   height: 520px;
   /* Ensure consistent top margin to maintain gap with avatar grid in all phases */
   /* This prevents gap collapse when Social module is injected during Social Phase */
+  /* Compensates for #rosterBar's margin-bottom: -2px to create a stable 6px visual gap */
   margin-top: 8px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));

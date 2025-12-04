@@ -35,13 +35,21 @@
     'Social Time': 'SOC'
   };
 
+  // ============================================================================
+  // LEGACY BUTTON REMOVAL NOTE
+  // ============================================================================
+  // Self-evict button removed from compact HUD to reduce UI clutter
+  // Users can still self-evict via:
+  //   1. Diary Room modal (primary method)
+  //   2. Action menu (if implemented)
+  // The EXIT functionality remains accessible through these alternative paths
+  
   // State
   let hudContainer = null;
   let phaseChip = null;
   let seasonWeekChip = null;
   let playersChip = null; // Now references the inline chip in header
   let drButton = null;
-  // Legacy self-evict button removed - EXIT button in tvHead is the primary method
   let drButtonHandler = null;
   let resizeObserver = null;
   let lastPhase = null;
@@ -60,7 +68,6 @@
     hudContainer = container;
 
     // Create HUD markup (without players chip - moved to header)
-    // Note: Legacy self-evict button removed - EXIT button in tvHead next to DR is now the primary method
     hudContainer.innerHTML = `
       <div class="compact-hud-chip phase" role="status" aria-live="polite" aria-atomic="true" title="">
         <span class="compact-hud-chip-icon">📍</span>
@@ -102,8 +109,6 @@
       };
       drButton.addEventListener('click', drButtonHandler);
     }
-
-    // Note: Legacy self-evict button removed - users should use EXIT button in tvHead next to DR
 
     // Setup ResizeObserver for phase compression
     setupResizeObserver();
@@ -246,7 +251,6 @@
     updatePhase();
     updateSeasonWeek();
     updatePlayers();
-    // Note: updateSelfEvictButton() removed - legacy button no longer exists
   }
 
   /**
@@ -360,8 +364,6 @@
       drButton.removeEventListener('click', drButtonHandler);
       drButtonHandler = null;
     }
-
-    // Note: Self-Evict button cleanup removed - legacy button no longer exists
 
     if (hudContainer) {
       hudContainer.innerHTML = '';
