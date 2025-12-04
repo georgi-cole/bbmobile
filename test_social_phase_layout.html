@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Social Phase Layout Test - Gap Fix</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="overrides-fixes.css?v=test">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <link rel="stylesheet" href="css/compact-hud.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  <style>
+    /* Debug helpers */
+    .debug-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 10000;
+      max-width: 300px;
+    }
+    
+    .debug-info h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #4fc3f7;
+    }
+    
+    .debug-info div {
+      margin: 4px 0;
+    }
+    
+    .test-controls {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.9);
+      color: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      z-index: 10000;
+    }
+    
+    .test-controls button {
+      display: block;
+      margin: 8px 0;
+      padding: 10px 16px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .test-controls button:hover {
+      background: #1976D2;
+    }
+    
+    /* Highlight spacing */
+    .highlight-spacing .sep {
+      background: rgba(255, 0, 0, 0.3) !important;
+      min-height: 12px !important;
+    }
+    
+    .highlight-spacing .tv {
+      outline: 2px solid lime;
+    }
+    
+    .highlight-spacing #panel {
+      outline: 2px solid cyan;
+    }
+  </style>
+</head>
+<body>
+
+<div class="debug-info" id="debugInfo">
+  <h3>Layout Debug Info</h3>
+  <div id="debugContent">Initializing...</div>
+</div>
+
+<div class="test-controls">
+  <h4 style="margin: 0 0 12px 0;">Phase Controls</h4>
+  <button onclick="toggleSocialPhase()">Toggle Social Phase</button>
+  <button onclick="toggleHighlightSpacing()">Toggle Spacing Highlights</button>
+  <button onclick="measureSpacing()">Measure Spacing</button>
+  <button onclick="resetLayout()">Reset Layout</button>
+</div>
+
+<div class="wrap">
+  <div class="card" id="actionCard">
+    <div class="houseguests-header">
+      <h1>Houseguests</h1>
+      <div class="compact-hud-chip players-inline" role="status" aria-live="polite" aria-atomic="true" title="" id="playersChipInline">
+        <span class="compact-hud-chip-icon">👥</span>
+        <span class="compact-hud-chip-label">12/12</span>
+      </div>
+    </div>
+    
+    <!-- Compact HUD -->
+    <div class="compact-hud" id="compactHud">
+      <div class="compact-hud-chip phase" role="status" aria-live="polite" aria-atomic="true" title="Normal Phase">
+        <span class="compact-hud-chip-icon">📍</span>
+        <span class="compact-hud-chip-label">Normal Phase</span>
+      </div>
+      <div class="compact-hud-chip season-week" title="Season 1, Week 3">
+        <span class="compact-hud-chip-icon">📅</span>
+        <span class="compact-hud-chip-label">S1W3</span>
+      </div>
+      <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
+        <span class="compact-hud-chip-icon">🚪</span>
+        <span class="compact-hud-chip-label">DR</span>
+      </button>
+      <!-- Legacy self-evict button removed - EXIT button in tvHead is now the primary method -->
+    </div>
+    
+    <!-- Mock Avatar Grid -->
+    <div id="rosterBar" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; padding: 12px; background: rgba(0,0,0,0.1);">
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P1</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P2</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P3</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P4</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P5</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P6</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P7</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P8</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P9</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P10</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P11</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P12</div>
+    </div>
+    
+    <!-- TV Container -->
+    <div class="tv tv-screen" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer" id="tvTimer">05:00</div>
+        <button class="tvDrBtn" id="btnDiaryRoom" aria-label="Open Diary Room" title="Diary Room">🚪 EXIT</button>
+      </div>
+      <div class="tvViewport" data-sm-faux-tv id="tvViewport">
+        <div id="tvNow" class="tvNow">Normal phase content here</div>
+        <div id="tvOverlay" class="tvOverlay"></div>
+      </div>
+    </div>
+    
+    <div class="sep"></div>
+    <div id="panel">
+      <p style="text-align: center; color: #999;">Panel content area</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let socialPhaseActive = false;
+  let highlightSpacing = false;
+  
+  function toggleSocialPhase() {
+    socialPhaseActive = !socialPhaseActive;
+    const tvViewport = document.getElementById('tvViewport');
+    const phaseChip = document.querySelector('.compact-hud-chip.phase .compact-hud-chip-label');
+    
+    if (socialPhaseActive) {
+      // Inject Social launcher
+      phaseChip.textContent = 'Social Time';
+      
+      const socialLauncher = document.createElement('div');
+      socialLauncher.id = 'socializeLauncher';
+      socialLauncher.className = 'socialize-launcher';
+      socialLauncher.setAttribute('data-sm-social-card-wrap', '');
+      
+      socialLauncher.innerHTML = `
+        <div class="socialize-card" data-sm-social-card>
+          <div class="socialize-hud-title">Social Energy</div>
+          <div class="socialize-hud-resources">
+            <div class="resource-badge">
+              <span>⚡</span>
+              <span>5/5</span>
+            </div>
+            <div class="resource-badge">
+              <span>👑</span>
+              <span>25</span>
+            </div>
+            <div class="resource-badge">
+              <span>💡</span>
+              <span>15</span>
+            </div>
+          </div>
+          <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <div style="font-weight: bold; margin-bottom: 8px;">Select Player to Interact</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+              <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 1</button>
+              <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 2</button>
+              <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 3</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      tvViewport.appendChild(socialLauncher);
+      console.log('✅ Social launcher injected');
+    } else {
+      // Remove Social launcher
+      phaseChip.textContent = 'Normal Phase';
+      const launcher = document.getElementById('socializeLauncher');
+      if (launcher) {
+        launcher.remove();
+        console.log('❌ Social launcher removed');
+      }
+    }
+    
+    measureSpacing();
+  }
+  
+  function toggleHighlightSpacing() {
+    highlightSpacing = !highlightSpacing;
+    document.body.classList.toggle('highlight-spacing', highlightSpacing);
+  }
+  
+  function measureSpacing() {
+    const rosterBar = document.getElementById('rosterBar');
+    const tv = document.getElementById('tv');
+    const tvViewport = document.getElementById('tvViewport');
+    const sep = document.querySelector('.sep');
+    const panel = document.getElementById('panel');
+    
+    const rosterRect = rosterBar.getBoundingClientRect();
+    const tvRect = tv.getBoundingClientRect();
+    const tvViewportRect = tvViewport.getBoundingClientRect();
+    const sepRect = sep ? sep.getBoundingClientRect() : null;
+    const panelRect = panel.getBoundingClientRect();
+    
+    const gapRosterToTV = tvRect.top - rosterRect.bottom;
+    const gapTVToPanel = panelRect.top - tvRect.bottom;
+    
+    const debugContent = document.getElementById('debugContent');
+    debugContent.innerHTML = `
+      <div><strong>Social Phase:</strong> ${socialPhaseActive ? 'ACTIVE' : 'INACTIVE'}</div>
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">
+        <strong>Roster Bar:</strong><br>
+        Height: ${rosterRect.height.toFixed(1)}px<br>
+        Bottom: ${rosterRect.bottom.toFixed(1)}px
+      </div>
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">
+        <strong>Gap (Roster → TV):</strong><br>
+        <span style="color: ${gapRosterToTV < 0 ? '#ff5252' : '#4caf50'}; font-size: 16px; font-weight: bold;">
+          ${gapRosterToTV.toFixed(1)}px
+        </span>
+      </div>
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">
+        <strong>TV Container:</strong><br>
+        Height: ${tvRect.height.toFixed(1)}px<br>
+        Top: ${tvRect.top.toFixed(1)}px<br>
+        Bottom: ${tvRect.bottom.toFixed(1)}px
+      </div>
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">
+        <strong>TV Viewport:</strong><br>
+        Height: ${tvViewportRect.height.toFixed(1)}px<br>
+        Flex: ${window.getComputedStyle(tvViewport).flex}
+      </div>
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">
+        <strong>Gap (TV → Panel):</strong><br>
+        <span style="color: ${gapTVToPanel < 10 ? '#ff5252' : '#4caf50'};">
+          ${gapTVToPanel.toFixed(1)}px
+        </span>
+      </div>
+    `;
+    
+    console.log('📐 Spacing Measurements:');
+    console.log(`  Roster → TV gap: ${gapRosterToTV.toFixed(1)}px`);
+    console.log(`  TV height: ${tvRect.height.toFixed(1)}px`);
+    console.log(`  TV Viewport height: ${tvViewportRect.height.toFixed(1)}px`);
+    console.log(`  TV → Panel gap: ${gapTVToPanel.toFixed(1)}px`);
+  }
+  
+  function resetLayout() {
+    if (socialPhaseActive) {
+      toggleSocialPhase();
+    }
+    if (highlightSpacing) {
+      toggleHighlightSpacing();
+    }
+    measureSpacing();
+  }
+  
+  // Initial measurement
+  window.addEventListener('load', () => {
+    setTimeout(measureSpacing, 100);
+  });
+  
+  // Measure on resize
+  window.addEventListener('resize', measureSpacing);
+</script>
+
+</body>
+</html>
