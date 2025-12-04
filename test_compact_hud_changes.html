@@ -120,20 +120,28 @@
     setTimeout(() => {
       const test3Result = document.getElementById('test3Result');
       
-      // Try to get computed style for .self-evict-button
-      const testEl = document.createElement('div');
-      testEl.className = 'compact-hud-chip self-evict-button';
-      testEl.style.display = 'none';
-      document.body.appendChild(testEl);
+      // Check if the CSS file contains the removed styles by examining loaded stylesheets
+      let foundSelfEvictStyles = false;
       
-      const computedStyle = window.getComputedStyle(testEl);
-      const hasSpecificStyles = computedStyle.cursor === 'pointer';
+      for (const sheet of document.styleSheets) {
+        try {
+          const rules = sheet.cssRules || sheet.rules;
+          for (const rule of rules) {
+            if (rule.selectorText && rule.selectorText.includes('self-evict-button')) {
+              foundSelfEvictStyles = true;
+              break;
+            }
+          }
+        } catch (e) {
+          // Cross-origin stylesheets may throw errors, skip them
+          continue;
+        }
+        if (foundSelfEvictStyles) break;
+      }
       
-      document.body.removeChild(testEl);
-      
-      if (!hasSpecificStyles) {
+      if (!foundSelfEvictStyles) {
         test3Result.className = 'test-result pass';
-        test3Result.textContent = '✓ PASS: Self-evict button CSS styles appear to be removed';
+        test3Result.textContent = '✓ PASS: Self-evict button CSS styles have been removed';
       } else {
         test3Result.className = 'test-result fail';
         test3Result.textContent = '✗ FAIL: Self-evict button CSS styles still exist';
