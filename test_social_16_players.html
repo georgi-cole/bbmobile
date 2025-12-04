@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Social Phase Test - 16 Players</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="overrides-fixes.css?v=test">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <link rel="stylesheet" href="css/compact-hud.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0d1b2a;
+    }
+    
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    /* Ensure proper spacing visibility */
+    #rosterBar {
+      background: linear-gradient(180deg, rgba(18,29,42,.88), rgba(13,22,35,.92));
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card" id="actionCard">
+    <div class="houseguests-header">
+      <h1>Houseguests</h1>
+      <div class="compact-hud-chip players-inline" role="status" aria-live="polite" aria-atomic="true" title="16 alive of 16 total" id="playersChipInline">
+        <span class="compact-hud-chip-icon">👥</span>
+        <span class="compact-hud-chip-label">16/16</span>
+      </div>
+    </div>
+    
+    <!-- Compact HUD -->
+    <div class="compact-hud" id="compactHud">
+      <div class="compact-hud-chip phase" role="status" aria-live="polite" aria-atomic="true" title="Social Time">
+        <span class="compact-hud-chip-icon">📍</span>
+        <span class="compact-hud-chip-label">Social Time</span>
+      </div>
+      <div class="compact-hud-chip season-week" title="Season 1, Week 3">
+        <span class="compact-hud-chip-icon">📅</span>
+        <span class="compact-hud-chip-label">S1W3</span>
+      </div>
+      <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
+        <span class="compact-hud-chip-icon">🚪</span>
+        <span class="compact-hud-chip-label">DR</span>
+      </button>
+    </div>
+    
+    <!-- Avatar Grid with 16 Players -->
+    <div id="rosterBar" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; padding: 12px;">
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P1</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P2</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P3</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P4</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P5</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P6</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P7</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P8</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P9</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P10</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P11</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P12</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P13</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P14</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P15</div>
+      <div style="aspect-ratio: 1; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">P16</div>
+    </div>
+    
+    <!-- TV Container with Social Phase Active -->
+    <div class="tv tv-screen" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer" id="tvTimer">05:00</div>
+        <button class="tvDrBtn" id="btnDiaryRoom" aria-label="Open Diary Room" title="Diary Room">🚪 DR</button>
+      </div>
+      <div class="tvViewport" data-sm-faux-tv id="tvViewport">
+        <!-- Social Launcher injected during Social Phase -->
+        <div id="socializeLauncher" class="socialize-launcher" data-sm-social-card-wrap>
+          <div class="socialize-card" data-sm-social-card>
+            <div class="socialize-hud-title">Social Energy</div>
+            <div class="socialize-hud-resources">
+              <div class="resource-badge">
+                <span>⚡</span>
+                <span>5/5</span>
+              </div>
+              <div class="resource-badge">
+                <span>👑</span>
+                <span>25</span>
+              </div>
+              <div class="resource-badge">
+                <span>💡</span>
+                <span>15</span>
+              </div>
+            </div>
+            <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+              <div style="font-weight: bold; margin-bottom: 8px; color: #f7b955;">Select Player to Interact</div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Player 2</button>
+                <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Player 3</button>
+                <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Player 4</button>
+                <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Player 5</button>
+                <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Player 6</button>
+                <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Player 7</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sep"></div>
+    <div id="panel">
+      <p style="text-align: center; color: #999; padding: 12px;">Social Phase Active - 16 Players</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
