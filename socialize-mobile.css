@@ -42,15 +42,19 @@
     position: static;
     width: min(92vw, 560px);
     max-width: min(92vw, 560px);
+    /* Use padding instead of margin to prevent margin collapse with parent container */
+    /* This ensures stable TV viewport dimensions and prevents gap collapse above TV */
     margin: 0 auto;
     padding-left: max(env(safe-area-inset-left), 16px);
     padding-right: max(env(safe-area-inset-right), 16px);
-    margin-top: 16px; /* Reduced from 60px to prevent expansion beyond TV frame */
-    margin-bottom: 16px; /* Add bottom margin for balance and prevent covering last row */
+    padding-top: 16px; /* Changed from margin-top to padding-top */
+    padding-bottom: 16px; /* Changed from margin-bottom to padding-bottom */
     scroll-margin-top: 80px; /* Scroll anchor offset */
     /* Ensure content stays within TV viewport bounds */
-    max-height: calc(100% - 32px); /* Account for top + bottom margins */
+    max-height: 100%; /* Changed from calc(100% - 32px) since we're using padding */
     overflow: auto; /* Allow scrolling if content exceeds max-height */
+    /* Prevent box-sizing issues */
+    box-sizing: border-box;
   }
 }
 

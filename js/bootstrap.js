@@ -575,7 +575,10 @@
       });
     }
 
-    // Self-Eviction (Exit) button
+    // Legacy Self-Eviction (Exit) button removed from topbar
+    // Users can self-evict via Diary Room or action menu
+    // Code preserved below for reference (inactive)
+    /*
     const exitBtn = $('#btnSelfEvict');
     if(exitBtn && !exitBtn.__exitWired){
       exitBtn.__exitWired = true;
@@ -614,8 +617,11 @@
         }
       });
     }
+    */
     
-    // Update Exit button visibility based on game state
+    // Legacy: Update Exit button visibility based on game state
+    // Function preserved for reference (inactive - button removed)
+    /*
     const updateExitBtn = ()=>{
       const g = global.game;
       if(!exitBtn) return;
@@ -636,6 +642,7 @@
     if(!global.__exitBtnUpdater){
       global.__exitBtnUpdater = setInterval(updateExitBtn, 5000);
     }
+    */
   }
 
   // ---------- Intro Screen Flow (Legacy) ----------
