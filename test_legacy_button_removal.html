@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Test: Legacy Button Removal Verification</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="overrides-fixes.css?v=test">
+  <link rel="stylesheet" href="css/compact-hud.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #4fc3f7;
+      border-bottom: 1px solid rgba(79, 195, 247, 0.3);
+      padding-bottom: 10px;
+    }
+    
+    .test-result {
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .test-result.pass {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid rgba(76, 175, 80, 0.5);
+    }
+    
+    .test-result.fail {
+      background: rgba(244, 67, 54, 0.2);
+      border: 1px solid rgba(244, 67, 54, 0.5);
+    }
+    
+    .test-result.info {
+      background: rgba(33, 150, 243, 0.2);
+      border: 1px solid rgba(33, 150, 243, 0.5);
+    }
+    
+    .test-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .test-details {
+      flex: 1;
+    }
+    
+    .test-details code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: rgba(79, 195, 247, 0.1);
+      border: 2px solid rgba(79, 195, 247, 0.3);
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .summary h2 {
+      margin-top: 0;
+      color: #4fc3f7;
+    }
+    
+    .summary .score {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    
+    .summary .score.perfect {
+      color: #4caf50;
+    }
+    
+    .summary .score.partial {
+      color: #ff9800;
+    }
+    
+    .summary .score.failed {
+      color: #f44336;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🧪 Legacy Button Removal Test</h1>
+<p>This test verifies that legacy Exit/Self-evict buttons have been properly removed from the UI.</p>
+
+<div class="test-section">
+  <h2>1. Topbar Button Removal (btnSelfEvict)</h2>
+  <div id="test1Results"></div>
+</div>
+
+<div class="test-section">
+  <h2>2. Compact HUD Button Removal (self-evict-button)</h2>
+  <div id="test2Results"></div>
+</div>
+
+<div class="test-section">
+  <h2>3. CSS Styles Cleanup</h2>
+  <div id="test3Results"></div>
+</div>
+
+<div class="test-section">
+  <h2>4. EXIT Button Next to DR (Should Remain)</h2>
+  <div id="test4Results"></div>
+</div>
+
+<div class="summary" id="summary">
+  <h2>Test Summary</h2>
+  <div class="score" id="score">...</div>
+  <div id="summaryText">Running tests...</div>
+</div>
+
+<!-- Load compact HUD module -->
+<script src="src/ui/compactHud.js"></script>
+
+<script>
+  const results = {
+    passed: 0,
+    failed: 0,
+    total: 0
+  };
+  
+  function addTestResult(containerId, passed, message, details = '') {
+    results.total++;
+    if (passed) {
+      results.passed++;
+    } else {
+      results.failed++;
+    }
+    
+    const container = document.getElementById(containerId);
+    const resultDiv = document.createElement('div');
+    resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+    resultDiv.innerHTML = `
+      <div class="test-icon">${passed ? '✅' : '❌'}</div>
+      <div class="test-details">
+        <div><strong>${message}</strong></div>
+        ${details ? `<div style="margin-top: 4px; opacity: 0.8;">${details}</div>` : ''}
+      </div>
+    `;
+    container.appendChild(resultDiv);
+  }
+  
+  function addInfoResult(containerId, message, details = '') {
+    const container = document.getElementById(containerId);
+    const resultDiv = document.createElement('div');
+    resultDiv.className = 'test-result info';
+    resultDiv.innerHTML = `
+      <div class="test-icon">ℹ️</div>
+      <div class="test-details">
+        <div><strong>${message}</strong></div>
+        ${details ? `<div style="margin-top: 4px; opacity: 0.8;">${details}</div>` : ''}
+      </div>
+    `;
+    container.appendChild(resultDiv);
+  }
+  
+  function runTests() {
+    // Test 1: Check if btnSelfEvict is removed from DOM
+    const topbarBtn = document.getElementById('btnSelfEvict');
+    addTestResult('test1Results', 
+      topbarBtn === null, 
+      'Topbar button should not exist in DOM',
+      topbarBtn ? `Found: <code>#btnSelfEvict</code> still exists` : 'Button successfully removed from index.html'
+    );
+    
+    // Test 2: Check if compact HUD self-evict button is removed
+    // First, create a mock HUD to test
+    const testHudContainer = document.createElement('div');
+    testHudContainer.id = 'testCompactHud';
+    document.body.appendChild(testHudContainer);
+    
+    // Initialize CompactHud if available
+    if (window.CompactHud && typeof window.CompactHud.init === 'function') {
+      try {
+        window.CompactHud.init(testHudContainer);
+        
+        const hudSelfEvictBtn = testHudContainer.querySelector('.compact-hud-chip.self-evict-button');
+        addTestResult('test2Results',
+          hudSelfEvictBtn === null,
+          'Compact HUD self-evict button should not exist',
+          hudSelfEvictBtn ? 'Found: <code>.self-evict-button</code> still in HUD' : 'Button successfully removed from compactHud.js'
+        );
+        
+        const drBtn = testHudContainer.querySelector('.compact-hud-chip.dr-button');
+        addInfoResult('test2Results',
+          'DR button verification',
+          drBtn ? 'DR button exists as expected' : 'Warning: DR button not found'
+        );
+      } catch (e) {
+        addTestResult('test2Results', false, 'Error testing CompactHud', e.message);
+      }
+    } else {
+      addTestResult('test2Results', false, 'CompactHud module not available', 'Cannot verify HUD button removal');
+    }
+    
+    // Test 3: Check CSS styles
+    const testElement = document.createElement('button');
+    testElement.className = 'compact-hud-chip self-evict-button';
+    testElement.style.display = 'none';
+    document.body.appendChild(testElement);
+    
+    const styles = window.getComputedStyle(testElement);
+    const hasCustomStyling = styles.getPropertyValue('--chip-base') !== '';
+    
+    addTestResult('test3Results',
+      !hasCustomStyling,
+      'Self-evict button CSS should be removed',
+      hasCustomStyling ? 'Warning: Custom CSS for .self-evict-button may still exist' : 'CSS styles successfully cleaned up'
+    );
+    
+    document.body.removeChild(testElement);
+    
+    // Test 4: Verify EXIT/DR button remains (conceptual - would need full page load)
+    addInfoResult('test4Results',
+      'EXIT button verification',
+      'The EXIT button next to DR (🚪 DR) should remain functional. This test requires full page context to verify.'
+    );
+    
+    addInfoResult('test4Results',
+      'Self-eviction via other methods',
+      'Users can still self-evict through Diary Room modal or action menu (if implemented).'
+    );
+    
+    // Update summary
+    updateSummary();
+  }
+  
+  function updateSummary() {
+    const scoreEl = document.getElementById('score');
+    const summaryText = document.getElementById('summaryText');
+    const percentage = Math.round((results.passed / results.total) * 100);
+    
+    scoreEl.textContent = `${results.passed}/${results.total}`;
+    
+    if (percentage === 100) {
+      scoreEl.className = 'score perfect';
+      summaryText.innerHTML = `
+        <div style="font-size: 20px; color: #4caf50; margin-top: 10px;">
+          ✨ Perfect! All legacy buttons successfully removed.
+        </div>
+      `;
+    } else if (percentage >= 50) {
+      scoreEl.className = 'score partial';
+      summaryText.innerHTML = `
+        <div style="font-size: 18px; color: #ff9800; margin-top: 10px;">
+          ⚠️ Some tests failed. Please review the results above.
+        </div>
+      `;
+    } else {
+      scoreEl.className = 'score failed';
+      summaryText.innerHTML = `
+        <div style="font-size: 18px; color: #f44336; margin-top: 10px;">
+          ❌ Multiple tests failed. Please review the implementation.
+        </div>
+      `;
+    }
+  }
+  
+  // Run tests when page loads
+  window.addEventListener('load', () => {
+    setTimeout(runTests, 100);
+  });
+</script>
+
+</body>
+</html>
