@@ -138,6 +138,21 @@
   outline-offset: 2px;
 }
 
+/* Self-Evict button chip - styled as danger/red pill */
+.compact-hud-chip.self-evict-button {
+  --chip-base: var(--danger, #c0392b);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 90%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 75%, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
+  cursor: pointer;
+}
+
+.compact-hud-chip.self-evict-button:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
 /* Icon support (optional) */
 .compact-hud-chip-icon {
   font-size: 0.9em;
