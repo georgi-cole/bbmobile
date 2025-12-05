@@ -2,23 +2,25 @@
 
 ## Overview
 
-This document describes the implementation of mobile UI control cleanup that hides all topbar buttons on mobile to save space and ensures DR button appears only once.
+This document describes the implementation of mobile UI control reorganization that adds Settings and Sound buttons to the Houseguests header on mobile viewports.
 
 ## Problem Statement
 
-Based on mobile UI feedback, the following issues were identified:
+Based on mobile UI feedback, the following requirements were identified:
 
-1. Topbar buttons (Settings, Start, Sound, Leaderboard) cluttered the mobile layout above the Houseguests section
-2. Duplicate speaker/sound controls appeared in multiple locations
-3. Duplicate DR buttons appeared (one next to FFWD, one in compact HUD)
+1. No topbar on mobile (remove all topbar buttons to save space)
+2. Settings and Sound buttons should appear next to "Houseguests" heading and player pill (16/16)
+3. Compact HUD should show: Phase pill, Week pill, DR button, Three dots menu
+4. Duplicate controls should be removed
 
-## Solution (Updated per User Feedback)
+## Solution (Final Implementation)
 
-The solution hides ALL topbar buttons on mobile (≤768px) and ensures clean layout above the Houseguests section:
+The solution reorganizes mobile UI controls per user specifications:
 
-1. **Hide entire topbar on mobile** - Saves space, no buttons above Houseguests
-2. **Remove duplicate controls** - Sound/Settings buttons removed from compact HUD duplicates
-3. **Single DR button** - Only in compact HUD next to 3-dot menu (removed from TV header)
+1. **Hide entire topbar on mobile** - No topbar buttons on mobile (≤768px)
+2. **Add buttons to Houseguests header** - Settings (⚙️) and Sound (🔊) appear next to heading and player pill
+3. **Clean compact HUD** - Phase, Week, DR, Three dots menu (no duplicate settings/sound)
+4. **Single DR button** - Only in compact HUD next to 3-dot menu (removed from TV header)
 
 ### Implementation Components
 
@@ -67,9 +69,12 @@ MobileControlsLayout.destroy()  // Cleanup and destroy
 ```
 
 **Implementation Details**:
-- Main functionality handled via CSS
-- No button creation or repositioning (per user feedback)
-- Module kept minimal for potential future enhancements
+- Detects mobile viewport (≤768px)
+- Creates Settings and Sound buttons dynamically on mobile
+- Appends buttons to `.houseguests-header` (after player pill)
+- Proxies clicks to original topbar buttons
+- Syncs sound button state with original (🔊 ↔ 🔇)
+- Removes buttons when switching to desktop viewport
 
 #### 3. HTML Changes: `index.html`
 
@@ -91,12 +96,18 @@ MobileControlsLayout.destroy()  // Cleanup and destroy
 - DR button only in compact HUD
 
 #### Mobile (≤768px)
-- **Topbar completely hidden** - Saves space above Houseguests section
-- **No buttons above Houseguests heading** - Clean, minimal layout
-- **Only player count pill (16/16) visible** in houseguests header
-- Compact HUD shows Phase, Season/Week, DR, and Actions buttons
-- **DR button only in compact HUD** (next to 3-dot menu)
-- Settings and sound accessible via action menu (3-dot button)
+- **Topbar completely hidden** - Saves space
+- **Houseguests header shows:**
+  - "Houseguests" heading
+  - Player count pill (16/16)
+  - **Settings button (⚙️)**
+  - **Sound button (🔊)**
+- **Compact HUD shows:**
+  - Phase pill (e.g., "HOH Competition")
+  - Week pill (e.g., "S1W1")
+  - DR button (🚪)
+  - Three dots menu (⋮)
+- **DR button only in compact HUD** (removed from TV header next to FFWD)
 
 ## File Structure
 
