@@ -92,13 +92,13 @@
   --popup-button-gap:14px; /* spacing between buttons - match HOH specs */
 
   /* Typography tokens - reusable design system (PR #3) */
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
 
   --font-size-heading-lg: 1.8rem;
   --font-size-heading-md: 1.3rem;
   --font-size-heading-sm: 1.1rem;
-  --font-size-body: 0.95rem;
-  --font-size-label: 0.7rem;
+  --font-size-body: 1rem;  /* Increased from 0.95rem to respect TV minimum (16px) */
+  --font-size-label: 0.75rem;  /* Increased from 0.7rem for better readability */
 
   --line-height-tight: 1.1;
   --line-height-normal: 1.4;
