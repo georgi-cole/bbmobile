@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Mobile UI Controls Test</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="styles.css?v=fixes-5">
+  <link rel="stylesheet" href="overrides-fixes.css?v=fixes-5">
+  <link rel="stylesheet" href="css/compact-hud.css">
+  <link rel="stylesheet" href="css/diary-room-modal.css">
+  <link rel="stylesheet" href="css/mobile-ui-controls-fix.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--bg, #0a1118);
+      color: var(--ink, #e8f0ff);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-header {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+    .test-info {
+      margin: 12px 0;
+      padding: 12px;
+      background: rgba(0, 120, 255, 0.1);
+      border-left: 3px solid rgba(0, 120, 255, 0.5);
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .viewport-indicator {
+      position: fixed;
+      top: 0;
+      right: 0;
+      padding: 8px 12px;
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      font-size: 0.85rem;
+      font-weight: bold;
+      z-index: 99999;
+    }
+    .viewport-indicator.mobile {
+      background: rgba(0, 200, 0, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-indicator" id="viewportIndicator">Desktop</div>
+  
+  <div class="test-header">
+    <h1>🧪 Mobile UI Controls Layout Test</h1>
+    <p>This page tests the mobile UI controls reorganization.</p>
+    <div class="test-info">
+      <strong>Test Requirements:</strong>
+      <ul>
+        <li>✅ Settings (⚙️) and Sound (🔊) buttons should appear next to player pill on mobile (≤768px)</li>
+        <li>✅ Original topbar buttons should be hidden on mobile</li>
+        <li>✅ Compact HUD duplicate buttons should be hidden on mobile</li>
+        <li>✅ Desktop layout (>768px) should show original topbar buttons only</li>
+        <li>✅ No duplicate DR buttons should appear</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Top Controls (original topbar) -->
+  <div class="topbar toolbar--scroll">
+    <button class="btn iconOnly" id="btnOpenSettings" aria-label="Settings" title="Settings">⚙️</button>
+    <button class="btn iconOnly" id="btnStartQuick" aria-label="Start game" title="Start game">▶</button>
+    <button class="btn" id="btnMuteToggle" aria-pressed="false" title="Toggle sound">🔊</button>
+    <button class="btn iconOnly" id="xpLeaderboardBadge" title="View Score & Level" aria-label="Open leaderboard">📊</button>
+  </div>
+
+  <div class="wrap">
+    <div class="card" id="actionCard">
+      <!-- Houseguests header with player count -->
+      <div class="houseguests-header">
+        <h1>Houseguests</h1>
+        <div class="compact-hud-chip players-inline" role="status" aria-live="polite" aria-atomic="true" title="16 alive of 16 total" id="playersChipInline">
+          <span class="compact-hud-chip-icon">👥</span>
+          <span class="compact-hud-chip-label">16/16</span>
+        </div>
+      </div>
+
+      <!-- Compact HUD -->
+      <div class="compact-hud" id="compactHud">
+        <div class="compact-hud-chip phase" role="status" aria-live="polite" aria-atomic="true" title="HOH Competition">
+          <span class="compact-hud-chip-icon">📍</span>
+          <span class="compact-hud-chip-label">HOH Competition</span>
+        </div>
+        <div class="compact-hud-chip season-week" title="Season 1, Week 1">
+          <span class="compact-hud-chip-icon">📅</span>
+          <span class="compact-hud-chip-label">S1W1</span>
+        </div>
+        <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
+          <span class="compact-hud-chip-icon">🚪</span>
+          <span class="compact-hud-chip-label">DR</span>
+        </button>
+        <button class="compact-hud-chip icon-button settings-button" id="btnSettingsHud" aria-label="Settings" title="Settings">
+          <span class="compact-hud-chip-icon">⚙️</span>
+        </button>
+        <button class="compact-hud-chip icon-button sound-button" id="btnSoundHud" aria-label="Toggle sound" aria-pressed="false" title="Toggle sound">
+          <span class="compact-hud-chip-icon">🔊</span>
+        </button>
+        <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
+          <span class="compact-hud-chip-icon">⋮</span>
+        </button>
+      </div>
+
+      <!-- TV Screen -->
+      <div class="tv tv-screen" id="tv">
+        <div class="tvHead">
+          <div class="tvTitle">House Network Live</div>
+          <div class="tv-skip-timer-pill">
+            <div class="tv-skip-timer-progress"></div>
+            <button class="tv-skip-timer-button" id="tvSkipButton">⏩ FFWD</button>
+            <div class="tv-skip-timer-display">02:30</div>
+          </div>
+          <button class="tvDrBtn" id="btnDiaryRoom" aria-label="Open Diary Room" title="Diary Room" style="display:none;">🚪 DR</button>
+        </div>
+        <div class="tvViewport">
+          <div id="tvNow" class="tvNow">Test content for TV screen</div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      
+      <div id="panel">
+        <p style="text-align: center; color: rgba(255, 255, 255, 0.6);">Test panel content</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the mobile controls layout module -->
+  <script src="js/ui/mobileControlsLayout.js"></script>
+
+  <!-- Test script -->
+  <script>
+    // Mock window.game for testing
+    window.game = window.game || {};
+    
+    // Viewport indicator
+    function updateViewportIndicator() {
+      const indicator = document.getElementById('viewportIndicator');
+      const width = window.innerWidth;
+      if (width <= 768) {
+        indicator.textContent = `Mobile (${width}px)`;
+        indicator.classList.add('mobile');
+      } else {
+        indicator.textContent = `Desktop (${width}px)`;
+        indicator.classList.remove('mobile');
+      }
+    }
+
+    // Button interaction logging
+    const buttons = ['btnOpenSettings', 'btnMuteToggle', 'btnDiaryRoomHud', 'btnSettingsHud', 'btnSoundHud'];
+    buttons.forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          console.log(`Clicked: ${id}`);
+          
+          // Toggle sound button state for testing
+          if (id.includes('Mute') || id.includes('Sound')) {
+            const isPressed = btn.getAttribute('aria-pressed') === 'true';
+            btn.setAttribute('aria-pressed', !isPressed ? 'true' : 'false');
+            btn.textContent = !isPressed ? '🔇' : '🔊';
+            
+            // Log state change
+            console.log(`Sound button state: ${!isPressed ? 'muted' : 'unmuted'}`);
+          }
+        });
+      }
+    });
+
+    // Update indicator on load and resize
+    updateViewportIndicator();
+    window.addEventListener('resize', updateViewportIndicator);
+
+    // Log initialization
+    console.log('Mobile UI Controls Test Page Loaded');
+    console.log('Window width:', window.innerWidth);
+    console.log('Mobile threshold: 768px');
+  </script>
+</body>
+</html>
