@@ -231,12 +231,10 @@
           // Dark icon for light background
           btn.style.color = '#1d1d1d';
           btn.classList.add('bb-contrast-btn--dark-icon');
-          btn.classList.remove('bb-contrast-btn--light-icon');
         } else {
           // Light icon for dark background
           btn.style.color = '#f5f5f5';
           btn.classList.remove('bb-contrast-btn--dark-icon');
-          btn.classList.add('bb-contrast-btn--light-icon');
         }
       });
     });
@@ -283,7 +281,7 @@
         // Check if attributes changed on relevant elements
         if (mutation.type === 'attributes') {
           const target = mutation.target;
-          if (target.matches && (
+          if (target instanceof Element && (
             target.matches('button') ||
             target.matches('[class*="intro"]') ||
             target.matches('[class*="compact-hud"]')
@@ -366,11 +364,15 @@
     });
     
     // Also listen for background theme changes
-    if (window.game && window.game.bus) {
-      window.game.bus.on('backgroundTheme:changed', () => {
-        console.info('[UI Accessibility] Background theme changed, updating colors');
-        updateMoreButtonColor();
-      });
+    if (window.game && window.game.bus && typeof window.game.bus.on === 'function') {
+      try {
+        window.game.bus.on('backgroundTheme:changed', () => {
+          console.info('[UI Accessibility] Background theme changed, updating colors');
+          updateMoreButtonColor();
+        });
+      } catch (err) {
+        console.warn('[UI Accessibility] Failed to attach background theme listener:', err);
+      }
     }
   }
 

@@ -10,6 +10,8 @@
 .bb-contrast-btn,
 .bb-contrast-btn * {
   color: #ffffff !important;
+  /* Note: -webkit-text-stroke is widely supported (Chrome, Safari, Firefox 49+, Edge)
+     The text-shadow provides fallback readability for older browsers */
   -webkit-text-stroke: 0.9px rgba(0,0,0,0.55);
   text-shadow: 0 1px 1px rgba(0,0,0,0.45);
   /* Ensure icons within these buttons inherit the color */
