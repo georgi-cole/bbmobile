@@ -71,15 +71,11 @@
 
     hudContainer = container;
 
-    // Create HUD markup (without players chip - moved to header)
+    // Create HUD markup (without players chip and season-week chip - both moved to header)
     hudContainer.innerHTML = `
       <div class="compact-hud-chip phase" role="status" aria-live="polite" aria-atomic="true" title="">
         <span class="compact-hud-chip-icon">📍</span>
         <span class="compact-hud-chip-label">Loading...</span>
-      </div>
-      <div class="compact-hud-chip season-week" title="">
-        <span class="compact-hud-chip-icon">📅</span>
-        <span class="compact-hud-chip-label">S1W1</span>
       </div>
       <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
         <span class="compact-hud-chip-icon">🚪</span>
@@ -87,18 +83,20 @@
       </button>
       <button class="compact-hud-chip icon-button settings-button" id="btnSettingsHud" aria-label="Settings" title="Settings">⚙️</button>
       <button class="compact-hud-chip icon-button sound-button" id="btnSoundHud" aria-label="Toggle sound" aria-pressed="false" title="Toggle sound">🔊</button>
-      <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
-        <span class="compact-hud-chip-icon">⋮</span>
-      </button>
+      <button class="compact-hud-chip icon-button action-menu-button" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">⋮</button>
     `;
 
     // Get chip references
     phaseChip = hudContainer.querySelector('.compact-hud-chip.phase');
-    seasonWeekChip = hudContainer.querySelector('.compact-hud-chip.season-week');
+    seasonWeekChip = document.getElementById('seasonWeekChipInline'); // Reference inline chip in header
     playersChip = document.getElementById('playersChipInline'); // Reference inline chip in header
     
     if (!playersChip) {
       console.warn('[CompactHud] Player count chip not found in DOM');
+    }
+    
+    if (!seasonWeekChip) {
+      console.warn('[CompactHud] Season/Week chip not found in DOM');
     }
     
     drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');

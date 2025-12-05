@@ -47,9 +47,10 @@
   flex-shrink: 0;
 }
 
-/* Inline player count chip (beside h1) */
-/* flex-shrink: 0 prevents chip from shrinking when header wraps on narrow viewports */
-.compact-hud-chip.players-inline {
+/* Inline chips (beside h1) */
+/* flex-shrink: 0 prevents chips from shrinking when header wraps on narrow viewports */
+.compact-hud-chip.players-inline,
+.compact-hud-chip.season-week-inline {
   flex-shrink: 0;
 }
 
@@ -193,30 +194,38 @@
   opacity: 0.6;
 }
 
-/* Action menu button (three dots) - matches icon button styling */
-.compact-hud-chip.action-menu-chip {
-  --chip-base: var(--accent-2);
-  background: linear-gradient(135deg, 
-    color-mix(in srgb, var(--chip-base) 85%, var(--card)) 0%, 
-    color-mix(in srgb, var(--chip-base) 70%, var(--bg)) 100%);
-  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
+/* Action menu button (three dots) - emoji-only, no backdrop */
+.compact-hud-chip.action-menu-button {
+  /* Remove all pill/chip styling */
+  background: transparent;
+  border: none;
+  box-shadow: none;
   cursor: pointer;
-  padding: 6px 10px;
+  padding: 6px 8px;
   min-width: unset;
+  border-radius: 4px;
+  /* Keep emoji size consistent */
+  font-size: 1.25rem;
+  line-height: 1;
+  /* Remove transform effects */
+  transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
-.compact-hud-chip.action-menu-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+.compact-hud-chip.action-menu-button:hover {
+  opacity: 0.8;
+  transform: none;
+  box-shadow: none;
 }
 
-.compact-hud-chip.action-menu-chip:active {
-  transform: scale(0.98);
+.compact-hud-chip.action-menu-button:active {
+  transform: scale(0.95);
+  opacity: 0.7;
 }
 
-.compact-hud-chip.action-menu-chip:focus-visible {
+.compact-hud-chip.action-menu-button:focus-visible {
   outline: 2px solid var(--accent-2);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Legacy self-evict button styles removed - EXIT button in tvHead is now the primary method */
@@ -269,7 +278,8 @@
   }
   
   /* Adjust emoji-only button size on mobile */
-  .compact-hud-chip.icon-button {
+  .compact-hud-chip.icon-button,
+  .compact-hud-chip.action-menu-button {
     font-size: 1.15rem;
     padding: 5px 6px;
   }

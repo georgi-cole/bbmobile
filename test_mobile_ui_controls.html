@@ -77,12 +77,16 @@
 
   <div class="wrap">
     <div class="card" id="actionCard">
-      <!-- Houseguests header with player count -->
+      <!-- Houseguests header with player count and season/week -->
       <div class="houseguests-header">
         <h1>Houseguests</h1>
         <div class="compact-hud-chip players-inline" role="status" aria-live="polite" aria-atomic="true" title="16 alive of 16 total" id="playersChipInline">
           <span class="compact-hud-chip-icon">👥</span>
           <span class="compact-hud-chip-label">16/16</span>
+        </div>
+        <div class="compact-hud-chip season-week-inline" title="Season 1, Week 1" id="seasonWeekChipInline">
+          <span class="compact-hud-chip-icon">📅</span>
+          <span class="compact-hud-chip-label">S1W1</span>
         </div>
       </div>
 
@@ -92,19 +96,13 @@
           <span class="compact-hud-chip-icon">📍</span>
           <span class="compact-hud-chip-label">HOH Competition</span>
         </div>
-        <div class="compact-hud-chip season-week" title="Season 1, Week 1">
-          <span class="compact-hud-chip-icon">📅</span>
-          <span class="compact-hud-chip-label">S1W1</span>
-        </div>
         <button class="compact-hud-chip dr-button" id="btnDiaryRoomHud" aria-label="Open Diary Room" title="Diary Room">
           <span class="compact-hud-chip-icon">🚪</span>
           <span class="compact-hud-chip-label">DR</span>
         </button>
         <button class="compact-hud-chip icon-button settings-button" id="btnSettingsHud" aria-label="Settings" title="Settings">⚙️</button>
         <button class="compact-hud-chip icon-button sound-button" id="btnSoundHud" aria-label="Toggle sound" aria-pressed="false" title="Toggle sound">🔊</button>
-        <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
-          <span class="compact-hud-chip-icon">⋮</span>
-        </button>
+        <button class="compact-hud-chip icon-button action-menu-button" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">⋮</button>
       </div>
 
       <!-- TV Screen -->
