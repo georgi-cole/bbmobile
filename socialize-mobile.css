@@ -56,6 +56,20 @@
     /* Prevent box-sizing issues */
     box-sizing: border-box;
   }
+  
+  /* MOBILE FIX: Ensure faux TV container establishes block formatting context */
+  .tvViewport[data-sm-faux-tv],
+  [data-faux-tv],
+  [data-sm-faux-tv] {
+    /* Prevent flex shrinking */
+    flex: 1 0 auto !important;
+    /* Establish block formatting context to contain floats and prevent margin collapse */
+    overflow: hidden;
+    /* Layout containment for performance and isolation */
+    contain: layout style;
+    /* Ensure minimum height */
+    min-height: 0;
+  }
 }
 
 .socialize-hud,
