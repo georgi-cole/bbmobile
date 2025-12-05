@@ -56,10 +56,12 @@
     <div class="test-info">
       <strong>Test Requirements:</strong>
       <ul>
-        <li>✅ Settings (⚙️) and Sound (🔊) buttons should appear next to player pill on mobile (≤768px)</li>
+        <li>✅ Settings (⚙️ settings-btn) and Speaker (🔊 speaker-chip) buttons should appear in hg-count-cluster on mobile (≤768px)</li>
+        <li>✅ hg-count-cluster should contain: player pill, settings button, speaker button (in that order)</li>
+        <li>✅ These controls should appear as a single side-by-side group, only once in mobile layout</li>
+        <li>✅ Settings and speaker buttons should be hidden from compact HUD on mobile</li>
         <li>✅ Original topbar buttons should be hidden on mobile</li>
-        <li>✅ Compact HUD duplicate buttons should be hidden on mobile</li>
-        <li>✅ Desktop layout (>768px) should show original topbar buttons only</li>
+        <li>✅ Desktop layout (>768px) should show original topbar with all buttons</li>
         <li>✅ No duplicate DR buttons should appear</li>
       </ul>
     </div>
@@ -148,14 +150,54 @@
       if (width <= 768) {
         indicator.textContent = `Mobile (${width}px)`;
         indicator.classList.add('mobile');
+        
+        // Validate hg-count-cluster on mobile
+        setTimeout(() => {
+          validateMobileLayout();
+        }, 200);
       } else {
         indicator.textContent = `Desktop (${width}px)`;
         indicator.classList.remove('mobile');
       }
     }
 
+    // Validate mobile layout structure
+    function validateMobileLayout() {
+      console.group('Mobile Layout Validation');
+      
+      // Check for hg-count-cluster
+      const cluster = document.getElementById('hgCountCluster');
+      console.log('hg-count-cluster exists:', !!cluster);
+      
+      if (cluster) {
+        // Check cluster children
+        const playerPill = cluster.querySelector('#playersChipInline');
+        const settingsBtn = cluster.querySelector('.settings-btn');
+        const speakerChip = cluster.querySelector('.speaker-chip');
+        
+        console.log('Player pill in cluster:', !!playerPill);
+        console.log('Settings button in cluster:', !!settingsBtn);
+        console.log('Speaker chip in cluster:', !!speakerChip);
+        
+        // Check order
+        const children = Array.from(cluster.children);
+        console.log('Cluster children order:', children.map(c => c.id || c.className));
+      }
+      
+      // Check compact HUD settings/speaker buttons are hidden
+      const compactHudSettings = document.querySelector('.compact-hud .settings-button');
+      const compactHudSound = document.querySelector('.compact-hud .sound-button');
+      const settingsVisible = compactHudSettings && window.getComputedStyle(compactHudSettings).display !== 'none';
+      const soundVisible = compactHudSound && window.getComputedStyle(compactHudSound).display !== 'none';
+      
+      console.log('Compact HUD settings button hidden:', !settingsVisible);
+      console.log('Compact HUD sound button hidden:', !soundVisible);
+      
+      console.groupEnd();
+    }
+
     // Button interaction logging
-    const buttons = ['btnOpenSettings', 'btnMuteToggle', 'btnDiaryRoomHud', 'btnSettingsHud', 'btnSoundHud'];
+    const buttons = ['btnOpenSettings', 'btnMuteToggle', 'btnDiaryRoomHud', 'btnSettingsHud', 'btnSoundHud', 'settings-btn', 'speaker-chip'];
     buttons.forEach(id => {
       const btn = document.getElementById(id);
       if (btn) {
@@ -163,10 +205,16 @@
           console.log(`Clicked: ${id}`);
           
           // Toggle sound button state for testing
-          if (id.includes('Mute') || id.includes('Sound')) {
+          if (id.includes('Mute') || id.includes('Sound') || id.includes('speaker')) {
             const isPressed = btn.getAttribute('aria-pressed') === 'true';
             btn.setAttribute('aria-pressed', !isPressed ? 'true' : 'false');
-            btn.textContent = !isPressed ? '🔇' : '🔊';
+            
+            // Update icon for speaker chip
+            if (id === 'speaker-chip') {
+              btn.textContent = !isPressed ? '🔇' : '🔊';
+            } else {
+              btn.textContent = !isPressed ? '🔇' : '🔊';
+            }
             
             // Log state change
             console.log(`Sound button state: ${!isPressed ? 'muted' : 'unmuted'}`);
