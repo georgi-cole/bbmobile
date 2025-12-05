@@ -170,7 +170,7 @@
    MOBILE SOCIAL PHASE LAYOUT FIXES
    Purpose: Ensure Social Phase module doesn't cause layout collapse on mobile
    Context: Follow-up to desktop fix - mobile uses different selectors/paths
-   Reference: PR for mobile faux-TV viewport overlap issue
+   Reference: Mobile faux-TV viewport overlap fix - see PR_SUMMARY_LAYOUT_FIX.md
    GitHub Issue: Faux-TV area overlaps houseguest avatar grid on narrow viewports
    ============================================================================ */
 
