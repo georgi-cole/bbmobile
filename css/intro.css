@@ -91,6 +91,49 @@ body:not(.main-screen-built) .topbar {
   transition: opacity 400ms ease-in-out, visibility 0ms linear 0ms;
 }
 
+/* ===== Title Group (Header Text Content) ===== */
+.intro-screen__title-group {
+  --title-group-spacing: 24px;
+  --quick-icons-clearance: 80px;
+  
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + var(--title-group-spacing));
+  left: calc(env(safe-area-inset-left, 0px) + var(--title-group-spacing));
+  right: calc(env(safe-area-inset-right, 0px) + var(--quick-icons-clearance)); /* Leave space for quick icons */
+  z-index: 15;
+  max-width: 600px;
+  animation: intro-title-fade 700ms ease-out backwards;
+  animation-delay: 200ms;
+}
+
+@keyframes intro-title-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.intro-screen__label {
+  margin: 0 0 8px 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.intro-screen__title {
+  margin: 0 0 12px 0;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.intro-screen__subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 500px;
+}
+
 /* ===== Quick Icons (Top-Right) ===== */
 .intro-screen__quick-icons {
   position: absolute;
@@ -325,6 +368,24 @@ body:not(.main-screen-built) .topbar {
 
 /* Portrait Mobile */
 @media (max-width: 768px) and (orientation: portrait) {
+  .intro-screen__title-group {
+    --title-group-spacing: 16px;
+    
+    top: calc(env(safe-area-inset-top, 0px) + var(--title-group-spacing));
+    left: calc(env(safe-area-inset-left, 0px) + var(--title-group-spacing));
+    right: calc(env(safe-area-inset-right, 0px) + var(--title-group-spacing));
+    max-width: none;
+  }
+  
+  /* Adjust typography for mobile without overriding utility classes */
+  .intro-screen__title.text-heading-lg {
+    font-size: 1.5rem;
+  }
+  
+  .intro-screen__subtitle.text-body {
+    font-size: 0.9rem;
+  }
+  
   .intro-screen__button-column {
     /* Keep centered positioning from CSS vars */
     min-width: 240px;
