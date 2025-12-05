@@ -1037,12 +1037,12 @@ header.innerHTML = `
       host.style.setProperty('--topTile', tileSize+'px');
 
       // Create opt-in wrapper for new mobile roster styles
-      const wrapper=document.createElement('div'); 
-      wrapper.className='roster-screen roster-screen--new';
+      const wrapper = document.createElement('div'); 
+      wrapper.className = 'roster-screen roster-screen--new';
       
       // Create roster-grid container with role="list"
-      const grid=document.createElement('div'); 
-      grid.className='roster-grid top-roster-row';
+      const grid = document.createElement('div'); 
+      grid.className = 'roster-grid top-roster-row';
       grid.setAttribute('role', 'list');
       
       wrapper.appendChild(grid);
@@ -1197,12 +1197,12 @@ header.innerHTML = `
       wrap.appendChild(img);
 
       // Create roster-info wrapper for name and badges
-      const info=document.createElement('div');
-      info.className='roster-info';
+      const info = document.createElement('div');
+      info.className = 'roster-info';
 
       // Name/Status label - show icons or text that replaces the name
-      const name=document.createElement('div'); 
-      name.className='top-tile-name roster-name';
+      const name = document.createElement('div'); 
+      name.className = 'top-tile-name roster-name';
       
       // Initialize label variables with fallback to player name
       // This ensures we always have a valid label even if no special status applies
