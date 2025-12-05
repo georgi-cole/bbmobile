@@ -9,6 +9,7 @@
   // ===== Default Configuration =====
   const DEFAULT_CONCURRENCY = 8;
   const DEFAULT_TIMEOUT_MS = 7000;
+  const DEFAULT_TIMEOUT_MS_STRICT = 30000; // Longer timeout for strict mode
   const DEFAULT_READY_PERCENT = 0.99;
   const DEFAULT_LOAD_MODE = 'batch'; // 'batch' | 'skeleton'
 
@@ -43,11 +44,14 @@
   // ===== Configuration Getters =====
   function getConfig() {
     const cfg = g.game?.cfg || g.cfg || {};
+    const strictMode = cfg.avatarPreloadRequireAll === true;
     return {
       concurrency: cfg.avatarPreloadConcurrency || DEFAULT_CONCURRENCY,
-      timeoutMs: cfg.avatarPreloadTimeoutMs || DEFAULT_TIMEOUT_MS,
-      readyPercent: cfg.avatarReadyPercent || DEFAULT_READY_PERCENT,
-      loadMode: cfg.avatarLoadMode || DEFAULT_LOAD_MODE
+      timeoutMs: cfg.avatarPreloadTimeoutMs || (strictMode ? DEFAULT_TIMEOUT_MS_STRICT : DEFAULT_TIMEOUT_MS),
+      readyPercent: strictMode ? 1.0 : (cfg.avatarReadyPercent || DEFAULT_READY_PERCENT),
+      loadMode: cfg.avatarLoadMode || DEFAULT_LOAD_MODE,
+      strictMode: strictMode,
+      enableProceedAnyway: cfg.enableProceedAnyway === true
     };
   }
 
@@ -63,55 +67,81 @@
   // ===== Queue-based Parallel Preloader =====
   /**
    * Preload a single avatar with decode() support
+   * In strict mode, success requires both load AND decode (if supported)
    * @param {string} url - Avatar URL
    * @param {number} playerId - Player ID for tracking
-   * @returns {Promise<Object>} Result { playerId, url, success, decoded, duration }
+   * @param {boolean} strictMode - If true, require decode() success for success flag
+   * @returns {Promise<Object>} Result { playerId, url, success, decoded, duration, error }
    */
-  function preloadSingleAvatar(url, playerId) {
+  function preloadSingleAvatar(url, playerId, strictMode = false) {
     return new Promise((resolve) => {
       const startTime = Date.now();
       const img = new Image();
       let resolved = false;
+      const decodeAvailable = typeof img.decode === 'function';
 
-      const complete = (success, decoded = false) => {
+      const complete = (opts = {}) => {
         if (resolved) return;
         resolved = true;
 
+        const { success = false, decoded = false, error = null } = opts;
         const duration = Date.now() - startTime;
         resolve({
           playerId,
           url,
           success,
           decoded,
-          duration
+          duration,
+          error
         });
       };
 
-      // Error handler - still count as complete (with fallback)
+      // Helper to handle decode failures based on strict mode
+      const handleDecodeFailure = (err, cached = false) => {
+        logWarn(`decode() failed for player ${playerId}:`, err);
+        if (strictMode) {
+          complete({ success: false, decoded: false, error: cached ? 'decode_error_cached' : 'decode_error' });
+        } else {
+          complete({ success: true, decoded: false, error: cached ? 'decode_failed_cached_non_strict' : 'decode_failed_non_strict' });
+        }
+      };
+
+      // Error handler - count as failure
       img.onerror = () => {
         logWarn(`Failed to load avatar for player ${playerId}:`, url);
-        complete(false, false);
+        complete({ success: false, decoded: false, error: 'load_error' });
       };
 
       // Load success handler
       img.onload = () => {
         // Try decode() for smoother rendering if available
-        if (img.decode) {
+        if (decodeAvailable) {
           img.decode()
-            .then(() => complete(true, true))
-            .catch(() => {
-              // decode() failed but image loaded - still success
-              logWarn(`decode() failed for player ${playerId}, using direct`);
-              complete(true, false);
+            .then(() => {
+              // Decode success - always count as success
+              complete({ success: true, decoded: true, error: null });
+            })
+            .catch((err) => {
+              handleDecodeFailure(err, false);
             });
         } else {
-          complete(true, false);
+          // decode() not available - load success is enough
+          complete({ success: true, decoded: false, error: null });
         }
       };
 
       // Check if already cached
       if (img.complete && img.naturalWidth > 0) {
-        complete(true, false);
+        // Image is cached and loaded
+        if (decodeAvailable) {
+          img.decode()
+            .then(() => complete({ success: true, decoded: true, error: null }))
+            .catch((err) => {
+              handleDecodeFailure(err, true);
+            });
+        } else {
+          complete({ success: true, decoded: false, error: null });
+        }
       } else {
         img.src = url;
       }
@@ -123,9 +153,10 @@
    * @param {Array<{playerId, url}>} items - Items to preload
    * @param {number} concurrency - Max concurrent requests
    * @param {Function} onProgress - Progress callback (loaded, total, item)
+   * @param {boolean} strictMode - If true, require decode() success
    * @returns {Promise<Array>} Results array
    */
-  async function runQueue(items, concurrency, onProgress) {
+  async function runQueue(items, concurrency, onProgress, strictMode = false) {
     const results = [];
     let loaded = 0;
     let index = 0;
@@ -135,7 +166,7 @@
       return results;
     }
 
-    logInfo(`Starting queue: ${total} items, concurrency=${concurrency}`);
+    logInfo(`Starting queue: ${total} items, concurrency=${concurrency}, strictMode=${strictMode}`);
 
     // Worker function - picks next item from queue
     async function worker() {
@@ -143,7 +174,7 @@
         const currentIndex = index++;
         const item = items[currentIndex];
 
-        const result = await preloadSingleAvatar(item.url, item.playerId);
+        const result = await preloadSingleAvatar(item.url, item.playerId, strictMode);
         results[currentIndex] = result;
 
         if (result.success) {
@@ -186,13 +217,14 @@
     const concurrency = opts.concurrency || config.concurrency;
     const timeout = opts.timeout || config.timeoutMs;
     const readyPercent = opts.readyPercent || config.readyPercent;
+    const strictMode = opts.strictMode !== undefined ? opts.strictMode : config.strictMode;
     const onProgress = typeof opts.onProgress === 'function' ? opts.onProgress : () => {};
     const onItemComplete = typeof opts.onItemComplete === 'function' ? opts.onItemComplete : () => {};
 
     const startTime = Date.now();
     const decodeSupported = supportsImageDecode();
 
-    logInfo(`Starting preload: ${players?.length || 0} players, concurrency=${concurrency}, timeout=${timeout}ms`);
+    logInfo(`Starting preload: ${players?.length || 0} players, concurrency=${concurrency}, timeout=${timeout}ms, strictMode=${strictMode}`);
     logInfo(`decode() supported: ${decodeSupported}`);
 
     // Log telemetry
@@ -200,7 +232,8 @@
       playerCount: players?.length || 0,
       concurrency,
       timeout,
-      decodeSupported
+      decodeSupported,
+      strictMode
     });
 
     // Validate input
@@ -296,12 +329,17 @@
         failed++;
       }
 
-      // Progress callback
-      onProgress(loaded, total);
+      // Progress callback - in strict mode, always call with current counts
+      // Use requestAnimationFrame for smooth UI updates
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => onProgress(loaded, total));
+      } else {
+        onProgress(loaded, total);
+      }
 
       // Per-item callback for skeleton mode
       onItemComplete(item);
-    });
+    }, strictMode);
 
     // Race between preload and timeout
     const race = await Promise.race([
@@ -339,7 +377,15 @@
 
     // Calculate if ready threshold met
     const percentLoaded = total > 0 ? loaded / total : 1;
-    const isReady = percentLoaded >= readyPercent || timedOut;
+    
+    // In strict mode: only ready if ALL loaded AND none failed AND not timed out
+    // In normal mode: ready if threshold met OR timed out
+    let isReady;
+    if (strictMode) {
+      isReady = (loaded === total) && (failed === 0) && !timedOut;
+    } else {
+      isReady = percentLoaded >= readyPercent || timedOut;
+    }
 
     // Build summary
     const summary = {
@@ -352,10 +398,19 @@
       elapsedMs,
       percentLoaded,
       isReady,
+      strictMode,
       results: race.results || []
     };
 
     logInfo('Summary:', summary);
+    
+    // In strict mode, log warning if not ready
+    if (strictMode && !isReady) {
+      logWarn('STRICT MODE: Preload NOT ready - some avatars failed or timed out');
+      logWarn(`  - Loaded: ${loaded}/${total}`);
+      logWarn(`  - Failed: ${failed}`);
+      logWarn(`  - Timed out: ${timedOut}`);
+    }
 
     return summary;
   }

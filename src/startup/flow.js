@@ -268,6 +268,19 @@
       
       return;
     }
+    
+    // Guard against showing hub while avatars are preloading
+    const avatarsPreloading = g.game?.state?.avatarsPreloading || g.__avatarsPreloading;
+    if (avatarsPreloading === true) {
+      console.info('[StartupFlow] Avatars are preloading, skipping showIntroHub() call');
+      
+      // Emit telemetry for blocked attempt
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_show_hub_blocked_preloading', {});
+      }
+      
+      return;
+    }
 
     console.info('[StartupFlow] Showing intro hub...');
 
