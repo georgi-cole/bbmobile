@@ -182,7 +182,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     buttons.forEach(({ id, label, action, primary }, index) => {
       const btn = document.createElement('button');
       btn.id = id;
-      btn.className = primary ? 'intro-screen__btn intro-screen__btn--primary' : 'intro-screen__btn';
+      btn.className = primary ? 'intro-screen__btn intro-screen__btn--primary btn btn-primary' : 'intro-screen__btn';
       btn.textContent = label;
       btn.setAttribute('aria-label', label);
       btn.style.setProperty('--stagger-index', index);
