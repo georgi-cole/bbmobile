@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Pause Manager Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .modal { display: none; border: 1px solid #ccc; padding: 10px; margin: 5px 0; }
+    .modal.visible { display: block; background: #f9f9f9; }
+  </style>
+</head>
+<body>
+  <h1>Pause Manager Test</h1>
+
+  <button id="openSettings">Open Settings</button>
+  <button id="closeSettings">Close Settings</button>
+  <div id="settingsModal" class="modal">Settings modal <button class="close">Close</button></div>
+
+  <button id="openMore">Open 3-dots</button>
+  <button id="closeMore">Close 3-dots</button>
+  <div id="moreOptionsMenu" class="modal">More options <button class="close">Close</button></div>
+
+  <p>Game tick counter: <span id="tickCount">0</span></p>
+  <script type="module">
+    import { PauseManager } from '../js/ui/pause-manager.js';
+
+    const settingsModal = document.getElementById('settingsModal');
+    const moreModal = document.getElementById('moreOptionsMenu');
+
+    document.getElementById('openSettings').addEventListener('click', () => {
+      settingsModal.classList.add('visible');
+      PauseManager.open('modal:settings');
+    });
+    document.getElementById('closeSettings').addEventListener('click', () => {
+      settingsModal.classList.remove('visible');
+      PauseManager.close('modal:settings');
+    });
+
+    document.getElementById('openMore').addEventListener('click', () => {
+      moreModal.classList.add('visible');
+      PauseManager.open('modal:more-options');
+    });
+    document.getElementById('closeMore').addEventListener('click', () => {
+      moreModal.classList.remove('visible');
+      PauseManager.close('modal:more-options');
+    });
+
+    const tickEl = document.getElementById('tickCount');
+    let ticks = 0;
+    setInterval(() => {
+      if (!PauseManager.isPaused()) { ticks++; tickEl.textContent = String(ticks); }
+    }, 200);
+  </script>
+</body>
+</html>

@@ -1670,6 +1670,11 @@
       g.PauseController.pause('settings');
     }
     
+    // Also notify PauseManager if available
+    if(g.game?.pauseManager && typeof g.game.pauseManager.open === 'function'){
+      g.game.pauseManager.open('modal:settings');
+    }
+    
     ensureGameCfg();
     const dim = ensureSettingsModal();
     const modal = dim.querySelector('.modal');
@@ -1731,6 +1736,11 @@
       // Resume game systems when closing settings
       if(g.PauseController && typeof g.PauseController.resume === 'function'){
         g.PauseController.resume();
+      }
+      
+      // Also notify PauseManager if available
+      if(g.game?.pauseManager && typeof g.game.pauseManager.close === 'function'){
+        g.game.pauseManager.close('modal:settings');
       }
     }
   }
