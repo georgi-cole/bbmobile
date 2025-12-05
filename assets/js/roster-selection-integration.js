@@ -40,7 +40,8 @@
     if (!el) return null;
     if (el.hasAttribute && el.hasAttribute(idAttr)) return el.getAttribute(idAttr);
     if (idAttr.indexOf('data-') === 0) {
-      var dataKey = idAttr.slice(5).toLowerCase().replace(/-([a-z])/g, function (m, c) { return c.toUpperCase(); });
+      // Convert data-player-id to playerId for dataset access
+      var dataKey = idAttr.slice(5).replace(/-(.)/g, function (m, c) { return c.toUpperCase(); });
       return el.dataset ? el.dataset[dataKey] : null;
     }
     return null;
@@ -59,8 +60,10 @@
       return;
     }
 
-    // Use a simple string-based marker to avoid btoa compatibility issues
-    var marker = '__rosterSelectionAttached_' + (opts.selector + '|' + opts.idAttr).replace(/[^a-zA-Z0-9]/g, '_');
+    // Use a unique marker key to prevent duplicate attachments
+    // Include event type to allow same selector with different events
+    var markerKey = 'sel:' + opts.selector + '|attr:' + opts.idAttr + '|ev:' + opts.event;
+    var marker = '__rosterSelectionAttached_' + markerKey.replace(/[^a-zA-Z0-9]/g, '_');
     if (opts.delegationRoot[marker]) return;
     opts.delegationRoot[marker] = true;
 
