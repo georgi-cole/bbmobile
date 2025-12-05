@@ -40,7 +40,7 @@
     if (!el) return null;
     if (el.hasAttribute && el.hasAttribute(idAttr)) return el.getAttribute(idAttr);
     if (idAttr.indexOf('data-') === 0) {
-      var dataKey = idAttr.slice(5).replace(/-([a-z])/g, function (m, c) { return c.toUpperCase(); });
+      var dataKey = idAttr.slice(5).toLowerCase().replace(/-([a-z])/g, function (m, c) { return c.toUpperCase(); });
       return el.dataset ? el.dataset[dataKey] : null;
     }
     return null;
@@ -49,15 +49,18 @@
   function attachIntegration(opts) {
     opts = Object.assign(defaultOptions(), opts || {});
     if (!window.BBMobile || typeof window.BBMobile.setRosterCardSelectedById !== 'function') {
-      document.addEventListener('DOMContentLoaded', function () {
-        if (window.BBMobile && typeof window.BBMobile.setRosterCardSelectedById === 'function') {
-          attachIntegration(opts);
-        }
-      }, { once: true });
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+          if (window.BBMobile && typeof window.BBMobile.setRosterCardSelectedById === 'function') {
+            attachIntegration(opts);
+          }
+        }, { once: true });
+      }
       return;
     }
 
-    var marker = '__rosterSelectionAttached_' + btoa(opts.selector + '|' + opts.idAttr).replace(/=/g, '');
+    // Use a simple string-based marker to avoid btoa compatibility issues
+    var marker = '__rosterSelectionAttached_' + (opts.selector + '|' + opts.idAttr).replace(/[^a-zA-Z0-9]/g, '_');
     if (opts.delegationRoot[marker]) return;
     opts.delegationRoot[marker] = true;
 
