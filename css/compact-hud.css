@@ -47,9 +47,10 @@
   flex-shrink: 0;
 }
 
-/* Inline player count chip (beside h1) */
-/* flex-shrink: 0 prevents chip from shrinking when header wraps on narrow viewports */
-.compact-hud-chip.players-inline {
+/* Inline chips (beside h1) */
+/* flex-shrink: 0 prevents chips from shrinking when header wraps on narrow viewports */
+.compact-hud-chip.players-inline,
+.compact-hud-chip.season-week-inline {
   flex-shrink: 0;
 }
 
@@ -69,6 +70,10 @@
   z-index: 100;
   flex-wrap: nowrap; /* Prevent wrapping - keep all chips in one row */
   overflow-x: auto; /* Allow horizontal scroll if needed on screens < 320px (tested down to 375px without scroll) */
+  /* Fixed height to prevent dynamic resizing across phases */
+  min-height: 48px;
+  height: 48px;
+  overflow-y: hidden; /* Prevent vertical overflow */
 }
 
 /* Individual HUD Chips */
@@ -138,76 +143,89 @@
   outline-offset: 2px;
 }
 
-/* Icon-only buttons (Settings, Sound) - compact circular style */
+/* Icon-only buttons (Settings, Sound) - emoji-only, no backdrop */
 .compact-hud-chip.icon-button {
-  --chip-base: var(--accent-2);
-  background: linear-gradient(135deg, 
-    color-mix(in srgb, var(--chip-base) 85%, var(--card)) 0%, 
-    color-mix(in srgb, var(--chip-base) 70%, var(--bg)) 100%);
-  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
+  /* Remove all pill/chip styling */
+  background: transparent;
+  border: none;
+  box-shadow: none;
   cursor: pointer;
-  padding: 6px 10px;
+  padding: 6px 8px;
   min-width: unset;
+  border-radius: 4px;
+  /* Keep emoji size consistent */
+  font-size: 1.25rem;
+  line-height: 1;
+  /* Remove transform effects */
+  transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
 .compact-hud-chip.icon-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  opacity: 0.8;
+  transform: none;
+  box-shadow: none;
 }
 
 .compact-hud-chip.icon-button:active {
-  transform: scale(0.98);
+  transform: scale(0.95);
+  opacity: 0.7;
 }
 
 .compact-hud-chip.icon-button:focus-visible {
   outline: 2px solid var(--accent-2);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Settings button specific styling */
 .compact-hud-chip.settings-button {
-  --chip-base: var(--accent-2);
   /* Hide on desktop - only show on mobile */
   display: none;
 }
 
 /* Sound button specific styling */
 .compact-hud-chip.sound-button {
-  --chip-base: var(--accent);
   /* Hide on desktop - only show on mobile */
   display: none;
 }
 
 /* Sound button when muted (aria-pressed="true") */
 .compact-hud-chip.sound-button[aria-pressed="true"] {
-  --chip-base: var(--danger);
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
-/* Action menu button (three dots) - matches icon button styling */
-.compact-hud-chip.action-menu-chip {
-  --chip-base: var(--accent-2);
-  background: linear-gradient(135deg, 
-    color-mix(in srgb, var(--chip-base) 85%, var(--card)) 0%, 
-    color-mix(in srgb, var(--chip-base) 70%, var(--bg)) 100%);
-  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
+/* Action menu button (three dots) - emoji-only, no backdrop */
+.compact-hud-chip.action-menu-button {
+  /* Remove all pill/chip styling */
+  background: transparent;
+  border: none;
+  box-shadow: none;
   cursor: pointer;
-  padding: 6px 10px;
+  padding: 6px 8px;
   min-width: unset;
+  border-radius: 4px;
+  /* Keep emoji size consistent */
+  font-size: 1.25rem;
+  line-height: 1;
+  /* Remove transform effects */
+  transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
-.compact-hud-chip.action-menu-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+.compact-hud-chip.action-menu-button:hover {
+  opacity: 0.8;
+  transform: none;
+  box-shadow: none;
 }
 
-.compact-hud-chip.action-menu-chip:active {
-  transform: scale(0.98);
+.compact-hud-chip.action-menu-button:active {
+  transform: scale(0.95);
+  opacity: 0.7;
 }
 
-.compact-hud-chip.action-menu-chip:focus-visible {
+.compact-hud-chip.action-menu-button:focus-visible {
   outline: 2px solid var(--accent-2);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Legacy self-evict button styles removed - EXIT button in tvHead is now the primary method */
@@ -248,12 +266,22 @@
   .compact-hud {
     gap: 6px;
     padding: 8px 10px;
+    /* Maintain fixed height on mobile */
+    min-height: 44px;
+    height: 44px;
   }
   
   .compact-hud-chip {
     font-size: 0.7rem;
     padding: 5px 9px;
     gap: 3px;
+  }
+  
+  /* Adjust emoji-only button size on mobile */
+  .compact-hud-chip.icon-button,
+  .compact-hud-chip.action-menu-button {
+    font-size: 1.15rem;
+    padding: 5px 6px;
   }
   
   /* Phase compression is handled by JS ResizeObserver */
@@ -467,9 +495,11 @@
     margin-bottom: 0.35em;
   }
   
-  /* Reduce compact-hud padding */
+  /* Reduce compact-hud padding and maintain fixed height */
   .compact-hud {
     padding: 8px 12px;
+    min-height: 46px;
+    height: 46px;
   }
   
   /* Reduce mobile roster container top padding */
@@ -490,6 +520,8 @@
   
   .compact-hud {
     padding: 6px 10px;
+    min-height: 44px;
+    height: 44px;
   }
   
   .mobile-roster-container {
