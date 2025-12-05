@@ -159,20 +159,25 @@
       __sm_resources: new Map()
     };
 
-    // Mock players data
+    // Mock players data with affinity
     const generatePlayers = (count) => {
       const names = [
         'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry',
         'Iris', 'Jack', 'Kelly', 'Leo', 'Maya', 'Noah', 'Olivia', 'Peter'
       ];
       
-      return Array.from({ length: count }, (_, i) => ({
-        id: i + 1,
-        name: names[i] || `Player ${i + 1}`,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${names[i] || `Player${i+1}`}`,
-        affinity: {},
-        evicted: false
-      }));
+      return Array.from({ length: count }, (_, i) => {
+        // Generate random affinity value between -0.3 and 0.3 for variety
+        const affinityValue = (Math.random() * 0.6) - 0.3;
+        
+        return {
+          id: i + 1,
+          name: names[i] || `Player ${i + 1}`,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${names[i] || `Player${i+1}`}`,
+          affinity: { 1: affinityValue },  // Affinity with player 1 (human)
+          evicted: false
+        };
+      });
     };
 
     let currentPlayers = generatePlayers(8);

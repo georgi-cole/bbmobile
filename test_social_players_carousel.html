@@ -147,28 +147,28 @@
     let historyButtonInstance = null;
     let currentResources = { energy: 5, influence: 25, information: 10 };
     
-    // Sample players data
+    // Sample players data with affinity information
     const samplePlayers = [
-      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
-      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
-      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
-      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
-      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' },
-      { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank' },
-      { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace' },
-      { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry' }
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice', affinity: { 1: 0.05 } },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob', affinity: { 1: -0.15 } },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie', affinity: { 1: 0.17 } },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana', affinity: { 1: -0.04 } },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve', affinity: { 1: 0.22 } },
+      { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank', affinity: { 1: -0.18 } },
+      { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace', affinity: { 1: 0.08 } },
+      { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry', affinity: { 1: -0.25 } }
     ];
     
     const manyPlayers = [
       ...samplePlayers,
-      { id: 9, name: 'Iris', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Iris' },
-      { id: 10, name: 'Jack', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack' },
-      { id: 11, name: 'Kelly', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Kelly' },
-      { id: 12, name: 'Leo', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo' },
-      { id: 13, name: 'Maya', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maya' },
-      { id: 14, name: 'Noah', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noah' },
-      { id: 15, name: 'Olivia', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Olivia' },
-      { id: 16, name: 'Peter', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Peter' }
+      { id: 9, name: 'Iris', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Iris', affinity: { 1: 0.12 } },
+      { id: 10, name: 'Jack', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack', affinity: { 1: -0.08 } },
+      { id: 11, name: 'Kelly', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Kelly', affinity: { 1: 0.19 } },
+      { id: 12, name: 'Leo', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo', affinity: { 1: -0.14 } },
+      { id: 13, name: 'Maya', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maya', affinity: { 1: 0.06 } },
+      { id: 14, name: 'Noah', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noah', affinity: { 1: -0.11 } },
+      { id: 15, name: 'Olivia', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Olivia', affinity: { 1: 0.15 } },
+      { id: 16, name: 'Peter', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Peter', affinity: { 1: -0.20 } }
     ];
     
     // Initialize history button

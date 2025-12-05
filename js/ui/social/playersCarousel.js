@@ -130,13 +130,16 @@ export const PlayersCarousel = (() => {
     const safeName = escapeHtml(player.name || 'Unknown');
     const safeAvatarUrl = escapeHtml(avatarUrl);
     
+    // Get relationship/affinity information if available
+    const relationshipInfo = getRelationshipInfo(player);
+    
     return `
       <div class="social-player-avatar-card ${isDisabled ? 'disabled' : ''}"
            role="listitem"
            tabindex="${isDisabled ? '-1' : '0'}"
            data-player-id="${player.id}"
            data-player-index="${index}"
-           aria-label="${safeName}"
+           aria-label="${safeName} ${relationshipInfo.ariaLabel}"
            ${isDisabled ? 'aria-disabled="true"' : ''}>
         
         <div class="social-player-avatar-img">
@@ -147,9 +150,56 @@ export const PlayersCarousel = (() => {
         
         <span class="social-player-avatar-name">${safeName}</span>
         
+        ${relationshipInfo.html}
+        
         <div class="social-player-selection-badge" aria-hidden="true">✓</div>
       </div>
     `;
+  }
+  
+  /**
+   * Get relationship/affinity information for a player
+   */
+  function getRelationshipInfo(player) {
+    // Check if we have affinity data
+    if (!player.affinity || typeof player.affinity !== 'object') {
+      return { html: '', ariaLabel: '' };
+    }
+    
+    // Get human player ID from global context
+    const humanId = (typeof window !== 'undefined' && window.game?.humanId) || state.excludeIds.values().next().value || 1;
+    
+    // Get affinity value with the human player
+    const affinityValue = player.affinity[humanId] || player.affinityToHuman || 0;
+    
+    // Calculate percentage (affinity is typically -1 to 1, convert to percentage)
+    const percentage = Math.round(affinityValue * 100);
+    
+    // Determine relationship status
+    let status = 'NEUTRAL';
+    let statusClass = 'neutral';
+    
+    if (percentage < -10) {
+      status = 'STRAINED';
+      statusClass = 'strained';
+    } else if (percentage > 10) {
+      status = 'FRIENDLY';
+      statusClass = 'friendly';
+    }
+    
+    // Format percentage display
+    const percentageDisplay = percentage >= 0 ? `+${percentage}%` : `${percentage}%`;
+    
+    const html = `
+      <div class="social-player-relationship">
+        <div class="social-player-relationship-status ${statusClass}">${status}</div>
+        <div class="social-player-relationship-percentage">${percentageDisplay}</div>
+      </div>
+    `;
+    
+    const ariaLabel = `${status} relationship: ${percentageDisplay}`;
+    
+    return { html, ariaLabel };
   }
 
   /**
