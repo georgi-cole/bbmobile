@@ -90,6 +90,18 @@
   --popup-inter-delay:800ms; /* delay between popups */
   --popup-content-gap:18px; /* spacing between body content and footer buttons - match HOH specs */
   --popup-button-gap:14px; /* spacing between buttons - match HOH specs */
+
+  /* Typography tokens - reusable design system (PR #3) */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+
+  --font-size-heading-lg: 1.8rem;
+  --font-size-heading-md: 1.3rem;
+  --font-size-heading-sm: 1.1rem;
+  --font-size-body: 1rem;  /* Increased from 0.95rem to respect TV minimum (16px) */
+  --font-size-label: 0.75rem;  /* Increased from 0.7rem for better readability */
+
+  --line-height-tight: 1.1;
+  --line-height-normal: 1.4;
 }
 
 /* THEME DEFINITIONS --------------------------------------------------------- */
@@ -508,6 +520,43 @@ h3{
 .ok{ color:var(--good); }
 .danger{ color:var(--bad); }
 .accent{ color:var(--accent); }
+
+/* Semantic typography utility classes (PR #3) - Reusable design system */
+.text-heading-lg {
+  font-size: var(--font-size-heading-lg);
+  line-height: var(--line-height-tight);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.text-heading-md {
+  font-size: var(--font-size-heading-md);
+  line-height: var(--line-height-tight);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.text-heading-sm {
+  font-size: var(--font-size-heading-sm);
+  line-height: var(--line-height-tight);
+  font-weight: 700;
+}
+
+.text-body {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-normal);
+}
+
+.text-label {
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-tight);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
 
 /* 04. BUTTONS --------------------------------------------------------------- */
 button{ font:inherit; cursor:pointer; }
