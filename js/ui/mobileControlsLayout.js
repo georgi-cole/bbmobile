@@ -130,24 +130,23 @@
       syncSoundButtonState();
     }
 
-    // Add buttons to container in order: settings, then speaker
+    // Always rebuild the container with proper order: player pill, settings, speaker
     mobileControlsContainer.innerHTML = '';
+    
+    // If player pill exists, move it into the cluster first
+    if (playerPill) {
+      // Move player pill into the cluster (whether it's in header or already in container)
+      mobileControlsContainer.appendChild(playerPill);
+    }
+    
+    // Add settings and speaker buttons after player pill
     mobileControlsContainer.appendChild(settingsBtn);
     mobileControlsContainer.appendChild(soundBtn);
 
-    // If player pill exists and is currently in the houseguests-header, 
-    // move it into our cluster first, then add settings and speaker buttons
-    if (playerPill && playerPill.parentNode === houseguestsHeader) {
-      // Clear container and rebuild with proper order: player pill, settings, speaker
-      mobileControlsContainer.innerHTML = '';
-      // Move player pill into the cluster
-      mobileControlsContainer.appendChild(playerPill);
-      mobileControlsContainer.appendChild(settingsBtn);
-      mobileControlsContainer.appendChild(soundBtn);
+    // Append container to houseguests header if not already there
+    if (!mobileControlsContainer.parentNode || mobileControlsContainer.parentNode !== houseguestsHeader) {
+      houseguestsHeader.appendChild(mobileControlsContainer);
     }
-
-    // Append container to houseguests header (after h1)
-    houseguestsHeader.appendChild(mobileControlsContainer);
 
     // Sync sound button state periodically
     syncSoundButtonState();
