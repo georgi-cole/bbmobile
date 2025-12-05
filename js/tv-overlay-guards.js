@@ -34,9 +34,6 @@
     '.tvOverlayContent'
   ];
 
-  // Track processed overlays to avoid redundant work
-  const processedOverlays = new WeakSet();
-
   /**
    * Check if an overlay element is empty (has no active content)
    * @param {HTMLElement} overlay - The overlay element to check
