@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster Audit Tracer Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    h1 { color: #333; }
+    .test-section {
+      margin: 2rem 0;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .player, .roster-card {
+      display: inline-block;
+      margin: 0.5rem;
+      padding: 1rem;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .player:hover, .roster-card:hover {
+      background: #e0e0e0;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .log-output {
+      background: #f8f9fa;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Roster Audit Tracer Test</h1>
+
+  <div class="test-section">
+    <h2>Test 1: Manual Module Load Logging</h2>
+    <p>Click the button to manually log a module load event:</p>
+    <button onclick="testModuleLoaded()">Log Module Load</button>
+    <div id="test1-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Manual Handler Fire Logging</h2>
+    <p>Click the button to manually log a handler fire event:</p>
+    <button onclick="testHandlerFired()">Log Handler Fire</button>
+    <div id="test2-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Auto Hook - Click on Players</h2>
+    <p>Click on the player cards below. The auto hook should log delegated clicks:</p>
+    <div class="player" data-player-id="player1">Player 1</div>
+    <div class="player" data-player-id="player2">Player 2</div>
+    <div class="roster-card" data-player-id="player3">Roster Card 1</div>
+    <div id="test3-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Export Logs</h2>
+    <p>Click to download all captured logs as JSON:</p>
+    <button onclick="testExportLogs()">Export Logs</button>
+    <div id="test4-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: View Current Logs</h2>
+    <button onclick="displayLogs()">Display Current Logs</button>
+    <div id="logs-display" class="log-output" style="display: none;"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Output</h2>
+    <p>Check the browser console for [BBMobile:audit] messages. All events should be logged there.</p>
+  </div>
+
+  <!-- Enable auto hook before loading the tracer -->
+  <script>
+    window.BBMobile = window.BBMobile || {};
+    window.BBMobile.audit = { autoHookSelections: true };
+  </script>
+
+  <!-- Load the audit tracer -->
+  <script src="assets/js/roster-audit-tracer.js"></script>
+
+  <!-- Test functions -->
+  <script>
+    function testModuleLoaded() {
+      const result = document.getElementById('test1-result');
+      try {
+        BBMobile.auditTracer.moduleLoaded('assets/js/roster.js');
+        result.innerHTML = '<p class="success">✓ Module load logged successfully! Check console for details.</p>';
+      } catch (e) {
+        result.innerHTML = '<p class="error">✗ Error: ' + e.message + '</p>';
+      }
+    }
+
+    function testHandlerFired() {
+      const result = document.getElementById('test2-result');
+      try {
+        BBMobile.auditTracer.handlerFired('onPlayerSelected', { 
+          playerId: 'test-player-123',
+          context: 'manual-test'
+        });
+        result.innerHTML = '<p class="success">✓ Handler fire logged successfully! Check console for details.</p>';
+      } catch (e) {
+        result.innerHTML = '<p class="error">✗ Error: ' + e.message + '</p>';
+      }
+    }
+
+    function testExportLogs() {
+      const result = document.getElementById('test4-result');
+      try {
+        const success = BBMobile.auditTracer.exportLogs();
+        if (success) {
+          result.innerHTML = '<p class="success">✓ Logs exported successfully! Check your downloads.</p>';
+        } else {
+          result.innerHTML = '<p class="error">✗ Export failed (check console for details)</p>';
+        }
+      } catch (e) {
+        result.innerHTML = '<p class="error">✗ Error: ' + e.message + '</p>';
+      }
+    }
+
+    function displayLogs() {
+      const display = document.getElementById('logs-display');
+      const logs = BBMobile.auditTracer._logs;
+      
+      if (logs.length === 0) {
+        display.innerHTML = '<p>No logs captured yet. Interact with the test sections above.</p>';
+      } else {
+        display.innerHTML = '<pre>' + JSON.stringify(logs, null, 2) + '</pre>';
+      }
+      display.style.display = 'block';
+    }
+
+    // Initial verification that the tracer is loaded
+    window.addEventListener('DOMContentLoaded', function() {
+      if (window.BBMobile && window.BBMobile.auditTracer) {
+        console.log('✓ Audit tracer loaded successfully');
+        console.log('✓ Auto hook enabled:', window.BBMobile.audit && window.BBMobile.audit.autoHookSelections);
+      } else {
+        console.error('✗ Audit tracer failed to load');
+      }
+    });
+  </script>
+</body>
+</html>
