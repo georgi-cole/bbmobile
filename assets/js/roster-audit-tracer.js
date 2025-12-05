@@ -71,15 +71,24 @@
     ];
     var root = document;
     root.addEventListener('click', function (ev) {
-      var sel = null, el = ev.target;
+      var sel = null, el = ev.target, matchedSelector = null;
       for (var i = 0; i < selectorList.length; i++) {
-        if (el && el.closest && (sel = el.closest(selectorList[i]))) break;
+        var candidate = el && el.closest ? el.closest(selectorList[i]) : null;
+        if (candidate) {
+          sel = candidate;
+          matchedSelector = selectorList[i];
+          break;
+        }
       }
       if (!sel) return;
       var pid = sel.getAttribute('data-player-id') || (sel.dataset && (sel.dataset.playerId || sel.dataset.id)) || null;
-      handlerFired('delegatedClick', { selectorMatched: selectorList[i], playerId: pid });
+      handlerFired('delegatedClick', { selectorMatched: matchedSelector, playerId: pid });
     }, false);
     pushLog('autoHookEnabled', 'delegatedClick', { selectors: selectorList });
+  }
+
+  function getLogs() {
+    return logs.slice(); // Return a copy to prevent external modification
   }
 
   // Public API
@@ -87,6 +96,7 @@
     moduleLoaded: moduleLoaded,
     handlerFired: handlerFired,
     exportLogs: exportLogs,
+    getLogs: getLogs,
     _logs: logs
   };
 

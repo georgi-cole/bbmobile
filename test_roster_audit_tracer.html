@@ -150,7 +150,7 @@
 
     function displayLogs() {
       const display = document.getElementById('logs-display');
-      const logs = BBMobile.auditTracer._logs;
+      const logs = BBMobile.auditTracer.getLogs();
       
       if (logs.length === 0) {
         display.innerHTML = '<p>No logs captured yet. Interact with the test sections above.</p>';
