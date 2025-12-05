@@ -230,13 +230,6 @@ body:not(.main-screen-built) .topbar {
   text-align: center;
   animation: intro-btn-stagger 600ms ease-out backwards;
   animation-delay: calc(100ms + var(--stagger-index, 0) * 60ms);
-  /* Improve text rendering quality */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  /* Prevent text rendering artifacts with backdrop blur */
-  transform: translateZ(0);
-  will-change: transform;
 }
 
 @keyframes intro-btn-stagger {
@@ -276,9 +269,6 @@ body:not(.main-screen-built) .topbar {
   box-shadow: 0 6px 24px rgba(0, 212, 255, 0.4),
               0 0 40px rgba(0, 212, 255, 0.2);
   animation-delay: 0ms; /* Play button appears first */
-  /* Improve text rendering quality for primary button */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 .intro-screen__btn--primary:hover {
