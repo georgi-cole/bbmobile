@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster Mobile Styles - Opt-in Test</title>
+  
+  <!-- Load mobile_version3.css which now imports roster-mobile.css -->
+  <link rel="stylesheet" href="mobile_version3.css">
+  
+  <style>
+    body {
+      padding: 20px;
+      background: #0d151f;
+      color: #f5f6ff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 2px solid rgba(0, 229, 255, 0.3);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    
+    .info-box {
+      padding: 15px;
+      margin: 15px 0;
+      background: rgba(58, 159, 255, 0.1);
+      border-left: 4px solid #3a9fff;
+      border-radius: 4px;
+    }
+    
+    .status {
+      font-family: monospace;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(0, 229, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Roster Mobile Styles - Opt-in Test</h1>
+  
+  <div class="info-box">
+    <strong>📋 Test Purpose:</strong> Verify that roster-mobile.css is loaded via mobile_version3.css and only applies to elements wrapped in <code>.roster-screen--new</code> class.
+  </div>
+  
+  <div class="test-section">
+    <h2>❌ Section 1: Without .roster-screen--new wrapper</h2>
+    <p><strong>Expected:</strong> No special roster styles applied (regular layout)</p>
+    <div class="roster-grid">
+      <div class="roster-card">
+        <div style="width: 150px; height: 225px; background: #333; border-radius: 8px; padding: 10px;">
+          <div class="roster-name">Player Without Wrapper</div>
+          <div class="roster-badges">
+            <span style="background: #3a9fff; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">Test</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-section roster-screen--new">
+    <h2>✅ Section 2: With .roster-screen--new wrapper</h2>
+    <p><strong>Expected:</strong> On mobile (≤768px), roster styles should apply - 2-column grid, card styles, etc.</p>
+    <p><strong>Current viewport:</strong> <span class="status" id="viewport-width"></span></p>
+    
+    <div class="roster-grid">
+      <div class="roster-card">
+        <img class="roster-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=player1" alt="Player 1">
+        <div class="roster-info">
+          <div class="roster-name">Sarah Martinez</div>
+          <div class="roster-badges">
+            <span style="background: #e74c3c; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">HOH</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="roster-card is-selected">
+        <img class="roster-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=player2" alt="Player 2">
+        <div class="roster-info">
+          <div class="roster-name">James Chen</div>
+          <div class="roster-badges">
+            <span style="background: #f39c12; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">POV</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="roster-card">
+        <img class="roster-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=player3" alt="Player 3">
+        <div class="roster-info">
+          <div class="roster-name">Emily Davis</div>
+          <div class="roster-badges">
+            <span style="background: #27ae60; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Safe</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="roster-card">
+        <img class="roster-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=player4" alt="Player 4">
+        <div class="roster-info">
+          <div class="roster-name">Michael Brown</div>
+          <div class="roster-badges">
+            <span style="background: #8e44ad; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Juror</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="info-box">
+    <h3>🔍 Verification Checklist:</h3>
+    <ul id="checklist">
+      <li>✓ CSS file loaded: <code>css/roster-mobile.css</code></li>
+      <li>✓ Styles scoped to: <code>.roster-screen--new</code></li>
+      <li>✓ Media query: <code>@media (max-width: 768px)</code></li>
+      <li>Resize viewport to ≤768px to see mobile styles</li>
+      <li>Section 1 (no wrapper) should NOT have grid layout</li>
+      <li>Section 2 (with wrapper) SHOULD have 2-column grid on mobile</li>
+      <li>Selected card should have checkmark overlay</li>
+      <li>Cards should have aspect ratio 2:3</li>
+    </ul>
+  </div>
+  
+  <div id="computed-styles" style="margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 8px; font-family: monospace; font-size: 0.85rem;">
+    <h3>📊 Computed Styles (for Section 2 .roster-grid):</h3>
+    <div id="style-output"></div>
+  </div>
+
+  <script>
+    // Display viewport width
+    function updateViewportWidth() {
+      const width = window.innerWidth;
+      document.getElementById('viewport-width').textContent = width + 'px';
+      
+      if (width <= 768) {
+        document.getElementById('viewport-width').style.background = 'rgba(39, 174, 96, 0.3)';
+      } else {
+        document.getElementById('viewport-width').style.background = 'rgba(231, 76, 60, 0.3)';
+      }
+    }
+    
+    updateViewportWidth();
+    window.addEventListener('resize', updateViewportWidth);
+    
+    // Check computed styles
+    window.addEventListener('load', () => {
+      const rosterGrid = document.querySelector('.roster-screen--new .roster-grid');
+      if (rosterGrid) {
+        const computedStyle = window.getComputedStyle(rosterGrid);
+        const styleOutput = document.getElementById('style-output');
+        
+        const styles = {
+          'display': computedStyle.display,
+          'grid-template-columns': computedStyle.gridTemplateColumns,
+          'gap': computedStyle.gap,
+          'padding': computedStyle.padding,
+        };
+        
+        let html = '';
+        for (const [prop, value] of Object.entries(styles)) {
+          html += `<div><strong>${prop}:</strong> ${value}</div>`;
+        }
+        
+        styleOutput.innerHTML = html;
+        
+        console.log('✅ roster-mobile.css loaded successfully');
+        console.log('Computed styles:', styles);
+      } else {
+        console.error('❌ .roster-screen--new .roster-grid not found');
+      }
+    });
+  </script>
+</body>
+</html>
