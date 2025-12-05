@@ -60,22 +60,28 @@
   
   /**
    * Check if local avatar folder lookups should be skipped
-   * Returns true if on GitHub Pages AND avatarLocalFolderEnabled is false
+   * Returns true if on GitHub Pages AND avatarLocalFolderEnabled is false (default)
    * This avoids 404 churn for local ./avatars/* requests on GitHub Pages
+   * 
+   * IMPORTANT for strict mode: Local avatars must exist if using strict mode,
+   * OR avatarLocalFolderEnabled must be explicitly set to false to skip local lookups
+   * and use external (Dicebear) avatars only.
+   * 
    * @returns {boolean} True if local folder lookups should be skipped
    */
   function shouldSkipLocalFolderLookups() {
     const cfg = g.game?.cfg || g.cfg || {};
+    const onGitHubPages = isGitHubPages();
+    const strictMode = cfg.avatarPreloadRequireAll === true;
     
     // Check explicit config setting first
     // When avatarLocalFolderEnabled is explicitly set to false, skip local lookups
     if (cfg.avatarLocalFolderEnabled === false) {
-      if (isGitHubPages()) {
+      if (onGitHubPages) {
         console.info('[AvatarPreload] Skipping local folder lookups - explicitly disabled for GitHub Pages');
-        return true;
+      } else {
+        console.info('[AvatarPreload] Skipping local folder lookups - explicitly disabled');
       }
-      // Even if not on GitHub Pages, honor explicit disable
-      console.info('[AvatarPreload] Skipping local folder lookups - explicitly disabled');
       return true;
     }
     
@@ -84,10 +90,22 @@
       return false;
     }
     
-    // Auto-detect mode: if on GitHub Pages with no explicit setting, prefer external
+    // Auto-detect mode: if on GitHub Pages with no explicit setting, default to false
     // This prevents 404 churn when local avatars don't exist on GitHub Pages
-    if (isGitHubPages()) {
-      console.info('[AvatarPreload] Auto-detected GitHub Pages - skipping local folder lookups');
+    if (onGitHubPages) {
+      console.info('[AvatarPreload] Auto-detected GitHub Pages - defaulting avatarLocalFolderEnabled to false');
+      // Set the config value so it's explicit for strict mode
+      if (cfg) {
+        cfg.avatarLocalFolderEnabled = false;
+      }
+      
+      // Warn if strict mode is enabled without local avatars
+      if (strictMode) {
+        console.warn('[AvatarPreload] STRICT MODE WARNING: avatarLocalFolderEnabled=false on GitHub Pages.');
+        console.warn('[AvatarPreload] All avatars will use external (Dicebear) sources.');
+        console.warn('[AvatarPreload] For strict mode with local avatars, set avatarLocalFolderEnabled=true');
+      }
+      
       return true;
     }
     

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avatar Preload Strict Mode Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #0a0e14;
+      color: #e0e0e0;
+    }
+    
+    h1, h2 {
+      color: #4a90e2;
+    }
+    
+    .test-section {
+      background: #1a1e24;
+      border: 1px solid #2a3a4a;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    
+    .config-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #242830;
+      border-radius: 6px;
+    }
+    
+    .config-item label {
+      flex: 1;
+      cursor: pointer;
+    }
+    
+    .config-item input[type="checkbox"] {
+      cursor: pointer;
+    }
+    
+    .config-item input[type="number"] {
+      width: 80px;
+      padding: 4px 8px;
+      background: #1a1e24;
+      border: 1px solid #2a3a4a;
+      border-radius: 4px;
+      color: #e0e0e0;
+    }
+    
+    .button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms ease;
+      margin: 8px 8px 8px 0;
+    }
+    
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    
+    .button:active {
+      transform: translateY(0);
+    }
+    
+    .button.secondary {
+      background: linear-gradient(135deg, #6a7a8a 0%, #4a5a6a 100%);
+    }
+    
+    .button.danger {
+      background: linear-gradient(135deg, #e24a4a 0%, #bd3535 100%);
+    }
+    
+    .log {
+      background: #0a0e14;
+      border: 1px solid #2a3a4a;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 16px 0;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1e24;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-error {
+      color: #ff6b6b;
+    }
+    
+    .log-warn {
+      color: #ffa94d;
+    }
+    
+    .log-success {
+      color: #51cf66;
+    }
+    
+    .log-info {
+      color: #4a90e2;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    
+    .status-idle {
+      background: #2a3a4a;
+      color: #9a9a9a;
+    }
+    
+    .status-loading {
+      background: #4a90e2;
+      color: white;
+    }
+    
+    .status-success {
+      background: #51cf66;
+      color: white;
+    }
+    
+    .status-error {
+      background: #ff6b6b;
+      color: white;
+    }
+    
+    .info-box {
+      background: #242830;
+      border-left: 4px solid #4a90e2;
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+    }
+    
+    .warning-box {
+      background: #2a2416;
+      border-left: 4px solid #ffa94d;
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+    }
+  </style>
+  
+  <!-- Load dependencies -->
+  <link rel="stylesheet" href="css/intro.css">
+  <script src="js/preload/avatar-queue.js"></script>
+</head>
+<body>
+  <h1>🔒 Avatar Preload Strict Mode Test</h1>
+  
+  <div class="info-box">
+    <strong>Test Purpose:</strong> Validate strict avatar preload behavior (Option B).
+    <br>
+    In strict mode, ALL avatars must successfully load AND decode before the game proceeds.
+  </div>
+  
+  <div class="test-section">
+    <h2>Configuration</h2>
+    <div class="config-grid">
+      <div class="config-item">
+        <input type="checkbox" id="cfg-strict" checked>
+        <label for="cfg-strict">Strict Mode (avatarPreloadRequireAll)</label>
+      </div>
+      <div class="config-item">
+        <input type="checkbox" id="cfg-proceed">
+        <label for="cfg-proceed">Enable "Proceed Anyway" Button (QA)</label>
+      </div>
+      <div class="config-item">
+        <input type="checkbox" id="cfg-local">
+        <label for="cfg-local">Enable Local Avatar Folder</label>
+      </div>
+      <div class="config-item">
+        <label for="cfg-timeout">Timeout (ms):</label>
+        <input type="number" id="cfg-timeout" value="30000" min="1000" max="120000" step="1000">
+      </div>
+      <div class="config-item">
+        <label for="cfg-concurrency">Concurrency:</label>
+        <input type="number" id="cfg-concurrency" value="8" min="1" max="32" step="1">
+      </div>
+      <div class="config-item">
+        <label for="cfg-players">Player Count:</label>
+        <input type="number" id="cfg-players" value="16" min="1" max="30" step="1">
+      </div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Scenarios</h2>
+    <button class="button" onclick="runTest('success')">✅ Test Success (All Load)</button>
+    <button class="button danger" onclick="runTest('partial-fail')">❌ Test Partial Failure (Some 404s)</button>
+    <button class="button danger" onclick="runTest('timeout')">⏱️ Test Timeout</button>
+    <button class="button danger" onclick="runTest('decode-fail')">🔧 Test Decode Failure</button>
+    <button class="button secondary" onclick="clearLog()">🗑️ Clear Log</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Status <span id="status-badge" class="status-badge status-idle">Idle</span></h2>
+    <div id="progress-display" style="margin: 16px 0; font-size: 18px; font-weight: 600;">
+      Progress: <span id="progress-loaded">0</span>/<span id="progress-total">0</span>
+      (<span id="progress-percent">0</span>%)
+    </div>
+    <div id="result-display"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Console Log</h2>
+    <div class="log" id="test-log"></div>
+  </div>
+  
+  <div class="warning-box">
+    <strong>Configuration Notes:</strong>
+    <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+      <li><strong>Strict Mode:</strong> Requires all avatars to load+decode successfully. No auto-proceed on timeout/failure.</li>
+      <li><strong>Proceed Anyway:</strong> QA-only override button shown on error (set cfg.enableProceedAnyway=true).</li>
+      <li><strong>Local Avatar Folder:</strong> Enable to test with local ./avatars/* files. Disable to use Dicebear only.</li>
+      <li><strong>GitHub Pages:</strong> Auto-detects and disables local folder by default to avoid 404s.</li>
+    </ul>
+  </div>
+  
+  <script>
+    // Initialize window.game namespace
+    if (!window.game) window.game = {};
+    if (!window.game.cfg) window.game.cfg = {};
+    
+    // Telemetry stub
+    if (!window.Telemetry) {
+      window.Telemetry = {
+        log: (event, data) => {
+          appendLog(`[Telemetry] ${event}`, data, 'info');
+        }
+      };
+    }
+    
+    // Dicebear URL generator
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    // Generate mock players
+    function generatePlayers(count, failurePattern = null) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        const player = {
+          id: i,
+          name: `Player ${i + 1}`,
+          avatar: null
+        };
+        
+        // Apply failure pattern
+        if (failurePattern === 'partial-fail' && (i % 3 === 0)) {
+          // Every 3rd player gets a 404 URL
+          player.avatar = `https://example.com/nonexistent-avatar-${i}.png`;
+        } else if (failurePattern === 'decode-fail' && (i % 4 === 0)) {
+          // Every 4th player gets a potentially problematic URL
+          player.avatar = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><text>Invalid</text></svg>`;
+        } else {
+          // Use Dicebear
+          player.avatar = window.getDicebearUrl(player.name);
+        }
+        
+        players.push(player);
+      }
+      return players;
+    }
+    
+    // Apply config from UI
+    function applyConfig() {
+      const cfg = window.game.cfg;
+      cfg.avatarPreloadRequireAll = document.getElementById('cfg-strict').checked;
+      cfg.enableProceedAnyway = document.getElementById('cfg-proceed').checked;
+      cfg.avatarLocalFolderEnabled = document.getElementById('cfg-local').checked;
+      cfg.avatarPreloadTimeoutMs = parseInt(document.getElementById('cfg-timeout').value, 10);
+      cfg.avatarPreloadConcurrency = parseInt(document.getElementById('cfg-concurrency').value, 10);
+      
+      appendLog('Config updated:', cfg, 'info');
+    }
+    
+    // Update status badge
+    function setStatus(status, text) {
+      const badge = document.getElementById('status-badge');
+      badge.className = `status-badge status-${status}`;
+      badge.textContent = text;
+    }
+    
+    // Update progress display
+    function updateProgress(loaded, total) {
+      document.getElementById('progress-loaded').textContent = loaded;
+      document.getElementById('progress-total').textContent = total;
+      const percent = total > 0 ? Math.floor((loaded / total) * 100) : 0;
+      document.getElementById('progress-percent').textContent = percent;
+    }
+    
+    // Append log entry
+    function appendLog(message, data = null, type = 'info') {
+      const log = document.getElementById('test-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      
+      const timestamp = new Date().toLocaleTimeString();
+      let text = `[${timestamp}] ${message}`;
+      
+      if (data && typeof data === 'object') {
+        text += '\n' + JSON.stringify(data, null, 2);
+      } else if (data !== null) {
+        text += ` ${data}`;
+      }
+      
+      entry.textContent = text;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+    
+    // Clear log
+    function clearLog() {
+      document.getElementById('test-log').innerHTML = '';
+      document.getElementById('result-display').innerHTML = '';
+      updateProgress(0, 0);
+      setStatus('idle', 'Idle');
+    }
+    
+    // Run test scenario
+    async function runTest(scenario) {
+      applyConfig();
+      clearLog();
+      setStatus('loading', 'Testing...');
+      
+      appendLog(`Starting test: ${scenario}`, null, 'info');
+      
+      const playerCount = parseInt(document.getElementById('cfg-players').value, 10);
+      let players;
+      
+      // Generate players based on scenario
+      switch (scenario) {
+        case 'success':
+          players = generatePlayers(playerCount, null);
+          appendLog('Generated players with valid Dicebear URLs', null, 'success');
+          break;
+        case 'partial-fail':
+          players = generatePlayers(playerCount, 'partial-fail');
+          appendLog('Generated players with some 404 URLs', null, 'warn');
+          break;
+        case 'timeout':
+          // Use extremely short timeout to force timeout
+          window.game.cfg.avatarPreloadTimeoutMs = 100;
+          players = generatePlayers(playerCount, null);
+          appendLog('Set timeout to 100ms to force timeout', null, 'warn');
+          break;
+        case 'decode-fail':
+          players = generatePlayers(playerCount, 'decode-fail');
+          appendLog('Generated players with potentially problematic decode URLs', null, 'warn');
+          break;
+        default:
+          players = generatePlayers(playerCount, null);
+      }
+      
+      updateProgress(0, players.length);
+      
+      try {
+        // Call the preloader
+        const AvatarQueue = window.AvatarQueue;
+        if (!AvatarQueue || !AvatarQueue.preloadAvatarsQueued) {
+          throw new Error('AvatarQueue not available');
+        }
+        
+        const result = await AvatarQueue.preloadAvatarsQueued(players, {
+          onProgress: (loaded, total) => {
+            updateProgress(loaded, total);
+            appendLog(`Progress: ${loaded}/${total}`, null, 'info');
+          }
+        });
+        
+        // Display result
+        appendLog('Preload complete', result, result.isReady ? 'success' : 'error');
+        
+        const resultDiv = document.getElementById('result-display');
+        const success = result.loaded === result.total && result.failed === 0 && !result.timedOut;
+        
+        resultDiv.innerHTML = `
+          <div class="${success ? 'info-box' : 'warning-box'}" style="margin-top: 16px;">
+            <strong>Result Summary:</strong><br>
+            Total: ${result.total}<br>
+            Loaded: ${result.loaded}<br>
+            Failed: ${result.failed}<br>
+            Decoded: ${result.decoded}<br>
+            Decode Supported: ${result.decodeSupported}<br>
+            Timed Out: ${result.timedOut}<br>
+            Elapsed: ${result.elapsedMs}ms<br>
+            Strict Mode: ${result.strictMode}<br>
+            Is Ready: ${result.isReady}<br>
+            <br>
+            <strong>Verdict:</strong> ${success ? '✅ SUCCESS' : '❌ FAILURE'}
+          </div>
+        `;
+        
+        if (success) {
+          setStatus('success', 'Success');
+          appendLog('✅ All avatars loaded and decoded successfully', null, 'success');
+        } else {
+          setStatus('error', 'Failed');
+          if (result.timedOut) {
+            appendLog('⏱️ Preload timed out', null, 'error');
+          }
+          if (result.failed > 0) {
+            appendLog(`❌ ${result.failed} avatar(s) failed to load`, null, 'error');
+          }
+          
+          if (window.game.cfg.avatarPreloadRequireAll) {
+            appendLog('🔒 STRICT MODE: avatars:ready event will NOT be dispatched', null, 'warn');
+            appendLog('Overlay will remain visible until manual intervention', null, 'warn');
+          }
+        }
+        
+      } catch (err) {
+        appendLog('Test error:', err.message, 'error');
+        setStatus('error', 'Error');
+        
+        const resultDiv = document.getElementById('result-display');
+        resultDiv.innerHTML = `
+          <div class="warning-box" style="margin-top: 16px;">
+            <strong>Error:</strong> ${err.message}
+          </div>
+        `;
+      }
+    }
+    
+    // Initialize
+    appendLog('Test page loaded', null, 'success');
+    appendLog('AvatarQueue available: ' + !!(window.AvatarQueue), null, 'info');
+  </script>
+</body>
+</html>

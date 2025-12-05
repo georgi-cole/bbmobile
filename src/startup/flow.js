@@ -268,6 +268,18 @@
       
       return;
     }
+    
+    // Guard against showing hub while avatars are preloading
+    if (g.__avatarsPreloading === true) {
+      console.info('[StartupFlow] Avatars are preloading, skipping showIntroHub() call');
+      
+      // Emit telemetry for blocked attempt
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_show_hub_blocked_preloading', {});
+      }
+      
+      return;
+    }
 
     console.info('[StartupFlow] Showing intro hub...');
 

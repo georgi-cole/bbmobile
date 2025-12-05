@@ -890,10 +890,34 @@ console.info('[IntroScreen] Script executing – pre-init');
     progress.setAttribute('aria-valuenow', '0');
     progress.textContent = '0%';
     
+    // Error message container (hidden by default)
+    const errorContainer = document.createElement('div');
+    errorContainer.className = 'intro-avatar-preload-error';
+    errorContainer.id = 'avatarPreloadError';
+    errorContainer.style.display = 'none';
+    errorContainer.setAttribute('role', 'alert');
+    
+    // Error message text
+    const errorText = document.createElement('div');
+    errorText.className = 'intro-avatar-preload-error-text';
+    errorText.id = 'avatarPreloadErrorText';
+    
+    // "Proceed anyway" button (QA-only)
+    const proceedButton = document.createElement('button');
+    proceedButton.className = 'intro-avatar-preload-proceed-btn';
+    proceedButton.id = 'avatarPreloadProceedBtn';
+    proceedButton.textContent = 'Proceed Anyway';
+    proceedButton.setAttribute('aria-label', 'Proceed to game despite avatar loading errors');
+    proceedButton.style.display = 'none'; // Hidden by default, shown only if enableProceedAnyway=true
+    
+    errorContainer.appendChild(errorText);
+    errorContainer.appendChild(proceedButton);
+    
     overlay.appendChild(spinner);
     overlay.appendChild(liveRegion);
     overlay.appendChild(text);
     overlay.appendChild(progress);
+    overlay.appendChild(errorContainer);
     
     return overlay;
   }
@@ -1065,14 +1089,17 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   /**
-   * Perform avatar preloading with overlay display.
+   * Perform avatar preloading with overlay display and strict mode enforcement.
    * Uses queued parallel loading from avatar-queue.js for better mobile stability.
    * Shows overlay, waits for players to be ready, preloads avatars, updates progress, then hides overlay.
-   * Fires avatars:ready event when complete.
+   * In strict mode: only fires avatars:ready event if ALL avatars load+decode successfully.
    * @returns {Promise<Object>} The preload result summary
    */
   async function performAvatarPreload() {
     console.info('[AvatarPreload] Starting avatar preload workflow');
+    
+    // Set global flag to indicate preloading is in progress
+    window.__avatarsPreloading = true;
     
     // Show overlay immediately so user sees feedback
     const overlay = showAvatarPreloadOverlay();
@@ -1083,9 +1110,13 @@ console.info('[IntroScreen] Script executing – pre-init');
     const preloadAvatarsQueued = AvatarQueue?.preloadAvatarsQueued;
     const legacyPreloadAvatars = g.preloadAvatars || window.preloadAvatars;
     
-    // Get load mode from config
+    // Get config including strict mode flag
     const cfg = g.game?.cfg || g.cfg || {};
     const loadMode = cfg.avatarLoadMode || 'batch';
+    const strictMode = cfg.avatarPreloadRequireAll === true;
+    const enableProceedAnyway = cfg.enableProceedAnyway === true;
+    
+    console.info('[AvatarPreload] Strict mode:', strictMode);
     
     // Wait for players to be ready before proceeding
     const players = await waitForPlayersReady();
@@ -1094,7 +1125,8 @@ console.info('[IntroScreen] Script executing – pre-init');
     try {
       if (g.Telemetry && typeof g.Telemetry.log === 'function') {
         g.Telemetry.log('avatar_preload_start', { 
-          playerCount: players.length
+          playerCount: players.length,
+          strictMode
         });
       }
     } catch (e) {
@@ -1104,6 +1136,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Skip if no players after waiting
     if (!players || players.length === 0) {
       console.warn('[AvatarPreload] No players to preload avatars for after waiting, skipping');
+      window.__avatarsPreloading = false;
       // Dispatch avatars:ready event even if skipped
       try {
         if (AvatarQueue?.dispatchAvatarsReady) {
@@ -1119,6 +1152,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     // If neither preloader is available, skip with warning
     if (!preloadAvatarsQueued && !legacyPreloadAvatars) {
       console.warn('[AvatarPreload] No avatar preloader available, skipping');
+      window.__avatarsPreloading = false;
       await hideAvatarPreloadOverlay(overlay);
       return { loaded: 0, total: 0, timedOut: false, skipped: true };
     }
@@ -1129,6 +1163,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         g.Telemetry.log('avatar_preload_workflow_start', { 
           playerCount: players.length,
           loadMode,
+          strictMode,
           useQueuedPreloader: !!preloadAvatarsQueued
         });
       }
@@ -1144,24 +1179,29 @@ console.info('[IntroScreen] Script executing – pre-init');
         console.info('[AvatarPreload] Using queued avatar preloader');
         result = await preloadAvatarsQueued(players, {
           concurrency: cfg.avatarPreloadConcurrency || 8,
-          timeout: cfg.avatarPreloadTimeoutMs || AVATAR_PRELOAD_TIMEOUT,
-          readyPercent: cfg.avatarReadyPercent || 0.99,
+          timeout: cfg.avatarPreloadTimeoutMs || (strictMode ? 30000 : AVATAR_PRELOAD_TIMEOUT),
+          readyPercent: cfg.avatarReadyPercent || (strictMode ? 1.0 : 0.99),
+          strictMode: strictMode,
           onProgress: (loaded, total) => {
-            updateAvatarPreloadProgress(loaded, total);
+            // Use requestAnimationFrame for smooth updates
+            if (typeof requestAnimationFrame === 'function') {
+              requestAnimationFrame(() => updateAvatarPreloadProgress(loaded, total));
+            } else {
+              updateAvatarPreloadProgress(loaded, total);
+            }
           }
         });
-        
-        // Dispatch avatars:ready event
-        if (AvatarQueue?.dispatchAvatarsReady) {
-          AvatarQueue.dispatchAvatarsReady(result);
-        }
       } else {
         // Fall back to legacy preloader
         console.info('[AvatarPreload] Using legacy avatar preloader');
         result = await legacyPreloadAvatars(players, {
-          timeout: AVATAR_PRELOAD_TIMEOUT,
+          timeout: strictMode ? 30000 : AVATAR_PRELOAD_TIMEOUT,
           onProgress: (loaded, total) => {
-            updateAvatarPreloadProgress(loaded, total);
+            if (typeof requestAnimationFrame === 'function') {
+              requestAnimationFrame(() => updateAvatarPreloadProgress(loaded, total));
+            } else {
+              updateAvatarPreloadProgress(loaded, total);
+            }
           }
         });
       }
@@ -1176,8 +1216,53 @@ console.info('[IntroScreen] Script executing – pre-init');
           failed: result.failed || (result.total - result.loaded),
           decodeSupported: result.decodeSupported,
           timedOut: result.timedOut,
-          elapsedMs: result.elapsedMs
+          elapsedMs: result.elapsedMs,
+          strictMode: result.strictMode,
+          isReady: result.isReady
         });
+      }
+      
+      // STRICT MODE ENFORCEMENT
+      // Check if preload succeeded according to strict mode rules
+      const preloadSuccess = strictMode 
+        ? (result.loaded === result.total && result.failed === 0 && !result.timedOut)
+        : result.isReady;
+      
+      if (!preloadSuccess) {
+        // Preload failed or timed out in strict mode
+        console.warn('[AvatarPreload] STRICT MODE: Preload not successful');
+        console.warn(`  - Loaded: ${result.loaded}/${result.total}`);
+        console.warn(`  - Failed: ${result.failed || 0}`);
+        console.warn(`  - Timed out: ${result.timedOut}`);
+        
+        // Show error message in overlay
+        showAvatarPreloadError(result, enableProceedAnyway);
+        
+        // Log telemetry for strict mode failure
+        try {
+          if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+            g.Telemetry.log('avatar_preload_strict_failure', {
+              loaded: result.loaded,
+              total: result.total,
+              failed: result.failed || 0,
+              timedOut: result.timedOut
+            });
+          }
+        } catch (e) {
+          // Non-blocking
+        }
+        
+        // Do NOT dispatch avatars:ready event - system must wait
+        // Keep overlay visible with error message
+        // User must manually proceed or fix the issue
+        
+        // Keep __avatarsPreloading flag set so StartupFlow doesn't re-show hub
+        return result;
+      }
+      
+      // Success - dispatch avatars:ready event and proceed
+      if (AvatarQueue?.dispatchAvatarsReady) {
+        AvatarQueue.dispatchAvatarsReady(result);
       }
       
       // Log telemetry for avatars_ready_event
@@ -1187,7 +1272,8 @@ console.info('[IntroScreen] Script executing – pre-init');
             loaded: result?.loaded || 0,
             total: result?.total || 0,
             timedOut: result?.timedOut || false,
-            elapsedMs: result?.elapsedMs || 0
+            elapsedMs: result?.elapsedMs || 0,
+            strictMode
           });
         }
       } catch (e) {
@@ -1202,20 +1288,39 @@ console.info('[IntroScreen] Script executing – pre-init');
       // Hide overlay with animation
       await hideAvatarPreloadOverlay(overlay);
       
+      // Clear preloading flag
+      window.__avatarsPreloading = false;
+      
       return result;
     } catch (err) {
       console.error('[AvatarPreload] Avatar preload error:', err);
       
+      // Clear preloading flag
+      window.__avatarsPreloading = false;
+      
       // Log telemetry for error
       try {
         if (g.Telemetry && typeof g.Telemetry.log === 'function') {
-          g.Telemetry.log('avatar_preload_workflow_error', { error: err.message });
+          g.Telemetry.log('avatar_preload_workflow_error', { error: err.message, strictMode });
         }
       } catch (e) {
         // Non-blocking telemetry
       }
       
-      // Dispatch avatars:ready event with timeout flag on error
+      // In strict mode, show error instead of proceeding
+      if (strictMode) {
+        const errorResult = { 
+          loaded: 0, 
+          total: players.length, 
+          failed: players.length,
+          timedOut: false, 
+          error: true 
+        };
+        showAvatarPreloadError(errorResult, enableProceedAnyway);
+        return errorResult;
+      }
+      
+      // Non-strict mode: dispatch avatars:ready event with timeout flag on error
       try {
         if (AvatarQueue?.dispatchAvatarsReady) {
           AvatarQueue.dispatchAvatarsReady({ 
@@ -1234,6 +1339,68 @@ console.info('[IntroScreen] Script executing – pre-init');
       
       return { loaded: 0, total: players.length, timedOut: true, error: true };
     }
+  }
+  
+  /**
+   * Show error message in avatar preload overlay
+   * @param {Object} result - Preload result summary
+   * @param {boolean} enableProceedAnyway - Whether to show "Proceed anyway" button
+   */
+  function showAvatarPreloadError(result, enableProceedAnyway) {
+    // Hide spinner and progress
+    const spinner = document.querySelector('.intro-avatar-preload-spinner');
+    const progress = document.getElementById('avatarPreloadProgress');
+    const text = document.getElementById('avatarPreloadText');
+    
+    if (spinner) spinner.style.display = 'none';
+    if (progress) progress.style.display = 'none';
+    if (text) text.style.display = 'none';
+    
+    // Show error container
+    const errorContainer = document.getElementById('avatarPreloadError');
+    const errorText = document.getElementById('avatarPreloadErrorText');
+    const proceedBtn = document.getElementById('avatarPreloadProceedBtn');
+    
+    if (errorContainer) {
+      errorContainer.style.display = 'flex';
+    }
+    
+    // Build error message
+    let message = 'Failed to load all houseguest profiles.\n\n';
+    if (result.timedOut) {
+      message += `Timeout after ${Math.floor((result.elapsedMs || 0) / 1000)}s\n`;
+    }
+    message += `Loaded: ${result.loaded || 0}/${result.total || 0}\n`;
+    message += `Failed: ${result.failed || 0}`;
+    
+    if (errorText) {
+      errorText.textContent = message;
+    }
+    
+    // Show "Proceed anyway" button if enabled
+    if (proceedBtn) {
+      if (enableProceedAnyway) {
+        proceedBtn.style.display = 'block';
+        proceedBtn.onclick = () => {
+          console.warn('[AvatarPreload] User manually proceeded despite errors');
+          // Clear flag and proceed
+          window.__avatarsPreloading = false;
+          // Dispatch avatars:ready with error flag
+          const AvatarQueue = g.AvatarQueue || window.AvatarQueue;
+          if (AvatarQueue?.dispatchAvatarsReady) {
+            AvatarQueue.dispatchAvatarsReady({ ...result, manualProceed: true });
+          }
+          // Hide overlay
+          hideAvatarPreloadOverlay(document.getElementById('avatarPreloadOverlay'));
+          // Continue to game
+          handleButtonAction('intro:play', 'Play');
+        };
+      } else {
+        proceedBtn.style.display = 'none';
+      }
+    }
+    
+    console.error('[AvatarPreload] Strict mode error - overlay remains visible');
   }
 
 
