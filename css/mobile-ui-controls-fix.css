@@ -65,7 +65,7 @@
   .houseguests-header .mobile-control-btn,
   .hg-count-cluster .settings-btn,
   .hg-count-cluster .speaker-chip {
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
     padding: 6px 10px;
