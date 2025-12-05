@@ -1186,7 +1186,8 @@ console.info('[IntroScreen] Script executing – pre-init');
     const overlay = showAvatarPreloadOverlay();
     updateAvatarPreloadProgress(0, 1); // Show 0% while waiting
     
-    // Check for avatar-queue module (preferred) or legacy preloadAvatars
+    // Check for avatar cache module (preferred), avatar-queue module, or legacy preloadAvatars
+    const AvatarCacheModule = g.AvatarCache || window.AvatarCache;
     const AvatarQueue = g.AvatarQueue || window.AvatarQueue;
     const preloadAvatarsQueued = AvatarQueue?.preloadAvatarsQueued;
     const legacyPreloadAvatars = g.preloadAvatars || window.preloadAvatars;
@@ -1207,7 +1208,8 @@ console.info('[IntroScreen] Script executing – pre-init');
       if (g.Telemetry && typeof g.Telemetry.log === 'function') {
         g.Telemetry.log('avatar_preload_start', { 
           playerCount: players.length,
-          strictMode
+          strictMode,
+          usesAvatarCache: !!AvatarCacheModule
         });
       }
     } catch (e) {
@@ -1230,8 +1232,8 @@ console.info('[IntroScreen] Script executing – pre-init');
       return { loaded: 0, total: 0, timedOut: false, skipped: true };
     }
     
-    // If neither preloader is available, skip with warning
-    if (!preloadAvatarsQueued && !legacyPreloadAvatars) {
+    // If no preloader is available, skip with warning
+    if (!AvatarCacheModule && !preloadAvatarsQueued && !legacyPreloadAvatars) {
       console.warn('[AvatarPreload] No avatar preloader available, skipping');
       setAvatarsPreloadingState(false);
       await hideAvatarPreloadOverlay(overlay);
@@ -1255,7 +1257,23 @@ console.info('[IntroScreen] Script executing – pre-init');
     try {
       let result;
       
-      if (preloadAvatarsQueued) {
+      if (AvatarCacheModule && typeof AvatarCacheModule.preloadPlayers === 'function') {
+        // Use unified avatar cache (preferred)
+        console.info('[AvatarPreload] Using unified AvatarCache module');
+        result = await AvatarCacheModule.preloadPlayers(players, {
+          strictMode: strictMode,
+          timeout: cfg.avatarPreloadTimeoutMs || (strictMode ? 30000 : AVATAR_PRELOAD_TIMEOUT),
+          concurrency: cfg.avatarPreloadConcurrency || 8,
+          onProgress: (loaded, total) => {
+            // Use requestAnimationFrame for smooth updates
+            if (typeof requestAnimationFrame === 'function') {
+              requestAnimationFrame(() => updateAvatarPreloadProgress(loaded, total));
+            } else {
+              updateAvatarPreloadProgress(loaded, total);
+            }
+          }
+        });
+      } else if (preloadAvatarsQueued) {
         // Use new queued preloader with concurrency control
         console.info('[AvatarPreload] Using queued avatar preloader');
         result = await preloadAvatarsQueued(players, {
