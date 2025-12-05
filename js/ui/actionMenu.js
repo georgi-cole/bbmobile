@@ -27,14 +27,12 @@
     MAX_RETRY_ATTEMPTS: 10, // Maximum number of initialization attempts
     // Buttons to group into the menu (in order)
     GROUPED_BUTTONS: [
-      { id: 'btnOpenSettings', icon: '⚙️', label: 'Settings' },
       { id: 'btnRules', icon: '📋', label: 'Rules' },
       { id: 'btnProfile', icon: '👤', label: 'Profile' },
       { id: 'btnStartQuick', icon: '▶', label: 'Restart' },
-      // Note: dynamic flag indicates button state changes, but we use static icon
-      // in menu since the original button handles its own icon updates
-      { id: 'btnMuteToggle', icon: '🔊', label: 'Sound', dynamic: true },
       { id: 'xpLeaderboardBadge', icon: '📊', label: 'Leaderboard' },
+      // EXIT triggers self-eviction functionality
+      { id: 'btnExit', icon: '🚪', label: 'EXIT', action: 'exit' },
     ],
   };
 
@@ -114,8 +112,12 @@
     list.className = 'action-menu-list';
     list.setAttribute('role', 'none');
 
-    // Filter to only include buttons that exist
+    // Filter to only include buttons that exist or have custom actions
     const validButtons = CONFIG.GROUPED_BUTTONS.filter(buttonConfig => {
+      // Allow buttons with custom actions (like EXIT) even if DOM element doesn't exist
+      if (buttonConfig.action) {
+        return true;
+      }
       const exists = !!document.getElementById(buttonConfig.id);
       if (!exists) {
         console.warn(`[ActionMenu] Original button not found: ${buttonConfig.id}`);
@@ -155,13 +157,13 @@
 
       // Add click handler
       itemButton.addEventListener('click', () => {
-        handleMenuItemClick(buttonConfig.id);
+        handleMenuItemClick(buttonConfig);
       });
 
       list.appendChild(item);
 
-      // Add divider after first item (Settings)
-      if (index === 0 && validButtons.length > 1) {
+      // Add divider after Leaderboard item (before EXIT)
+      if (buttonConfig.id === 'xpLeaderboardBadge' && validButtons.length > index + 1) {
         const divider = document.createElement('div');
         divider.className = 'action-menu-divider';
         divider.setAttribute('role', 'separator');
@@ -317,19 +319,33 @@
   /**
    * Handle menu item click
    */
-  function handleMenuItemClick(originalButtonId) {
+  function handleMenuItemClick(buttonConfig) {
     // Close menu first
     closeMenu();
 
+    // Handle custom actions
+    if (buttonConfig.action === 'exit') {
+      // Use requestAnimationFrame for better responsiveness
+      requestAnimationFrame(() => {
+        // Trigger self-eviction functionality
+        if (typeof global.selfEviction?.requestHuman === 'function') {
+          global.selfEviction.requestHuman();
+        } else {
+          console.warn('[ActionMenu] selfEviction.requestHuman not available');
+        }
+      });
+      return;
+    }
+
     // Find and trigger the original button
-    const originalButton = document.getElementById(originalButtonId);
+    const originalButton = document.getElementById(buttonConfig.id);
     if (originalButton) {
       // Use requestAnimationFrame for better responsiveness
       requestAnimationFrame(() => {
         originalButton.click();
       });
     } else {
-      console.warn(`[ActionMenu] Original button not found: ${originalButtonId}`);
+      console.warn(`[ActionMenu] Original button not found: ${buttonConfig.id}`);
     }
   }
 
