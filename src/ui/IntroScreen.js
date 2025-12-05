@@ -173,7 +173,7 @@ console.info('[IntroScreen] Script executing – pre-init');
 
     const buttons = [
       { id: 'intro-btn-play', label: playLabel, action: 'intro:play', primary: true },
-      { id: 'intro-btn-rules', label: 'Rules', action: 'intro:open:rules' },
+      { id: 'intro-btn-houseguests', label: 'Houseguests', action: 'intro:open:houseguests' },
       { id: 'intro-btn-profile', label: 'Profile', action: 'intro:open:profile' },
       { id: 'intro-btn-leaderboard', label: 'Leaderboard', action: 'intro:open:leaderboard' },
       { id: 'intro-btn-credits', label: 'Credits', action: 'intro:open:credits' }
@@ -469,7 +469,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Fallback: Map actions to global function names (for backward compatibility)
     const actionMap = {
       'intro:play': { fn: 'enterGame', obj: 'StartupFlow', method: 'enterGame' },
-      'intro:open:rules': { fn: 'showRulesModal' },
+      'intro:open:houseguests': { fallback: { obj: 'HouseguestsModal', method: 'open' } },
       'intro:open:profile': { fn: 'showProfileModal', fallback: { obj: 'ProfileModal', method: 'open' } },
       'intro:open:settings': { fn: 'showSettingsModal', click: 'btnOpenSettings' },
       'intro:open:leaderboard': { fn: 'showLeaderboard', fallback: { obj: 'ProgressionUI', method: 'showLeaderboard' }, click: 'xpLeaderboardBadge' },
