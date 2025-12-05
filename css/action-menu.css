@@ -63,31 +63,31 @@
   user-select: none;
 }
 
-/* Popover menu container */
+/* Popover menu container - centered modal style */
 .action-menu-popover {
   position: fixed;
-  top: 120px; /* Position below compact HUD */
-  right: 12px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
   z-index: 10000;
   background: var(--card, #1e2936);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 
-              0 4px 8px rgba(0, 0, 0, 0.2);
-  min-width: 200px;
-  max-width: 280px;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 
+              0 8px 16px rgba(0, 0, 0, 0.4);
+  min-width: 260px;
+  max-width: 320px;
   overflow: hidden;
   /* Animation */
   opacity: 0;
-  transform: translateY(-8px) scale(0.95);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
 }
 
-/* Popover visible state */
+/* Popover visible state - centered and scaled up */
 .action-menu-popover.visible {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translate(-50%, -50%) scale(1);
   pointer-events: auto;
 }
 
@@ -159,7 +159,7 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Backdrop overlay (for click-outside detection) */
+/* Backdrop overlay - dimmed background for modal effect */
 .action-menu-backdrop {
   position: fixed;
   top: 0;
@@ -167,12 +167,18 @@
   right: 0;
   bottom: 0;
   z-index: 9999;
-  background: transparent;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: background 0.2s ease, backdrop-filter 0.2s ease;
   display: none;
 }
 
 .action-menu-backdrop.visible {
   display: block;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 /* Theme-aware styling
@@ -206,8 +212,9 @@ body[data-theme="apartment"] .action-menu-item button:focus {
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .action-menu-popover {
-    right: 8px;
-    max-width: calc(100vw - 32px);
+    /* Keep centered positioning on mobile */
+    max-width: calc(100vw - 48px);
+    min-width: 240px;
   }
 }
 
