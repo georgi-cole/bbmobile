@@ -94,30 +94,51 @@
       item.className = 'houseguests-list__item';
       item.setAttribute('aria-label', `View ${houseguest.fullName}`);
 
-      // Avatar (using existing avatar system)
+      // Avatar (using avatar cache if available, fallback to direct loading)
       const avatar = document.createElement('div');
       avatar.className = 'houseguests-list__avatar';
       
-      // Try to get avatar from game's avatar resolver, or use direct path
+      // Try to get avatar from cache first
+      const AvatarCache = global.AvatarCache || window.AvatarCache;
       let avatarUrl = null;
-      if (global.getAvatar) {
+      
+      if (AvatarCache && typeof AvatarCache.getUrl === 'function') {
+        avatarUrl = AvatarCache.getUrl(houseguest);
+      } else if (global.resolveAvatar) {
+        avatarUrl = global.resolveAvatar(houseguest);
+      } else if (global.getAvatar) {
         avatarUrl = global.getAvatar(houseguest.name);
       } else {
         // Direct fallback to avatars folder
         avatarUrl = `avatars/${houseguest.name}.png`;
       }
       
-      // Set background image
-      avatar.style.backgroundImage = `url(${avatarUrl})`;
+      // Check if avatar is already cached
+      const cached = AvatarCache && AvatarCache.has(houseguest);
       
-      // Handle image load error - fallback to initials
-      const testImg = new Image();
-      testImg.onerror = () => {
-        avatar.style.backgroundImage = 'none';
-        avatar.textContent = houseguest.name.charAt(0);
+      if (cached) {
+        // Use cached image immediately
+        avatar.style.backgroundImage = `url(${avatarUrl})`;
+      } else {
+        // Show placeholder while loading
+        avatar.classList.add('houseguests-list__avatar--loading');
         avatar.style.backgroundColor = getColorForName(houseguest.name);
-      };
-      testImg.src = avatarUrl;
+        avatar.textContent = houseguest.name.charAt(0);
+        
+        // Load image in background
+        const img = new Image();
+        img.onload = () => {
+          avatar.classList.remove('houseguests-list__avatar--loading');
+          avatar.style.backgroundImage = `url(${avatarUrl})`;
+          avatar.textContent = '';
+          avatar.style.backgroundColor = '';
+        };
+        img.onerror = () => {
+          // Keep placeholder on error
+          avatar.classList.remove('houseguests-list__avatar--loading');
+        };
+        img.src = avatarUrl;
+      }
 
       // Info
       const info = document.createElement('div');
@@ -185,26 +206,44 @@
     const avatar = document.createElement('div');
     avatar.className = 'houseguests-detail__avatar';
     
-    // Try to get avatar from game's avatar resolver, or use direct path
+    // Try to get avatar from cache first
+    const AvatarCache = global.AvatarCache || window.AvatarCache;
     let avatarUrl = null;
-    if (global.getAvatar) {
+    
+    if (AvatarCache && typeof AvatarCache.getUrl === 'function') {
+      avatarUrl = AvatarCache.getUrl(selectedHouseguest);
+    } else if (global.resolveAvatar) {
+      avatarUrl = global.resolveAvatar(selectedHouseguest);
+    } else if (global.getAvatar) {
       avatarUrl = global.getAvatar(selectedHouseguest.name);
     } else {
       // Direct fallback to avatars folder
       avatarUrl = `avatars/${selectedHouseguest.name}.png`;
     }
     
-    // Set background image
-    avatar.style.backgroundImage = `url(${avatarUrl})`;
+    // Check if avatar is already cached
+    const cached = AvatarCache && AvatarCache.has(selectedHouseguest);
     
-    // Handle image load error - fallback to initials
-    const testImg = new Image();
-    testImg.onerror = () => {
-      avatar.style.backgroundImage = 'none';
-      avatar.textContent = selectedHouseguest.name.charAt(0);
+    if (cached) {
+      // Use cached image immediately
+      avatar.style.backgroundImage = `url(${avatarUrl})`;
+    } else {
+      // Show placeholder while loading
       avatar.style.backgroundColor = getColorForName(selectedHouseguest.name);
-    };
-    testImg.src = avatarUrl;
+      avatar.textContent = selectedHouseguest.name.charAt(0);
+      
+      // Load image in background
+      const img = new Image();
+      img.onload = () => {
+        avatar.style.backgroundImage = `url(${avatarUrl})`;
+        avatar.textContent = '';
+        avatar.style.backgroundColor = '';
+      };
+      img.onerror = () => {
+        // Keep placeholder on error
+      };
+      img.src = avatarUrl;
+    }
 
     const nameLabel = document.createElement('h3');
     nameLabel.className = 'houseguests-detail__name';

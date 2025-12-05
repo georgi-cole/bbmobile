@@ -249,6 +249,62 @@
     });
   }
 
+  // ===== BACKGROUND AVATAR WARM-UP =====
+
+  /**
+   * Start background warm-up of houseguest avatars after Intro Hub is shown.
+   * This preloads avatars opportunistically without blocking the user.
+   * When the HousGuests button is pressed, avatars should already be cached.
+   */
+  async function startAvatarWarmUp() {
+    console.info('[StartupFlow] Starting background avatar warm-up...');
+
+    // Emit telemetry
+    if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+      g.Telemetry.log('startup_avatar_warmup_start', {});
+    }
+
+    // Check if AvatarCache is available
+    const AvatarCache = g.AvatarCache || window.AvatarCache;
+    if (!AvatarCache || typeof AvatarCache.preloadHouseguests !== 'function') {
+      console.warn('[StartupFlow] AvatarCache not available for warm-up');
+      return;
+    }
+
+    try {
+      // Preload houseguest avatars in background (non-blocking)
+      // This will use the cache so if already loaded via PLAY flow, it's instant
+      const result = await AvatarCache.preloadHouseguests({
+        strictMode: false, // Non-strict for background warm-up
+        onProgress: (loaded, total) => {
+          // Log milestone progress
+          if (loaded === total || loaded % 5 === 0) {
+            console.info(`[StartupFlow] Avatar warm-up progress: ${loaded}/${total}`);
+          }
+        }
+      });
+
+      console.info('[StartupFlow] Avatar warm-up complete:', result);
+
+      // Emit telemetry
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_avatar_warmup_complete', {
+          total: result.total,
+          loaded: result.loaded,
+          cached: result.cached,
+          elapsed: result.elapsed
+        });
+      }
+    } catch (err) {
+      console.warn('[StartupFlow] Avatar warm-up error:', err);
+      
+      // Emit telemetry
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_avatar_warmup_error', { error: err.message });
+      }
+    }
+  }
+
   // ===== INTRO HUB DISPLAY =====
 
   /**
@@ -347,6 +403,15 @@
           console.info('[StartupFlow] Skipping lobby music (disabled or muted)');
         }
       }
+
+      // Start background avatar warm-up (non-blocking)
+      // This preloads houseguest avatars opportunistically
+      // Small delay to let hub render first
+      setTimeout(() => {
+        startAvatarWarmUp().catch(err => {
+          console.warn('[StartupFlow] Avatar warm-up failed:', err);
+        });
+      }, 500);
 
     } catch (err) {
       console.error('[StartupFlow] Error showing intro hub:', err);
@@ -795,6 +860,18 @@
         window.NewsModal.open();
       } else {
         console.warn('[StartupFlow] NewsModal not available');
+      }
+    });
+
+    // Houseguests button - open Houseguests modal
+    bus.on('intro:open:houseguests', function() {
+      console.info('[StartupFlow] Houseguests button clicked');
+      if (g.HouseguestsModal && typeof g.HouseguestsModal.open === 'function') {
+        g.HouseguestsModal.open();
+      } else if (window.HouseguestsModal && typeof window.HouseguestsModal.open === 'function') {
+        window.HouseguestsModal.open();
+      } else {
+        console.warn('[StartupFlow] HouseguestsModal not available');
       }
     });
   }
