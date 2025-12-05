@@ -42,7 +42,13 @@
   opacity: 0.6;
   pointer-events: none;
   animation: float-up-fade 8s ease-in-out infinite;
+  animation-play-state: paused;
   filter: blur(0.5px);
+}
+
+/* Play animations only when modal is visible */
+.houseguests-modal--visible .houseguests-modal__floating-emoji {
+  animation-play-state: running;
 }
 
 @keyframes float-up-fade {
