@@ -1036,8 +1036,20 @@ header.innerHTML = `
       const tileSize=computeTopTileSize(host, n);
       host.style.setProperty('--topTile', tileSize+'px');
 
-      const row=document.createElement('div'); row.className='top-roster-row';
-      host.appendChild(row);
+      // Create opt-in wrapper for new mobile roster styles
+      const wrapper = document.createElement('div'); 
+      wrapper.className = 'roster-screen roster-screen--new';
+      
+      // Create roster-grid container with role="list"
+      const grid = document.createElement('div'); 
+      grid.className = 'roster-grid top-roster-row';
+      grid.setAttribute('role', 'list');
+      
+      wrapper.appendChild(grid);
+      host.appendChild(wrapper);
+      
+      // Use grid as the row container for player tiles
+      const row = grid;
 
       // Reorder players with dynamic priority: human, HOH, nominees, POV, others, then evicted
       const allPlayers = (game.players||[]).slice();
@@ -1102,7 +1114,12 @@ header.innerHTML = `
       const orderedPlayers = [...orderedActive, ...evictedPlayers];
 
       orderedPlayers.forEach((p, displayIndex)=>{
-      const tile=document.createElement('div'); tile.className='top-roster-tile';
+      const tile=document.createElement('div'); 
+      tile.className='top-roster-tile roster-card';
+      
+      // Add accessibility attributes for new roster-card
+      tile.setAttribute('role', 'listitem');
+      tile.setAttribute('tabindex', '0');
       
       // Add data attributes for tracking
       tile.dataset.playerId = p.id || '';
@@ -1174,14 +1191,18 @@ header.innerHTML = `
       }
 
       const img=document.createElement('img');
-      img.className='top-tile-avatar' + (p.evicted?' grayed':'');
+      img.className='top-tile-avatar roster-avatar' + (p.evicted?' grayed':'');
       img.src=getAvatar(p); img.alt=p.name||'guest';
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);
 
+      // Create roster-info wrapper for name and badges
+      const info = document.createElement('div');
+      info.className = 'roster-info';
+
       // Name/Status label - show icons or text that replaces the name
-      const name=document.createElement('div'); 
-      name.className='top-tile-name';
+      const name = document.createElement('div'); 
+      name.className = 'top-tile-name roster-name';
       
       // Initialize label variables with fallback to player name
       // This ensures we always have a valid label even if no special status applies
@@ -1280,7 +1301,10 @@ header.innerHTML = `
       wrap.addEventListener('touchstart', (e)=>{ e.preventDefault(); showProfileFor(p, e.touches[0]); }, {passive:false});
       wrap.addEventListener('touchend', ()=> hideProfileTip());
 
-      tile.appendChild(wrap); tile.appendChild(name);
+      // Append name to info container, then info to tile
+      info.appendChild(name);
+      tile.appendChild(wrap); 
+      tile.appendChild(info);
       row.appendChild(tile);
     });
 
