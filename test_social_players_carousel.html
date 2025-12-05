@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Players Carousel & History Button Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/ui/social-players-carousel.css">
+  <link rel="stylesheet" href="css/ui/topbar-history-button.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0d1b2a;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .test-header h1 {
+      color: #3498db;
+      margin: 0 0 10px 0;
+    }
+    
+    .test-controls {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    
+    .test-controls h2 {
+      margin-top: 0;
+      color: #f7b955;
+    }
+    
+    button.test-btn {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button.test-btn:hover {
+      background: #2980b9;
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    
+    .test-output h2 {
+      margin-top: 0;
+      color: #f7b955;
+    }
+    
+    .log-entry {
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid #3498db;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    
+    .module-wrapper {
+      background: linear-gradient(135deg, rgba(22, 33, 62, 0.98), rgba(13, 27, 42, 0.98));
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      margin-bottom: 30px;
+    }
+    
+    .topbar-wrapper {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>👥 Social Players Carousel & History Button Test</h1>
+      <p>Test the horizontal scrollable players carousel and top bar history button</p>
+    </div>
+    
+    <div class="test-controls">
+      <h2>Test Controls</h2>
+      <button class="test-btn" onclick="loadSamplePlayers()">Load 8 Players</button>
+      <button class="test-btn" onclick="loadManyPlayers()">Load 16 Players</button>
+      <button class="test-btn" onclick="testMultiSelect()">Enable Multi-Select</button>
+      <button class="test-btn" onclick="testSingleSelect()">Enable Single-Select</button>
+      <button class="test-btn" onclick="testExcludeHuman()">Exclude Human Player</button>
+      <button class="test-btn" onclick="clearSelection()">Clear Selection</button>
+      <button class="test-btn" onclick="updateResources()">Update Resources</button>
+    </div>
+    
+    <div class="module-wrapper">
+      <h2 style="color: #3498db; margin-top: 0;">Top Bar with Resources & History Button</h2>
+      <div class="topbar-wrapper">
+        <div id="historyButtonContainer"></div>
+      </div>
+    </div>
+    
+    <div class="test-output">
+      <h2>Selected Players</h2>
+      <div id="selectedOutput">
+        <p style="opacity: 0.6;">No players selected yet. Click on player avatars to select.</p>
+      </div>
+    </div>
+    
+    <div class="module-wrapper">
+      <h2 style="color: #3498db; margin-top: 0;">Players Carousel</h2>
+      <div id="playersCarouselContainer"></div>
+    </div>
+    
+    <div class="test-output" style="margin-top: 30px;">
+      <h2>Event Log</h2>
+      <div id="logOutput"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { PlayersCarousel } from './js/ui/social/playersCarousel.js';
+    import { HistoryButton } from './js/ui/topbar/historyButton.js';
+    
+    let playersCarouselInstance = null;
+    let historyButtonInstance = null;
+    let currentResources = { energy: 5, influence: 25, information: 10 };
+    
+    // Sample players data
+    const samplePlayers = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' },
+      { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank' },
+      { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace' },
+      { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry' }
+    ];
+    
+    const manyPlayers = [
+      ...samplePlayers,
+      { id: 9, name: 'Iris', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Iris' },
+      { id: 10, name: 'Jack', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack' },
+      { id: 11, name: 'Kelly', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Kelly' },
+      { id: 12, name: 'Leo', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo' },
+      { id: 13, name: 'Maya', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maya' },
+      { id: 14, name: 'Noah', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noah' },
+      { id: 15, name: 'Olivia', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Olivia' },
+      { id: 16, name: 'Peter', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Peter' }
+    ];
+    
+    // Initialize history button
+    function initHistoryButton() {
+      const container = document.getElementById('historyButtonContainer');
+      
+      historyButtonInstance = HistoryButton.init({
+        container: container,
+        resources: currentResources,
+        onOpen: () => {
+          log('History button clicked - opening history view');
+          
+          // Create sample history content
+          const historyHtml = `
+            <div style="padding: 16px;">
+              <h3 style="color: #3498db; margin-top: 0;">Recent Activity</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="padding: 12px; background: rgba(46, 204, 113, 0.1); border-left: 3px solid #2ecc71; border-radius: 4px;">
+                  <strong style="color: #2ecc71;">✓ Small Talk with Bob</strong>
+                  <p style="margin: 4px 0 0 0; opacity: 0.8; font-size: 0.9em;">Built rapport (+0.5 Influence)</p>
+                  <span style="opacity: 0.6; font-size: 0.85em;">2 minutes ago</span>
+                </div>
+                <div style="padding: 12px; background: rgba(52, 152, 219, 0.1); border-left: 3px solid #3498db; border-radius: 4px;">
+                  <strong style="color: #3498db;">ℹ Strategize with Alice</strong>
+                  <p style="margin: 4px 0 0 0; opacity: 0.8; font-size: 0.9em;">Discussed game plans (+1 Information)</p>
+                  <span style="opacity: 0.6; font-size: 0.85em;">5 minutes ago</span>
+                </div>
+                <div style="padding: 12px; background: rgba(231, 76, 60, 0.1); border-left: 3px solid #e74c3c; border-radius: 4px;">
+                  <strong style="color: #e74c3c;">⚠ Confronted Charlie</strong>
+                  <p style="margin: 4px 0 0 0; opacity: 0.8; font-size: 0.9em;">Addressed conflict directly (-2 Influence with Charlie)</p>
+                  <span style="opacity: 0.6; font-size: 0.85em;">10 minutes ago</span>
+                </div>
+              </div>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                <h3 style="color: #9b59b6; margin-top: 0;">This Week's Summary</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                  <div style="padding: 12px; background: rgba(52, 152, 219, 0.1); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: bold; color: #3498db;">12</div>
+                    <div style="opacity: 0.8; font-size: 0.9em;">Actions Taken</div>
+                  </div>
+                  <div style="padding: 12px; background: rgba(46, 204, 113, 0.1); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: bold; color: #2ecc71;">+15</div>
+                    <div style="opacity: 0.8; font-size: 0.9em;">Influence Gained</div>
+                  </div>
+                  <div style="padding: 12px; background: rgba(155, 89, 182, 0.1); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: bold; color: #9b59b6;">+8</div>
+                    <div style="opacity: 0.8; font-size: 0.9em;">Information Gained</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          historyButtonInstance.showHistoryModal(historyHtml);
+        }
+      });
+      
+      log('History button initialized');
+    }
+    
+    // Load sample players
+    window.loadSamplePlayers = function() {
+      log('Loading 8 sample players...');
+      initPlayersCarousel(samplePlayers, false, []);
+    };
+    
+    window.loadManyPlayers = function() {
+      log('Loading 16 players...');
+      initPlayersCarousel(manyPlayers, false, []);
+    };
+    
+    window.testMultiSelect = function() {
+      log('Switching to multi-select mode...');
+      if (playersCarouselInstance) {
+        playersCarouselInstance.destroy();
+      }
+      initPlayersCarousel(samplePlayers, true, []);
+    };
+    
+    window.testSingleSelect = function() {
+      log('Switching to single-select mode...');
+      if (playersCarouselInstance) {
+        playersCarouselInstance.destroy();
+      }
+      initPlayersCarousel(samplePlayers, false, []);
+    };
+    
+    window.testExcludeHuman = function() {
+      log('Excluding human player (ID 1)...');
+      if (playersCarouselInstance) {
+        playersCarouselInstance.destroy();
+      }
+      initPlayersCarousel(samplePlayers, false, [1]);
+    };
+    
+    window.clearSelection = function() {
+      log('Clearing player selection...');
+      if (playersCarouselInstance) {
+        playersCarouselInstance.clearSelection();
+        document.getElementById('selectedOutput').innerHTML = '<p style="opacity: 0.6;">Selection cleared.</p>';
+      }
+    };
+    
+    window.updateResources = function() {
+      // Simulate resource changes
+      currentResources.energy = Math.floor(Math.random() * 10);
+      currentResources.influence = Math.floor(Math.random() * 100);
+      currentResources.information = Math.floor(Math.random() * 100);
+      
+      if (historyButtonInstance) {
+        historyButtonInstance.updateResources(currentResources);
+        log(`Resources updated: Energy=${currentResources.energy}, Influence=${currentResources.influence}, Insights=${currentResources.information}`);
+      }
+    };
+    
+    function initPlayersCarousel(players, multiSelect, excludeIds) {
+      // Clean up existing instance
+      if (playersCarouselInstance) {
+        playersCarouselInstance.destroy();
+      }
+      
+      const container = document.getElementById('playersCarouselContainer');
+      
+      playersCarouselInstance = PlayersCarousel.init({
+        container: container,
+        players: players,
+        multiSelect: multiSelect,
+        maxVisible: 8,
+        excludeIds: excludeIds,
+        onSelect: (selectedIds) => {
+          displaySelectedPlayers(selectedIds, players);
+          log(`Selected player IDs: [${selectedIds.join(', ')}]`);
+        }
+      });
+      
+      log(`Players carousel initialized with ${players.length - excludeIds.length} players (${multiSelect ? 'multi' : 'single'}-select mode)`);
+    }
+    
+    function displaySelectedPlayers(selectedIds, players) {
+      const output = document.getElementById('selectedOutput');
+      
+      if (selectedIds.length === 0) {
+        output.innerHTML = '<p style="opacity: 0.6;">No players selected.</p>';
+        return;
+      }
+      
+      const selectedPlayers = players.filter(p => selectedIds.includes(p.id));
+      
+      output.innerHTML = `
+        <div style="padding: 16px; background: rgba(247, 185, 85, 0.1); border: 2px solid #f7b955; border-radius: 8px;">
+          <h3 style="margin: 0 0 12px 0; color: #f7b955;">
+            ${selectedIds.length} Player${selectedIds.length > 1 ? 's' : ''} Selected
+          </h3>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+            ${selectedPlayers.map(p => `
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                <img src="${p.avatar}" 
+                     alt="${p.name}" 
+                     style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #f7b955;">
+                <span style="font-weight: 600;">${p.name}</span>
+                <span style="opacity: 0.6; font-size: 0.9em;">(ID: ${p.id})</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    function log(message) {
+      const logOutput = document.getElementById('logOutput');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logOutput.insertBefore(entry, logOutput.firstChild);
+      
+      // Limit log entries
+      while (logOutput.children.length > 20) {
+        logOutput.removeChild(logOutput.lastChild);
+      }
+    }
+    
+    // Auto-initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Page loaded. Initializing components...');
+      initHistoryButton();
+      loadSamplePlayers();
+    });
+  </script>
+</body>
+</html>

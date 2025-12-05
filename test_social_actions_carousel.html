@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Actions Carousel Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/ui/social-carousel.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0d1b2a;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .test-header h1 {
+      color: #3498db;
+      margin: 0 0 10px 0;
+    }
+    
+    .test-controls {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    
+    .test-controls h2 {
+      margin-top: 0;
+      color: #f7b955;
+    }
+    
+    button.test-btn {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button.test-btn:hover {
+      background: #2980b9;
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    
+    .test-output h2 {
+      margin-top: 0;
+      color: #f7b955;
+    }
+    
+    .log-entry {
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid #3498db;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    
+    .carousel-wrapper {
+      background: linear-gradient(135deg, rgba(22, 33, 62, 0.98), rgba(13, 27, 42, 0.98));
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🎭 Social Actions Carousel Test</h1>
+      <p>Test the horizontal scrollable actions carousel with snap, navigation, and keyboard support</p>
+    </div>
+    
+    <div class="test-controls">
+      <h2>Test Controls</h2>
+      <button class="test-btn" onclick="loadSampleActions()">Load Sample Actions</button>
+      <button class="test-btn" onclick="loadManyActions()">Load Many Actions (15)</button>
+      <button class="test-btn" onclick="simulateDisabled()">Simulate Disabled Actions</button>
+      <button class="test-btn" onclick="testKeyboardNav()">Test Keyboard Navigation</button>
+      <button class="test-btn" onclick="clearCarousel()">Clear Carousel</button>
+    </div>
+    
+    <div class="test-output">
+      <h2>Selected Action</h2>
+      <div id="selectedOutput">
+        <p style="opacity: 0.6;">No action selected yet. Click on an action card or use arrow keys to select.</p>
+      </div>
+    </div>
+    
+    <div class="carousel-wrapper">
+      <div id="actionsCarouselContainer"></div>
+    </div>
+    
+    <div class="test-output" style="margin-top: 30px;">
+      <h2>Event Log</h2>
+      <div id="logOutput"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { ActionsCarousel } from './js/ui/social/actionsCarousel.js';
+    
+    let carouselInstance = null;
+    
+    // Sample actions data
+    const sampleActions = [
+      { id: 'smalltalk', label: 'Small Talk', description: 'Light conversation to build rapport', cost: 1, category: 'friendly', canAfford: true },
+      { id: 'strategize', label: 'Strategize', description: 'Discuss game plans and alliances', cost: 2, category: 'strategic', canAfford: true },
+      { id: 'confide', label: 'Confide', description: 'Share personal thoughts and build trust', cost: 2, category: 'friendly', canAfford: true },
+      { id: 'interrogate', label: 'Interrogate', description: 'Press for information about plans', cost: 2, category: 'aggressive', canAfford: true },
+      { id: 'compliment', label: 'Compliment', description: 'Give genuine praise', cost: 1, category: 'friendly', canAfford: true },
+      { id: 'confront', label: 'Confront', description: 'Address conflicts directly', cost: 3, category: 'aggressive', canAfford: false },
+      { id: 'mediate', label: 'Mediate', description: 'Help resolve tensions between others', cost: 2, category: 'strategic', canAfford: true },
+      { id: 'observe', label: 'Observe', description: 'Watch and listen quietly', cost: 1, category: 'strategic', canAfford: true }
+    ];
+    
+    const manyActions = [
+      ...sampleActions,
+      { id: 'spread_rumor', label: 'Spread Rumor', description: 'Spread damaging information. Risk of being caught!', cost: 1, category: 'aggressive', canAfford: true },
+      { id: 'expose_secret', label: 'Expose Secret', description: 'Reveal damaging information publicly. High risk!', cost: 2, category: 'aggressive', canAfford: true },
+      { id: 'group_hangout', label: 'Group Hangout', description: 'Organize a casual hangout with multiple players', cost: 2, category: 'friendly', canAfford: true },
+      { id: 'form_alliance', label: 'Form Alliance', description: 'Propose a formal alliance. Creates lasting bond.', cost: 3, category: 'strategic', canAfford: true },
+      { id: 'gossip', label: 'Gossip', description: 'Share juicy information with others', cost: 1, category: 'aggressive', canAfford: true },
+      { id: 'mentor', label: 'Mentor', description: 'Offer guidance and advice', cost: 2, category: 'friendly', canAfford: true },
+      { id: 'challenge', label: 'Challenge', description: 'Directly challenge someone\'s game', cost: 3, category: 'aggressive', canAfford: false }
+    ];
+    
+    // Initialize carousel with sample actions
+    window.loadSampleActions = function() {
+      log('Loading sample actions...');
+      initCarousel(sampleActions);
+    };
+    
+    window.loadManyActions = function() {
+      log('Loading many actions (15 total)...');
+      initCarousel(manyActions);
+    };
+    
+    window.simulateDisabled = function() {
+      log('Simulating disabled actions (low energy)...');
+      const disabledActions = sampleActions.map((a, i) => ({
+        ...a,
+        canAfford: i < 3, // Only first 3 are affordable
+        locked: i >= 6 // Last 2 are locked
+      }));
+      initCarousel(disabledActions);
+    };
+    
+    window.testKeyboardNav = function() {
+      log('Keyboard navigation enabled. Use:');
+      log('  - Arrow Left/Right to navigate');
+      log('  - Home/End to jump to first/last');
+      log('  - Enter/Space to select');
+      document.querySelector('.social-actions-scroll')?.focus();
+    };
+    
+    window.clearCarousel = function() {
+      log('Clearing carousel...');
+      if (carouselInstance) {
+        carouselInstance.destroy();
+        carouselInstance = null;
+      }
+      document.getElementById('actionsCarouselContainer').innerHTML = '';
+      document.getElementById('selectedOutput').innerHTML = '<p style="opacity: 0.6;">Carousel cleared.</p>';
+    };
+    
+    function initCarousel(actions) {
+      // Clean up existing instance
+      if (carouselInstance) {
+        carouselInstance.destroy();
+      }
+      
+      const container = document.getElementById('actionsCarouselContainer');
+      
+      carouselInstance = ActionsCarousel.init({
+        container: container,
+        actions: actions,
+        enableKeyboard: true,
+        onSelect: (actionId, index) => {
+          const action = actions.find(a => a.id === actionId);
+          displaySelectedAction(action, index);
+          log(`Selected: ${action.label} (ID: ${actionId}, Index: ${index})`);
+        }
+      });
+      
+      log(`Carousel initialized with ${actions.length} actions`);
+    }
+    
+    function displaySelectedAction(action, index) {
+      const output = document.getElementById('selectedOutput');
+      output.innerHTML = `
+        <div style="padding: 16px; background: rgba(247, 185, 85, 0.1); border: 2px solid #f7b955; border-radius: 8px;">
+          <h3 style="margin: 0 0 8px 0; color: #f7b955;">${action.label}</h3>
+          <p style="margin: 0 0 8px 0; color: #95a9c0;">${action.description}</p>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <span style="padding: 4px 10px; background: rgba(52, 152, 219, 0.2); border-radius: 12px; color: #3498db; font-weight: bold;">
+              ⚡ ${action.cost} Energy
+            </span>
+            <span style="padding: 4px 10px; background: rgba(155, 89, 182, 0.2); border-radius: 12px; color: #9b59b6; font-weight: 600; text-transform: uppercase; font-size: 0.85em;">
+              ${action.category}
+            </span>
+            <span style="opacity: 0.6; font-size: 0.9em;">
+              Card Index: ${index}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    
+    function log(message) {
+      const logOutput = document.getElementById('logOutput');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logOutput.insertBefore(entry, logOutput.firstChild);
+      
+      // Limit log entries
+      while (logOutput.children.length > 20) {
+        logOutput.removeChild(logOutput.lastChild);
+      }
+    }
+    
+    // Auto-load sample actions on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Page loaded. Initializing with sample actions...');
+      loadSampleActions();
+    });
+  </script>
+</body>
+</html>

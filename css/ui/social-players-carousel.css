@@ -1,0 +1,349 @@
+/* Social Players Carousel - Horizontal scroller for player selection */
+
+/* ============================================================================
+   PLAYERS CAROUSEL CONTAINER
+   ============================================================================ */
+
+.social-players-carousel {
+  position: relative;
+  padding: 16px 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.social-players-carousel-header {
+  padding: 0 16px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.social-players-carousel-title {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #f7b955;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.social-players-carousel-count {
+  font-size: 0.9em;
+  color: #95a9c0;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+/* ============================================================================
+   PLAYERS SCROLL CONTAINER
+   ============================================================================ */
+
+.social-players-scroll {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  gap: 12px;
+  padding: 0 16px 12px;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Limit visible items to ~8 at a time */
+  max-width: 100%;
+}
+
+.social-players-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual player avatar card */
+.social-player-avatar-card {
+  flex: 0 0 80px;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.social-player-avatar-card:hover {
+  transform: translateY(-4px);
+}
+
+.social-player-avatar-card:focus {
+  outline: 3px solid rgba(247, 185, 85, 0.8);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.social-player-avatar-card.selected .social-player-avatar-img {
+  border-color: #f7b955;
+  box-shadow: 0 0 20px rgba(247, 185, 85, 0.6);
+  transform: scale(1.05);
+}
+
+/* Avatar image container */
+.social-player-avatar-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  object-fit: cover;
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.3), rgba(41, 128, 185, 0.3));
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.social-player-avatar-card.selected .social-player-avatar-img {
+  border-width: 4px;
+}
+
+.social-player-avatar-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Player name label */
+.social-player-avatar-name {
+  font-size: 0.75em;
+  color: #e3ecf5;
+  text-align: center;
+  font-weight: 600;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-player-avatar-card.selected .social-player-avatar-name {
+  color: #f7b955;
+  font-weight: bold;
+}
+
+/* Selection indicator badge */
+.social-player-selection-badge {
+  position: absolute;
+  top: -4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f7b955;
+  border: 2px solid rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #000;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
+}
+
+.social-player-avatar-card.selected .social-player-selection-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Disabled/blocked state */
+.social-player-avatar-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.social-player-avatar-card.disabled .social-player-avatar-img {
+  filter: grayscale(1);
+}
+
+/* ============================================================================
+   NAVIGATION CONTROLS
+   ============================================================================ */
+
+.social-players-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+  font-size: 18px;
+}
+
+.social-players-nav:hover {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: #f7b955;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.social-players-nav:focus {
+  outline: 3px solid rgba(247, 185, 85, 0.8);
+  outline-offset: 2px;
+}
+
+.social-players-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.social-players-nav.prev {
+  left: 4px;
+}
+
+.social-players-nav.next {
+  right: 4px;
+}
+
+/* ============================================================================
+   SCROLL INDICATORS
+   ============================================================================ */
+
+.social-players-scroll-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.social-players-scroll-indicator.visible {
+  opacity: 1;
+}
+
+.social-players-scroll-indicator.left {
+  left: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), transparent);
+}
+
+.social-players-scroll-indicator.right {
+  right: 0;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.5), transparent);
+}
+
+/* ============================================================================
+   MOBILE RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .social-player-avatar-card {
+    flex: 0 0 70px;
+    width: 70px;
+  }
+  
+  .social-player-avatar-img {
+    width: 64px;
+    height: 64px;
+  }
+  
+  .social-players-scroll {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .social-player-avatar-card {
+    flex: 0 0 64px;
+    width: 64px;
+  }
+  
+  .social-player-avatar-img {
+    width: 58px;
+    height: 58px;
+    border-width: 2px;
+  }
+  
+  .social-player-avatar-name {
+    font-size: 0.7em;
+  }
+  
+  .social-players-scroll {
+    padding: 0 12px 12px;
+    gap: 8px;
+  }
+  
+  .social-players-nav {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  
+  .social-players-carousel {
+    padding: 12px 0;
+  }
+}
+
+/* ============================================================================
+   MULTI-SELECT MODE
+   ============================================================================ */
+
+.social-players-carousel.multi-select .social-player-avatar-card.selected {
+  position: relative;
+}
+
+/* Show order number for multi-select */
+.social-players-carousel.multi-select .social-player-selection-badge {
+  font-size: 12px;
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+/* Ensure keyboard focus is visible */
+.social-player-avatar-card:focus-visible,
+.social-players-nav:focus-visible {
+  outline: 3px solid rgba(247, 185, 85, 0.8);
+  outline-offset: 2px;
+}
+
+/* ARIA live region for screen readers */
+.social-players-carousel[aria-live="polite"] {
+  /* Announce selection changes */
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .social-player-avatar-img {
+    border-width: 4px;
+  }
+  
+  .social-player-avatar-card.selected .social-player-avatar-img {
+    border-width: 5px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .social-player-avatar-card,
+  .social-player-avatar-img,
+  .social-player-selection-badge,
+  .social-players-nav,
+  .social-players-scroll {
+    transition: none;
+  }
+  
+  .social-players-scroll {
+    scroll-behavior: auto;
+  }
+}
