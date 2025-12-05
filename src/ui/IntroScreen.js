@@ -190,7 +190,7 @@ console.info('[IntroScreen] Script executing – pre-init');
       btn.addEventListener('click', async () => {
         console.info(`[IntroHub] action=${action} button="${label}"`);
         
-        // Handle Play button specially with idempotence guard and avatar preload
+        // Handle Play button specially - delegate to unified flow
         if (action === 'intro:play') {
           if (playButtonClicked) {
             console.warn('[IntroHub] Play button already clicked, ignoring duplicate click');
@@ -199,43 +199,19 @@ console.info('[IntroScreen] Script executing – pre-init');
           playButtonClicked = true;
           
           // Set global flag to indicate Play was pressed
-          // This prevents Rules modal from showing after Play
           g.__bbPlayInitiated = true;
-          console.info('[IntroHub] Set __bbPlayInitiated=true');
+          console.info('[IntroHub] Play button pressed, delegating to unified enterGameFromIntro');
           
-          const cfg = g.game?.cfg || g.cfg || {};
-          const strictMode = cfg.avatarPreloadRequireAll === true;
-          
-          try {
-            // Show avatar preload overlay and wait for completion
-            await performAvatarPreload();
-            
-            // In strict mode, do NOT auto-proceed after preload
-            // The avatars:ready listener will handle transition after successful preload
-            if (strictMode) {
-              console.info('[IntroHub] Strict mode: waiting for avatars:ready event to proceed');
-              // Preload function already dispatched avatars:ready on success
-              // Or showed error overlay on failure (overlay remains visible)
-              // So we just return here and let the event listener handle the rest
-              return;
-            }
-            
-            // Non-strict mode: proceed immediately after preload attempt (even if some failed)
-            console.info('[IntroHub] Non-strict mode: proceeding to game after preload');
-          } catch (err) {
-            // Log error but proceed anyway in non-strict mode
-            console.error('[IntroHub] Avatar preload error:', err);
-            
-            if (strictMode) {
-              // In strict mode, don't proceed on error
-              console.warn('[IntroHub] Strict mode: NOT proceeding due to preload error');
-              return;
-            }
-            // Non-strict mode continues below
+          // Delegate to unified entry point in StartupFlow
+          // This handles loading overlay, avatar preload, and transition
+          const StartupFlow = g.StartupFlow || window.StartupFlow;
+          if (StartupFlow && typeof StartupFlow.enterGameFromIntro === 'function') {
+            await StartupFlow.enterGameFromIntro();
+          } else {
+            // Fallback to legacy behavior
+            console.warn('[IntroHub] StartupFlow.enterGameFromIntro not available, using fallback');
+            handleButtonAction(action, label);
           }
-          
-          // After preload completes (non-strict mode only), proceed with the play action
-          handleButtonAction(action, label);
           return;
         }
         

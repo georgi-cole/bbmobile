@@ -554,15 +554,16 @@
   // ===== ENTER GAME ORCHESTRATION =====
 
   /**
-   * Enter game - main orchestration function called when Play button is pressed.
-   * Handles profile loading/guest mode and starts the game.
+   * Unified entry point for Play → main hub transition.
+   * Shows loading overlay immediately, preloads all avatars with progress tracking,
+   * then transitions to main hub only when all assets are ready.
+   * Handles errors with overlay-level Retry option.
    */
-  async function enterGame() {
-    // Guard against duplicate calls (check flowState first to prevent race conditions)
+  async function enterGameFromIntro() {
+    // Guard against duplicate calls
     if (flowState.gameStarted) {
-      console.warn('[StartupFlow] Game already started (flowState), ignoring duplicate enterGame() call');
+      console.warn('[StartupFlow] Game already started, ignoring duplicate enterGameFromIntro() call');
       
-      // Emit telemetry for duplicate attempt
       if (g.Telemetry && typeof g.Telemetry.log === 'function') {
         g.Telemetry.log('startup_enter_game_duplicate', {});
       }
@@ -570,27 +571,191 @@
       return;
     }
 
-    // Mark game as started immediately to prevent race conditions
+    // Mark game as starting to prevent race conditions
     flowState.gameStarted = true;
 
-    console.info('[StartupFlow] enterGame() called');
+    console.info('[StartupFlow] enterGameFromIntro() - unified Play transition starting');
 
-    // Prevent duplicate calls (legacy idempotence check for DeferredGuards compatibility)
-    if (g.DeferredGuards && g.DeferredGuards.isGameStarted()) {
-      console.warn('[StartupFlow] Game already started (DeferredGuards), skipping duplicate enterGame() call');
+    // Log telemetry
+    if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+      g.Telemetry.log('startup_enter_game_from_intro_start', {});
+    }
+
+    // Show loading overlay immediately
+    const LoadingOverlay = g.LoadingOverlay || window.LoadingOverlay;
+    if (!LoadingOverlay) {
+      console.error('[StartupFlow] LoadingOverlay not available, falling back to legacy enterGame');
+      await legacyEnterGame();
       return;
     }
 
-    // Mark game as ready to start (unblocks deferred tasks)
+    LoadingOverlay.showOverlay();
+
+    try {
+      // Step 1: Preload and build game cast (get players ready)
+      console.info('[StartupFlow] Building game cast...');
+      if (typeof g.buildCast === 'function') {
+        g.buildCast();
+      }
+
+      // Wait a tick for players to be available
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const players = g.game?.players || g.players || [];
+      
+      if (!players || players.length === 0) {
+        console.warn('[StartupFlow] No players available after buildCast, proceeding anyway');
+      }
+
+      // Step 2: Strict avatar preload with progress tracking
+      console.info('[StartupFlow] Starting strict avatar preload...');
+      
+      const AvatarQueue = g.AvatarQueue || window.AvatarQueue;
+      if (!AvatarQueue || !AvatarQueue.preloadAvatarsQueued) {
+        console.warn('[StartupFlow] AvatarQueue not available, skipping avatar preload');
+        LoadingOverlay.updateProgress({ loaded: 1, total: 1 });
+      } else {
+        const cfg = g.game?.cfg || g.cfg || {};
+        const strictMode = cfg.avatarPreloadRequireAll === true;
+        
+        const result = await AvatarQueue.preloadAvatarsQueued(players, {
+          concurrency: cfg.avatarPreloadConcurrency || 8,
+          timeout: cfg.avatarPreloadTimeoutMs || (strictMode ? 30000 : 7000),
+          strictMode: strictMode,
+          onProgress: (loaded, total) => {
+            LoadingOverlay.updateProgress({ loaded, total });
+          }
+        });
+
+        console.info('[StartupFlow] Avatar preload complete:', result);
+
+        // Check for strict mode failure
+        if (strictMode && !result.isReady) {
+          const errorMsg = `Failed to load all houseguest profiles.\n\nLoaded: ${result.loaded}/${result.total}\nFailed: ${result.failed || 0}${result.timedOut ? '\nTimed out' : ''}`;
+          
+          LoadingOverlay.showError(errorMsg, {
+            showRetry: true,
+            onRetry: async () => {
+              console.info('[StartupFlow] User requested retry');
+              // Reset state and retry
+              flowState.gameStarted = false;
+              await enterGameFromIntro();
+            }
+          });
+          
+          // Keep overlay visible, don't proceed
+          console.warn('[StartupFlow] Strict avatar preload failed, waiting for user action');
+          return;
+        }
+      }
+
+      // Step 3: Apply profile or guest mode
+      let profile = null;
+      if (g.ProfileStorage && g.ProfileService) {
+        const lastProfileId = g.ProfileStorage.getLastProfileId();
+        if (lastProfileId) {
+          profile = g.ProfileStorage.getProfileById(lastProfileId);
+          console.info('[StartupFlow] Found last profile:', profile?.displayName);
+        }
+      }
+
+      if (profile && g.ProfileService) {
+        console.info('[StartupFlow] Applying profile:', profile.displayName);
+        g.ProfileService.setCurrentProfile(profile);
+      } else {
+        console.info('[StartupFlow] No profile found, enabling guest mode');
+        if (g.ProfileService) {
+          g.ProfileService.setGuestMode();
+        }
+        console.info('[guest-xp] Guest mode active - XP events will be suppressed');
+      }
+
+      // Step 4: Mark game as ready
+      if (g.DeferredGuards) {
+        g.DeferredGuards.markGameReady();
+        g.DeferredGuards.flushDeferredTasks();
+      } else {
+        g.__bbGameReadyToStart = true;
+      }
+
+      // Disable auto-popups
+      if (g.game && g.game.cfg) {
+        g.game.cfg.autoShowRulesOnStart = false;
+      }
+
+      // Step 5: Small delay to show 100% before transitioning
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Step 6: Hide overlay and build main screen
+      await LoadingOverlay.hideOverlay();
+      
+      buildMainScreen();
+
+      // Mark game as started
+      if (g.DeferredGuards) {
+        g.DeferredGuards.markGameStarted();
+      } else {
+        g.__bbGameStarted = true;
+      }
+
+      // Start opening sequence
+      if (typeof g.startOpeningSequence === 'function') {
+        g.startOpeningSequence();
+      } else if (typeof g.startGame === 'function') {
+        g.startGame();
+      } else {
+        console.error('[StartupFlow] No game start function available');
+      }
+
+      // Log telemetry
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_enter_game_from_intro_success', {});
+      }
+
+    } catch (err) {
+      console.error('[StartupFlow] Error in enterGameFromIntro:', err);
+      
+      // Show error on overlay with retry
+      LoadingOverlay.showError(
+        `An error occurred while loading the game.\n\n${err.message || 'Unknown error'}`,
+        {
+          showRetry: true,
+          onRetry: async () => {
+            console.info('[StartupFlow] User requested retry after error');
+            flowState.gameStarted = false;
+            await enterGameFromIntro();
+          }
+        }
+      );
+
+      // Log telemetry
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_enter_game_from_intro_error', { error: err.message });
+      }
+    }
+  }
+
+  /**
+   * Legacy enter game function (fallback for when LoadingOverlay not available)
+   * Maintains backward compatibility with existing code
+   */
+  async function legacyEnterGame() {
+    console.info('[StartupFlow] Using legacy enterGame() fallback');
+
+    // Prevent duplicate calls
+    if (g.DeferredGuards && g.DeferredGuards.isGameStarted()) {
+      console.warn('[StartupFlow] Game already started (DeferredGuards), skipping');
+      return;
+    }
+
+    // Mark game as ready to start
     if (g.DeferredGuards) {
       g.DeferredGuards.markGameReady();
     } else {
-      console.warn('[StartupFlow] DeferredGuards not available, proceeding without guards');
-      // Set legacy flag for backward compatibility
       g.__bbGameReadyToStart = true;
     }
 
-    // Set autoShowRulesOnStart to false to prevent auto-popups
+    // Set autoShowRulesOnStart to false
     if (g.game && g.game.cfg) {
       g.game.cfg.autoShowRulesOnStart = false;
     }
@@ -614,11 +779,10 @@
       if (g.ProfileService) {
         g.ProfileService.setGuestMode();
       }
-      // Log guest mode marker for verification
       console.info('[guest-xp] Guest mode active - XP events will be suppressed');
     }
 
-    // Flush deferred tasks (HUD, roster placeholders, etc.)
+    // Flush deferred tasks
     if (g.DeferredGuards) {
       g.DeferredGuards.flushDeferredTasks();
     }
@@ -631,10 +795,10 @@
       }
     }
 
-    // Build main screen and start game
+    // Build main screen
     buildMainScreen();
 
-    // Mark game as started (prevents duplicate starts)
+    // Mark game as started
     if (g.DeferredGuards) {
       g.DeferredGuards.markGameStarted();
     } else {
@@ -649,6 +813,14 @@
     } else {
       console.error('[StartupFlow] No game start function available');
     }
+  }
+
+  /**
+   * Alias for backward compatibility
+   * Delegates to new unified entry point
+   */
+  async function enterGame() {
+    await enterGameFromIntro();
   }
 
   // ===== EVENT WIRING =====
@@ -916,6 +1088,8 @@
     preloadIntroBackground,
     showIntroHub,
     enterGame,
+    enterGameFromIntro,  // New unified entry point
+    legacyEnterGame,     // Fallback for compatibility
     restartToHub
   };
   
