@@ -1587,7 +1587,7 @@
     
     // ROSTER GATING: Check if avatars are ready in strict mode
     // If avatars are preloading, add gated class and wait for avatars:ready event
-    const avatarsPreloading = global.game?.state?.avatarsPreloading || global.__avatarsPreloading;
+    const avatarsPreloading = (global.game && global.game.state && global.game.state.avatarsPreloading) || global.__avatarsPreloading;
     const cfg = (global.game && global.game.cfg) || global.cfg || {};
     const strictMode = cfg.avatarPreloadRequireAll === true;
     
@@ -1595,11 +1595,12 @@
       // Add gated class to hide roster while avatars load
       container.classList.add('roster-grid--gated');
       container.classList.remove('roster-grid--ready');
-      console.info('[RosterGate] Roster gated - waiting for avatars:ready event');
       
       // Log telemetry for gating
       if (global.Telemetry && typeof global.Telemetry.log === 'function') {
         global.Telemetry.log('roster_gated', { strictMode: true });
+      } else {
+        console.info('[RosterGate] Roster gated - waiting for avatars:ready event');
       }
       
       return; // Do not render until avatars are ready
@@ -2930,8 +2931,6 @@
         const success = summary.loaded === summary.total && summary.failed === 0 && !summary.timedOut;
         
         if (success) {
-          console.info('[RosterGate] All avatars loaded successfully - unlocking roster');
-          
           // Remove gated class and add ready class
           const container = document.querySelector('.mobile-roster-active-grid');
           if (container) {
@@ -2947,6 +2946,8 @@
               total: summary.total,
               elapsedMs: summary.elapsedMs
             });
+          } else {
+            console.info('[RosterGate] All avatars loaded successfully - unlocking roster');
           }
           
           // Re-render roster now that avatars are ready
@@ -2954,13 +2955,6 @@
             renderAll();
           }
         } else {
-          console.warn('[RosterGate] Avatar preload incomplete - roster remains gated', {
-            loaded: summary.loaded,
-            total: summary.total,
-            failed: summary.failed,
-            timedOut: summary.timedOut
-          });
-          
           // Log telemetry for failed unlock
           if (global.Telemetry && typeof global.Telemetry.log === 'function') {
             global.Telemetry.log('roster_unlock_failed', {
@@ -2970,12 +2964,17 @@
               failed: summary.failed,
               timedOut: summary.timedOut
             });
+          } else {
+            console.warn('[RosterGate] Avatar preload incomplete - roster remains gated', {
+              loaded: summary.loaded,
+              total: summary.total,
+              failed: summary.failed,
+              timedOut: summary.timedOut
+            });
           }
         }
       } else {
         // Non-strict mode: always unlock roster when event fires
-        console.info('[RosterGate] Avatars ready (non-strict mode) - unlocking roster');
-        
         const container = document.querySelector('.mobile-roster-active-grid');
         if (container) {
           container.classList.remove('roster-grid--gated');
@@ -2989,6 +2988,8 @@
             loaded: summary.loaded,
             total: summary.total
           });
+        } else {
+          console.info('[RosterGate] Avatars ready (non-strict mode) - unlocking roster');
         }
         
         // Re-render roster
