@@ -68,134 +68,29 @@
   }
 
   /**
-   * Apply mobile layout - add Settings and Sound buttons to houseguests header
+   * Apply mobile layout - Settings and Sound buttons now appear in compact HUD on mobile
+   * This function no longer creates the hg-count-cluster with settings/sound buttons
    */
   function applyMobileLayout() {
-    console.info('[MobileControlsLayout] Applying mobile layout');
+    console.info('[MobileControlsLayout] Applying mobile layout (buttons in compact HUD)');
 
-    // Find the houseguests header
-    const houseguestsHeader = document.querySelector('.houseguests-header');
-    if (!houseguestsHeader) {
-      console.warn('[MobileControlsLayout] .houseguests-header not found');
-      return;
-    }
+    // NOTE: Settings and Sound buttons are now placed in the compact HUD pill row on mobile
+    // They are created by compactHud.js and styled to match other pills
+    // This module no longer manages them on mobile
 
-    // Find original buttons for click proxying
-    const originalSettingsBtn = document.getElementById('btnOpenSettings');
-    const originalSoundBtn = document.getElementById('btnMuteToggle');
-
-    if (!originalSettingsBtn || !originalSoundBtn) {
-      console.warn('[MobileControlsLayout] Original buttons not found');
-      return;
-    }
-
-    // Create mobile controls container if it doesn't exist
-    // This creates the "hg-count-cluster" - a group containing player pill + settings + speaker
-    if (!mobileControlsContainer) {
-      mobileControlsContainer = document.createElement('div');
-      mobileControlsContainer.className = 'hg-count-cluster mobile-controls-group';
-      mobileControlsContainer.setAttribute('id', 'hgCountCluster');
-      mobileControlsContainer.setAttribute('role', 'group');
-      mobileControlsContainer.setAttribute('aria-label', 'Player count and controls');
-      mobileControlsContainer.style.display = 'inline-flex';
-      mobileControlsContainer.style.alignItems = 'center';
-      mobileControlsContainer.style.gap = '6px';
-    }
-
-    // Find the player pill (it should already exist in the houseguests-header)
-    const playerPill = document.getElementById('playersChipInline');
-    
-    // Create mobile settings button if it doesn't exist
-    if (!settingsBtn) {
-      settingsBtn = createMobileButton('⚙️', 'Settings', 'settings-btn');
-      settingsBtn.classList.add('settings-btn');
-      settingsBtn.addEventListener('click', () => {
-        originalSettingsBtn.click();
-      });
-    }
-    
-    // Ensure settings button is visible (remove any inline display style)
-    settingsBtn.style.display = '';
-
-    // Create mobile sound button if it doesn't exist
-    if (!soundBtn) {
-      soundBtn = createMobileButton('🔊', 'Toggle sound', 'speaker-chip');
-      soundBtn.classList.add('speaker-chip');
-      soundBtn.setAttribute('aria-pressed', 'false');
-      
-      soundBtn.addEventListener('click', () => {
-        originalSoundBtn.click();
-        // Sync state
-        syncSoundButtonState();
-      });
-
-      // Initial state sync
-      syncSoundButtonState();
-    }
-    
-    // Ensure sound button is visible (remove any inline display style)
-    soundBtn.style.display = '';
-
-    // Always rebuild the container with proper order: player pill, settings, speaker
-    mobileControlsContainer.innerHTML = '';
-    
-    // If player pill exists, move it into the cluster first
-    if (playerPill) {
-      // Move player pill into the cluster (whether it's in header or already in container)
-      mobileControlsContainer.appendChild(playerPill);
-    }
-    
-    // Add settings and speaker buttons after player pill
-    mobileControlsContainer.appendChild(settingsBtn);
-    mobileControlsContainer.appendChild(soundBtn);
-
-    // Append container to houseguests header if not already there
-    if (!mobileControlsContainer.parentNode || mobileControlsContainer.parentNode !== houseguestsHeader) {
-      houseguestsHeader.appendChild(mobileControlsContainer);
-    }
-
-    // Sync sound button state periodically
-    syncSoundButtonState();
-    
-    // Listen for sound state changes
-    if (originalSoundBtn) {
-      const observer = new MutationObserver(syncSoundButtonState);
-      observer.observe(originalSoundBtn, {
-        attributes: true,
-        attributeFilter: ['aria-pressed']
-      });
-    }
-
-    console.info('[MobileControlsLayout] Mobile layout applied');
+    // Nothing to do here - mobile layout is handled via CSS and compactHud.js
+    console.info('[MobileControlsLayout] Mobile layout applied (no-op - buttons in HUD)');
   }
 
   /**
    * Revert to desktop layout
    */
   function revertToDesktopLayout() {
-    console.info('[MobileControlsLayout] Reverting to desktop layout');
+    console.info('[MobileControlsLayout] Reverting to desktop layout (no-op)');
 
-    // Before removing the container, move the player pill back to houseguests-header if needed
-    const houseguestsHeader = document.querySelector('.houseguests-header');
-    const playerPill = document.getElementById('playersChipInline');
+    // Nothing to do here - desktop layout is handled via CSS
+    // Settings and Sound buttons appear in topbar on desktop
     
-    if (playerPill && mobileControlsContainer && playerPill.parentNode === mobileControlsContainer) {
-      // Move player pill back to houseguests header (after h1)
-      if (houseguestsHeader) {
-        const h1 = houseguestsHeader.querySelector('h1');
-        if (h1 && h1.nextSibling) {
-          houseguestsHeader.insertBefore(playerPill, h1.nextSibling);
-        } else {
-          houseguestsHeader.appendChild(playerPill);
-        }
-      }
-    }
-
-    // Remove mobile controls container
-    if (mobileControlsContainer && mobileControlsContainer.parentNode) {
-      mobileControlsContainer.parentNode.removeChild(mobileControlsContainer);
-    }
-
     console.info('[MobileControlsLayout] Desktop layout restored');
   }
 

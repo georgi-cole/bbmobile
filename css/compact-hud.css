@@ -167,17 +167,47 @@
 /* Settings button specific styling */
 .compact-hud-chip.settings-button {
   --chip-base: var(--accent-2);
+  /* Hide on desktop - only show on mobile */
+  display: none;
 }
 
 /* Sound button specific styling */
 .compact-hud-chip.sound-button {
   --chip-base: var(--accent);
+  /* Hide on desktop - only show on mobile */
+  display: none;
 }
 
 /* Sound button when muted (aria-pressed="true") */
 .compact-hud-chip.sound-button[aria-pressed="true"] {
   --chip-base: var(--danger);
   opacity: 0.8;
+}
+
+/* Action menu button (three dots) - matches icon button styling */
+.compact-hud-chip.action-menu-chip {
+  --chip-base: var(--accent-2);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 85%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 70%, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
+  cursor: pointer;
+  padding: 6px 10px;
+  min-width: unset;
+}
+
+.compact-hud-chip.action-menu-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.compact-hud-chip.action-menu-chip:active {
+  transform: scale(0.98);
+}
+
+.compact-hud-chip.action-menu-chip:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
 }
 
 /* Legacy self-evict button styles removed - EXIT button in tvHead is now the primary method */
