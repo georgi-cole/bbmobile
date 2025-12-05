@@ -170,6 +170,8 @@
    MOBILE SOCIAL PHASE LAYOUT FIXES
    Purpose: Ensure Social Phase module doesn't cause layout collapse on mobile
    Context: Follow-up to desktop fix - mobile uses different selectors/paths
+   Reference: Mobile faux-TV viewport overlap fix - see PR_SUMMARY_LAYOUT_FIX.md
+   GitHub Issue: Faux-TV area overlaps houseguest avatar grid on narrow viewports
    ============================================================================ */
 
 /* MOBILE FIX: Hide legacy self-evict buttons during Social Phase */
@@ -233,15 +235,16 @@ body[data-phase="social_intermission"] {
   /* Phase identifier for debugging and styling */
 }
 
-/* Ensure faux TV container has proper BFC on mobile */
+/* MOBILE LAYOUT FIX: Ensure faux TV container has proper block-formatting context on mobile */
+/* This prevents the faux-TV from expanding/shifting and overlapping the avatar grid */
 @media (max-width: 768px) {
   .tvViewport[data-sm-faux-tv],
   [data-faux-tv],
   [data-sm-faux-tv] {
-    /* Block formatting context */
+    /* Block formatting context - contains layout and prevents shifts */
     overflow: hidden !important;
     contain: layout style !important;
-    /* Prevent shrinking */
+    /* Prevent shrinking that causes overlap with avatar grid */
     flex: 1 0 auto !important;
     min-height: 0 !important;
   }

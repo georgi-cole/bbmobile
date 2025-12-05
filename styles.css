@@ -876,9 +876,10 @@ button:focus-visible,.btn:focus-visible{
   position:relative;
   /* Fixed height to prevent flashing when popups appear/disappear */
   height: 520px;
-  /* Ensure consistent top margin to maintain gap with avatar grid in all phases */
+  /* MOBILE LAYOUT FIX: Ensure consistent top margin to maintain gap with avatar grid in all phases */
   /* This prevents gap collapse when Social module is injected during Social Phase */
   /* Compensates for #rosterBar's margin-bottom: -2px to create a stable 6px visual gap */
+  /* Reference: Mobile faux-TV viewport overlap fix - see PR_SUMMARY_LAYOUT_FIX.md */
   margin-top: 8px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
@@ -943,8 +944,9 @@ button:focus-visible,.btn:focus-visible{
 
 .tvViewport{
   position:relative; 
-  /* Changed from flex:1 1 auto to flex:1 0 auto to prevent shrinking when content is injected */
+  /* MOBILE LAYOUT FIX: Changed from flex:1 1 auto to flex:1 0 auto to prevent shrinking when content is injected */
   /* This ensures stable height during Social Phase and prevents gap collapse above TV */
+  /* Reference: Mobile faux-TV viewport overlap fix - see PR_SUMMARY_LAYOUT_FIX.md */
   flex:1 0 auto; 
   overflow:hidden;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
