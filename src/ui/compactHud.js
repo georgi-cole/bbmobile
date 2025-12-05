@@ -51,6 +51,10 @@
   let playersChip = null; // Now references the inline chip in header
   let drButton = null;
   let drButtonHandler = null;
+  let settingsButton = null;
+  let settingsButtonHandler = null;
+  let soundButton = null;
+  let soundButtonHandler = null;
   let resizeObserver = null;
   let lastPhase = null;
   let lastPlayers = null;
@@ -81,6 +85,12 @@
         <span class="compact-hud-chip-icon">🚪</span>
         <span class="compact-hud-chip-label">DR</span>
       </button>
+      <button class="compact-hud-chip icon-button settings-button" id="btnSettingsHud" aria-label="Settings" title="Settings">
+        <span class="compact-hud-chip-icon">⚙️</span>
+      </button>
+      <button class="compact-hud-chip icon-button sound-button" id="btnSoundHud" aria-label="Toggle sound" aria-pressed="false" title="Toggle sound">
+        <span class="compact-hud-chip-icon">🔊</span>
+      </button>
       <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
         <span class="compact-hud-chip-icon">⋮</span>
       </button>
@@ -96,6 +106,8 @@
     }
     
     drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');
+    settingsButton = hudContainer.querySelector('.compact-hud-chip.settings-button');
+    soundButton = hudContainer.querySelector('.compact-hud-chip.sound-button');
 
     // Setup DR button click handler
     if (drButton) {
@@ -108,6 +120,53 @@
         }
       };
       drButton.addEventListener('click', drButtonHandler);
+    }
+
+    // Setup Settings button click handler
+    if (settingsButton) {
+      settingsButtonHandler = () => {
+        // Find and click the original settings button
+        const originalSettingsBtn = document.getElementById('btnOpenSettings');
+        if (originalSettingsBtn) {
+          originalSettingsBtn.click();
+        } else {
+          console.warn('[CompactHud] Original settings button not found');
+        }
+      };
+      settingsButton.addEventListener('click', settingsButtonHandler);
+    }
+
+    // Setup Sound button click handler
+    if (soundButton) {
+      soundButtonHandler = () => {
+        // Find and click the original sound button
+        const originalSoundBtn = document.getElementById('btnMuteToggle');
+        if (originalSoundBtn) {
+          originalSoundBtn.click();
+          // Sync the aria-pressed state
+          const isPressed = originalSoundBtn.getAttribute('aria-pressed') === 'true';
+          soundButton.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
+          // Update icon to match state
+          const icon = soundButton.querySelector('.compact-hud-chip-icon');
+          if (icon) {
+            icon.textContent = isPressed ? '🔇' : '🔊';
+          }
+        } else {
+          console.warn('[CompactHud] Original sound button not found');
+        }
+      };
+      soundButton.addEventListener('click', soundButtonHandler);
+      
+      // Initial sync of sound button state
+      const originalSoundBtn = document.getElementById('btnMuteToggle');
+      if (originalSoundBtn) {
+        const isPressed = originalSoundBtn.getAttribute('aria-pressed') === 'true';
+        soundButton.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
+        const icon = soundButton.querySelector('.compact-hud-chip-icon');
+        if (icon) {
+          icon.textContent = isPressed ? '🔇' : '🔊';
+        }
+      }
     }
 
     // Setup ResizeObserver for phase compression
@@ -365,6 +424,18 @@
       drButtonHandler = null;
     }
 
+    // Remove Settings button event listener
+    if (settingsButton && settingsButtonHandler) {
+      settingsButton.removeEventListener('click', settingsButtonHandler);
+      settingsButtonHandler = null;
+    }
+
+    // Remove Sound button event listener
+    if (soundButton && soundButtonHandler) {
+      soundButton.removeEventListener('click', soundButtonHandler);
+      soundButtonHandler = null;
+    }
+
     if (hudContainer) {
       hudContainer.innerHTML = '';
     }
@@ -373,6 +444,8 @@
     seasonWeekChip = null;
     playersChip = null;
     drButton = null;
+    settingsButton = null;
+    soundButton = null;
     hudContainer = null;
     lastPhase = null;
     lastPlayers = null;
