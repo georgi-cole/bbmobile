@@ -98,15 +98,26 @@
       const avatar = document.createElement('div');
       avatar.className = 'houseguests-list__avatar';
       
-      // Try to get avatar from game's avatar resolver
+      // Try to get avatar from game's avatar resolver, or use direct path
+      let avatarUrl = null;
       if (global.getAvatar) {
-        const avatarUrl = global.getAvatar(houseguest.name);
-        avatar.style.backgroundImage = `url(${avatarUrl})`;
+        avatarUrl = global.getAvatar(houseguest.name);
       } else {
-        // Fallback initial
+        // Direct fallback to avatars folder
+        avatarUrl = `avatars/${houseguest.name}.png`;
+      }
+      
+      // Set background image
+      avatar.style.backgroundImage = `url(${avatarUrl})`;
+      
+      // Handle image load error - fallback to initials
+      const testImg = new Image();
+      testImg.onerror = () => {
+        avatar.style.backgroundImage = 'none';
         avatar.textContent = houseguest.name.charAt(0);
         avatar.style.backgroundColor = getColorForName(houseguest.name);
-      }
+      };
+      testImg.src = avatarUrl;
 
       // Info
       const info = document.createElement('div');
@@ -174,13 +185,26 @@
     const avatar = document.createElement('div');
     avatar.className = 'houseguests-detail__avatar';
     
+    // Try to get avatar from game's avatar resolver, or use direct path
+    let avatarUrl = null;
     if (global.getAvatar) {
-      const avatarUrl = global.getAvatar(selectedHouseguest.name);
-      avatar.style.backgroundImage = `url(${avatarUrl})`;
+      avatarUrl = global.getAvatar(selectedHouseguest.name);
     } else {
+      // Direct fallback to avatars folder
+      avatarUrl = `avatars/${selectedHouseguest.name}.png`;
+    }
+    
+    // Set background image
+    avatar.style.backgroundImage = `url(${avatarUrl})`;
+    
+    // Handle image load error - fallback to initials
+    const testImg = new Image();
+    testImg.onerror = () => {
+      avatar.style.backgroundImage = 'none';
       avatar.textContent = selectedHouseguest.name.charAt(0);
       avatar.style.backgroundColor = getColorForName(selectedHouseguest.name);
-    }
+    };
+    testImg.src = avatarUrl;
 
     const nameLabel = document.createElement('h3');
     nameLabel.className = 'houseguests-detail__name';
@@ -206,7 +230,12 @@
       { label: 'Location', value: selectedHouseguest.location },
       { label: 'Sexuality', value: selectedHouseguest.sexuality },
       { label: 'Education', value: selectedHouseguest.education },
-      { label: 'Profession', value: selectedHouseguest.profession }
+      { label: 'Profession', value: selectedHouseguest.profession },
+      { label: 'Family Status', value: selectedHouseguest.familyStatus },
+      { label: 'Kids', value: selectedHouseguest.kids },
+      { label: 'Pets', value: selectedHouseguest.pets },
+      { label: 'Zodiac Sign', value: selectedHouseguest.zodiacSign },
+      { label: 'Religion', value: selectedHouseguest.religion }
     ];
 
     basicFields.forEach(field => {
