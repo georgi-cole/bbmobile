@@ -458,14 +458,6 @@ console.info('[IntroScreen] Script executing – pre-init');
 
     let handled = false;
     
-    // Try bus event FIRST (preferred method when bus is available)
-    if (bus) {
-      console.info(`[IntroHub] Emitting bus event: ${action}`);
-      bus.emit(action, {});
-      handled = true;
-      return; // Early return - bus events are the primary mechanism
-    }
-    
     // Fallback: Map actions to global function names (for backward compatibility)
     const actionMap = {
       'intro:play': { fn: 'enterGame', obj: 'StartupFlow', method: 'enterGame' },
@@ -478,6 +470,14 @@ console.info('[IntroScreen] Script executing – pre-init');
     };
     
     const mapping = actionMap[action];
+    
+    // Try bus event FIRST (preferred method when bus is available)
+    if (bus) {
+      console.info(`[IntroHub] Emitting bus event: ${action}`);
+      bus.emit(action, {});
+      handled = true;
+      // Don't return early - still check for fallback handlers below
+    }
     
     if (mapping) {
       // Try primary function
