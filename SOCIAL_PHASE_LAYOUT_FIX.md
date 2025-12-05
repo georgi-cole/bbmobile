@@ -349,7 +349,7 @@ The desktop fixes described in this document **do not apply to mobile viewports*
 
 ---
 
-**Last Updated**: December 5, 2024  
+**Last Updated**: December 5, 2025  
 **Author**: GitHub Copilot (via georgi-cole)  
 **Version**: 1.1 (Added mobile references)
 **Related**: Desktop fix only - See MOBILE_SOCIAL_LAYOUT_FIX.md for mobile

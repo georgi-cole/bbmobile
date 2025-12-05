@@ -252,6 +252,62 @@
   // Set timestamp
   document.getElementById('testTimestamp').textContent = new Date().toLocaleTimeString();
   
+  // Helper: Create Social launcher element
+  function createSocialLauncher() {
+    const socialLauncher = document.createElement('div');
+    socialLauncher.id = 'socializeLauncher';
+    socialLauncher.className = 'socialize-launcher';
+    socialLauncher.setAttribute('data-sm-social-card-wrap', '');
+    
+    socialLauncher.innerHTML = `
+      <div class="socialize-card" data-sm-social-card>
+        <div class="socialize-hud-title">Social Energy</div>
+        <div class="socialize-hud-resources">
+          <div class="resource-badge">
+            <span>⚡</span>
+            <span>5/5</span>
+          </div>
+          <div class="resource-badge">
+            <span>👑</span>
+            <span>25</span>
+          </div>
+          <div class="resource-badge">
+            <span>💡</span>
+            <span>15</span>
+          </div>
+        </div>
+        <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+          <div style="font-weight: bold; margin-bottom: 8px; color: white;">Select Player to Interact</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+            <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 1</button>
+            <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 2</button>
+            <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 3</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    return socialLauncher;
+  }
+  
+  // Helper: Apply phase classes to DOM elements
+  function setPhaseClasses(active) {
+    const elements = [
+      document.body,
+      document.querySelector('.wrap'),
+      document.getElementById('actionCard')
+    ];
+    
+    elements.forEach(el => {
+      if (!el) return;
+      if (active) {
+        el.classList.add('is-social-phase');
+      } else {
+        el.classList.remove('is-social-phase');
+      }
+    });
+  }
+  
   function toggleSocialPhase() {
     socialPhaseActive = !socialPhaseActive;
     const tvViewport = document.getElementById('tvViewport');
@@ -260,56 +316,16 @@
     if (socialPhaseActive) {
       // Enable Social Phase
       phaseLabel.textContent = 'Social Time';
-      
-      // Add phase class to various elements (test all potential targets)
-      document.body.classList.add('is-social-phase');
-      document.querySelector('.wrap')?.classList.add('is-social-phase');
-      document.getElementById('actionCard')?.classList.add('is-social-phase');
+      setPhaseClasses(true);
       
       // Inject Social launcher
-      const socialLauncher = document.createElement('div');
-      socialLauncher.id = 'socializeLauncher';
-      socialLauncher.className = 'socialize-launcher';
-      socialLauncher.setAttribute('data-sm-social-card-wrap', '');
-      
-      socialLauncher.innerHTML = `
-        <div class="socialize-card" data-sm-social-card>
-          <div class="socialize-hud-title">Social Energy</div>
-          <div class="socialize-hud-resources">
-            <div class="resource-badge">
-              <span>⚡</span>
-              <span>5/5</span>
-            </div>
-            <div class="resource-badge">
-              <span>👑</span>
-              <span>25</span>
-            </div>
-            <div class="resource-badge">
-              <span>💡</span>
-              <span>15</span>
-            </div>
-          </div>
-          <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-            <div style="font-weight: bold; margin-bottom: 8px; color: white;">Select Player to Interact</div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-              <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 1</button>
-              <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 2</button>
-              <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 3</button>
-            </div>
-          </div>
-        </div>
-      `;
-      
+      const socialLauncher = createSocialLauncher();
       tvViewport.appendChild(socialLauncher);
       console.log('✅ Social Phase activated');
     } else {
       // Disable Social Phase
       phaseLabel.textContent = 'Normal Phase';
-      
-      // Remove phase classes
-      document.body.classList.remove('is-social-phase');
-      document.querySelector('.wrap')?.classList.remove('is-social-phase');
-      document.getElementById('actionCard')?.classList.remove('is-social-phase');
+      setPhaseClasses(false);
       
       // Remove Social launcher
       const launcher = document.getElementById('socializeLauncher');
