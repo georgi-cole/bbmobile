@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Mobile Social Phase Layout Test</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="styles.css?v=mobile-test">
+  <link rel="stylesheet" href="overrides-fixes.css?v=mobile-test">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <link rel="stylesheet" href="css/compact-hud.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  <style>
+    /* Debug overlay */
+    .debug-overlay {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      z-index: 10000;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+    
+    .debug-overlay h3 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      color: #4fc3f7;
+    }
+    
+    .debug-section {
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+    
+    .debug-value {
+      color: #4caf50;
+      font-weight: bold;
+    }
+    
+    .debug-error {
+      color: #ff5252;
+      font-weight: bold;
+    }
+    
+    .test-controls {
+      position: fixed;
+      bottom: 80px;
+      left: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 12px;
+      border-radius: 8px;
+      z-index: 10000;
+    }
+    
+    .test-controls button {
+      display: block;
+      width: 100%;
+      margin: 6px 0;
+      padding: 12px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .test-controls button:active {
+      background: #1976D2;
+    }
+    
+    .version-badge {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #4fc3f7;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      text-align: center;
+      z-index: 10000;
+    }
+    
+    /* Highlight elements for visual debugging */
+    .highlight-spacing #rosterBar,
+    .highlight-spacing .mobile-roster-container {
+      outline: 2px solid cyan;
+    }
+    
+    .highlight-spacing .tv {
+      outline: 2px solid lime;
+    }
+    
+    .highlight-spacing [data-sm-faux-tv] {
+      outline: 2px dashed yellow;
+    }
+    
+    .highlight-spacing [data-sm-social-card-wrap] {
+      outline: 2px solid magenta;
+    }
+  </style>
+</head>
+<body>
+
+<div class="debug-overlay" id="debugOverlay">
+  <h3>📱 Mobile Social Phase Debug</h3>
+  <div id="debugContent">Initializing...</div>
+</div>
+
+<div class="test-controls">
+  <button onclick="toggleSocialPhase()">Toggle Social Phase</button>
+  <button onclick="measureLayout()">Measure Layout</button>
+  <button onclick="toggleHighlight()">Toggle Highlights</button>
+  <button onclick="checkPhaseClass()">Check Phase Class</button>
+</div>
+
+<div class="version-badge" id="versionBadge">
+  Build: Mobile-Social-Fix v1.0.0 | Test: <span id="testTimestamp"></span>
+</div>
+
+<div class="wrap">
+  <div class="card" id="actionCard">
+    <div class="houseguests-header">
+      <h1>Houseguests</h1>
+      <div class="compact-hud-chip players-inline" role="status">
+        <span class="compact-hud-chip-icon">👥</span>
+        <span class="compact-hud-chip-label">12/12</span>
+      </div>
+    </div>
+    
+    <!-- Compact HUD -->
+    <div class="compact-hud" id="compactHud">
+      <div class="compact-hud-chip phase" role="status">
+        <span class="compact-hud-chip-icon">📍</span>
+        <span class="compact-hud-chip-label" id="phaseLabel">Normal Phase</span>
+      </div>
+    </div>
+    
+    <!-- Mobile Roster -->
+    <div class="mobile-roster-container" id="mobileRoster">
+      <div class="mobile-roster-active-grid" id="mobileRosterGrid">
+        <!-- Mock 12 players -->
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P1</div>
+          </div>
+          <div class="mobile-roster-name">Player 1</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P2</div>
+          </div>
+          <div class="mobile-roster-name">Player 2</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P3</div>
+          </div>
+          <div class="mobile-roster-name">Player 3</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P4</div>
+          </div>
+          <div class="mobile-roster-name">Player 4</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P5</div>
+          </div>
+          <div class="mobile-roster-name">Player 5</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P6</div>
+          </div>
+          <div class="mobile-roster-name">Player 6</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P7</div>
+          </div>
+          <div class="mobile-roster-name">Player 7</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P8</div>
+          </div>
+          <div class="mobile-roster-name">Player 8</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P9</div>
+          </div>
+          <div class="mobile-roster-name">Player 9</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P10</div>
+          </div>
+          <div class="mobile-roster-name">Player 10</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P11</div>
+          </div>
+          <div class="mobile-roster-name">Player 11</div>
+        </div>
+        <div class="mobile-roster-tile">
+          <div class="mobile-roster-avatar-wrap">
+            <div class="mobile-roster-avatar" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">P12</div>
+          </div>
+          <div class="mobile-roster-name">Player 12</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TV Container -->
+    <div class="tv tv-screen" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer" id="tvTimer">05:00</div>
+        <button class="tvDrBtn" id="btnDiaryRoom" aria-label="Open Diary Room" title="Diary Room">🚪 EXIT</button>
+      </div>
+      <div class="tvViewport" data-sm-faux-tv id="tvViewport">
+        <div id="tvNow" class="tvNow">Normal phase content</div>
+        <div id="tvOverlay" class="tvOverlay"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Test state
+  let socialPhaseActive = false;
+  let highlightActive = false;
+  
+  // Set timestamp
+  document.getElementById('testTimestamp').textContent = new Date().toLocaleTimeString();
+  
+  // Helper: Create Social launcher element
+  function createSocialLauncher() {
+    const socialLauncher = document.createElement('div');
+    socialLauncher.id = 'socializeLauncher';
+    socialLauncher.className = 'socialize-launcher';
+    socialLauncher.setAttribute('data-sm-social-card-wrap', '');
+    
+    socialLauncher.innerHTML = `
+      <div class="socialize-card" data-sm-social-card>
+        <div class="socialize-hud-title">Social Energy</div>
+        <div class="socialize-hud-resources">
+          <div class="resource-badge">
+            <span>⚡</span>
+            <span>5/5</span>
+          </div>
+          <div class="resource-badge">
+            <span>👑</span>
+            <span>25</span>
+          </div>
+          <div class="resource-badge">
+            <span>💡</span>
+            <span>15</span>
+          </div>
+        </div>
+        <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+          <div style="font-weight: bold; margin-bottom: 8px; color: white;">Select Player to Interact</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+            <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 1</button>
+            <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 2</button>
+            <button style="padding: 8px; background: rgba(247,185,85,0.2); border: 1px solid rgba(247,185,85,0.5); border-radius: 6px; color: white; cursor: pointer;">Player 3</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    return socialLauncher;
+  }
+  
+  // Helper: Apply phase classes to DOM elements
+  function setPhaseClasses(active) {
+    const elements = [
+      document.body,
+      document.querySelector('.wrap'),
+      document.getElementById('actionCard')
+    ];
+    
+    elements.forEach(el => {
+      if (!el) return;
+      if (active) {
+        el.classList.add('is-social-phase');
+      } else {
+        el.classList.remove('is-social-phase');
+      }
+    });
+  }
+  
+  function toggleSocialPhase() {
+    socialPhaseActive = !socialPhaseActive;
+    const tvViewport = document.getElementById('tvViewport');
+    const phaseLabel = document.getElementById('phaseLabel');
+    
+    if (socialPhaseActive) {
+      // Enable Social Phase
+      phaseLabel.textContent = 'Social Time';
+      setPhaseClasses(true);
+      
+      // Inject Social launcher
+      const socialLauncher = createSocialLauncher();
+      tvViewport.appendChild(socialLauncher);
+      console.log('✅ Social Phase activated');
+    } else {
+      // Disable Social Phase
+      phaseLabel.textContent = 'Normal Phase';
+      setPhaseClasses(false);
+      
+      // Remove Social launcher
+      const launcher = document.getElementById('socializeLauncher');
+      if (launcher) {
+        launcher.remove();
+        console.log('❌ Social Phase deactivated');
+      }
+    }
+    
+    measureLayout();
+  }
+  
+  function measureLayout() {
+    const rosterContainer = document.querySelector('.mobile-roster-container');
+    const rosterGrid = document.querySelector('.mobile-roster-active-grid');
+    const tv = document.getElementById('tv');
+    const tvViewport = document.getElementById('tvViewport');
+    const socialCard = document.querySelector('[data-sm-social-card-wrap]');
+    
+    const measurements = {
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      },
+      roster: rosterContainer ? {
+        height: rosterContainer.offsetHeight,
+        bottom: rosterContainer.getBoundingClientRect().bottom
+      } : null,
+      tv: tv ? {
+        height: tv.offsetHeight,
+        top: tv.getBoundingClientRect().top,
+        marginTop: getComputedStyle(tv).marginTop
+      } : null,
+      tvViewport: tvViewport ? {
+        height: tvViewport.offsetHeight,
+        flex: getComputedStyle(tvViewport).flex,
+        overflow: getComputedStyle(tvViewport).overflow,
+        contain: getComputedStyle(tvViewport).contain
+      } : null,
+      socialCard: socialCard ? {
+        height: socialCard.offsetHeight,
+        position: getComputedStyle(socialCard).position,
+        paddingTop: getComputedStyle(socialCard).paddingTop,
+        paddingBottom: getComputedStyle(socialCard).paddingBottom
+      } : null
+    };
+    
+    // Calculate gap
+    let gap = null;
+    if (rosterContainer && tv) {
+      const rosterBottom = rosterContainer.getBoundingClientRect().bottom;
+      const tvTop = tv.getBoundingClientRect().top;
+      gap = tvTop - rosterBottom;
+    }
+    
+    // Update debug display
+    const debugContent = document.getElementById('debugContent');
+    debugContent.innerHTML = `
+      <div class="debug-section">
+        <strong>Phase State:</strong> <span class="${socialPhaseActive ? 'debug-value' : 'debug-error'}">${socialPhaseActive ? 'SOCIAL' : 'NORMAL'}</span>
+      </div>
+      <div class="debug-section">
+        <strong>Viewport:</strong> ${measurements.viewport.width}×${measurements.viewport.height}px
+      </div>
+      <div class="debug-section">
+        <strong>Gap (Roster→TV):</strong> 
+        <span class="${gap !== null ? (gap < 0 ? 'debug-error' : 'debug-value') : ''}">${gap !== null ? gap.toFixed(1) + 'px' : 'N/A'}</span>
+      </div>
+      <div class="debug-section">
+        <strong>TV Container:</strong><br>
+        Height: ${measurements.tv?.height || 'N/A'}px<br>
+        Margin-top: ${measurements.tv?.marginTop || 'N/A'}
+      </div>
+      <div class="debug-section">
+        <strong>TV Viewport:</strong><br>
+        Height: ${measurements.tvViewport?.height || 'N/A'}px<br>
+        Flex: ${measurements.tvViewport?.flex || 'N/A'}<br>
+        Overflow: ${measurements.tvViewport?.overflow || 'N/A'}<br>
+        Contain: ${measurements.tvViewport?.contain || 'N/A'}
+      </div>
+      ${socialPhaseActive ? `
+      <div class="debug-section">
+        <strong>Social Card:</strong><br>
+        Height: ${measurements.socialCard?.height || 'N/A'}px<br>
+        Position: ${measurements.socialCard?.position || 'N/A'}<br>
+        Padding: ${measurements.socialCard?.paddingTop || 'N/A'} / ${measurements.socialCard?.paddingBottom || 'N/A'}
+      </div>` : ''}
+    `;
+    
+    console.log('📐 Layout measurements:', measurements);
+    console.log(`📏 Gap: ${gap !== null ? gap.toFixed(1) : 'N/A'}px`);
+  }
+  
+  function toggleHighlight() {
+    highlightActive = !highlightActive;
+    document.body.classList.toggle('highlight-spacing', highlightActive);
+    console.log(highlightActive ? '🎨 Highlights enabled' : '⬜ Highlights disabled');
+  }
+  
+  function checkPhaseClass() {
+    const targets = {
+      body: document.body.classList.contains('is-social-phase'),
+      wrap: document.querySelector('.wrap')?.classList.contains('is-social-phase'),
+      actionCard: document.getElementById('actionCard')?.classList.contains('is-social-phase')
+    };
+    
+    const debugContent = document.getElementById('debugContent');
+    debugContent.innerHTML = `
+      <div class="debug-section">
+        <strong>Phase Class Check:</strong>
+      </div>
+      <div class="debug-section">
+        <strong>body:</strong> <span class="${targets.body ? 'debug-value' : 'debug-error'}">${targets.body ? '✅ HAS' : '❌ MISSING'} .is-social-phase</span>
+      </div>
+      <div class="debug-section">
+        <strong>.wrap:</strong> <span class="${targets.wrap ? 'debug-value' : 'debug-error'}">${targets.wrap ? '✅ HAS' : '❌ MISSING'} .is-social-phase</span>
+      </div>
+      <div class="debug-section">
+        <strong>#actionCard:</strong> <span class="${targets.actionCard ? 'debug-value' : 'debug-error'}">${targets.actionCard ? '✅ HAS' : '❌ MISSING'} .is-social-phase</span>
+      </div>
+    `;
+    
+    console.log('🔍 Phase class check:', targets);
+  }
+  
+  // Enable mobile roster by default
+  document.body.setAttribute('data-mobile-roster-active', 'true');
+  
+  // Initial measurement
+  window.addEventListener('load', () => {
+    setTimeout(measureLayout, 100);
+  });
+  
+  // Measure on resize
+  window.addEventListener('resize', measureLayout);
+</script>
+
+</body>
+</html>

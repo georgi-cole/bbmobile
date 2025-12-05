@@ -3902,6 +3902,27 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   /* Fixed height for mobile to prevent flashing when popups appear/disappear */
   .tv{ height:360px; }
   .tv.tvTall{ height:360px; }
+  
+  /* MOBILE FIX: Ensure consistent gap between roster and TV */
+  /* This prevents gap collapse during Social Phase on mobile */
+  .mobile-roster-container {
+    margin-bottom: 0; /* Remove any bottom margin that could collapse */
+  }
+  
+  .tv {
+    /* Maintain consistent top margin on mobile (matching desktop 8px) */
+    margin-top: 8px;
+  }
+  
+  /* MOBILE FIX: Ensure tvViewport maintains flex properties on mobile */
+  .tvViewport {
+    /* Prevent flex shrinking even on mobile */
+    flex: 1 0 auto !important;
+    /* Maintain overflow and containment */
+    overflow: hidden;
+    contain: layout;
+    min-height: 0;
+  }
 }
 @media (max-width:540px){
   .modal{ padding:18px 16px 24px; border-radius:16px; }

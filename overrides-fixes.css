@@ -165,3 +165,84 @@
 #panel.voteOverlayOpen {
   display: none !important;
 }
+
+/* ============================================================================
+   MOBILE SOCIAL PHASE LAYOUT FIXES
+   Purpose: Ensure Social Phase module doesn't cause layout collapse on mobile
+   Context: Follow-up to desktop fix - mobile uses different selectors/paths
+   ============================================================================ */
+
+/* MOBILE FIX: Hide legacy self-evict buttons during Social Phase */
+.is-social-phase #btnSelfEvict,
+.is-social-phase .btn-self-evict,
+.is-social-phase .self-evict-button,
+body[data-social-phase="true"] #btnSelfEvict,
+body[data-social-phase="true"] .btn-self-evict,
+body[data-social-phase="true"] .self-evict-button {
+  display: none !important;
+}
+
+/* Defensive: Also hide via class selector in case JS adds legacy button */
+#btnSelfEvict,
+.btn-self-evict,
+.self-evict-button {
+  /* Hidden by default - legacy buttons removed */
+  display: none !important;
+}
+
+/* Ensure EXIT button in TV header remains visible */
+.tvDrBtn,
+#btnDiaryRoom {
+  display: block !important;
+}
+
+/* MOBILE FIX: Ensure consistent spacing between roster and TV on all viewports */
+@media (max-width: 900px) {
+  /* Mobile roster spacing */
+  .mobile-roster-container,
+  #rosterBar {
+    margin-bottom: 0 !important;
+  }
+  
+  /* TV container top margin - consistent with desktop */
+  .tv {
+    margin-top: 8px !important;
+  }
+  
+  /* Prevent tvViewport flex shrinking on mobile */
+  .tvViewport {
+    flex: 1 0 auto !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+  
+  /* Social card positioning on mobile - use padding not margin */
+  .socialize-launcher,
+  [data-sm-social-card-wrap] {
+    position: static !important;
+    /* Ensure padding-based spacing to prevent collapse */
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Phase-specific body classes for targeting */
+body.is-social-phase,
+body[data-phase="social"],
+body[data-phase="social_intermission"] {
+  /* Phase identifier for debugging and styling */
+}
+
+/* Ensure faux TV container has proper BFC on mobile */
+@media (max-width: 768px) {
+  .tvViewport[data-sm-faux-tv],
+  [data-faux-tv],
+  [data-sm-faux-tv] {
+    /* Block formatting context */
+    overflow: hidden !important;
+    contain: layout style !important;
+    /* Prevent shrinking */
+    flex: 1 0 auto !important;
+    min-height: 0 !important;
+  }
+}

@@ -1,5 +1,8 @@
 # Social Phase Layout Fix Documentation
 
+> **Note**: This document describes the **desktop** Social Phase layout fix.  
+> For mobile-specific fixes, see **[MOBILE_SOCIAL_LAYOUT_FIX.md](./MOBILE_SOCIAL_LAYOUT_FIX.md)**
+
 ## Problem Summary
 
 ### Issue Description
@@ -9,6 +12,8 @@ Additionally, there were redundant Exit/Self-evict buttons:
 1. Legacy red button in the topbar (near the clock)
 2. Legacy button in the compact HUD
 3. These were redundant with self-eviction functionality available via Diary Room
+
+**Update**: The desktop fix did not affect mobile due to different selectors and media query overrides. See [MOBILE_SOCIAL_LAYOUT_FIX.md](./MOBILE_SOCIAL_LAYOUT_FIX.md) for mobile-specific implementation.
 
 ### Root Causes
 
@@ -328,9 +333,23 @@ The fixes use standard CSS properties that are well-supported across all modern 
 - Flexbox behavior: MDN Web Docs - CSS Flexible Box Layout
 - Margin collapse: MDN Web Docs - Mastering Margin Collapsing
 - Box sizing: MDN Web Docs - box-sizing
+- **Mobile-specific fixes**: [MOBILE_SOCIAL_LAYOUT_FIX.md](./MOBILE_SOCIAL_LAYOUT_FIX.md)
+
+## Mobile Considerations
+
+The desktop fixes described in this document **do not apply to mobile viewports** due to:
+1. Different CSS selectors (`.mobile-roster-container` vs `#rosterBar`)
+2. Media query overrides at `@media (max-width: 900px)` and `@media (max-width: 768px)`
+3. Alternative TV height (360px vs 520px on mobile)
+4. Separate Social card positioning system
+
+**For mobile-specific implementation details**, see:
+- **[MOBILE_SOCIAL_LAYOUT_FIX.md](./MOBILE_SOCIAL_LAYOUT_FIX.md)** - Complete mobile fix documentation
+- **[test_mobile_social_phase.html](./test_mobile_social_phase.html)** - Mobile test harness
 
 ---
 
-**Last Updated**: December 4, 2025  
+**Last Updated**: December 5, 2025  
 **Author**: GitHub Copilot (via georgi-cole)  
-**Version**: 1.0
+**Version**: 1.1 (Added mobile references)
+**Related**: Desktop fix only - See MOBILE_SOCIAL_LAYOUT_FIX.md for mobile
