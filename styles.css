@@ -115,6 +115,7 @@
   --color-on-accent: #020308;
   --color-text: #f5f6ff;
   --btn-shadow: 0 10px 25px rgba(0, 178, 255, 0.18);
+  --btn-focus-outline: rgba(58, 159, 255, 0.16);
 }
 
 /* THEME DEFINITIONS --------------------------------------------------------- */
@@ -769,13 +770,9 @@ button:focus-visible,.btn:focus-visible{
 }
 
 .btn-base:focus {
-  outline: 3px solid rgba(58,159,255,0.16);
+  outline: 3px solid var(--btn-focus-outline);
   outline-offset: 3px;
   border-radius: var(--btn-radius);
-}
-
-a.btn-base {
-  display: inline-flex;
 }
 
 @media (max-width: 768px) {
