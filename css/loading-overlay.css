@@ -1,0 +1,346 @@
+/* MODULE: loading-overlay.css
+ * Unified loading overlay styles for Play → main hub transition
+ * Features:
+ * - Full-screen blocking overlay
+ * - Animated eye (lid opening/closing)
+ * - Progress bar and percentage
+ * - Error state with retry button
+ * - Mobile-first responsive design
+ */
+
+/* ===== BASE OVERLAY ===== */
+
+.unified-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000; /* Above everything else */
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease-in-out;
+  
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.unified-loading-overlay--visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.unified-loading-overlay--hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===== EYE ANIMATION ===== */
+
+.unified-loading-eye {
+  width: 120px;
+  height: 120px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unified-loading-eye-outer {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.3),
+    inset 0 0 20px rgba(0, 0, 0, 0.2);
+  animation: eyePulse 2s ease-in-out infinite;
+}
+
+.unified-loading-eye-inner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 
+    0 0 15px rgba(33, 150, 243, 0.6),
+    inset 0 0 10px rgba(0, 0, 0, 0.3);
+  animation: pupilMove 3s ease-in-out infinite;
+}
+
+.unified-loading-eye-lid {
+  width: 110px;
+  height: 55px;
+  background: rgba(0, 0, 0, 0.9);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  border-radius: 0 0 55px 55px;
+  animation: eyeBlink 3s ease-in-out infinite;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes eyePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes pupilMove {
+  0%, 100% {
+    transform: translate(-50%, -50%);
+  }
+  25% {
+    transform: translate(-45%, -48%);
+  }
+  75% {
+    transform: translate(-55%, -52%);
+  }
+}
+
+@keyframes eyeBlink {
+  0%, 90%, 100% {
+    transform: translateX(-50%) translateY(-100%);
+  }
+  95% {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ===== TITLE ===== */
+
+.unified-loading-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* ===== PROGRESS BAR ===== */
+
+.unified-loading-progress-bar {
+  width: 100%;
+  max-width: 300px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.unified-loading-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2196F3 0%, #21CBF3 100%);
+  border-radius: 2px;
+  transition: width 200ms ease-out;
+  box-shadow: 0 0 10px rgba(33, 150, 243, 0.6);
+}
+
+/* ===== PROGRESS TEXT ===== */
+
+.unified-loading-progress-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  min-width: 60px;
+}
+
+/* ===== ERROR STATE ===== */
+
+.unified-loading-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 400px;
+  text-align: center;
+}
+
+.unified-loading-error-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #ff6b6b;
+  white-space: pre-line;
+  padding: 1rem;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.unified-loading-retry-btn {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+.unified-loading-retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(33, 150, 243, 0.6);
+}
+
+.unified-loading-retry-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
+}
+
+.unified-loading-retry-btn:focus {
+  outline: 2px solid #2196F3;
+  outline-offset: 2px;
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+.unified-loading-live-region {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.sr-only {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+
+@media (max-width: 640px) {
+  .unified-loading-overlay {
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .unified-loading-eye {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .unified-loading-eye-outer {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .unified-loading-eye-inner {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .unified-loading-eye-lid {
+    width: 88px;
+    height: 44px;
+    border-radius: 0 0 44px 44px;
+  }
+  
+  .unified-loading-title {
+    font-size: 1.1rem;
+  }
+  
+  .unified-loading-progress-bar {
+    max-width: 250px;
+  }
+  
+  .unified-loading-error {
+    max-width: 300px;
+  }
+  
+  .unified-loading-retry-btn {
+    padding: 0.65rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* ===== REDUCED MOTION ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .unified-loading-overlay {
+    transition: none;
+  }
+  
+  .unified-loading-eye-outer,
+  .unified-loading-eye-inner,
+  .unified-loading-eye-lid {
+    animation: none !important;
+  }
+  
+  .unified-loading-progress-bar-fill {
+    transition: none;
+  }
+  
+  .unified-loading-retry-btn {
+    transition: none;
+  }
+}
+
+/* ===== DARK MODE (explicit) ===== */
+/* Already dark by default, but ensure consistency */
+
+body[data-theme="dark"] .unified-loading-overlay,
+body.dark-mode .unified-loading-overlay {
+  background: rgba(0, 0, 0, 0.95);
+}
+
+/* ===== LIGHT MODE ===== */
+
+body[data-theme="light"] .unified-loading-overlay,
+body.light-mode .unified-loading-overlay {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+body[data-theme="light"] .unified-loading-title,
+body.light-mode .unified-loading-title {
+  color: #000000;
+}
+
+body[data-theme="light"] .unified-loading-progress-text,
+body.light-mode .unified-loading-progress-text {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body[data-theme="light"] .unified-loading-progress-bar,
+body.light-mode .unified-loading-progress-bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+body[data-theme="light"] .unified-loading-eye-outer,
+body.light-mode .unified-loading-eye-outer {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+}
+
+body[data-theme="light"] .unified-loading-eye-lid,
+body.light-mode .unified-loading-eye-lid {
+  background: rgba(0, 0, 0, 0.9);
+}
