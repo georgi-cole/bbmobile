@@ -5,6 +5,13 @@
 export const PlayersCarousel = (() => {
   'use strict';
 
+  // Helper to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // State management
   const state = {
     container: null,
@@ -119,22 +126,26 @@ export const PlayersCarousel = (() => {
     const isDisabled = player.disabled === true || player.evicted === true;
     const avatarUrl = resolveAvatar(player);
     
+    // Escape user-provided content to prevent XSS
+    const safeName = escapeHtml(player.name || 'Unknown');
+    const safeAvatarUrl = escapeHtml(avatarUrl);
+    
     return `
       <div class="social-player-avatar-card ${isDisabled ? 'disabled' : ''}"
            role="listitem"
            tabindex="${isDisabled ? '-1' : '0'}"
            data-player-id="${player.id}"
            data-player-index="${index}"
-           aria-label="${player.name}"
+           aria-label="${safeName}"
            ${isDisabled ? 'aria-disabled="true"' : ''}>
         
         <div class="social-player-avatar-img">
-          <img src="${avatarUrl}" 
-               alt="${player.name}"
+          <img src="${safeAvatarUrl}" 
+               alt="${safeName}"
                loading="lazy">
         </div>
         
-        <span class="social-player-avatar-name">${player.name}</span>
+        <span class="social-player-avatar-name">${safeName}</span>
         
         <div class="social-player-selection-badge" aria-hidden="true">✓</div>
       </div>

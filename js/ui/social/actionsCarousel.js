@@ -5,6 +5,17 @@
 export const ActionsCarousel = (() => {
   'use strict';
 
+  // Constants
+  const MAX_DOTS = 5; // Maximum dot indicators to prevent clutter
+  const CARDS_PER_PAGE = 3; // Approximate cards visible at once
+
+  // Helper to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // State management
   const state = {
     container: null,
@@ -113,26 +124,32 @@ export const ActionsCarousel = (() => {
     const isDisabled = action.canAfford === false;
     const isLocked = action.locked === true;
     
+    // Escape user-provided content to prevent XSS
+    const safeLabel = escapeHtml(action.label || '');
+    const safeDescription = escapeHtml(action.description || '');
+    const safeCategory = escapeHtml(category);
+    const safeId = escapeHtml(action.id || '');
+    
     return `
       <div class="social-action-card ${isDisabled ? 'disabled' : ''} ${isLocked ? 'locked' : ''}"
            role="listitem"
            tabindex="${index === 0 ? '0' : '-1'}"
-           data-action-id="${action.id}"
+           data-action-id="${safeId}"
            data-action-index="${index}"
-           aria-label="${action.label}: ${action.description}. Cost: ${cost} energy"
+           aria-label="${safeLabel}: ${safeDescription}. Cost: ${cost} energy"
            ${isDisabled ? 'aria-disabled="true"' : ''}>
         
         <div class="social-action-card-header">
-          <span class="social-action-card-name">${action.label}</span>
+          <span class="social-action-card-name">${safeLabel}</span>
           <span class="social-action-card-cost" aria-label="Energy cost: ${cost}">
             ⚡ ${cost}
           </span>
         </div>
         
-        <p class="social-action-card-description">${action.description}</p>
+        <p class="social-action-card-description">${safeDescription}</p>
         
-        <span class="social-action-card-category ${category}">
-          ${category}
+        <span class="social-action-card-category ${safeCategory}">
+          ${safeCategory}
         </span>
       </div>
     `;
@@ -145,7 +162,7 @@ export const ActionsCarousel = (() => {
     if (!state.dotsContainer || !state.cards.length) return;
 
     // Calculate number of pages (assuming ~3 cards visible at once on mobile)
-    const numDots = Math.min(state.cards.length, 5); // Limit dots to prevent clutter
+    const numDots = Math.min(state.cards.length, MAX_DOTS);
     
     const dotsHtml = Array.from({ length: numDots }, (_, i) => {
       return `

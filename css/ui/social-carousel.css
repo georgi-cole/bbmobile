@@ -10,9 +10,11 @@
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
-  /* Safe area insets for mobile notches */
+  /* Safe area insets for mobile notches and landscape mode */
   padding-top: env(safe-area-inset-top, 0);
+  padding-right: env(safe-area-inset-right, 0);
   padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
 }
 
 /* Top bar with indicators and history button */

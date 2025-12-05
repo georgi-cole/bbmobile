@@ -46,28 +46,33 @@ export const HistoryButton = (() => {
   function render(container, resources) {
     if (!container) return;
 
+    // Validate and sanitize resource values
+    const energy = Math.max(0, parseInt(resources.energy, 10) || 0);
+    const influence = Math.max(0, parseInt(resources.influence, 10) || 0);
+    const information = Math.max(0, parseInt(resources.information, 10) || 0);
+
     const html = `
       <div class="social-topbar-container">
         <div class="social-topbar-left">
           <div class="social-resource-indicator energy" 
                role="status" 
-               aria-label="Energy: ${resources.energy || 0}">
+               aria-label="Energy: ${energy}">
             <span class="social-resource-indicator-icon">⚡</span>
-            <span class="social-resource-indicator-value">${resources.energy || 0}</span>
+            <span class="social-resource-indicator-value">${energy}</span>
           </div>
           
           <div class="social-resource-indicator influence" 
                role="status" 
-               aria-label="Influence: ${resources.influence || 0}">
+               aria-label="Influence: ${influence}">
             <span class="social-resource-indicator-icon">👑</span>
-            <span class="social-resource-indicator-value">${resources.influence || 0}</span>
+            <span class="social-resource-indicator-value">${influence}</span>
           </div>
           
           <div class="social-resource-indicator information" 
                role="status" 
-               aria-label="Insights: ${resources.information || 0}">
+               aria-label="Insights: ${information}">
             <span class="social-resource-indicator-icon">🔍</span>
-            <span class="social-resource-indicator-value">${resources.information || 0}</span>
+            <span class="social-resource-indicator-value">${information}</span>
           </div>
         </div>
         
@@ -151,25 +156,30 @@ export const HistoryButton = (() => {
     const container = state.button.closest('.social-topbar-container');
     if (!container) return;
 
+    // Validate and sanitize resource values
+    const energy = Math.max(0, parseInt(resources.energy, 10) || 0);
+    const influence = Math.max(0, parseInt(resources.influence, 10) || 0);
+    const information = Math.max(0, parseInt(resources.information, 10) || 0);
+
     // Update energy
     const energyIndicator = container.querySelector('.social-resource-indicator.energy .social-resource-indicator-value');
     if (energyIndicator) {
-      energyIndicator.textContent = resources.energy || 0;
-      energyIndicator.closest('.social-resource-indicator').setAttribute('aria-label', `Energy: ${resources.energy || 0}`);
+      energyIndicator.textContent = energy;
+      energyIndicator.closest('.social-resource-indicator').setAttribute('aria-label', `Energy: ${energy}`);
     }
 
     // Update influence
     const influenceIndicator = container.querySelector('.social-resource-indicator.influence .social-resource-indicator-value');
     if (influenceIndicator) {
-      influenceIndicator.textContent = resources.influence || 0;
-      influenceIndicator.closest('.social-resource-indicator').setAttribute('aria-label', `Influence: ${resources.influence || 0}`);
+      influenceIndicator.textContent = influence;
+      influenceIndicator.closest('.social-resource-indicator').setAttribute('aria-label', `Influence: ${influence}`);
     }
 
     // Update information
     const informationIndicator = container.querySelector('.social-resource-indicator.information .social-resource-indicator-value');
     if (informationIndicator) {
-      informationIndicator.textContent = resources.information || 0;
-      informationIndicator.closest('.social-resource-indicator').setAttribute('aria-label', `Insights: ${resources.information || 0}`);
+      informationIndicator.textContent = information;
+      informationIndicator.closest('.social-resource-indicator').setAttribute('aria-label', `Insights: ${information}`);
     }
   }
 
