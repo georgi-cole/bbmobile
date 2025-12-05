@@ -31,8 +31,12 @@
     display: none !important;
   }
   
-  /* Hide the entire topbar on mobile to save space */
-  .topbar {
+  /* Hide the entire topbar on mobile to save space - cover all variations */
+  .topbar,
+  .toolbar,
+  .toolbar--scroll,
+  .topbar.toolbar--scroll,
+  div.topbar {
     display: none !important;
   }
   
