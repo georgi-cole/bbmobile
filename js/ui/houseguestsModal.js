@@ -26,6 +26,21 @@
     backdrop.className = 'houseguests-modal__backdrop';
     backdrop.addEventListener('click', closeModal);
 
+    // Add floating emojis to backdrop (diverse people)
+    const emojiPool = [
+      '👨', '👩', '👨🏻', '👩🏻', '👨🏼', '👩🏼', 
+      '👨🏽', '👩🏽', '👨🏾', '👩🏾', '👨🏿', '👩🏿',
+      '🧑', '🧑🏻', '🧑🏼', '🧑🏽', '🧑🏾', '🧑🏿'
+    ];
+    
+    for (let i = 0; i < 6; i++) {
+      const emoji = document.createElement('div');
+      emoji.className = 'houseguests-modal__floating-emoji';
+      emoji.textContent = emojiPool[Math.floor(Math.random() * emojiPool.length)];
+      emoji.style.bottom = '-50px'; // Start from bottom
+      backdrop.appendChild(emoji);
+    }
+
     // Modal content container (bottom sheet style)
     const content = document.createElement('div');
     content.className = 'houseguests-modal__content';
