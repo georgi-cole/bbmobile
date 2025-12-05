@@ -102,6 +102,19 @@
 
   --line-height-tight: 1.1;
   --line-height-normal: 1.4;
+
+  /* Button tokens - additive styling for future CTA standardization */
+  --btn-radius: 999px;
+  --btn-padding-vertical: 12px;
+  --btn-padding-horizontal: 18px;
+
+  --color-accent-1: #3a9fff;
+  --color-accent-2: #00e5ff;
+  --color-surface: rgba(255,255,255,0.03);
+  --color-surface-strong: rgba(255,255,255,0.06);
+  --color-on-accent: #020308;
+  --color-text: #f5f6ff;
+  --btn-shadow: 0 10px 25px rgba(0, 178, 255, 0.18);
 }
 
 /* THEME DEFINITIONS --------------------------------------------------------- */
@@ -699,6 +712,80 @@ button:focus-visible,.btn:focus-visible{
              0 0 0 3px var(--accent-2),
              0 0 24px -4px var(--accent),
              inset 0 1px 0 rgba(255,255,255,.2);
+}
+
+/* New button utility classes - additive styling for future CTA standardization */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  padding: var(--btn-padding-vertical) var(--btn-padding-horizontal);
+  border-radius: var(--btn-radius);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease, box-shadow 160ms ease, opacity 120ms ease;
+  user-select: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-accent-1), var(--color-accent-2));
+  color: var(--color-on-accent);
+  box-shadow: var(--btn-shadow);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--color-surface-strong);
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-accent-1);
+  border: none;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.btn[disabled],
+.btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+
+.btn:focus {
+  outline: 3px solid rgba(58,159,255,0.16);
+  outline-offset: 3px;
+  border-radius: var(--btn-radius);
+}
+
+a.btn {
+  display: inline-flex;
+}
+
+@media (max-width: 768px) {
+  .btn {
+    font-size: 0.95rem;
+    padding: calc(var(--btn-padding-vertical) - 2px) 14px;
+  }
+
+  .btn-primary {
+    padding: 14px 16px;
+  }
 }
 
 /* 05. BADGES / TAGS --------------------------------------------------------- */
