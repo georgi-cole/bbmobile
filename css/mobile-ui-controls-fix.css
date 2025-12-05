@@ -31,14 +31,20 @@
     display: none !important;
   }
   
-  /* Hide the entire topbar on mobile to save space */
-  .topbar {
+  /* Hide the entire topbar on mobile to save space - cover all variations */
+  .topbar,
+  .toolbar,
+  .toolbar--scroll,
+  .topbar.toolbar--scroll,
+  div.topbar {
     display: none !important;
   }
   
-  /* Hide settings and sound from compact HUD on mobile */
+  /* Hide settings and sound buttons from compact HUD on mobile - they appear in hg-count-cluster instead */
   .compact-hud .settings-button,
-  .compact-hud .sound-button {
+  .compact-hud .sound-button,
+  .compact-hud #btnSettingsHud,
+  .compact-hud #btnSoundHud {
     display: none !important;
   }
   
@@ -50,9 +56,20 @@
     flex-wrap: wrap;
   }
   
-  /* Style for mobile control buttons next to Houseguests and player pill */
-  .houseguests-header .mobile-control-btn {
-    display: inline-flex;
+  /* HG Count Cluster - groups player pill, settings, and speaker buttons */
+  .hg-count-cluster,
+  .mobile-controls-group {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  
+  /* Style for mobile control buttons (settings-btn and speaker-chip) */
+  .houseguests-header .mobile-control-btn,
+  .hg-count-cluster .settings-btn,
+  .hg-count-cluster .speaker-chip {
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
     padding: 6px 10px;
@@ -68,22 +85,29 @@
     min-width: unset;
   }
   
-  .houseguests-header .mobile-control-btn:hover {
+  .houseguests-header .mobile-control-btn:hover,
+  .hg-count-cluster .settings-btn:hover,
+  .hg-count-cluster .speaker-chip:hover {
     transform: translateY(-1px);
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
   }
   
-  .houseguests-header .mobile-control-btn:active {
+  .houseguests-header .mobile-control-btn:active,
+  .hg-count-cluster .settings-btn:active,
+  .hg-count-cluster .speaker-chip:active {
     transform: scale(0.98);
   }
   
-  .houseguests-header .mobile-control-btn:focus-visible {
+  .houseguests-header .mobile-control-btn:focus-visible,
+  .hg-count-cluster .settings-btn:focus-visible,
+  .hg-count-cluster .speaker-chip:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
   
-  /* Sound button muted state */
-  .houseguests-header .mobile-control-btn[aria-pressed="true"] {
+  /* Speaker button (speaker-chip) muted state */
+  .houseguests-header .mobile-control-btn[aria-pressed="true"],
+  .hg-count-cluster .speaker-chip[aria-pressed="true"] {
     background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 80%, black) 100%);
     opacity: 0.8;
   }
