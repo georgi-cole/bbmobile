@@ -29,11 +29,17 @@ Enable delegated click logging via a global flag before page load:
 This attaches a delegated `click` listener that logs interactions on `.player`, `.roster-card`, and `[data-player-id]`.
 
 ### View logs
-Get a copy of captured logs:
+Get a copy of captured logs (preferred method):
 
 ```js
 const logs = BBMobile.auditTracer.getLogs();
 console.log(logs);
+```
+
+Or access the internal array directly (for debugging only):
+
+```js
+console.log(BBMobile.auditTracer._logs);
 ```
 
 ### Export logs
