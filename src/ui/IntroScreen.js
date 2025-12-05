@@ -461,7 +461,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Fallback: Map actions to global function names (for backward compatibility)
     const actionMap = {
       'intro:play': { fn: 'enterGame', obj: 'StartupFlow', method: 'enterGame' },
-      'intro:open:houseguests': { fallback: { obj: 'HouseguestsModal', method: 'open' } },
+      'intro:open:houseguests': { obj: 'HouseguestsModal', method: 'open' },
       'intro:open:profile': { fn: 'showProfileModal', fallback: { obj: 'ProfileModal', method: 'open' } },
       'intro:open:settings': { fn: 'showSettingsModal', click: 'btnOpenSettings' },
       'intro:open:leaderboard': { fn: 'showLeaderboard', fallback: { obj: 'ProgressionUI', method: 'showLeaderboard' }, click: 'xpLeaderboardBadge' },
@@ -487,11 +487,14 @@ console.info('[IntroScreen] Script executing – pre-init');
         console.info(`[IntroHub] Calling global.${mapping.fn}()`);
         g[mapping.fn]();
         handled = true;
-      } else if (mapping.obj && mapping.method && g[mapping.obj] && typeof g[mapping.obj][mapping.method] === 'function') {
-        // Try object.method pattern
-        console.info(`[IntroHub] Calling global.${mapping.obj}.${mapping.method}()`);
-        g[mapping.obj][mapping.method]();
-        handled = true;
+      } else if (mapping.obj && mapping.method) {
+        // Try object.method pattern - check both g (window.game) and window
+        const target = g[mapping.obj] || window[mapping.obj];
+        if (target && typeof target[mapping.method] === 'function') {
+          console.info(`[IntroHub] Calling global.${mapping.obj}.${mapping.method}()`);
+          target[mapping.method]();
+          handled = true;
+        }
       } else if (mapping.fallback && g[mapping.fallback.obj] && typeof g[mapping.fallback.obj][mapping.fallback.method] === 'function') {
         // Try fallback object.method
         console.info(`[IntroHub] Calling fallback global.${mapping.fallback.obj}.${mapping.fallback.method}()`);
