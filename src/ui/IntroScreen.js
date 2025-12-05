@@ -890,6 +890,19 @@ console.info('[IntroScreen] Script executing – pre-init');
     progress.setAttribute('aria-valuenow', '0');
     progress.textContent = '0%';
     
+    // Progress bar container
+    const progressBarContainer = document.createElement('div');
+    progressBarContainer.className = 'intro-avatar-progress-bar-container';
+    progressBarContainer.id = 'avatarProgressBarContainer';
+    
+    // Progress bar fill
+    const progressBarFill = document.createElement('div');
+    progressBarFill.className = 'intro-avatar-progress-bar-fill';
+    progressBarFill.id = 'avatarProgressBarFill';
+    progressBarFill.style.width = '0%';
+    
+    progressBarContainer.appendChild(progressBarFill);
+    
     // Error message container (hidden by default)
     const errorContainer = document.createElement('div');
     errorContainer.className = 'intro-avatar-preload-error';
@@ -916,6 +929,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     overlay.appendChild(spinner);
     overlay.appendChild(liveRegion);
     overlay.appendChild(text);
+    overlay.appendChild(progressBarContainer);
     overlay.appendChild(progress);
     overlay.appendChild(errorContainer);
     
@@ -953,19 +967,41 @@ console.info('[IntroScreen] Script executing – pre-init');
    */
   function updateAvatarPreloadProgress(loaded, total) {
     const progress = document.getElementById('avatarPreloadProgress');
+    const progressBarFill = document.getElementById('avatarProgressBarFill');
     const liveRegion = document.getElementById('avatarPreloadLiveRegion');
     
+    const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+    
+    // Update percentage text
     if (progress) {
-      const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
       progress.textContent = `${percent}%`;
       progress.setAttribute('aria-valuenow', String(percent));
     }
     
+    // Animate progress bar fill
+    if (progressBarFill) {
+      progressBarFill.style.width = `${percent}%`;
+    }
+    
     // Update live region for screen readers (every 25%)
     if (liveRegion && total > 0) {
-      const percent = Math.round((loaded / total) * 100);
       if (percent % 25 === 0 || percent === 100) {
         liveRegion.textContent = `Loading: ${percent}% complete`;
+      }
+    }
+    
+    // Log telemetry for progress milestones
+    if (percent === 25 || percent === 50 || percent === 75 || percent === 100) {
+      try {
+        if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+          g.Telemetry.log('avatar_preload_progress_milestone', { 
+            percent, 
+            loaded, 
+            total 
+          });
+        }
+      } catch (e) {
+        // Non-blocking
       }
     }
   }
