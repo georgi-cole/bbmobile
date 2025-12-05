@@ -93,10 +93,13 @@ body:not(.main-screen-built) .topbar {
 
 /* ===== Title Group (Header Text Content) ===== */
 .intro-screen__title-group {
+  --title-group-spacing: 24px;
+  --quick-icons-clearance: 80px;
+  
   position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 24px);
-  left: calc(env(safe-area-inset-left, 0px) + 24px);
-  right: calc(env(safe-area-inset-right, 0px) + 80px); /* Leave space for quick icons */
+  top: calc(env(safe-area-inset-top, 0px) + var(--title-group-spacing));
+  left: calc(env(safe-area-inset-left, 0px) + var(--title-group-spacing));
+  right: calc(env(safe-area-inset-right, 0px) + var(--quick-icons-clearance)); /* Leave space for quick icons */
   z-index: 15;
   max-width: 600px;
   animation: intro-title-fade 700ms ease-out backwards;
@@ -366,17 +369,20 @@ body:not(.main-screen-built) .topbar {
 /* Portrait Mobile */
 @media (max-width: 768px) and (orientation: portrait) {
   .intro-screen__title-group {
-    top: calc(env(safe-area-inset-top, 0px) + 16px);
-    left: calc(env(safe-area-inset-left, 0px) + 16px);
-    right: calc(env(safe-area-inset-right, 0px) + 16px);
+    --title-group-spacing: 16px;
+    
+    top: calc(env(safe-area-inset-top, 0px) + var(--title-group-spacing));
+    left: calc(env(safe-area-inset-left, 0px) + var(--title-group-spacing));
+    right: calc(env(safe-area-inset-right, 0px) + var(--title-group-spacing));
     max-width: none;
   }
   
-  .intro-screen__title {
+  /* Adjust typography for mobile without overriding utility classes */
+  .intro-screen__title.text-heading-lg {
     font-size: 1.5rem;
   }
   
-  .intro-screen__subtitle {
+  .intro-screen__subtitle.text-body {
     font-size: 0.9rem;
   }
   
