@@ -751,10 +751,13 @@
       }
     });
 
-    // Credits button - shows credits/end credits
+    // Credits button - play credits video (outro.mp4)
     bus.on('intro:open:credits', function() {
       console.info('[StartupFlow] Credits button clicked');
-      if (typeof g.showCreditsModal === 'function') {
+      if (g.CreditsVideo && typeof g.CreditsVideo.play === 'function') {
+        console.info('[StartupFlow] Playing credits video');
+        g.CreditsVideo.play();
+      } else if (typeof g.showCreditsModal === 'function') {
         g.showCreditsModal();
       } else if (typeof g.showCredits === 'function') {
         g.showCredits();
@@ -785,10 +788,14 @@
       // TODO: Implement daily challenge feature
     });
 
-    // News chip button - placeholder for future implementation
+    // News chip button - open News modal
     bus.on('intro:chip:news', function() {
-      console.info('[StartupFlow] News chip clicked (not yet implemented)');
-      // TODO: Implement news/announcements feature
+      console.info('[StartupFlow] News chip clicked - opening NewsModal');
+      if (window.NewsModal && typeof window.NewsModal.open === 'function') {
+        window.NewsModal.open();
+      } else {
+        console.warn('[StartupFlow] NewsModal not available');
+      }
     });
   }
 

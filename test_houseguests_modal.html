@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Houseguests Modal Test</title>
+  <link rel="stylesheet" href="css/houseguests-modal.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    .test-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    p {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 30px;
+    }
+    .test-btn {
+      padding: 14px 28px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+      border: 1px solid rgba(0, 212, 255, 0.5);
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms ease;
+      box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+      margin: 10px;
+    }
+    .test-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+    }
+    .test-btn:active {
+      transform: translateY(0);
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #00d4ff;
+    }
+    .log {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #00d4ff;
+      padding-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏠 Houseguests Modal Test</h1>
+    <p>Test the houseguests modal functionality with list view and detail cards.</p>
+
+    <div class="test-section">
+      <h3>Test Controls</h3>
+      <button class="test-btn" onclick="openListView()">Open Houseguests List</button>
+      <button class="test-btn" onclick="openDetailView()">Open Detail (Finn)</button>
+      <button class="test-btn" onclick="testAvatar()">Test Avatar System</button>
+      <button class="test-btn" onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+      <h3>Console Log</h3>
+      <div class="log" id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Status Checks</h3>
+      <div id="statusChecks"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/avatar.js"></script>
+  <script src="js/data/houseguests.js"></script>
+  <script src="js/ui/houseguestsModal.js"></script>
+
+  <script>
+    // Override console.info to show in log
+    const originalConsoleInfo = console.info;
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+    
+    function addToLog(message, type = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.style.borderLeftColor = {
+        'info': '#00d4ff',
+        'log': '#00ff88',
+        'warn': '#ffaa00',
+        'error': '#ff4444'
+      }[type] || '#00d4ff';
+      entry.textContent = message;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    console.info = function(...args) {
+      originalConsoleInfo.apply(console, args);
+      addToLog(args.join(' '), 'info');
+    };
+
+    console.log = function(...args) {
+      originalConsoleLog.apply(console, args);
+      addToLog(args.join(' '), 'log');
+    };
+
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      addToLog('⚠️ ' + args.join(' '), 'warn');
+    };
+
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      addToLog('❌ ' + args.join(' '), 'error');
+    };
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+      console.info('Log cleared');
+    }
+
+    function openListView() {
+      console.info('Test: Opening houseguests list view');
+      if (window.HouseguestsModal) {
+        window.HouseguestsModal.open('list');
+      } else {
+        console.error('HouseguestsModal not found!');
+      }
+    }
+
+    function openDetailView() {
+      console.info('Test: Opening detail view for Finn');
+      if (window.HouseguestsModal && window.Houseguests) {
+        const finn = window.Houseguests.get('Finn');
+        if (finn) {
+          window.HouseguestsModal.open('detail', finn);
+        } else {
+          console.error('Finn not found in houseguests data!');
+        }
+      } else {
+        console.error('HouseguestsModal or Houseguests not found!');
+      }
+    }
+
+    function testAvatar() {
+      console.info('Test: Checking avatar system');
+      if (window.getAvatar) {
+        const finnAvatar = window.getAvatar('Finn');
+        console.log('Finn avatar URL:', finnAvatar);
+      } else {
+        console.warn('getAvatar function not available');
+      }
+    }
+
+    function updateStatusChecks() {
+      const statusDiv = document.getElementById('statusChecks');
+      const checks = [
+        { name: 'Houseguests Data', condition: !!window.Houseguests },
+        { name: 'HouseguestsModal', condition: !!window.HouseguestsModal },
+        { name: 'Houseguests.getAll()', condition: window.Houseguests && typeof window.Houseguests.getAll === 'function' },
+        { name: 'HouseguestsModal.open()', condition: window.HouseguestsModal && typeof window.HouseguestsModal.open === 'function' },
+        { name: 'Avatar System', condition: typeof window.getAvatar === 'function' },
+        { name: 'Total Houseguests', condition: window.Houseguests ? window.Houseguests.getAll().length : 0, isCount: true }
+      ];
+
+      statusDiv.innerHTML = checks.map(check => {
+        const status = check.isCount 
+          ? `<strong>${check.condition}</strong>`
+          : (check.condition ? '✅ Available' : '❌ Missing');
+        return `<div style="padding: 8px; margin: 4px 0; background: rgba(255,255,255,0.05); border-radius: 6px;">
+          <strong>${check.name}:</strong> ${status}
+        </div>`;
+      }).join('');
+    }
+
+    // Initial status check
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        updateStatusChecks();
+        console.info('Page loaded and status checks complete');
+      }, 100);
+    });
+  </script>
+</body>
+</html>
