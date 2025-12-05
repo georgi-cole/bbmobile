@@ -50,16 +50,57 @@
    */
   function handleAvatarsReady(event){
     const detail = event?.detail || {};
+    const cfg = g.game?.cfg || g.cfg || {};
+    const strictMode = cfg.avatarPreloadRequireAll === true;
     
     console.info('[RosterGate] avatars:ready event received:', detail);
+    
+    // In strict mode, only ungate if ALL avatars loaded successfully
+    if (strictMode) {
+      const success = detail.loaded === detail.total && detail.failed === 0 && !detail.timedOut;
+      
+      if (!success) {
+        console.warn('[RosterGate] STRICT MODE: Avatar preload incomplete - roster remains gated', {
+          loaded: detail.loaded,
+          total: detail.total,
+          failed: detail.failed,
+          timedOut: detail.timedOut
+        });
+        
+        // Log telemetry for failed unlock
+        if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+          g.Telemetry.log('top_roster_unlock_failed', {
+            strictMode: true,
+            loaded: detail.loaded,
+            total: detail.total,
+            failed: detail.failed,
+            timedOut: detail.timedOut
+          });
+        }
+        
+        return; // Do NOT ungate roster
+      }
+      
+      console.info('[RosterGate] STRICT MODE: All avatars loaded successfully - unlocking roster');
+    } else {
+      // Non-strict mode: log warning if timed out but proceed
+      if(detail.timedOut){
+        console.warn('[RosterGate] Roster ungated after timeout - some avatars may not be loaded');
+      }
+    }
     
     rosterGateState.avatarsReady = true;
     rosterGateState.timedOut = !!detail.timedOut;
     rosterGateState.summary = detail;
     
-    // Log warning if timed out
-    if(detail.timedOut){
-      console.warn('[RosterGate] Roster ungated after timeout - some avatars may not be loaded');
+    // Log telemetry for successful unlock
+    if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+      g.Telemetry.log('top_roster_unlocked', {
+        strictMode,
+        loaded: detail.loaded,
+        total: detail.total,
+        elapsedMs: detail.elapsedMs
+      });
     }
     
     // Ungate and render roster

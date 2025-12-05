@@ -1585,6 +1585,27 @@
     const container = document.querySelector('.mobile-roster-active-grid');
     if (!container) return;
     
+    // ROSTER GATING: Check if avatars are ready in strict mode
+    // If avatars are preloading, add gated class and wait for avatars:ready event
+    const avatarsPreloading = (global.game && global.game.state && global.game.state.avatarsPreloading) || global.__avatarsPreloading;
+    const cfg = (global.game && global.game.cfg) || global.cfg || {};
+    const strictMode = cfg.avatarPreloadRequireAll === true;
+    
+    if (avatarsPreloading && strictMode) {
+      // Add gated class to hide roster while avatars load
+      container.classList.add('roster-grid--gated');
+      container.classList.remove('roster-grid--ready');
+      
+      // Log telemetry for gating
+      if (global.Telemetry && typeof global.Telemetry.log === 'function') {
+        global.Telemetry.log('roster_gated', { strictMode: true });
+      } else {
+        console.info('[RosterGate] Roster gated - waiting for avatars:ready event');
+      }
+      
+      return; // Do not render until avatars are ready
+    }
+    
     // Sync badge states from canonical game state before rendering
     // This ensures badges are always up-to-date with HOH, POV, and nominations
     if (typeof global.syncPlayerBadgeStates === 'function') {
@@ -2896,6 +2917,89 @@
       });
       console.info('[MobileRoster] Subscribed to PlayerService');
     }
+    
+    // ROSTER GATING: Listen for avatars:ready event to unlock roster
+    global.addEventListener('avatars:ready', (event) => {
+      const summary = event?.detail || {};
+      const cfg = (global.game && global.game.cfg) || global.cfg || {};
+      const strictMode = cfg.avatarPreloadRequireAll === true;
+      
+      console.info('[RosterGate] avatars:ready event received', summary);
+      
+      // In strict mode, only unlock if all avatars loaded successfully
+      if (strictMode) {
+        const success = summary.loaded === summary.total && summary.failed === 0 && !summary.timedOut;
+        
+        if (success) {
+          // Remove gated class and add ready class
+          const container = document.querySelector('.mobile-roster-active-grid');
+          if (container) {
+            container.classList.remove('roster-grid--gated');
+            container.classList.add('roster-grid--ready');
+          }
+          
+          // Log telemetry for unlock
+          if (global.Telemetry && typeof global.Telemetry.log === 'function') {
+            global.Telemetry.log('roster_unlocked', {
+              strictMode: true,
+              loaded: summary.loaded,
+              total: summary.total,
+              elapsedMs: summary.elapsedMs
+            });
+          } else {
+            console.info('[RosterGate] All avatars loaded successfully - unlocking roster');
+          }
+          
+          // Re-render roster now that avatars are ready
+          if (isMobileViewport() && state.initialized) {
+            renderAll();
+          }
+        } else {
+          // Log telemetry for failed unlock
+          if (global.Telemetry && typeof global.Telemetry.log === 'function') {
+            global.Telemetry.log('roster_unlock_failed', {
+              strictMode: true,
+              loaded: summary.loaded,
+              total: summary.total,
+              failed: summary.failed,
+              timedOut: summary.timedOut
+            });
+          } else {
+            console.warn('[RosterGate] Avatar preload incomplete - roster remains gated', {
+              loaded: summary.loaded,
+              total: summary.total,
+              failed: summary.failed,
+              timedOut: summary.timedOut
+            });
+          }
+        }
+      } else {
+        // Non-strict mode: always unlock roster when event fires
+        const container = document.querySelector('.mobile-roster-active-grid');
+        if (container) {
+          container.classList.remove('roster-grid--gated');
+          container.classList.add('roster-grid--ready');
+        }
+        
+        // Log telemetry for unlock
+        if (global.Telemetry && typeof global.Telemetry.log === 'function') {
+          global.Telemetry.log('roster_unlocked', {
+            strictMode: false,
+            loaded: summary.loaded,
+            total: summary.total
+          });
+        } else {
+          console.info('[RosterGate] Avatars ready (non-strict mode) - unlocking roster');
+        }
+        
+        // Re-render roster
+        if (isMobileViewport() && state.initialized) {
+          renderAll();
+        }
+      }
+    });
+    
+    console.info('[MobileRoster] Subscribed to avatars:ready event for roster gating');
     
     // Setup chip bar suppression
     setupChipBarSuppression();
