@@ -85,12 +85,8 @@
         <span class="compact-hud-chip-icon">🚪</span>
         <span class="compact-hud-chip-label">DR</span>
       </button>
-      <button class="compact-hud-chip icon-button settings-button" id="btnSettingsHud" aria-label="Settings" title="Settings">
-        <span class="compact-hud-chip-icon">⚙️</span>
-      </button>
-      <button class="compact-hud-chip icon-button sound-button" id="btnSoundHud" aria-label="Toggle sound" aria-pressed="false" title="Toggle sound">
-        <span class="compact-hud-chip-icon">🔊</span>
-      </button>
+      <button class="compact-hud-chip icon-button settings-button" id="btnSettingsHud" aria-label="Settings" title="Settings">⚙️</button>
+      <button class="compact-hud-chip icon-button sound-button" id="btnSoundHud" aria-label="Toggle sound" aria-pressed="false" title="Toggle sound">🔊</button>
       <button class="compact-hud-chip action-menu-chip" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">
         <span class="compact-hud-chip-icon">⋮</span>
       </button>
@@ -146,11 +142,8 @@
           // Sync the aria-pressed state
           const isPressed = originalSoundBtn.getAttribute('aria-pressed') === 'true';
           soundButton.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
-          // Update icon to match state
-          const icon = soundButton.querySelector('.compact-hud-chip-icon');
-          if (icon) {
-            icon.textContent = isPressed ? '🔇' : '🔊';
-          }
+          // Update emoji directly (no wrapper span)
+          soundButton.textContent = isPressed ? '🔇' : '🔊';
         } else {
           console.warn('[CompactHud] Original sound button not found');
         }
@@ -162,10 +155,8 @@
       if (originalSoundBtn) {
         const isPressed = originalSoundBtn.getAttribute('aria-pressed') === 'true';
         soundButton.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
-        const icon = soundButton.querySelector('.compact-hud-chip-icon');
-        if (icon) {
-          icon.textContent = isPressed ? '🔇' : '🔊';
-        }
+        // Update emoji directly (no wrapper span)
+        soundButton.textContent = isPressed ? '🔇' : '🔊';
       }
     }
 
