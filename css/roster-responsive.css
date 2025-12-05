@@ -1,0 +1,191 @@
+/* ============================================================================
+   ROSTER RESPONSIVE LAYOUT - Avatar Grid Scrolling Fix
+   ============================================================================
+   
+   Purpose: Prevent avatar grid from extending under the faux-TV area on mobile
+   by making the roster/avatar grid scrollable within a constrained container.
+   
+   Context: Part of mobile faux-TV viewport overlap fix
+   Reference: PR for mobile layout regression where last row of avatars becomes
+   partially hidden under the faux TV or TV overlays block interaction.
+   
+   Strategy:
+   - Wrap roster in a flexbox container (.houseguests-section) that can grow/shrink
+   - Make the avatar grid (.avatar-grid, #rosterBar, .top-roster-row) scrollable
+   - Use CSS variables for dynamic max-height calculation (set by JS)
+   - Provide fallback max-heights for cases where JS hasn't run yet
+   
+   ============================================================================ */
+
+/* Houseguests section wrapper - provides vertical layout with phase pills above */
+.houseguests-section,
+#actionCard > .houseguests-header + .compact-hud + #rosterBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Allow section to shrink if needed but maintain minimum space */
+  flex: 0 1 auto;
+  min-height: 120px; /* Ensure pills/title remain visible */
+}
+
+/* Avatar grid scrollable container - applies to multiple selector patterns */
+.houseguests-section .avatar-grid,
+#rosterBar,
+.top-roster,
+.top-roster-row,
+.avatar-list {
+  /* Make scrollable when content exceeds available space */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Dynamic max-height set by layout-responsive.js, fallback to reasonable default */
+  max-height: var(--houseguests-grid-max-height, 220px);
+  /* Ensure content doesn't push container beyond bounds */
+  flex-shrink: 1;
+}
+
+/* Specific styling for #rosterBar (main roster container) */
+#rosterBar {
+  /* Ensure it participates in flex layout */
+  display: flex;
+  flex-direction: column;
+  /* Compact spacing between rows on mobile */
+  gap: 6px;
+}
+
+/* Hide scrollbar on desktop but keep functionality */
+.houseguests-section .avatar-grid::-webkit-scrollbar,
+#rosterBar::-webkit-scrollbar,
+.top-roster-row::-webkit-scrollbar {
+  width: 6px;
+}
+
+.houseguests-section .avatar-grid::-webkit-scrollbar-track,
+#rosterBar::-webkit-scrollbar-track,
+.top-roster-row::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.houseguests-section .avatar-grid::-webkit-scrollbar-thumb,
+#rosterBar::-webkit-scrollbar-thumb,
+.top-roster-row::-webkit-scrollbar-thumb {
+  background: rgba(120, 210, 255, 0.3);
+  border-radius: 3px;
+}
+
+.houseguests-section .avatar-grid::-webkit-scrollbar-thumb:hover,
+#rosterBar::-webkit-scrollbar-thumb:hover,
+.top-roster-row::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 210, 255, 0.5);
+}
+
+/* ============================================================================
+   MOBILE RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+/* Tablet and smaller (900px) */
+@media (max-width: 900px) {
+  .houseguests-section,
+  #actionCard > .houseguests-header + .compact-hud + #rosterBar {
+    gap: 6px;
+    min-height: 100px;
+  }
+  
+  .houseguests-section .avatar-grid,
+  #rosterBar,
+  .top-roster-row {
+    /* Tighter max-height on tablets */
+    max-height: var(--houseguests-grid-max-height, 200px);
+  }
+}
+
+/* Mobile portrait (600px and smaller) */
+@media (max-width: 600px) {
+  .houseguests-section,
+  #actionCard > .houseguests-header + .compact-hud + #rosterBar {
+    gap: 4px;
+    min-height: 80px;
+  }
+  
+  .houseguests-section .avatar-grid,
+  #rosterBar,
+  .top-roster-row {
+    /* Even more constrained on small mobile */
+    max-height: var(--houseguests-grid-max-height, 180px);
+    /* Smaller gap between avatar tiles */
+    gap: 4px;
+  }
+  
+  /* Reduce avatar tile size on very small screens */
+  .top-roster-tile {
+    min-width: 48px;
+    min-height: 48px;
+  }
+  
+  /* Make scrollbar always visible on mobile for discoverability */
+  .houseguests-section .avatar-grid::-webkit-scrollbar,
+  #rosterBar::-webkit-scrollbar,
+  .top-roster-row::-webkit-scrollbar {
+    width: 4px;
+  }
+}
+
+/* ============================================================================
+   PHASE-SPECIFIC ADJUSTMENTS
+   ============================================================================ */
+
+/* During Social Phase - pills may take more space */
+body.is-social-phase .houseguests-section,
+body[data-phase="social"] .houseguests-section,
+body[data-phase="social_intermission"] .houseguests-section {
+  /* Allow more vertical space for social phase pills */
+  min-height: 140px;
+}
+
+body.is-social-phase #rosterBar,
+body[data-phase="social"] #rosterBar,
+body[data-phase="social_intermission"] #rosterBar {
+  /* Reduce max-height to account for social cards above */
+  max-height: var(--houseguests-grid-max-height, 160px);
+}
+
+/* ============================================================================
+   ACCESSIBILITY & VISUAL POLISH
+   ============================================================================ */
+
+/* Focus indicator for keyboard navigation within scrollable area */
+.houseguests-section .avatar-grid:focus-within,
+#rosterBar:focus-within,
+.top-roster-row:focus-within {
+  outline: 2px solid rgba(120, 210, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* Smooth scroll behavior */
+.houseguests-section .avatar-grid,
+#rosterBar,
+.top-roster-row {
+  scroll-behavior: smooth;
+}
+
+/* Fade effect at bottom to indicate more content */
+.houseguests-section .avatar-grid::after,
+#rosterBar::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: linear-gradient(to bottom, transparent, rgba(13, 21, 31, 0.7));
+  pointer-events: none;
+  display: block;
+}
+
+/* Hide fade effect when scrolled to bottom */
+.houseguests-section .avatar-grid.scrolled-to-bottom::after,
+#rosterBar.scrolled-to-bottom::after {
+  display: none;
+}
