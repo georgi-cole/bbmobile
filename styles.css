@@ -382,6 +382,47 @@ a:hover{ color:#a8d3ff; } a:active{ color:#d3ecff; }
 ::-webkit-scrollbar-thumb{ background:#26435d; border-radius:6px; }
 ::-webkit-scrollbar-thumb:hover{ background:#31587a; }
 
+/* App Shell Layout Classes (Epic A / Story A1) - Additive Only ------------ */
+/* These classes provide flexible app-shell layout structure without breaking existing layouts */
+
+.app-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #020308);
+}
+
+.app-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px 16px;
+  box-sizing: border-box;
+}
+
+.app-screen-header {
+  padding-bottom: 8px;
+}
+
+.app-screen-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-screen-footer {
+  padding-top: 8px;
+}
+
+/* Mobile-specific app-shell background gradient 
+   Note: Uses fixed colors rather than CSS vars to ensure consistent appearance
+   across themes. Colors chosen for mobile-optimized aesthetic. */
+@media (max-width: 768px) {
+  .app-root {
+    background: radial-gradient(circle at top, #101633 0, #020308 60%);
+  }
+}
+
 /* 02. LAYOUT GRID & CARDS -------------------------------------------------- */
 .wrap{
   display:grid; gap:14px; padding:14px;
