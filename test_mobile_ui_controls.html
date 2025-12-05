@@ -209,12 +209,8 @@
             const isPressed = btn.getAttribute('aria-pressed') === 'true';
             btn.setAttribute('aria-pressed', !isPressed ? 'true' : 'false');
             
-            // Update icon for speaker chip
-            if (id === 'speaker-chip') {
-              btn.textContent = !isPressed ? '🔇' : '🔊';
-            } else {
-              btn.textContent = !isPressed ? '🔇' : '🔊';
-            }
+            // Update icon
+            btn.textContent = !isPressed ? '🔇' : '🔊';
             
             // Log state change
             console.log(`Sound button state: ${!isPressed ? 'muted' : 'unmuted'}`);

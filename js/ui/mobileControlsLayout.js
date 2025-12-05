@@ -185,8 +185,6 @@
         const h1 = houseguestsHeader.querySelector('h1');
         if (h1 && h1.nextSibling) {
           houseguestsHeader.insertBefore(playerPill, h1.nextSibling);
-        } else if (h1) {
-          houseguestsHeader.appendChild(playerPill);
         } else {
           houseguestsHeader.appendChild(playerPill);
         }
