@@ -7,7 +7,6 @@ export const ActionsCarousel = (() => {
 
   // Constants
   const MAX_DOTS = 5; // Maximum dot indicators to prevent clutter
-  const CARDS_PER_PAGE = 3; // Approximate cards visible at once
 
   // Helper to escape HTML to prevent XSS
   function escapeHtml(text) {

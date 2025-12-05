@@ -185,7 +185,9 @@ export const HistoryButton = (() => {
 
   /**
    * Show modal with history content
-   * @param {string} historyHtml - HTML content to display in the history panel
+   * SECURITY NOTE: The historyHtml parameter must be sanitized by the caller
+   * to prevent XSS attacks. This function does not perform HTML sanitization.
+   * @param {string} historyHtml - Pre-sanitized HTML content to display in the history panel
    */
   function showHistoryModal(historyHtml) {
     // Create overlay if it doesn't exist

@@ -357,13 +357,26 @@
     actions.forEach(action => {
       const card = document.createElement('div');
       card.style.cssText = 'padding: 14px; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer;';
-      card.innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <strong>${action.label}</strong>
-          <span style="color: #3498db;">⚡ ${action.cost || 1}</span>
-        </div>
-        <p style="font-size: 0.9em; opacity: 0.8; margin: 0;">${action.description}</p>
-      `;
+      
+      const headerDiv = document.createElement('div');
+      headerDiv.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 8px;';
+      
+      const label = document.createElement('strong');
+      label.textContent = action.label || '';
+      
+      const cost = document.createElement('span');
+      cost.style.color = '#3498db';
+      cost.textContent = `⚡ ${action.cost || 1}`;
+      
+      headerDiv.appendChild(label);
+      headerDiv.appendChild(cost);
+      
+      const desc = document.createElement('p');
+      desc.style.cssText = 'font-size: 0.9em; opacity: 0.8; margin: 0;';
+      desc.textContent = action.description || '';
+      
+      card.appendChild(headerDiv);
+      card.appendChild(desc);
       card.onclick = () => onSelect(action);
       grid.appendChild(card);
     });
@@ -388,7 +401,11 @@
     players.forEach(player => {
       const card = document.createElement('div');
       card.style.cssText = 'padding: 12px; text-align: center; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer;';
-      card.innerHTML = `<strong>${player.name}</strong>`;
+      
+      const name = document.createElement('strong');
+      name.textContent = player.name || 'Unknown';
+      card.appendChild(name);
+      
       card.onclick = () => {
         selected = [player];
         onSelect(selected);
