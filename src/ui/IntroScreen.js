@@ -465,8 +465,10 @@ console.info('[IntroScreen] Script executing – pre-init');
       'intro:open:profile': { fn: 'showProfileModal', fallback: { obj: 'ProfileModal', method: 'open' } },
       'intro:open:settings': { fn: 'showSettingsModal', click: 'btnOpenSettings' },
       'intro:open:leaderboard': { fn: 'showLeaderboard', fallback: { obj: 'ProgressionUI', method: 'showLeaderboard' }, click: 'xpLeaderboardBadge' },
-      'intro:open:credits': { fn: 'showCreditsModal', fallback2: 'showCredits' },
-      'intro:open:help': { fn: 'showHelpModal', fallback2: 'showHelp', fallback3: 'showRulesModal' }
+      'intro:open:credits': { fallback: { obj: 'CreditsVideo', method: 'play' }, fallback2: 'showCredits' },
+      'intro:open:help': { fn: 'showHelpModal', fallback2: 'showHelp', fallback3: 'showRulesModal' },
+      'intro:chip:news': { fallback: { obj: 'NewsModal', method: 'open' } },
+      'intro:chip:daily': { } // Daily is handled elsewhere
     };
     
     const mapping = actionMap[action];
