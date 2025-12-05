@@ -113,6 +113,9 @@
         originalSettingsBtn.click();
       });
     }
+    
+    // Ensure settings button is visible (remove any inline display style)
+    settingsBtn.style.display = '';
 
     // Create mobile sound button if it doesn't exist
     if (!soundBtn) {
@@ -129,6 +132,9 @@
       // Initial state sync
       syncSoundButtonState();
     }
+    
+    // Ensure sound button is visible (remove any inline display style)
+    soundBtn.style.display = '';
 
     // Always rebuild the container with proper order: player pill, settings, speaker
     mobileControlsContainer.innerHTML = '';
