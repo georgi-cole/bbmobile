@@ -59,38 +59,31 @@
   }
   
   /**
-   * Check if local avatar folder lookups should be skipped
-   * Returns true if on GitHub Pages AND avatarLocalFolderEnabled is false (default)
-   * This avoids 404 churn for local ./avatars/* requests on GitHub Pages
+   * Check if local avatar folder should be used
+   * Returns true if local avatars should be used (avatarLocalFolderEnabled=true or local dev)
+   * Returns false if should skip local avatars (GitHub Pages with no explicit setting, or explicitly disabled)
    * 
-   * IMPORTANT for strict mode: Local avatars must exist if using strict mode,
-   * OR avatarLocalFolderEnabled must be explicitly set to false to skip local lookups
-   * and use external (Dicebear) avatars only.
+   * This is the primary API for checking whether to use local ./avatars/ folder.
+   * Default behavior: enable on local dev, disable on github.io to avoid 404 churn.
    * 
-   * @returns {boolean} True if local folder lookups should be skipped
+   * @returns {boolean} True if local avatar folder should be used
    */
-  function shouldSkipLocalFolderLookups() {
+  function shouldUseLocalAvatars() {
     const cfg = g.game?.cfg || g.cfg || {};
     const onGitHubPages = isGitHubPages();
-    const strictMode = cfg.avatarPreloadRequireAll === true;
     
     // Check explicit config setting first
-    // When avatarLocalFolderEnabled is explicitly set to false, skip local lookups
+    // When avatarLocalFolderEnabled is explicitly set to false, don't use local
     if (cfg.avatarLocalFolderEnabled === false) {
-      if (onGitHubPages) {
-        console.info('[AvatarPreload] Skipping local folder lookups - explicitly disabled for GitHub Pages');
-      } else {
-        console.info('[AvatarPreload] Skipping local folder lookups - explicitly disabled');
-      }
-      return true;
-    }
-    
-    // When explicitly enabled (true), always allow local lookups
-    if (cfg.avatarLocalFolderEnabled === true) {
       return false;
     }
     
-    // Auto-detect mode: if on GitHub Pages with no explicit setting, default to false
+    // When explicitly enabled (true), always use local lookups
+    if (cfg.avatarLocalFolderEnabled === true) {
+      return true;
+    }
+    
+    // Auto-detect mode: if on GitHub Pages with no explicit setting, default to false (disable local)
     // This prevents 404 churn when local avatars don't exist on GitHub Pages
     if (onGitHubPages) {
       console.info('[AvatarPreload] Auto-detected GitHub Pages - defaulting avatarLocalFolderEnabled to false');
@@ -100,17 +93,34 @@
       }
       
       // Warn if strict mode is enabled without local avatars
+      const strictMode = cfg.avatarPreloadRequireAll === true;
       if (strictMode) {
         console.warn('[AvatarPreload] STRICT MODE WARNING: avatarLocalFolderEnabled=false on GitHub Pages.');
         console.warn('[AvatarPreload] All avatars will use external (Dicebear) sources.');
         console.warn('[AvatarPreload] For strict mode with local avatars, set avatarLocalFolderEnabled=true');
       }
       
-      return true;
+      return false;
     }
     
-    // Default: allow local folder lookups (for local development)
-    return false;
+    // Default: enable local folder lookups (for local development)
+    return true;
+  }
+  
+  /**
+   * Check if local avatar folder lookups should be skipped
+   * Returns true if on GitHub Pages AND avatarLocalFolderEnabled is false (default)
+   * This avoids 404 churn for local ./avatars/* requests on GitHub Pages
+   * 
+   * IMPORTANT for strict mode: Local avatars must exist if using strict mode,
+   * OR avatarLocalFolderEnabled must be explicitly set to false to skip local lookups
+   * and use external (Dicebear) avatars only.
+   * 
+   * @returns {boolean} True if local folder lookups should be skipped
+   * @deprecated Use shouldUseLocalAvatars() instead (returns inverted value)
+   */
+  function shouldSkipLocalFolderLookups() {
+    return !shouldUseLocalAvatars();
   }
   
   /**
@@ -524,11 +534,15 @@
   g.isIOSSafari = getIsIOSSafari;
   g.getAvatarLoadTracking = getLoadTracking;
   g.updateAvatarTrackingStatus = updateTrackingStatus;
+  g.shouldUseLocalAvatars = shouldUseLocalAvatars; // GitHub Pages fallback helper
+  g.isGitHubPages = isGitHubPages; // Deployment detection helper
   
   // Expose global helper for legacy code (window.resolveAvatar)
   if (typeof window !== 'undefined') {
     window.resolveAvatar = resolveAvatar;
     window.projectBase = projectBase;
+    window.shouldUseLocalAvatars = shouldUseLocalAvatars;
+    window.isGitHubPages = isGitHubPages;
     window.__dumpAvatarStatus = dumpAvatarStatus;
   }
 

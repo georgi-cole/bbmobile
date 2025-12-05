@@ -203,15 +203,38 @@ console.info('[IntroScreen] Script executing – pre-init');
           g.__bbPlayInitiated = true;
           console.info('[IntroHub] Set __bbPlayInitiated=true');
           
+          const cfg = g.game?.cfg || g.cfg || {};
+          const strictMode = cfg.avatarPreloadRequireAll === true;
+          
           try {
             // Show avatar preload overlay and wait for completion
             await performAvatarPreload();
+            
+            // In strict mode, do NOT auto-proceed after preload
+            // The avatars:ready listener will handle transition after successful preload
+            if (strictMode) {
+              console.info('[IntroHub] Strict mode: waiting for avatars:ready event to proceed');
+              // Preload function already dispatched avatars:ready on success
+              // Or showed error overlay on failure (overlay remains visible)
+              // So we just return here and let the event listener handle the rest
+              return;
+            }
+            
+            // Non-strict mode: proceed immediately after preload attempt (even if some failed)
+            console.info('[IntroHub] Non-strict mode: proceeding to game after preload');
           } catch (err) {
-            // Log error but proceed anyway - game should still start
-            console.error('[IntroHub] Avatar preload error, proceeding to game:', err);
+            // Log error but proceed anyway in non-strict mode
+            console.error('[IntroHub] Avatar preload error:', err);
+            
+            if (strictMode) {
+              // In strict mode, don't proceed on error
+              console.warn('[IntroHub] Strict mode: NOT proceeding due to preload error');
+              return;
+            }
+            // Non-strict mode continues below
           }
           
-          // After preload completes (or fails), proceed with the play action
+          // After preload completes (non-strict mode only), proceed with the play action
           handleButtonAction(action, label);
           return;
         }
@@ -1430,6 +1453,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     g.__avatarsPreloading = state;
   }
   
+  // eslint-disable-next-line no-unused-vars
   function getAvatarsPreloadingState() {
     return g.game?.state?.avatarsPreloading || g.__avatarsPreloading || false;
   }
@@ -2012,6 +2036,34 @@ console.info('[IntroScreen] Script executing – pre-init');
       
       // Announce to screen readers
       announceThemeChange(data.reason);
+    });
+    
+    // Listen for avatars:ready event (dispatched by avatar-queue.js after successful preload)
+    // When avatars are ready (all loaded+decoded in strict mode), proceed to game
+    window.addEventListener('avatars:ready', async (event) => {
+      console.info('[IntroHub] avatars:ready event received', event.detail);
+      
+      // Hide overlay if visible
+      const overlay = document.getElementById('avatarPreloadOverlay');
+      if (overlay) {
+        await hideAvatarPreloadOverlay(overlay);
+      }
+      
+      // Clear preloading flag
+      setAvatarsPreloadingState(false);
+      
+      // Proceed to game via StartupFlow.enterGame()
+      if (g.StartupFlow && typeof g.StartupFlow.enterGame === 'function') {
+        console.info('[IntroHub] Calling StartupFlow.enterGame() after avatars ready');
+        g.StartupFlow.enterGame();
+      } else if (g.enterGame && typeof g.enterGame === 'function') {
+        console.info('[IntroHub] Calling enterGame() after avatars ready');
+        g.enterGame();
+      } else {
+        console.warn('[IntroHub] enterGame() not available after avatars ready');
+        // Fallback: use handleButtonAction
+        handleButtonAction('intro:play', 'Play');
+      }
     });
 
     console.info('[IntroScreen] Initialized');
