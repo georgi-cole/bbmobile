@@ -26,6 +26,9 @@ This implementation adds a **visual progress bar** to the avatar preloading over
 - Responsive adjustments for mobile devices
 - Reduced motion support for accessibility
 
+**Enhanced:**
+- `.intro-avatar-preload-progress` - Increased opacity from 0.7 to 0.9 and added font-weight:600 for better readability against dark overlay background
+
 ### 3. Roster Gating (`js/ui/mobileRoster.js`)
 
 **Added:**
