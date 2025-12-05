@@ -414,7 +414,9 @@ a:hover{ color:#a8d3ff; } a:active{ color:#d3ecff; }
   padding-top: 8px;
 }
 
-/* Mobile-specific app-shell background gradient */
+/* Mobile-specific app-shell background gradient 
+   Note: Uses fixed colors rather than CSS vars to ensure consistent appearance
+   across themes. Colors chosen for mobile-optimized aesthetic. */
 @media (max-width: 768px) {
   .app-root {
     background: radial-gradient(circle at top, #101633 0, #020308 60%);
