@@ -1,0 +1,37 @@
+/* Small UI accessibility & contrast tweaks for the main menu */
+
+/* Utility class used by the JS to hide the intro text element */
+.bb-hidden-intro {
+  display: none !important;
+}
+
+/* Make all main menu buttons use the same readable white text with a subtle dark stroke/shadow
+   so they remain readable across light/dark backgrounds and gradients. */
+.bb-contrast-btn,
+.bb-contrast-btn * {
+  color: #ffffff !important;
+  -webkit-text-stroke: 0.9px rgba(0,0,0,0.55);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.45);
+  /* Ensure icons within these buttons inherit the color */
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Slightly stronger stroke on larger display text (like Play) */
+.bb-contrast-btn.bb-large {
+  -webkit-text-stroke-width: 1.1px;
+}
+
+/* Fallback when stronger contrast is needed (applied by JS heuristics) */
+.bb-contrast-btn--dark-icon {
+  color: #1d1d1d !important;
+  -webkit-text-stroke: 0px !important;
+  text-shadow: none !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Style target for the 3-dots button (so it looks correct in layout) */
+.bb-more-btn {
+  transition: color 180ms ease, fill 180ms ease;
+}
