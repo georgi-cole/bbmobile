@@ -1,0 +1,370 @@
+/* Social Carousel - Horizontal scrollable actions carousel for mobile-friendly social phase */
+
+/* ============================================================================
+   SOCIAL MODULE CONTAINER - 100vh Mobile Layout
+   ============================================================================ */
+
+.social-module-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  /* Safe area insets for mobile notches and landscape mode */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+/* Top bar with indicators and history button */
+.social-module-topbar {
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+}
+
+/* Resources section (left side) */
+.social-module-resources {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Actions section (middle - scrollable) */
+.social-module-actions {
+  flex: 0 1 auto;
+  overflow: hidden;
+  padding: 0;
+  max-height: 40vh;
+}
+
+/* Players section (bottom - scrollable, limited height) */
+.social-module-players {
+  flex: 0 1 auto;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* CTA section (bottom - always visible) */
+.social-module-cta {
+  flex: 0 0 auto;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================================================
+   ACTIONS CAROUSEL CONTAINER
+   ============================================================================ */
+
+.social-actions-carousel {
+  position: relative;
+  padding: 16px 0;
+}
+
+.social-actions-carousel-header {
+  padding: 0 16px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.social-actions-carousel-title {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #f7b955;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Carousel scroll container */
+.social-actions-scroll {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  gap: 16px;
+  padding: 0 16px 16px;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.social-actions-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual action card in carousel */
+.social-action-card {
+  flex: 0 0 280px;
+  scroll-snap-align: start;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.social-action-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(247, 185, 85, 0.5);
+  transform: scale(1.02);
+}
+
+.social-action-card:focus {
+  outline: 3px solid rgba(247, 185, 85, 0.8);
+  outline-offset: 2px;
+}
+
+.social-action-card.selected {
+  background: rgba(247, 185, 85, 0.2);
+  border-color: #f7b955;
+  box-shadow: 0 0 20px rgba(247, 185, 85, 0.4);
+}
+
+.social-action-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.social-action-card.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(255, 100, 100, 0.1);
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+/* Action card header */
+.social-action-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.social-action-card-name {
+  font-weight: bold;
+  color: #e3ecf5;
+  font-size: 1.05em;
+  flex: 1;
+}
+
+.social-action-card-cost {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-weight: bold;
+  color: #3498db;
+  font-size: 0.95em;
+  padding: 4px 8px;
+  background: rgba(52, 152, 219, 0.15);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.social-action-card-description {
+  font-size: 0.85em;
+  color: #95a9c0;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.social-action-card-category {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: auto;
+}
+
+.social-action-card-category.friendly {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.social-action-card-category.strategic {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.social-action-card-category.aggressive {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* ============================================================================
+   CAROUSEL NAVIGATION CONTROLS
+   ============================================================================ */
+
+.social-carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+  font-size: 20px;
+}
+
+.social-carousel-nav:hover {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: #f7b955;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.social-carousel-nav:focus {
+  outline: 3px solid rgba(247, 185, 85, 0.8);
+  outline-offset: 2px;
+}
+
+.social-carousel-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.social-carousel-nav.prev {
+  left: 8px;
+}
+
+.social-carousel-nav.next {
+  right: 8px;
+}
+
+/* ============================================================================
+   CAROUSEL DOT INDICATORS
+   ============================================================================ */
+
+.social-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px 8px;
+}
+
+.social-carousel-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.social-carousel-dot:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(1.2);
+}
+
+.social-carousel-dot:focus {
+  outline: 2px solid rgba(247, 185, 85, 0.8);
+  outline-offset: 2px;
+}
+
+.social-carousel-dot.active {
+  background: #f7b955;
+  transform: scale(1.3);
+  border-color: rgba(247, 185, 85, 0.5);
+  box-shadow: 0 0 8px rgba(247, 185, 85, 0.4);
+}
+
+/* ============================================================================
+   MOBILE RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .social-action-card {
+    flex: 0 0 240px;
+    min-height: 160px;
+  }
+  
+  .social-module-actions {
+    max-height: 35vh;
+  }
+  
+  .social-carousel-nav {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .social-action-card {
+    flex: 0 0 200px;
+    padding: 12px;
+    min-height: 150px;
+  }
+  
+  .social-actions-scroll {
+    padding: 0 12px 12px;
+    gap: 12px;
+  }
+  
+  .social-module-topbar {
+    padding: 8px 12px;
+    min-height: 52px;
+  }
+  
+  .social-module-cta {
+    padding: 12px;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+/* Ensure keyboard focus is visible */
+.social-action-card:focus-visible,
+.social-carousel-nav:focus-visible,
+.social-carousel-dot:focus-visible {
+  outline: 3px solid rgba(247, 185, 85, 0.8);
+  outline-offset: 2px;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

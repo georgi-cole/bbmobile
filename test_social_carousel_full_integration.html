@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Carousel Full Integration Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  
+  <!-- Carousel styles -->
+  <link rel="stylesheet" href="css/ui/social-carousel.css">
+  <link rel="stylesheet" href="css/ui/social-players-carousel.css">
+  <link rel="stylesheet" href="css/ui/topbar-history-button.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0d1b2a;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+    }
+    
+    .test-header {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 16px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 8px 0;
+      color: #3498db;
+      font-size: 1.5em;
+    }
+    
+    .test-header p {
+      margin: 0;
+      opacity: 0.8;
+      font-size: 0.9em;
+    }
+    
+    .test-controls {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 12px;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 101;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      backdrop-filter: blur(10px);
+    }
+    
+    .test-controls button {
+      padding: 8px 16px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .test-controls button:hover {
+      background: #2980b9;
+    }
+    
+    .test-controls button.danger {
+      background: #e74c3c;
+    }
+    
+    .test-controls button.success {
+      background: #2ecc71;
+    }
+    
+    #socialUIContainer {
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    /* Mobile-specific adjustments */
+    @media (max-width: 768px) {
+      .test-header h1 {
+        font-size: 1.2em;
+      }
+      
+      .test-header p {
+        font-size: 0.8em;
+      }
+      
+      .test-controls {
+        padding: 8px;
+        gap: 6px;
+      }
+      
+      .test-controls button {
+        padding: 6px 12px;
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>🎭 Social Carousel Full Integration</h1>
+    <p>Mobile-friendly horizontal carousels with 100vh layout</p>
+  </div>
+
+  <div id="socialUIContainer"></div>
+
+  <div class="test-controls">
+    <button onclick="reload8Players()">8 Players</button>
+    <button onclick="reload16Players()">16 Players</button>
+    <button onclick="simulateLowEnergy()" class="danger">Low Energy</button>
+    <button onclick="simulateFullResources()" class="success">Full Resources</button>
+    <button onclick="toggleMobileView()">Toggle Mobile View</button>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+  <script type="module">
+    // Import carousel modules
+    import { ActionsCarousel } from './js/ui/social/actionsCarousel.js';
+    import { PlayersCarousel } from './js/ui/social/playersCarousel.js';
+    import { HistoryButton } from './js/ui/topbar/historyButton.js';
+
+    // Make available globally
+    window.ActionsCarousel = ActionsCarousel;
+    window.PlayersCarousel = PlayersCarousel;
+    window.HistoryButton = HistoryButton;
+
+    console.info('[test] Carousel modules loaded');
+  </script>
+  <script src="js/ui/social/carouselIntegration.js"></script>
+
+  <script>
+    // Setup minimal game environment
+    window.game = {
+      week: 3,
+      phase: 'social_intermission',
+      humanId: 1,
+      cfg: {
+        enableSocialManeuvers: true
+      },
+      __sm_bankEnergy: new Map(),
+      __sm_resources: new Map()
+    };
+
+    // Mock players data with affinity
+    const generatePlayers = (count) => {
+      const names = [
+        'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry',
+        'Iris', 'Jack', 'Kelly', 'Leo', 'Maya', 'Noah', 'Olivia', 'Peter'
+      ];
+      
+      return Array.from({ length: count }, (_, i) => {
+        // Generate random affinity value between -0.3 and 0.3 for variety
+        const affinityValue = (Math.random() * 0.6) - 0.3;
+        
+        return {
+          id: i + 1,
+          name: names[i] || `Player ${i + 1}`,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${names[i] || `Player${i+1}`}`,
+          affinity: { 1: affinityValue },  // Affinity with player 1 (human)
+          evicted: false
+        };
+      });
+    };
+
+    let currentPlayers = generatePlayers(8);
+
+    // Helper functions
+    window.getP = (id) => {
+      return currentPlayers.find(p => p.id === id) || null;
+    };
+
+    window.alivePlayers = () => {
+      return currentPlayers.filter(p => !p.evicted);
+    };
+
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+
+    window.resolveAvatar = (id) => {
+      const p = window.getP(id);
+      return p?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Player${id}`;
+    };
+
+    window.addLog = (message, type) => {
+      console.log(`[${type || 'info'}] ${message}`);
+    };
+
+    // Initialize social resources for human player
+    function initializeResources(playerId, energy = 5, influence = 25, information = 10) {
+      if (!window.SocialManeuvers) return;
+      
+      const resources = window.SocialManeuvers.SocialResources;
+      if (resources) {
+        resources.set(playerId, 'energy', energy);
+        resources.set(playerId, 'influence', influence);
+        resources.set(playerId, 'information', information);
+      }
+      
+      // Initialize bank
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      if (bank) {
+        bank.init(playerId);
+        bank.set(playerId, energy);
+      }
+    }
+
+    // Test controls
+    window.reload8Players = function() {
+      currentPlayers = generatePlayers(8);
+      initializeResources(1);
+      renderUI();
+      console.info('[test] Reloaded with 8 players');
+    };
+
+    window.reload16Players = function() {
+      currentPlayers = generatePlayers(16);
+      initializeResources(1);
+      renderUI();
+      console.info('[test] Reloaded with 16 players');
+    };
+
+    window.simulateLowEnergy = function() {
+      initializeResources(1, 2, 10, 5);
+      renderUI();
+      console.info('[test] Simulated low energy (2)');
+    };
+
+    window.simulateFullResources = function() {
+      initializeResources(1, 10, 100, 100);
+      renderUI();
+      console.info('[test] Simulated full resources');
+    };
+
+    window.toggleMobileView = function() {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport.content.includes('width=375')) {
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        console.info('[test] Switched to device width');
+      } else {
+        viewport.content = 'width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        console.info('[test] Switched to 375px width (iPhone)');
+      }
+    };
+
+    // Render the UI
+    function renderUI() {
+      const container = document.getElementById('socialUIContainer');
+      
+      if (window.SocialCarouselIntegration) {
+        window.SocialCarouselIntegration.renderSocialUIWithCarousels(container, 1, {
+          useCarousels: true,
+          showHistory: true
+        });
+        console.info('[test] Rendered UI with carousel integration');
+      } else {
+        container.innerHTML = '<div style="padding: 40px; text-align: center; color: #e74c3c;">Error: SocialCarouselIntegration not loaded</div>';
+        console.error('[test] SocialCarouselIntegration not available');
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.info('[test] Page loaded, initializing...');
+      
+      // Wait a bit for modules to load
+      setTimeout(() => {
+        initializeResources(1);
+        renderUI();
+        console.info('[test] Initial render complete');
+      }, 100);
+    });
+
+    // Handle orientation changes
+    window.addEventListener('orientationchange', () => {
+      setTimeout(renderUI, 300);
+    });
+
+    // Handle resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        console.info('[test] Window resized, re-rendering...');
+        renderUI();
+      }, 250);
+    });
+  </script>
+</body>
+</html>
