@@ -62,8 +62,11 @@
       return `./avatars/${item.name}.png`;
     }
 
-    // Final fallback
-    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(item.name || item.id || 'player')}`;
+    // Final fallback - use configured external URL or default
+    const cfg = g.game?.cfg || g.cfg || {};
+    const fallbackUrl = cfg.avatarFallbackUrl || 'https://api.dicebear.com/6.x/bottts/svg';
+    const seed = encodeURIComponent(item.name || item.id || 'player');
+    return `${fallbackUrl}?seed=${seed}`;
   }
 
   /**
@@ -72,7 +75,7 @@
    * @returns {string} Cache key
    */
   function getCacheKey(item) {
-    return item.name || item.id || String(item.id);
+    return item.name || String(item.id || '');
   }
 
   /**
@@ -134,13 +137,15 @@
         }
       };
 
-      // Check if already cached
+      // Set source first
+      img.src = url;
+      
+      // Check if already cached (after setting src)
       if (img.complete && img.naturalWidth > 0) {
         const elapsed = Date.now() - startTime;
         console.info(`[AvatarCache] Already cached: ${url} (${elapsed}ms)`);
-        resolve(img);
-      } else {
-        img.src = url;
+        // Trigger onload manually since it won't fire for cached images
+        img.onload();
       }
     });
   }

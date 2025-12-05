@@ -106,8 +106,6 @@
         avatarUrl = AvatarCache.getUrl(houseguest);
       } else if (global.resolveAvatar) {
         avatarUrl = global.resolveAvatar(houseguest);
-      } else if (global.getAvatar) {
-        avatarUrl = global.getAvatar(houseguest.name);
       } else {
         // Direct fallback to avatars folder
         avatarUrl = `avatars/${houseguest.name}.png`;
@@ -214,8 +212,6 @@
       avatarUrl = AvatarCache.getUrl(selectedHouseguest);
     } else if (global.resolveAvatar) {
       avatarUrl = global.resolveAvatar(selectedHouseguest);
-    } else if (global.getAvatar) {
-      avatarUrl = global.getAvatar(selectedHouseguest.name);
     } else {
       // Direct fallback to avatars folder
       avatarUrl = `avatars/${selectedHouseguest.name}.png`;
