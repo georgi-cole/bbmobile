@@ -66,7 +66,33 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Quick icons (top-right) - wrapped in app-screen-header
     const header = document.createElement('div');
     header.className = 'app-screen-header intro-screen__header';
+    
+    // Title group container for semantic grouping
+    const titleGroup = document.createElement('div');
+    titleGroup.className = 'intro-screen__title-group';
+    
+    // Label text (e.g., "Week 1 · Setup")
+    const label = document.createElement('p');
+    label.className = 'intro-screen__label text-label';
+    label.textContent = 'Season Start';
+    
+    // Main title (game name)
+    const title = document.createElement('h1');
+    title.className = 'intro-screen__title text-heading-lg';
+    title.textContent = 'Big Brother';
+    
+    // Subtitle/description
+    const subtitle = document.createElement('p');
+    subtitle.className = 'intro-screen__subtitle text-body';
+    subtitle.textContent = 'Configure your cast, competitions, and ceremonies to simulate a full season.';
+    
+    titleGroup.appendChild(label);
+    titleGroup.appendChild(title);
+    titleGroup.appendChild(subtitle);
+    
     const quickIcons = buildQuickIcons();
+    
+    header.appendChild(titleGroup);
     header.appendChild(quickIcons);
     
     // Main button column - wrapped in app-screen-body
