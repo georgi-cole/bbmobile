@@ -1,25 +1,35 @@
 /* ============================================================================
    MOBILE UI CONTROLS REORGANIZATION
    
-   Purpose: Fix mobile UI control layout issues
+   Purpose: Clean up mobile UI control layout
    
-   Changes:
-   1. Move settings wheel and speaker chip to sit next to player count pill on mobile
-   2. Remove duplicate speaker icon next to DR button
-   3. Remove duplicate DR pill next to FFWD button
+   Changes (per user feedback):
+   1. Hide ALL topbar buttons on mobile (≤768px) to save space above Houseguests
+   2. Remove duplicate speaker/sound controls from compact HUD
+   3. Ensure DR button only appears once (in compact HUD next to 3-dot menu)
+   4. Settings and sound controls accessible via action menu (3-dot button)
    
    File: css/mobile-ui-controls-fix.css
    ============================================================================ */
 
 /* ============================================================================
-   TASK 1: Move Settings and Sound buttons to houseguests header on mobile
+   TASK 1: Hide ALL topbar buttons on mobile to save space
    ============================================================================ */
 
 /* Mobile viewport only (max-width: 768px) */
 @media (max-width: 768px) {
-  /* Hide settings and sound buttons from topbar on mobile */
+  /* Hide ALL topbar buttons on mobile to save space */
   .topbar #btnOpenSettings,
-  .topbar #btnMuteToggle {
+  .topbar #btnStartQuick,
+  .topbar #btnMuteToggle,
+  .topbar #xpLeaderboardBadge,
+  .topbar #btnAdvancePhase,
+  .topbar #btnMusicToggle {
+    display: none !important;
+  }
+  
+  /* Hide the entire topbar on mobile to save space */
+  .topbar {
     display: none !important;
   }
   
@@ -29,77 +39,15 @@
     display: none !important;
   }
   
-  /* Modify houseguests header to accommodate the new buttons */
-  .houseguests-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 0.35em;
-  }
-  
-  /* Create a grouped container for player pill and control buttons */
-  .houseguests-header .players-inline {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  
-  /* Add mobile control buttons container after player pill */
-  .houseguests-header::after {
-    content: '';
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    order: 10; /* Place after other elements */
-  }
-  
-  /* Style for mobile control buttons (will be added via JS) */
-  .houseguests-header .mobile-control-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 10px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-    color: var(--card);
-    font-size: 0.75rem;
-    font-weight: 700;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    min-width: unset;
-  }
-  
-  .houseguests-header .mobile-control-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-  }
-  
-  .houseguests-header .mobile-control-btn:active {
-    transform: scale(0.98);
-  }
-  
-  .houseguests-header .mobile-control-btn:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  
-  /* Sound button muted state */
-  .houseguests-header .mobile-control-btn[aria-pressed="true"] {
-    background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 80%, black) 100%);
-    opacity: 0.8;
-  }
+  /* NO buttons above Houseguests header - removed mobile-control-btn styles */
+  /* Mobile controls (settings, sound) are now accessible via the 3-dot action menu */
 }
 
 /* ============================================================================
-   TASK 2: Remove duplicate speaker icon in compact HUD
+   TASK 2: Remove duplicate speaker/sound controls
    ============================================================================ */
 
-/* Already handled above by hiding .compact-hud .sound-button on mobile */
-
-/* Desktop: keep original topbar buttons, hide compact HUD duplicate buttons */
+/* Desktop: hide compact HUD duplicate buttons */
 @media (min-width: 769px) {
   .compact-hud .sound-button,
   .compact-hud .settings-button {
@@ -108,41 +56,16 @@
 }
 
 /* ============================================================================
-   TASK 3: Remove duplicate DR pill
+   TASK 3: Ensure DR button only appears once (in compact HUD)
    ============================================================================ */
 
-/* DR button in tvHead is already hidden via diary-room-modal.css line 34-36 */
-/* DR button in compact HUD should remain visible */
-/* No additional changes needed - the duplicate is already removed */
-
-/* Ensure only one DR button is shown */
-.tvHead .tvDrBtn {
+/* Hide DR button from tvHead - it's redundant next to FFWD */
+.tvHead .tvDrBtn,
+.tvHead #btnDiaryRoom {
   display: none !important;
 }
 
-/* Keep DR button in compact HUD visible */
+/* Keep only the DR button in compact HUD (next to 3-dot menu) */
 .compact-hud .dr-button {
   display: inline-flex !important;
-}
-
-/* ============================================================================
-   ACCESSIBILITY
-   ============================================================================ */
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .houseguests-header .mobile-control-btn {
-    transition: none;
-  }
-  
-  .houseguests-header .mobile-control-btn:hover {
-    transform: none;
-  }
-}
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  .houseguests-header .mobile-control-btn {
-    border: 2px solid currentColor;
-  }
 }
