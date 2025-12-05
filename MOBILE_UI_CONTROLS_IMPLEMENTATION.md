@@ -2,70 +2,74 @@
 
 ## Overview
 
-This document describes the implementation of mobile UI control layout improvements that move the settings wheel and speaker controls to sit next to the player count pill on mobile viewports.
+This document describes the implementation of mobile UI control cleanup that hides all topbar buttons on mobile to save space and ensures DR button appears only once.
 
 ## Problem Statement
 
 Based on mobile UI feedback, the following issues were identified:
 
-1. Settings wheel (⚙️) and speaker chip (🔊) were located between the clock and Houseguest label, creating a cluttered layout
-2. Duplicate speaker icons appeared in multiple locations
-3. Duplicate DR pills appeared next to the FFWD button
+1. Topbar buttons (Settings, Start, Sound, Leaderboard) cluttered the mobile layout above the Houseguests section
+2. Duplicate speaker/sound controls appeared in multiple locations
+3. Duplicate DR buttons appeared (one next to FFWD, one in compact HUD)
 
-## Solution
+## Solution (Updated per User Feedback)
 
-The solution reorganizes UI controls specifically for mobile viewports (≤768px) while preserving the desktop layout.
+The solution hides ALL topbar buttons on mobile (≤768px) and ensures clean layout above the Houseguests section:
+
+1. **Hide entire topbar on mobile** - Saves space, no buttons above Houseguests
+2. **Remove duplicate controls** - Sound/Settings buttons removed from compact HUD duplicates
+3. **Single DR button** - Only in compact HUD next to 3-dot menu (removed from TV header)
 
 ### Implementation Components
 
 #### 1. CSS Module: `css/mobile-ui-controls-fix.css`
 
-**Purpose**: Provides mobile-specific styling and hides duplicate controls
+**Purpose**: Hides topbar and duplicate controls on mobile
 
 **Key Features**:
 - Media queries for mobile (≤768px) and desktop (≥769px)
-- Hides original topbar buttons on mobile
-- Hides compact HUD duplicate buttons on mobile
-- Styles for mobile control buttons
-- Maintains accessibility features (focus states, reduced motion)
+- Hides entire topbar on mobile to save space
+- Hides compact HUD duplicate buttons (settings/sound) on all viewports
+- Hides duplicate DR button from TV header
+- Maintains desktop layout unchanged
 
 **Selectors Used**:
 ```css
-/* Hide on mobile */
-.topbar #btnOpenSettings
-.topbar #btnMuteToggle
+/* Hide entire topbar on mobile */
+@media (max-width: 768px) {
+  .topbar {
+    display: none !important;
+  }
+}
+
+/* Hide compact HUD duplicates */
 .compact-hud .settings-button
 .compact-hud .sound-button
 
-/* Mobile button styling */
-.mobile-control-btn
-
-/* Hide DR duplicate */
+/* Hide DR duplicate from TV header */
 .tvHead .tvDrBtn
+.tvHead #btnDiaryRoom
 ```
 
 #### 2. JavaScript Module: `js/ui/mobileControlsLayout.js`
 
-**Purpose**: Dynamically repositions buttons based on viewport size
+**Purpose**: Minimal module for future enhancements
 
 **Key Features**:
-- Viewport detection (768px breakpoint)
-- Dynamic button creation and positioning
-- State synchronization between mobile and original buttons
-- Responsive to window resize events
-- Graceful initialization and cleanup
+- CSS-based implementation (no dynamic repositioning)
+- Initialization tracking
+- Graceful cleanup
 
 **Public API**:
 ```javascript
-MobileControlsLayout.init()     // Initialize the module
+MobileControlsLayout.init()     // Initialize the module (minimal)
 MobileControlsLayout.destroy()  // Cleanup and destroy
 ```
 
 **Implementation Details**:
-- Creates mobile buttons only when needed (mobile viewport)
-- Positions buttons after player count pill in `.houseguests-header`
-- Proxies clicks to original buttons to maintain functionality
-- Uses MutationObserver to sync sound button state (muted/unmuted)
+- Main functionality handled via CSS
+- No button creation or repositioning (per user feedback)
+- Module kept minimal for potential future enhancements
 
 #### 3. HTML Changes: `index.html`
 
@@ -81,15 +85,18 @@ MobileControlsLayout.destroy()  // Cleanup and destroy
 ### Layout Behavior
 
 #### Desktop (>768px)
-- Settings and Sound buttons visible in `.topbar`
+- Topbar visible with Settings, Start, Sound, and Leaderboard buttons
 - Compact HUD shows Phase, Season/Week, DR, and Actions buttons
 - Settings and Sound buttons hidden in Compact HUD (to avoid duplication)
+- DR button only in compact HUD
 
 #### Mobile (≤768px)
-- Settings and Sound buttons hidden from `.topbar`
-- New mobile buttons appear next to player count pill (16/16)
-- Buttons are visually grouped with the player pill
-- Compact HUD shows Phase, Season/Week, DR, and Actions buttons (no Settings/Sound)
+- **Topbar completely hidden** - Saves space above Houseguests section
+- **No buttons above Houseguests heading** - Clean, minimal layout
+- **Only player count pill (16/16) visible** in houseguests header
+- Compact HUD shows Phase, Season/Week, DR, and Actions buttons
+- **DR button only in compact HUD** (next to 3-dot menu)
+- Settings and sound accessible via action menu (3-dot button)
 
 ## File Structure
 
