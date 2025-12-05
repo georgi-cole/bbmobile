@@ -1098,8 +1098,8 @@ console.info('[IntroScreen] Script executing – pre-init');
   async function performAvatarPreload() {
     console.info('[AvatarPreload] Starting avatar preload workflow');
     
-    // Set global flag to indicate preloading is in progress
-    window.__avatarsPreloading = true;
+    // Set state flag to indicate preloading is in progress
+    setAvatarsPreloadingState(true);
     
     // Show overlay immediately so user sees feedback
     const overlay = showAvatarPreloadOverlay();
@@ -1136,7 +1136,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Skip if no players after waiting
     if (!players || players.length === 0) {
       console.warn('[AvatarPreload] No players to preload avatars for after waiting, skipping');
-      window.__avatarsPreloading = false;
+      setAvatarsPreloadingState(false);
       // Dispatch avatars:ready event even if skipped
       try {
         if (AvatarQueue?.dispatchAvatarsReady) {
@@ -1152,7 +1152,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     // If neither preloader is available, skip with warning
     if (!preloadAvatarsQueued && !legacyPreloadAvatars) {
       console.warn('[AvatarPreload] No avatar preloader available, skipping');
-      window.__avatarsPreloading = false;
+      setAvatarsPreloadingState(false);
       await hideAvatarPreloadOverlay(overlay);
       return { loaded: 0, total: 0, timedOut: false, skipped: true };
     }
@@ -1289,14 +1289,14 @@ console.info('[IntroScreen] Script executing – pre-init');
       await hideAvatarPreloadOverlay(overlay);
       
       // Clear preloading flag
-      window.__avatarsPreloading = false;
+      setAvatarsPreloadingState(false);
       
       return result;
     } catch (err) {
       console.error('[AvatarPreload] Avatar preload error:', err);
       
       // Clear preloading flag
-      window.__avatarsPreloading = false;
+      setAvatarsPreloadingState(false);
       
       // Log telemetry for error
       try {
@@ -1342,6 +1342,22 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
   
   /**
+   * Get/set avatars preloading state
+   * Uses namespaced property to avoid global pollution
+   */
+  function setAvatarsPreloadingState(state) {
+    if (!g.game) g.game = {};
+    if (!g.game.state) g.game.state = {};
+    g.game.state.avatarsPreloading = state;
+    // Keep legacy flag for backward compatibility
+    g.__avatarsPreloading = state;
+  }
+  
+  function getAvatarsPreloadingState() {
+    return g.game?.state?.avatarsPreloading || g.__avatarsPreloading || false;
+  }
+  
+  /**
    * Show error message in avatar preload overlay
    * @param {Object} result - Preload result summary
    * @param {boolean} enableProceedAnyway - Whether to show "Proceed anyway" button
@@ -1384,7 +1400,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         proceedBtn.onclick = () => {
           console.warn('[AvatarPreload] User manually proceeded despite errors');
           // Clear flag and proceed
-          window.__avatarsPreloading = false;
+          setAvatarsPreloadingState(false);
           // Dispatch avatars:ready with error flag
           const AvatarQueue = g.AvatarQueue || window.AvatarQueue;
           if (AvatarQueue?.dispatchAvatarsReady) {

@@ -264,9 +264,13 @@
       };
     }
     
+    // Dicebear API configuration
+    const DICEBEAR_VERSION = '6.x';
+    const DICEBEAR_STYLE = 'bottts';
+    
     // Dicebear URL generator
     window.getDicebearUrl = function(seed) {
-      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      return `https://api.dicebear.com/${DICEBEAR_VERSION}/${DICEBEAR_STYLE}/svg?seed=${encodeURIComponent(seed || 'player')}`;
     };
     
     // Generate mock players

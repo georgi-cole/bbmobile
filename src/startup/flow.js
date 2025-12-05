@@ -270,7 +270,8 @@
     }
     
     // Guard against showing hub while avatars are preloading
-    if (g.__avatarsPreloading === true) {
+    const avatarsPreloading = g.game?.state?.avatarsPreloading || g.__avatarsPreloading;
+    if (avatarsPreloading === true) {
       console.info('[StartupFlow] Avatars are preloading, skipping showIntroHub() call');
       
       // Emit telemetry for blocked attempt

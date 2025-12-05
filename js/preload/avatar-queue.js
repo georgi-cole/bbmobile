@@ -80,10 +80,11 @@
       let resolved = false;
       const decodeAvailable = typeof img.decode === 'function';
 
-      const complete = (success, decoded = false, error = null) => {
+      const complete = (opts = {}) => {
         if (resolved) return;
         resolved = true;
 
+        const { success = false, decoded = false, error = null } = opts;
         const duration = Date.now() - startTime;
         resolve({
           playerId,
@@ -95,10 +96,20 @@
         });
       };
 
+      // Helper to handle decode failures based on strict mode
+      const handleDecodeFailure = (err, cached = false) => {
+        logWarn(`decode() failed for player ${playerId}:`, err);
+        if (strictMode) {
+          complete({ success: false, decoded: false, error: cached ? 'decode_error_cached' : 'decode_error' });
+        } else {
+          complete({ success: true, decoded: false, error: cached ? 'decode_failed_cached_non_strict' : 'decode_failed_non_strict' });
+        }
+      };
+
       // Error handler - count as failure
       img.onerror = () => {
         logWarn(`Failed to load avatar for player ${playerId}:`, url);
-        complete(false, false, 'load_error');
+        complete({ success: false, decoded: false, error: 'load_error' });
       };
 
       // Load success handler
@@ -108,22 +119,14 @@
           img.decode()
             .then(() => {
               // Decode success - always count as success
-              complete(true, true, null);
+              complete({ success: true, decoded: true, error: null });
             })
             .catch((err) => {
-              // decode() failed
-              logWarn(`decode() failed for player ${playerId}:`, err);
-              // In strict mode, decode failure = overall failure
-              // In normal mode, load success is enough
-              if (strictMode) {
-                complete(false, false, 'decode_error');
-              } else {
-                complete(true, false, 'decode_failed_non_strict');
-              }
+              handleDecodeFailure(err, false);
             });
         } else {
           // decode() not available - load success is enough
-          complete(true, false, null);
+          complete({ success: true, decoded: false, error: null });
         }
       };
 
@@ -132,16 +135,12 @@
         // Image is cached and loaded
         if (decodeAvailable) {
           img.decode()
-            .then(() => complete(true, true, null))
-            .catch(() => {
-              if (strictMode) {
-                complete(false, false, 'decode_error_cached');
-              } else {
-                complete(true, false, 'decode_failed_cached_non_strict');
-              }
+            .then(() => complete({ success: true, decoded: true, error: null }))
+            .catch((err) => {
+              handleDecodeFailure(err, true);
             });
         } else {
-          complete(true, false, null);
+          complete({ success: true, decoded: false, error: null });
         }
       } else {
         img.src = url;
