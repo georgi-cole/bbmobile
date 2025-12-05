@@ -1025,3 +1025,43 @@ body:not(.main-screen-built) .topbar {
     transform: none !important;
   }
 }
+
+/* ===== App-Shell Layout Integration (PR #2 - Epic A / Story A1) ===== */
+/* Override app-shell defaults to preserve intro screen's absolute positioning layout */
+
+.intro-screen__app-shell {
+  /* Fill the content container */
+  width: 100%;
+  height: 100%;
+  padding: 0; /* Remove default app-screen padding */
+}
+
+.intro-screen__header,
+.intro-screen__body,
+.intro-screen__footer {
+  /* Make header/body/footer transparent containers that don't affect layout */
+  position: static;
+  padding: 0;
+  /* Allow children to use absolute positioning */
+  pointer-events: none;
+}
+
+.intro-screen__header > *,
+.intro-screen__body > *,
+.intro-screen__footer > * {
+  /* Re-enable pointer events on actual content */
+  pointer-events: auto;
+}
+
+.intro-screen__body {
+  /* Body takes up full height to allow centered button column */
+  flex: 1;
+  overflow: visible; /* Override app-screen-body's overflow-y: auto */
+}
+
+/* Mobile-specific: Ensure no double scrollbars or overflow issues */
+@media (max-width: 768px) {
+  .app-screen.intro-screen__app-shell {
+    overflow: hidden; /* Prevent viewport scrolling on mobile */
+  }
+}

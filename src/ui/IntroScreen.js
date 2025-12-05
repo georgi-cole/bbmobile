@@ -59,18 +59,33 @@ console.info('[IntroScreen] Script executing – pre-init');
     const content = document.createElement('div');
     content.className = 'intro-screen__content';
 
-    // Quick icons (top-right)
+    // App-shell layout wrapper (Epic A / Story A1)
+    const appScreen = document.createElement('div');
+    appScreen.className = 'app-screen intro-screen__app-shell';
+
+    // Quick icons (top-right) - wrapped in app-screen-header
+    const header = document.createElement('div');
+    header.className = 'app-screen-header intro-screen__header';
     const quickIcons = buildQuickIcons();
+    header.appendChild(quickIcons);
     
-    // Main button column
+    // Main button column - wrapped in app-screen-body
+    const body = document.createElement('div');
+    body.className = 'app-screen-body intro-screen__body';
     const buttonColumn = buildButtonColumn();
+    body.appendChild(buttonColumn);
 
-    // Optional chips (bottom-right)
+    // Optional chips (bottom-right) - wrapped in app-screen-footer
+    const footer = document.createElement('div');
+    footer.className = 'app-screen-footer intro-screen__footer';
     const chips = buildChips();
+    footer.appendChild(chips);
 
-    content.appendChild(quickIcons);
-    content.appendChild(buttonColumn);
-    content.appendChild(chips);
+    appScreen.appendChild(header);
+    appScreen.appendChild(body);
+    appScreen.appendChild(footer);
+
+    content.appendChild(appScreen);
 
     root.appendChild(bgCurrent);
     root.appendChild(bgNext);
