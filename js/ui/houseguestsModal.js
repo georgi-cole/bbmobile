@@ -270,7 +270,21 @@
       { label: 'Kids', value: selectedHouseguest.kids },
       { label: 'Pets', value: selectedHouseguest.pets },
       { label: 'Zodiac Sign', value: selectedHouseguest.zodiacSign },
-      { label: 'Religion', value: selectedHouseguest.religion }
+      { label: 'Religion', value: selectedHouseguest.religion },
+      { label: 'Motto', value: selectedHouseguest.motto },
+      { label: 'Fun Fact', value: selectedHouseguest.funFact },
+      { 
+        label: 'Allies', 
+        value: (selectedHouseguest.allies && selectedHouseguest.allies.length > 0) 
+          ? selectedHouseguest.allies.join(', ') 
+          : 'None' 
+      },
+      { 
+        label: 'Enemies', 
+        value: (selectedHouseguest.enemies && selectedHouseguest.enemies.length > 0) 
+          ? selectedHouseguest.enemies.join(', ') 
+          : 'None' 
+      }
     ];
 
     basicFields.forEach(field => {

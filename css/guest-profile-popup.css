@@ -1,0 +1,188 @@
+/* Guest Profile Popup Styles
+ * Compact popup for displaying houseguest profile information on hover/tap
+ * Different from full-screen HouseguestsModal - this is a lightweight tooltip
+ */
+
+.guest-profile-popup {
+  position: fixed;
+  z-index: 10200; /* Above modals */
+  max-width: 380px;
+  min-width: 320px;
+  background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: none;
+}
+
+.guest-profile-popup--visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* Close Button */
+.guest-profile-popup__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+  z-index: 1;
+}
+
+.guest-profile-popup__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.guest-profile-popup__close:active {
+  transform: scale(0.95);
+}
+
+.guest-profile-popup__close:focus-visible {
+  outline: 2px solid #00d4ff;
+  outline-offset: 2px;
+}
+
+/* Content Container */
+.guest-profile-popup__content {
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+}
+
+/* Avatar */
+.guest-profile-popup__avatar {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Info Section */
+.guest-profile-popup__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.guest-profile-popup__name {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+  padding-right: 30px; /* Space for close button */
+}
+
+/* Details Grid */
+.guest-profile-popup__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guest-profile-popup__field {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.guest-profile-popup__label {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 75px;
+  flex-shrink: 0;
+}
+
+.guest-profile-popup__value {
+  color: rgba(255, 255, 255, 0.9);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+  .guest-profile-popup {
+    max-width: calc(100vw - 32px);
+    min-width: auto;
+    left: 16px !important;
+    right: 16px;
+    width: auto;
+  }
+
+  .guest-profile-popup__content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .guest-profile-popup__avatar {
+    width: 100px;
+    height: 100px;
+    min-width: 100px;
+    min-height: 100px;
+  }
+
+  .guest-profile-popup__name {
+    text-align: center;
+    padding-right: 0;
+  }
+
+  .guest-profile-popup__field {
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+  }
+
+  .guest-profile-popup__label {
+    min-width: auto;
+  }
+}
+
+/* Dark theme adjustments (if needed) */
+@media (prefers-color-scheme: light) {
+  .guest-profile-popup {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  .guest-profile-popup__name,
+  .guest-profile-popup__value {
+    color: #1a1f2e;
+  }
+
+  .guest-profile-popup__label {
+    color: rgba(0, 0, 0, 0.5);
+  }
+
+  .guest-profile-popup__close {
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #1a1f2e;
+  }
+
+  .guest-profile-popup__close:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+}
