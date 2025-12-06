@@ -45,7 +45,11 @@ Schedule a specific background for today's date. This is also stored locally and
 
 ### 3. Refresh Assets
 
-Click the "Refresh" button to reload the list of available backgrounds from `/assets/skins/skins.json`. This is useful if you've added new background images.
+Click the "Refresh" button to reload the list of available backgrounds from two sources:
+- **Manifest**: `/assets/skins/skins.json` (contains friendly names and descriptions)
+- **GitHub Contents API**: Enumerates all image files in `/assets/skins` directory (unauthenticated)
+
+The Background Manager automatically merges both sources, with manifest entries taking priority for matching IDs. This ensures all background files in the repository are available, even if not listed in the manifest.
 
 ### 4. Apply to All Users (Publish to Repository)
 
@@ -56,6 +60,7 @@ This feature allows you to publish a background override to the repository, affe
 #### Steps to Publish:
 
 1. **Create a GitHub Personal Access Token**:
+   - **Note**: You only need a token for publishing, not for browsing backgrounds (GitHub Contents API is used without authentication)
    - Go to GitHub Settings → Developer Settings → Personal Access Tokens → Tokens (classic)
    - Click "Generate new token (classic)"
    - Set expiration (recommend: 7 days or 30 days for short-lived tokens)
@@ -66,8 +71,10 @@ This feature allows you to publish a background override to the repository, affe
 2. **Paste Token in Background Manager**:
    - Open the Background Manager panel
    - Scroll to "Apply to All Users" section
-   - Paste your token in the "GitHub Token" field
+   - Click the "📋 Use clipboard" button to paste from clipboard (or manually paste in the field)
    - The token is stored in `sessionStorage` for the duration of your browser session only
+   - On HTTPS/localhost: Uses `navigator.clipboard.readText()`
+   - Fallback: Shows a prompt dialog for manual entry
 
 3. **Select Background**:
    - Choose a background from the "Manual Override" dropdown
@@ -209,24 +216,40 @@ The Background Manager loads backgrounds from `/assets/skins/skins.json`. The cu
 ### Architecture
 
 - **backgroundManager.js**: Core manager module with GitHub API integration
+  - `fetchAssetsFromGitHubContents()`: Fetches all image files from `/assets/skins` via GitHub Contents API (unauthenticated)
+  - `loadAssetsFromManifest()`: Loads backgrounds from `/assets/skins/skins.json`
+  - `mergeBackgrounds()`: Merges both sources, manifest takes priority
 - **introhubBackgroundIntegration.js**: Integration shim for intro hub
-- **skins.json**: Manifest of available backgrounds
+- **skins.json**: Manifest of available backgrounds (with friendly names and descriptions)
 - **bg_override.json**: Published global override (created by publish action)
+
+#### Asset Loading Flow
+
+1. **On startup**: `introhubBackgroundIntegration.js` calls `BackgroundManager.refreshAssetsAndPopulateUI()`
+2. **Dual fetch**: Simultaneously fetches from:
+   - `/assets/skins/skins.json` manifest (local)
+   - GitHub Contents API for `/assets/skins` directory (remote, unauthenticated)
+3. **Merge**: Combines both sources, manifest entries take precedence for matching IDs
+4. **Result**: All backgrounds available, even if not listed in manifest
 
 ## API Reference
 
 ### BackgroundManager API
 
 ```javascript
-// Load assets from manifest
+// Load assets from both manifest and GitHub Contents API
 await BackgroundManager.refreshAssetsAndPopulateUI();
+// Returns: Array of backgrounds merged from both sources
 
-// Set available backgrounds manually
+// Load from manifest only
+await BackgroundManager.loadAssetsFromManifest();
+
+// Set available backgrounds manually (bypasses auto-loading)
 BackgroundManager.setAvailableBackgrounds([
   { id: 'day', label: 'Day', filename: 'daily-background.png' }
 ]);
 
-// Publish override to repository
+// Publish override to repository (requires GitHub token)
 await BackgroundManager.publishOverrideToRepo(
   'xmasDay',  // background id or null
   'bgmgr: set Christmas day background',  // commit message
@@ -239,6 +262,10 @@ BackgroundManager.hidePanel();
 
 // Check if dev mode enabled
 BackgroundManager.isDevModeEnabled();
+
+// Get current preferences
+const prefs = BackgroundManager.getPreferences();
+// Returns: { manualOverride: { id: 'day' } | null, schedule: { '2025-12-25': 'xmasDay' } }
 ```
 
 ## Support

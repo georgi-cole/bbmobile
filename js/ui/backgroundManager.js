@@ -72,6 +72,66 @@
 
   // ===== ASSET LOADING =====
 
+  /**
+   * Fetch assets from GitHub Contents API (unauthenticated)
+   * This enumerates all files in assets/skins directory
+   */
+  async function fetchAssetsFromGitHubContents() {
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/assets/skins?ref=${BRANCH_NAME}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'BBMobile-BackgroundManager'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const files = await response.json();
+      
+      // Filter for image files (png, jpg, jpeg, webp)
+      const imageFiles = files.filter(file => 
+        file.type === 'file' && 
+        /\.(png|jpg|jpeg|webp)$/i.test(file.name)
+      );
+      
+      // Convert to background objects
+      const backgrounds = imageFiles.map(file => {
+        // Extract ID from filename (remove extension)
+        const id = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+        
+        // Create friendly label from ID (camelCase to Title Case)
+        const label = id
+          .replace(/-background$/i, '')
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/[-_]/g, ' ')
+          .trim()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        
+        return {
+          id: id,
+          label: label,
+          filename: file.name,
+          description: `Background from repository`,
+          source: 'github'
+        };
+      });
+      
+      console.info('[BackgroundManager] Fetched backgrounds from GitHub:', backgrounds.length);
+      return backgrounds;
+    } catch (err) {
+      console.error('[BackgroundManager] Failed to fetch from GitHub Contents API:', err);
+      return [];
+    }
+  }
+
   async function loadAssetsFromManifest() {
     try {
       const response = await fetch('/assets/skins/skins.json');
@@ -80,25 +140,58 @@
       }
       const data = await response.json();
       if (data && Array.isArray(data.backgrounds)) {
-        availableBackgrounds = data.backgrounds;
-        console.info('[BackgroundManager] Loaded backgrounds from manifest:', availableBackgrounds.length);
-        return availableBackgrounds;
+        console.info('[BackgroundManager] Loaded backgrounds from manifest:', data.backgrounds.length);
+        return data.backgrounds.map(bg => ({ ...bg, source: 'manifest' }));
       } else {
         throw new Error('Invalid manifest format');
       }
     } catch (err) {
       console.error('[BackgroundManager] Failed to load manifest:', err);
-      // Keep existing backgrounds if load fails
-      return availableBackgrounds;
+      return [];
     }
   }
 
+  /**
+   * Merge backgrounds from manifest and GitHub Contents API
+   * Manifest takes priority for matching IDs
+   */
+  function mergeBackgrounds(manifestBgs, githubBgs) {
+    const merged = new Map();
+    
+    // Add manifest backgrounds first (higher priority)
+    for (const bg of manifestBgs) {
+      merged.set(bg.id, bg);
+    }
+    
+    // Add GitHub backgrounds if not already in manifest
+    for (const bg of githubBgs) {
+      if (!merged.has(bg.id)) {
+        merged.set(bg.id, bg);
+      }
+    }
+    
+    return Array.from(merged.values());
+  }
+
   async function refreshAssetsAndPopulateUI() {
-    const backgrounds = await loadAssetsFromManifest();
+    // Fetch from both sources in parallel
+    const [manifestBgs, githubBgs] = await Promise.all([
+      loadAssetsFromManifest(),
+      fetchAssetsFromGitHubContents()
+    ]);
+    
+    // Merge the results
+    availableBackgrounds = mergeBackgrounds(manifestBgs, githubBgs);
+    
+    console.info('[BackgroundManager] Total available backgrounds:', availableBackgrounds.length);
+    console.info('[BackgroundManager] - From manifest:', manifestBgs.length);
+    console.info('[BackgroundManager] - From GitHub:', githubBgs.length);
+    console.info('[BackgroundManager] - Unique total:', availableBackgrounds.length);
+    
     if (panelElement) {
       rebuildPanelUI();
     }
-    return backgrounds;
+    return availableBackgrounds;
   }
 
   // ===== PUBLIC API =====
@@ -420,7 +513,10 @@
         <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #fbbf24;">🚀 Apply to All Users</h4>
         
         <div style="margin-bottom: 12px;">
-          <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 12px;">GitHub Token (repo scope)</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-weight: 600; font-size: 12px;">GitHub Token (repo scope)</label>
+            <button id="bgmgr-paste-token" style="background: rgba(100, 149, 237, 0.2); border: 1px solid rgba(100, 149, 237, 0.5); color: #93c5fd; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 11px;">📋 Use clipboard</button>
+          </div>
           <input type="password" id="bgmgr-token" placeholder="ghp_..." 
             value="${storedToken || ''}"
             style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(100, 149, 237, 0.3); color: #e2e8f0; font-size: 12px; font-family: monospace;">
@@ -462,6 +558,7 @@
     const clearManualBtn = panelElement.querySelector('#bgmgr-clear-manual');
     const clearTodayBtn = panelElement.querySelector('#bgmgr-clear-today');
     const refreshBtn = panelElement.querySelector('#bgmgr-refresh');
+    const pasteTokenBtn = panelElement.querySelector('#bgmgr-paste-token');
     const tokenInput = panelElement.querySelector('#bgmgr-token');
     const commitMsgInput = panelElement.querySelector('#bgmgr-commit-msg');
     const publishBtn = panelElement.querySelector('#bgmgr-publish');
@@ -518,6 +615,45 @@
         } finally {
           refreshBtn.disabled = false;
           refreshBtn.textContent = '↻ Refresh';
+        }
+      });
+    }
+    
+    if (pasteTokenBtn) {
+      pasteTokenBtn.addEventListener('click', async () => {
+        try {
+          // Try clipboard API first (requires HTTPS or localhost)
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            if (text && text.trim()) {
+              tokenInput.value = text.trim();
+              storeToken(text.trim());
+              showPublishStatus('✓ Token pasted from clipboard', 'success');
+            } else {
+              showPublishStatus('✗ Clipboard is empty', 'error');
+            }
+          } else {
+            // Fallback to prompt()
+            const text = prompt('Paste your GitHub token (starts with ghp_):');
+            if (text && text.trim()) {
+              tokenInput.value = text.trim();
+              storeToken(text.trim());
+              showPublishStatus('✓ Token entered', 'success');
+            } else {
+              showPublishStatus('✗ No token entered', 'error');
+            }
+          }
+        } catch (err) {
+          console.error('[BackgroundManager] Clipboard error:', err);
+          // Fallback to prompt() on error
+          const text = prompt('Paste your GitHub token (starts with ghp_):');
+          if (text && text.trim()) {
+            tokenInput.value = text.trim();
+            storeToken(text.trim());
+            showPublishStatus('✓ Token entered', 'success');
+          } else {
+            showPublishStatus('✗ No token entered', 'error');
+          }
         }
       });
     }
