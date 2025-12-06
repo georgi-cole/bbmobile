@@ -22,6 +22,7 @@ console.info('[IntroScreen] Script executing – pre-init');
   let currentBgLayer = 'current';
   let bus = null;
   let playButtonClicked = false; // Idempotence guard for Play button
+  let zoomLock = null; // Zoom lock instance for preventing pinch-to-zoom
 
   // Centralized intro screen state to prevent duplicate operations
   const introScreenState = {
@@ -1851,6 +1852,54 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
   }
 
+  // ===== ZOOM LOCK =====
+
+  /**
+   * Dynamically import and attach zoom lock to prevent pinch-to-zoom on intro screen.
+   * Uses dynamic import to load the ES module and creates a lock for the intro screen container.
+   */
+  async function attachZoomLock() {
+    try {
+      // Only attach if container exists
+      if (!container) {
+        console.warn('[IntroScreen] Cannot attach zoom lock - container not found');
+        return;
+      }
+
+      // Skip if already attached
+      if (zoomLock && zoomLock.isAttached && zoomLock.isAttached()) {
+        console.info('[IntroScreen] Zoom lock already attached, skipping');
+        return;
+      }
+
+      // Dynamically import ZoomLock module
+      const { ZoomLock } = await import('../../js/utils/zoom-lock.js');
+      
+      // Create lock for intro screen container
+      zoomLock = ZoomLock.forElement(container);
+      zoomLock.attach();
+      
+      console.info('[IntroScreen] Zoom lock attached to intro screen');
+    } catch (err) {
+      // Fail gracefully - zoom lock is a progressive enhancement
+      console.warn('[IntroScreen] Failed to attach zoom lock:', err);
+    }
+  }
+
+  /**
+   * Detach zoom lock when hiding intro screen.
+   */
+  function detachZoomLock() {
+    try {
+      if (zoomLock && zoomLock.isAttached && zoomLock.isAttached()) {
+        zoomLock.detach();
+        console.info('[IntroScreen] Zoom lock detached from intro screen');
+      }
+    } catch (err) {
+      console.warn('[IntroScreen] Failed to detach zoom lock:', err);
+    }
+  }
+
   // ===== PUBLIC API =====
 
   function show() {
@@ -1929,6 +1978,9 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Attach UI SFX after hub is visible
     afterIntroScreenVisible();
 
+    // Attach zoom lock to prevent pinch-to-zoom on intro screen
+    attachZoomLock();
+
     console.info('[IntroScreen] Shown');
 
     // Emit telemetry for show complete
@@ -1950,6 +2002,9 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
 
     console.info('[IntroScreen] Hiding...');
+    
+    // Detach zoom lock when hiding intro screen
+    detachZoomLock();
     
     // Emit telemetry for hide
     if (window.Telemetry && typeof window.Telemetry.log === 'function') {
@@ -2112,6 +2167,9 @@ console.info('[IntroScreen] Script executing – pre-init');
       window.Telemetry.log('intro_reset', { wasVisible: introScreenState.visible, hadContainer: !!container });
     }
     
+    // Detach zoom lock before resetting
+    detachZoomLock();
+    
     // Hide first if visible
     if (isVisible && container) {
       container.classList.remove('intro-screen--visible');
@@ -2140,6 +2198,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     isVisible = false;
     currentBgLayer = 'current';
     playButtonClicked = false;
+    zoomLock = null; // Reset zoom lock instance
     bus = null; // Reset bus so init() can be called again
     introScreenState.initialized = false; // Allow re-initialization
     
