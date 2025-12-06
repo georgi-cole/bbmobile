@@ -31,10 +31,35 @@
 
   let observer = null;
   let hubElement = null;
-  let activeModals = new Set();
+  const activeModals = new Set();
+  let previousModals = new Set();
   let styleInjected = false;
 
   // ===== MODAL MONITORING =====
+
+  /**
+   * Get a normalized modal ID for PauseManager tracking
+   */
+  function getModalId(modalEl) {
+    if (!modalEl) return null;
+    
+    // Map common modal classes/IDs to normalized IDs
+    const className = modalEl.className || '';
+    const id = modalEl.id || '';
+    
+    if (className.includes('rulesDim') || id === 'rulesModal') return 'modal:hub:rules';
+    if (className.includes('profile-modal-dim') || id === 'profileModal') return 'modal:hub:profile';
+    if (className.includes('creditsDim') || id === 'creditsModal') return 'modal:hub:credits';
+    if (className.includes('leaderboardDim') || id === 'leaderboardModal') return 'modal:hub:leaderboard';
+    if (className.includes('helpDim') || id === 'helpModal') return 'modal:hub:help';
+    if (className.includes('settingsDim') || id === 'settingsBackdrop' || id === 'settingsModal') return 'modal:hub:settings';
+    if (className.includes('modal-backdrop')) return 'modal:hub:generic';
+    if (className.includes('xp-modal-backdrop')) return 'modal:hub:xp';
+    if (className.includes('socialize-modal-backdrop')) return 'modal:hub:socialize';
+    
+    // Fallback: use class name or ID
+    return 'modal:hub:' + (id || className.split(' ')[0] || 'unknown');
+  }
 
   /**
    * Check if a modal root is currently visible
@@ -54,7 +79,41 @@
       .map(sel => document.querySelector(sel))
       .filter(el => el && isModalVisible(el));
 
-    // Update active modals set
+    // Build set of currently visible modal IDs for PauseManager
+    const currentModalIds = new Set();
+    modals.forEach(modal => {
+      const modalId = getModalId(modal);
+      if (modalId) {
+        currentModalIds.add(modalId);
+      }
+    });
+
+    // Detect modals that were opened (new in currentModalIds, not in previousModals)
+    currentModalIds.forEach(modalId => {
+      if (!previousModals.has(modalId)) {
+        // Modal opened - notify PauseManager
+        if (g.pauseManager && typeof g.pauseManager.open === 'function') {
+          console.info('[HubModalBridge] Modal opened, pausing game:', modalId);
+          g.pauseManager.open(modalId);
+        }
+      }
+    });
+
+    // Detect modals that were closed (in previousModals, not in currentModalIds)
+    previousModals.forEach(modalId => {
+      if (!currentModalIds.has(modalId)) {
+        // Modal closed - notify PauseManager
+        if (g.pauseManager && typeof g.pauseManager.close === 'function') {
+          console.info('[HubModalBridge] Modal closed, resuming game:', modalId);
+          g.pauseManager.close(modalId);
+        }
+      }
+    });
+
+    // Update previousModals for next comparison
+    previousModals = new Set(currentModalIds);
+
+    // Update active modals set (for backward compatibility)
     activeModals.clear();
     modals.forEach(modal => {
       activeModals.add(modal);
