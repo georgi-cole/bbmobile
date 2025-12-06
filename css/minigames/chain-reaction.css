@@ -1,6 +1,10 @@
 /* Chain Reaction styles: smaller cells via --cr-cell-size 
  * NOTE: To use in main game, add the following to index.html:
  * <link rel="stylesheet" href="css/minigames/chain-reaction.css">
+ * 
+ * The game will work without this CSS file but with degraded visuals
+ * (animations and some styling will be missing). The module sets inline
+ * styles for critical layout properties.
  */
 .cr-container {
   display: inline-block;

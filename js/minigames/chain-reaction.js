@@ -277,9 +277,17 @@ export const ChainReactionMinigame = (() => {
     } = options;
 
     // Initialize with new API (uses default config values: 2 rounds, 36px cells)
-    ChainReactionMinigame.init(container);
-    ChainReactionMinigame.setRounds(2);
-    ChainReactionMinigame.setCellSize(36);
+    try {
+      ChainReactionMinigame.init(container);
+      ChainReactionMinigame.setRounds(2);
+      ChainReactionMinigame.setCellSize(36);
+    } catch (err) {
+      console.error('[ChainReaction] Initialization failed:', err);
+      if (typeof onComplete === 'function') {
+        onComplete(0); // Return 0 score on initialization failure
+      }
+      return;
+    }
 
     // Mock the game bus to capture the end event and call onComplete
     const originalBus = g.game?.bus;
