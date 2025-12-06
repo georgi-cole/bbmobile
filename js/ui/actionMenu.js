@@ -31,8 +31,8 @@
       { id: 'btnProfile', icon: '👤', label: 'Profile' },
       { id: 'btnStartQuick', icon: '▶', label: 'Restart' },
       { id: 'xpLeaderboardBadge', icon: '📊', label: 'Leaderboard' },
-      // EXIT triggers self-eviction functionality
-      { id: 'btnExit', icon: '🚪', label: 'EXIT', action: 'exit' },
+      // Self-evict triggers self-eviction functionality
+      { id: 'btnExit', icon: '🚪', label: 'Self-evict', action: 'exit' },
     ],
   };
 

@@ -2363,7 +2363,9 @@
       });
     }
 
-    if (global.alivePlayers().length <= 9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)) {
+    // Add to jury if enabled (exclude self-evicted players)
+    const targetPlayer = global.getP?.(target);
+    if (global.alivePlayers().length <= 9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target) && !targetPlayer?.selfEvicted) {
       g.juryHouse.push(target);
     }
 

@@ -63,7 +63,7 @@
   user-select: none;
 }
 
-/* Popover menu container - centered modal style */
+/* Popover menu container - near-fullscreen modal style */
 .action-menu-popover {
   position: fixed;
   top: 50%;
@@ -75,9 +75,11 @@
   border-radius: 12px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 
               0 8px 16px rgba(0, 0, 0, 0.4);
-  min-width: 260px;
-  max-width: 320px;
-  overflow: hidden;
+  /* Near-fullscreen dimensions with margin for visibility */
+  width: calc(100vw - 32px);
+  max-width: 600px;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
   /* Animation */
   opacity: 0;
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -110,17 +112,17 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 12px 16px;
+  padding: 16px 20px;
   border: none;
   background: transparent;
   color: var(--ink, #e0e6ed);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
   transition: background 0.15s ease;
-  /* Ensure proper touch target */
-  min-height: 44px;
+  /* Ensure proper touch target - larger for near-fullscreen modal */
+  min-height: 56px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -142,8 +144,8 @@
 /* Menu item icon */
 .action-menu-item-icon {
   flex-shrink: 0;
-  font-size: 1.2rem;
-  width: 24px;
+  font-size: 1.5rem;
+  width: 32px;
   text-align: center;
 }
 
@@ -159,7 +161,7 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Backdrop overlay - dimmed background for modal effect */
+/* Backdrop overlay - dimmed background for modal effect with background slightly visible */
 .action-menu-backdrop {
   position: fixed;
   top: 0;
@@ -176,9 +178,10 @@
 
 .action-menu-backdrop.visible {
   display: block;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  /* Semi-transparent backdrop that keeps background visible */
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 
 /* Theme-aware styling
@@ -212,9 +215,10 @@ body[data-theme="apartment"] .action-menu-item button:focus {
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .action-menu-popover {
-    /* Keep centered positioning on mobile */
-    max-width: calc(100vw - 48px);
-    min-width: 240px;
+    /* Near-fullscreen on mobile with minimal margins */
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 48px);
   }
 }
 
