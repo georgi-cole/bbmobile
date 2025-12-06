@@ -463,6 +463,25 @@
 
   // ===== DEV PANEL UI =====
 
+  // Map of GitHub API error status codes to user-friendly messages
+  const GITHUB_ERROR_MAPPINGS = [
+    {
+      // Match HTTP 401 status codes
+      pattern: /GitHub API error: 401(?!\d)|status[:\s]+401(?!\d)/i,
+      message: 'Authentication failed. Please check your GitHub token and ensure it has not expired.'
+    },
+    {
+      // Match HTTP 403 status codes
+      pattern: /GitHub API error: 403(?!\d)|status[:\s]+403(?!\d)/i,
+      message: 'Permission denied. Ensure your token has the "repo" scope and you have write access to the repository.'
+    },
+    {
+      // Match HTTP 422 status codes
+      pattern: /GitHub API error: 422(?!\d)|status[:\s]+422(?!\d)/i,
+      message: 'Invalid request. The file may have been modified by someone else. Try refreshing and publishing again.'
+    }
+  ];
+
   function createPanel() {
     if (panelElement) return panelElement;
     
@@ -728,27 +747,8 @@
           // Map common GitHub API errors to user-friendly messages
           let errorMessage = err.message;
           
-          // Map of status codes to user-friendly messages
-          const errorMappings = [
-            {
-              // Match HTTP 401 status codes
-              pattern: /GitHub API error: 401(?!\d)|status[:\s]+401(?!\d)/i,
-              message: 'Authentication failed. Please check your GitHub token and ensure it has not expired.'
-            },
-            {
-              // Match HTTP 403 status codes
-              pattern: /GitHub API error: 403(?!\d)|status[:\s]+403(?!\d)/i,
-              message: 'Permission denied. Ensure your token has the "repo" scope and you have write access to the repository.'
-            },
-            {
-              // Match HTTP 422 status codes
-              pattern: /GitHub API error: 422(?!\d)|status[:\s]+422(?!\d)/i,
-              message: 'Invalid request. The file may have been modified by someone else. Try refreshing and publishing again.'
-            }
-          ];
-          
           // Check each error mapping
-          for (const mapping of errorMappings) {
+          for (const mapping of GITHUB_ERROR_MAPPINGS) {
             if (mapping.pattern.test(errorMessage)) {
               errorMessage = mapping.message;
               break;
