@@ -259,12 +259,70 @@
   async function startAvatarWarmUp() {
     console.info('[StartupFlow] Starting background avatar warm-up...');
 
+    // Check config flag
+    const cfg = g.game?.cfg || g.cfg || {};
+    if (cfg.preloadAvatars === false) {
+      console.info('[StartupFlow] Avatar preloading disabled by config flag');
+      return;
+    }
+
     // Emit telemetry
     if (g.Telemetry && typeof g.Telemetry.log === 'function') {
       g.Telemetry.log('startup_avatar_warmup_start', {});
     }
 
-    // Check if AvatarCache is available
+    // Use AvatarPreloader if available (preferred)
+    const AvatarPreloader = g.AvatarPreloader || window.AvatarPreloader;
+    if (AvatarPreloader && typeof AvatarPreloader.init === 'function') {
+      console.info('[StartupFlow] Using AvatarPreloader for warm-up');
+      
+      try {
+        // Get houseguests list
+        const Houseguests = g.Houseguests || window.Houseguests;
+        if (!Houseguests || typeof Houseguests.getAll !== 'function') {
+          console.warn('[StartupFlow] Houseguests data not available');
+          return;
+        }
+
+        const houseguests = Houseguests.getAll();
+        if (!houseguests || houseguests.length === 0) {
+          console.warn('[StartupFlow] No houseguests to preload');
+          return;
+        }
+
+        // Initialize and start preload
+        AvatarPreloader.init(houseguests);
+        
+        // Only register progress callback if not already done
+        // The callback will be cleared automatically when preload completes
+        if (!AvatarPreloader.isDone()) {
+          AvatarPreloader.onProgress((loaded, total) => {
+            // Log milestone progress
+            if (loaded === total || loaded % 5 === 0) {
+              console.info(`[StartupFlow] Avatar warm-up progress: ${loaded}/${total}`);
+            }
+          });
+        }
+        
+        const result = await AvatarPreloader.start();
+        console.info('[StartupFlow] Avatar warm-up complete:', result);
+
+        // Emit telemetry
+        if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+          g.Telemetry.log('startup_avatar_warmup_complete', {
+            total: result.total || 0,
+            loaded: result.loaded || 0,
+            timedOut: result.timedOut || false
+          });
+        }
+        
+        return;
+      } catch (err) {
+        console.warn('[StartupFlow] AvatarPreloader warm-up error:', err);
+      }
+    }
+
+    // Fallback to AvatarCache if AvatarPreloader not available
     const AvatarCache = g.AvatarCache || window.AvatarCache;
     if (!AvatarCache || typeof AvatarCache.preloadHouseguests !== 'function') {
       console.warn('[StartupFlow] AvatarCache not available for warm-up');
@@ -1035,9 +1093,52 @@
       }
     });
 
-    // Houseguests button - open Houseguests modal
-    bus.on('intro:open:houseguests', function() {
+    // Houseguests button - open Houseguests modal (wait for avatar preload if needed)
+    bus.on('intro:open:houseguests', async function() {
       console.info('[StartupFlow] Houseguests button clicked');
+      
+      // Check if avatar preloader is active
+      const AvatarPreloader = g.AvatarPreloader || window.AvatarPreloader;
+      const LoadingOverlay = g.LoadingOverlay || window.LoadingOverlay;
+      
+      if (AvatarPreloader && !AvatarPreloader.isDone()) {
+        console.info('[StartupFlow] Waiting for avatar preload to complete...');
+        
+        // Show loading overlay while waiting
+        if (LoadingOverlay && typeof LoadingOverlay.showOverlay === 'function') {
+          LoadingOverlay.showOverlay();
+          
+          // Register progress callback once
+          // It will be cleared automatically when preload completes
+          const progressCallback = (loaded, total) => {
+            if (LoadingOverlay && typeof LoadingOverlay.updateProgress === 'function') {
+              LoadingOverlay.updateProgress({ loaded, total });
+            }
+          };
+          
+          AvatarPreloader.onProgress(progressCallback);
+        }
+        
+        // Wait for preload to finish
+        try {
+          const result = await AvatarPreloader.whenDone();
+          console.info('[StartupFlow] Avatar preload complete before opening Houseguests:', result);
+          
+          // Hide loading overlay
+          if (LoadingOverlay && typeof LoadingOverlay.hideOverlay === 'function') {
+            await LoadingOverlay.hideOverlay();
+          }
+        } catch (err) {
+          console.warn('[StartupFlow] Avatar preload error, opening modal anyway:', err);
+          
+          // Hide loading overlay
+          if (LoadingOverlay && typeof LoadingOverlay.hideOverlay === 'function') {
+            await LoadingOverlay.hideOverlay();
+          }
+        }
+      }
+      
+      // Open Houseguests modal
       if (g.HouseguestsModal && typeof g.HouseguestsModal.open === 'function') {
         g.HouseguestsModal.open();
       } else if (window.HouseguestsModal && typeof window.HouseguestsModal.open === 'function') {

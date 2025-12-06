@@ -32,7 +32,8 @@
       numPlayers:12,tHOH:35,tNoms:25,tVeto:30,tVetoDec:20,tComms:30,tVote:25,tJury:42,
       fxCards:true,fxSound:true,fxAnim:true,fxStyle:'fade',miniMode:'random',
       manualMode:false,doubleChance:10,tripleChance:3,enableJuryHouse:true,autoMusic:true,
-      returnChance:50,selfEvictChance:0,enablePublicFav:false,adaptiveBackground:true
+      returnChance:50,selfEvictChance:0,enablePublicFav:false,adaptiveBackground:true,
+      preloadAvatars:true // Enable avatar preloading in intro hub (default: true)
     };
   }
 
