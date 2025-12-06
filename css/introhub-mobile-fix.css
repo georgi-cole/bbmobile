@@ -1,0 +1,46 @@
+/* Mobile visual fixes for IntroHub buttons
+   - Removes native UA chrome/tap highlight
+   - Prevents background seams and sizing artifacts
+   - Disables -webkit-text-stroke on small screens (fixes grey fill/outline artifacts)
+   - Uses text-shadow fallback for an outline that renders better on mobile
+*/
+
+.intro-screen__btn,
+.intro-screen__icon-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-user-select: none;
+  user-select: none;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-clip: padding-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Prefer solid fill + text-shadow over text-stroke on mobile */
+@media (max-width: 768px) {
+  .intro-screen__btn,
+  .intro-screen__btn--primary,
+  .intro-screen__icon-btn {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-text-stroke: 0 !important;   /* disable strokes that often cause grey artifacts */
+    text-shadow:
+      0 1px 0 rgba(0,0,0,0.95),
+      1px 0 0 rgba(0,0,0,0.95),
+      -1px 0 0 rgba(0,0,0,0.95),
+      0 -1px 0 rgba(0,0,0,0.95);
+  }
+}
+
+/* Maintain keyboard accessibility while preventing unwanted mobile focus styles */
+@media (max-width: 768px) {
+  .intro-screen__btn:focus:not(:focus-visible),
+  .intro-screen__icon-btn:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
