@@ -219,6 +219,44 @@
   }
 
   // ============================
+  // Pause Integration
+  // ============================
+
+  /**
+   * Pause the game when Actions menu opens
+   * Defensively calls pauseController.open if available
+   */
+  function _openActionsPause() {
+    try {
+      if (window.game && 
+          window.game.pauseController && 
+          typeof window.game.pauseController.open === 'function') {
+        window.game.pauseController.open('modal:actions');
+        console.debug('[ActionMenu] Paused game for Actions menu');
+      }
+    } catch (err) {
+      console.warn('[ActionMenu] Failed to pause game:', err);
+    }
+  }
+
+  /**
+   * Resume the game when Actions menu closes
+   * Defensively calls pauseController.close if available
+   */
+  function _closeActionsPause() {
+    try {
+      if (window.game && 
+          window.game.pauseController && 
+          typeof window.game.pauseController.close === 'function') {
+        window.game.pauseController.close('modal:actions');
+        console.debug('[ActionMenu] Resumed game after Actions menu closed');
+      }
+    } catch (err) {
+      console.warn('[ActionMenu] Failed to resume game:', err);
+    }
+  }
+
+  // ============================
   // Event Handlers
   // ============================
 
@@ -283,6 +321,9 @@
     if (state.backdrop) {
       state.backdrop.classList.add('visible');
     }
+
+    // Pause the game
+    _openActionsPause();
   }
 
   /**
@@ -312,6 +353,9 @@
     if (state.menuButton) {
       state.menuButton.focus();
     }
+
+    // Resume the game
+    _closeActionsPause();
   }
 
   /**

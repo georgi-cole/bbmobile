@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actions Menu Pause Integration Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0a0e1a;
+      color: #e6e8ee;
+    }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #9fb5ff;
+    }
+    button {
+      background: #172034;
+      border: 1px solid #2c3446;
+      color: #e6e8ee;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1d2840;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      border-color: #2d8ab4;
+    }
+    button.danger {
+      background: #8b3838;
+      border-color: #a04545;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .status.paused {
+      background: rgba(242, 200, 98, 0.1);
+      border: 1px solid #f2c862;
+      color: #f2c862;
+    }
+    .status.running {
+      background: rgba(121, 209, 154, 0.1);
+      border: 1px solid #79d19a;
+      color: #79d19a;
+    }
+    .timer-display {
+      font-size: 48px;
+      text-align: center;
+      margin: 20px 0;
+      font-weight: bold;
+      color: #9fb5ff;
+    }
+    .log {
+      background: #0a0e1a;
+      border: 1px solid #1d2742;
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1d2742;
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .log-entry.pause {
+      color: #f2c862;
+    }
+    .log-entry.resume {
+      color: #79d19a;
+    }
+    .log-entry.info {
+      color: #9fb5ff;
+    }
+    .test-result {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .test-result.pass {
+      background: rgba(121, 209, 154, 0.15);
+      border: 1px solid #79d19a;
+      color: #79d19a;
+    }
+    .test-result.fail {
+      background: rgba(255, 107, 107, 0.15);
+      border: 1px solid #ff6b6b;
+      color: #ff6b6b;
+    }
+    
+    /* Mock action menu styles */
+    #actionMenuBtn {
+      background: #172034;
+      border: 1px solid #2c3446;
+      color: #e6e8ee;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    #actionMenuBtn:hover {
+      background: #1d2840;
+    }
+    .action-menu-popover {
+      display: none;
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 10px;
+      min-width: 200px;
+      z-index: 1000;
+    }
+    .action-menu-popover.visible {
+      display: block;
+    }
+    .action-menu-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    .action-menu-backdrop.visible {
+      display: block;
+    }
+    .action-menu-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .action-menu-item-btn {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: #e6e8ee;
+      text-align: left;
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .action-menu-item-btn:hover {
+      background: #1d2840;
+    }
+    .toolbar {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏸️ Actions Menu Pause Integration Test</h1>
+
+  <div class="test-section">
+    <h2>Mock Toolbar with Actions Menu</h2>
+    <div class="toolbar">
+      <button id="actionMenuBtn" aria-expanded="false">⋮</button>
+      <span style="flex: 1;">Actions Menu (3-dots)</span>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Pause State</h2>
+    <div id="pauseStatus" class="status running">⏯️ Game Running</div>
+    <div>
+      <strong>Open Modals:</strong> <span id="openModals">[]</span>
+    </div>
+    <div>
+      <strong>isPaused():</strong> <span id="isPausedValue">false</span>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Game Timer (Should Pause)</h2>
+    <div class="timer-display" id="timer">00:00</div>
+    <div style="text-align: center;">
+      <button id="startTimer" class="primary">Start Timer</button>
+      <button id="stopTimer" class="danger">Stop Timer</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Test Instructions</h2>
+    <ol>
+      <li>Start the timer by clicking "Start Timer"</li>
+      <li>Click the Actions menu button (⋮) to open the menu</li>
+      <li>Verify that:
+        <ul>
+          <li>Pause Status shows "Game Paused"</li>
+          <li>Open Modals includes "modal:actions"</li>
+          <li>isPaused() shows "true"</li>
+          <li>Timer stops incrementing</li>
+          <li>Console shows "[ActionMenu] Paused game for Actions menu"</li>
+        </ul>
+      </li>
+      <li>Close the menu by clicking the backdrop or pressing Escape</li>
+      <li>Verify that:
+        <ul>
+          <li>Pause Status shows "Game Running"</li>
+          <li>Open Modals is empty</li>
+          <li>isPaused() shows "false"</li>
+          <li>Timer resumes incrementing</li>
+          <li>Console shows "[ActionMenu] Resumed game after Actions menu closed"</li>
+        </ul>
+      </li>
+      <li>Click "Run Automated Tests" to verify programmatically</li>
+    </ol>
+  </div>
+
+  <div class="test-section">
+    <h2>Automated Tests</h2>
+    <button id="runTests" class="primary">Run Automated Tests</button>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <div id="eventLog" class="log"></div>
+  </div>
+
+  <!-- Load pause controller -->
+  <script src="js/ui/global-pause.js"></script>
+  
+  <!-- Load action menu -->
+  <script src="js/ui/actionMenu.js"></script>
+
+  <!-- Test Script -->
+  <script>
+    // Setup logging
+    const logEl = document.getElementById('eventLog');
+    
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Listen to pause/resume events
+    window.addEventListener('game:pause', () => {
+      log('🔴 game:pause event received', 'pause');
+      updatePauseStatus();
+    });
+
+    window.addEventListener('game:resume', () => {
+      log('🟢 game:resume event received', 'resume');
+      updatePauseStatus();
+    });
+
+    // Update pause status display
+    function updatePauseStatus() {
+      const isPaused = window.game?.pauseController?.isPaused() || false;
+      const openModals = window.game?.pauseController?.getOpenModals() || [];
+      
+      const statusEl = document.getElementById('pauseStatus');
+      const openModalsEl = document.getElementById('openModals');
+      const isPausedEl = document.getElementById('isPausedValue');
+      
+      if (isPaused) {
+        statusEl.className = 'status paused';
+        statusEl.textContent = '⏸️ Game Paused';
+      } else {
+        statusEl.className = 'status running';
+        statusEl.textContent = '⏯️ Game Running';
+      }
+      
+      openModalsEl.textContent = JSON.stringify(openModals);
+      isPausedEl.textContent = String(isPaused);
+    }
+
+    // Timer functionality
+    let timerInterval = null;
+    let seconds = 0;
+    const timerEl = document.getElementById('timer');
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const secs = (seconds % 60).toString().padStart(2, '0');
+      timerEl.textContent = `${mins}:${secs}`;
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+      log('Timer started', 'info');
+      timerInterval = setInterval(() => {
+        // Skip if paused
+        if (window.game?.pauseController?.isPaused()) {
+          return;
+        }
+        seconds++;
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        log('Timer stopped', 'info');
+      }
+    }
+
+    function resetTimer() {
+      stopTimer();
+      seconds = 0;
+      updateTimerDisplay();
+    }
+
+    document.getElementById('startTimer').addEventListener('click', startTimer);
+    document.getElementById('stopTimer').addEventListener('click', stopTimer);
+
+    // Run automated tests
+    document.getElementById('runTests').addEventListener('click', async () => {
+      const resultsEl = document.getElementById('testResults');
+      resultsEl.innerHTML = '';
+      
+      function testResult(name, passed, message = '') {
+        const div = document.createElement('div');
+        div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+        div.textContent = `${passed ? '✓' : '✗'} ${name}${message ? ': ' + message : ''}`;
+        resultsEl.appendChild(div);
+        return passed;
+      }
+
+      let allPassed = true;
+
+      // Test 1: PauseController exists
+      allPassed &= testResult(
+        'PauseController exists',
+        window.game?.pauseController !== undefined
+      );
+
+      // Test 2: PauseController has required methods
+      allPassed &= testResult(
+        'PauseController has open method',
+        typeof window.game?.pauseController?.open === 'function'
+      );
+      allPassed &= testResult(
+        'PauseController has close method',
+        typeof window.game?.pauseController?.close === 'function'
+      );
+      allPassed &= testResult(
+        'PauseController has isPaused method',
+        typeof window.game?.pauseController?.isPaused === 'function'
+      );
+      allPassed &= testResult(
+        'PauseController has getOpenModals method',
+        typeof window.game?.pauseController?.getOpenModals === 'function'
+      );
+
+      // Test 3: ActionMenu exists and has methods
+      allPassed &= testResult(
+        'ActionMenu exists',
+        window.ActionMenu !== undefined
+      );
+      allPassed &= testResult(
+        'ActionMenu has openMenu method',
+        typeof window.ActionMenu?.openMenu === 'function'
+      );
+      allPassed &= testResult(
+        'ActionMenu has closeMenu method',
+        typeof window.ActionMenu?.closeMenu === 'function'
+      );
+
+      // Test 4: Open menu and check pause state
+      log('Opening Actions menu programmatically...', 'info');
+      window.ActionMenu.openMenu();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const isPausedAfterOpen = window.game?.pauseController?.isPaused();
+      const openModalsAfterOpen = window.game?.pauseController?.getOpenModals() || [];
+      
+      allPassed &= testResult(
+        'isPaused() returns true after opening menu',
+        isPausedAfterOpen === true,
+        `Got: ${isPausedAfterOpen}`
+      );
+      allPassed &= testResult(
+        'getOpenModals() includes "modal:actions"',
+        openModalsAfterOpen.includes('modal:actions'),
+        `Got: [${openModalsAfterOpen.join(', ')}]`
+      );
+
+      // Test 5: Close menu and check pause state
+      log('Closing Actions menu programmatically...', 'info');
+      window.ActionMenu.closeMenu();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const isPausedAfterClose = window.game?.pauseController?.isPaused();
+      const openModalsAfterClose = window.game?.pauseController?.getOpenModals() || [];
+      
+      allPassed &= testResult(
+        'isPaused() returns false after closing menu',
+        isPausedAfterClose === false,
+        `Got: ${isPausedAfterClose}`
+      );
+      allPassed &= testResult(
+        'getOpenModals() does not include "modal:actions"',
+        !openModalsAfterClose.includes('modal:actions'),
+        `Got: [${openModalsAfterClose.join(', ')}]`
+      );
+
+      // Test 6: Timer respects pause state
+      log('Testing timer pause behavior...', 'info');
+      resetTimer();
+      startTimer();
+      
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const secondsAfterRunning = seconds;
+      
+      window.ActionMenu.openMenu();
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const secondsWhilePaused = seconds;
+      
+      window.ActionMenu.closeMenu();
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const secondsAfterResuming = seconds;
+      
+      stopTimer();
+      
+      allPassed &= testResult(
+        'Timer increments while running',
+        secondsAfterRunning > 0,
+        `Got: ${secondsAfterRunning} seconds`
+      );
+      allPassed &= testResult(
+        'Timer does not increment while paused',
+        secondsWhilePaused === secondsAfterRunning,
+        `Before pause: ${secondsAfterRunning}, after pause: ${secondsWhilePaused}`
+      );
+      allPassed &= testResult(
+        'Timer resumes after closing menu',
+        secondsAfterResuming > secondsWhilePaused,
+        `While paused: ${secondsWhilePaused}, after resume: ${secondsAfterResuming}`
+      );
+
+      // Summary
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = `test-result ${allPassed ? 'pass' : 'fail'}`;
+      summaryDiv.textContent = allPassed 
+        ? '✓ All tests passed!' 
+        : '✗ Some tests failed';
+      summaryDiv.style.fontSize = '18px';
+      summaryDiv.style.marginTop = '20px';
+      resultsEl.appendChild(summaryDiv);
+
+      log(allPassed ? 'All automated tests passed!' : 'Some automated tests failed', allPassed ? 'resume' : 'pause');
+    });
+
+    // Initialize
+    log('Test page loaded', 'info');
+    log('Waiting for ActionMenu to initialize...', 'info');
+    
+    // Wait for ActionMenu to initialize, then log status
+    setTimeout(() => {
+      if (window.ActionMenu) {
+        log('ActionMenu initialized successfully', 'resume');
+        log('PauseController available: ' + (window.game?.pauseController ? 'Yes' : 'No'), 'info');
+      } else {
+        log('WARNING: ActionMenu not initialized', 'pause');
+      }
+      updatePauseStatus();
+    }, 1000);
+
+    // Monitor ActionMenu state changes
+    setInterval(updatePauseStatus, 500);
+  </script>
+</body>
+</html>
