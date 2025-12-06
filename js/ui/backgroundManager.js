@@ -170,6 +170,8 @@
           id: id,
           label: label,
           filename: file.name,
+          url: `assets/skins/${file.name}`,
+          previewUrl: file.download_url || `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH_NAME}/assets/skins/${file.name}`,
           description: `Background from repository`,
           source: 'github'
         };
@@ -192,7 +194,12 @@
       const data = await response.json();
       if (data && Array.isArray(data.backgrounds)) {
         console.info('[BackgroundManager] Loaded backgrounds from manifest:', data.backgrounds.length);
-        return data.backgrounds.map(bg => ({ ...bg, source: 'manifest' }));
+        return data.backgrounds.map(bg => ({
+          ...bg,
+          url: bg.url || `assets/skins/${bg.filename}`,
+          previewUrl: bg.previewUrl || bg.url || `assets/skins/${bg.filename}`,
+          source: 'manifest'
+        }));
       } else {
         throw new Error('Invalid manifest format');
       }
@@ -447,37 +454,46 @@
     }
   }
 
+  /**
+   * Publish background override to GitHub repository
+   * Note: This function does not manage the publish lock internally.
+   * Callers (typically the UI button handler) are responsible for managing
+   * the _publishInProgress lock to prevent concurrent operations.
+   * 
+   * Example usage (from button handler):
+   *   try {
+   *     _publishInProgress = true;
+   *     await publishOverrideToRepo(id, message, token);
+   *   } finally {
+   *     _publishInProgress = false;
+   *   }
+   * 
+   * @param {string} manualOverrideId - Background ID to set as override (or null)
+   * @param {string} commitMessage - Commit message for GitHub
+   * @param {string} token - GitHub personal access token
+   * @returns {Promise<Object>} GitHub API response with commit data
+   */
   async function publishOverrideToRepo(manualOverrideId, commitMessage, token) {
-    if (_publishInProgress) {
-      throw new Error('Publish already in progress. Please wait for the current operation to complete.');
+    // Validate token
+    if (!token || token.trim() === '') {
+      throw new Error('GitHub token is required');
     }
     
-    _publishInProgress = true;
+    // Get existing file (to get SHA)
+    const fileData = await getFileFromGitHub(token);
     
-    try {
-      // Validate token
-      if (!token || token.trim() === '') {
-        throw new Error('GitHub token is required');
-      }
-      
-      // Get existing file (to get SHA)
-      const fileData = await getFileFromGitHub(token);
-      
-      // Prepare content
-      const overrideContent = {
-        manualOverrideId: manualOverrideId || null,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: 'BackgroundManager'
-      };
-      
-      // Put file to GitHub
-      const result = await putFileToGitHub(token, overrideContent, commitMessage, fileData.sha);
-      
-      console.info('[BackgroundManager] Successfully published override to repo:', result);
-      return result;
-    } finally {
-      _publishInProgress = false;
-    }
+    // Prepare content
+    const overrideContent = {
+      manualOverrideId: manualOverrideId || null,
+      lastUpdated: new Date().toISOString(),
+      updatedBy: 'BackgroundManager'
+    };
+    
+    // Put file to GitHub
+    const result = await putFileToGitHub(token, overrideContent, commitMessage, fileData.sha);
+    
+    console.info('[BackgroundManager] Successfully published override to repo:', result);
+    return result;
   }
 
   // ===== DEV PANEL UI =====

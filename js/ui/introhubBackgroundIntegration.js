@@ -25,6 +25,7 @@
 
   let availableBackgrounds = DEFAULT_BACKGROUNDS;
   let isInitialized = false;
+  let bgmgrListenerAdded = false;
 
   // ===== AUTO RESOLVER (PLACEHOLDER) =====
   // This is a simplified version. In production, this should call the actual
@@ -197,10 +198,15 @@
     }
     
     // Listen for manager changes and reapply background
-    window.addEventListener('bgmgr:changed', () => {
-      console.info('[IntroHubBackgroundIntegration] Manager preferences changed, reapplying background');
-      applyIntroBackground();
-    });
+    // Only add the listener once to avoid duplicates
+    if (!bgmgrListenerAdded) {
+      window.addEventListener('bgmgr:changed', () => {
+        console.info('[IntroHubBackgroundIntegration] Manager preferences changed, reapplying background');
+        applyIntroBackground();
+      });
+      bgmgrListenerAdded = true;
+      console.info('[IntroHubBackgroundIntegration] Event listener for bgmgr:changed added');
+    }
     
     isInitialized = true;
     console.info('[IntroHubBackgroundIntegration] Initialized');
