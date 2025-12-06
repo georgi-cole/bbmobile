@@ -452,11 +452,11 @@
       // CRITICAL: Remove initial blocking overlay now that intro hub is visible
       // This signals that the app is ready and prevents half-loaded UI from showing
       console.info('[StartupFlow] Intro hub fully visible, removing initial blocking overlay');
-      if (g.InitialBlockingOverlay && typeof g.InitialBlockingOverlay.remove === 'function') {
-        g.InitialBlockingOverlay.remove();
+      if (window.InitialBlockingOverlay && typeof window.InitialBlockingOverlay.remove === 'function') {
+        window.InitialBlockingOverlay.remove();
       } else {
         // Fallback: dispatch event for overlay to listen to
-        g.dispatchEvent(new CustomEvent('bb:app-ready'));
+        window.dispatchEvent(new CustomEvent('bb:app-ready'));
       }
 
       // Play intro hub lobby music if enabled

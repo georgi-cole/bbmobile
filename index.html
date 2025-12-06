@@ -152,7 +152,7 @@
   
   // Listen for explicit removal signal
   window.addEventListener('bb:app-ready', () => {
-    console.info('[InitialBlocker] Received app-ready event');
+    console.info('[InitialBlocker] Received bb:app-ready event');
     clearTimeout(removeTimeout);
     removeOverlay();
   });
