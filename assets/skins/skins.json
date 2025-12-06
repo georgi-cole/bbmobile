@@ -1,0 +1,106 @@
+{
+  "backgrounds": [
+    {
+      "id": "day",
+      "label": "Day",
+      "filename": "daily-background.png",
+      "description": "Bright daytime background"
+    },
+    {
+      "id": "day2",
+      "label": "Day (Alt)",
+      "filename": "daily-background2.png",
+      "description": "Alternative daytime background"
+    },
+    {
+      "id": "night",
+      "label": "Night",
+      "filename": "night-background.png",
+      "description": "Nighttime background"
+    },
+    {
+      "id": "sunrise",
+      "label": "Sunrise",
+      "filename": "sunrise-background.png",
+      "description": "Early morning sunrise"
+    },
+    {
+      "id": "sunset",
+      "label": "Sunset",
+      "filename": "sunset-background.png",
+      "description": "Evening sunset"
+    },
+    {
+      "id": "rain",
+      "label": "Rainy",
+      "filename": "rainy-background.png",
+      "description": "Rainy weather background"
+    },
+    {
+      "id": "thunderstorm",
+      "label": "Thunderstorm",
+      "filename": "thunderstorm-background.png",
+      "description": "Stormy weather with lightning"
+    },
+    {
+      "id": "snow",
+      "label": "Night Snow",
+      "filename": "night-snow-background.png",
+      "description": "Snowy night background"
+    },
+    {
+      "id": "snowday",
+      "label": "Snow Day",
+      "filename": "snowday-background.png",
+      "description": "Snowy daytime background"
+    },
+    {
+      "id": "blizzard",
+      "label": "Blizzard",
+      "filename": "blizzard-background.png",
+      "description": "Heavy snowstorm"
+    },
+    {
+      "id": "icyNight",
+      "label": "Icy Night",
+      "filename": "icy-night-background.png",
+      "description": "Cold icy night"
+    },
+    {
+      "id": "autumnLeaves",
+      "label": "Autumn Leaves",
+      "filename": "autumn-leaves-background.png",
+      "description": "Fall season with leaves"
+    },
+    {
+      "id": "xmasDay",
+      "label": "Christmas Day",
+      "filename": "xmas-day-background.png",
+      "description": "Christmas day celebration"
+    },
+    {
+      "id": "xmasEve",
+      "label": "Christmas Eve",
+      "filename": "xmas-eve-background.png",
+      "description": "Christmas Eve night"
+    },
+    {
+      "id": "xmasyNight",
+      "label": "Christmas Night",
+      "filename": "xmasy-night-background.png",
+      "description": "Christmas themed night"
+    },
+    {
+      "id": "xmas",
+      "label": "Christmas",
+      "filename": "xmas-background.png",
+      "description": "General Christmas theme"
+    },
+    {
+      "id": "discreteSantaDay",
+      "label": "Subtle Christmas Day",
+      "filename": "discrete-santa-day-background.png",
+      "description": "Subtle Christmas daytime"
+    }
+  ]
+}

@@ -158,7 +158,7 @@
    * Initialize the integration
    * Sets available backgrounds and initializes BackgroundManager
    */
-  function init() {
+  async function init() {
     if (isInitialized) {
       console.warn('[IntroHubBackgroundIntegration] Already initialized');
       return;
@@ -176,6 +176,19 @@
     if (BackgroundManager) {
       BackgroundManager.setAvailableBackgrounds(availableBackgrounds);
       console.info('[IntroHubBackgroundIntegration] BackgroundManager configured');
+      
+      // Load assets from manifest and populate UI
+      if (typeof BackgroundManager.refreshAssetsAndPopulateUI === 'function') {
+        try {
+          const manifestBackgrounds = await BackgroundManager.refreshAssetsAndPopulateUI();
+          if (manifestBackgrounds && manifestBackgrounds.length > 0) {
+            availableBackgrounds = manifestBackgrounds;
+            console.info('[IntroHubBackgroundIntegration] Loaded backgrounds from manifest:', manifestBackgrounds.length);
+          }
+        } catch (err) {
+          console.warn('[IntroHubBackgroundIntegration] Failed to load manifest, using defaults:', err);
+        }
+      }
       
       // Initialize BackgroundManager
       if (typeof BackgroundManager.init === 'function') {
