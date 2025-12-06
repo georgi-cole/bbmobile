@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Manager Test</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0a0e14;
+      color: #e2e8f0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      color: #6495ed;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+
+    .section {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(100, 149, 237, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #93c5fd;
+    }
+
+    .section p {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    button {
+      background: rgba(100, 149, 237, 0.2);
+      border: 1px solid rgba(100, 149, 237, 0.5);
+      color: #93c5fd;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: rgba(100, 149, 237, 0.3);
+      border-color: rgba(100, 149, 237, 0.7);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button.danger {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+
+    button.danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      border-color: rgba(239, 68, 68, 0.7);
+    }
+
+    .status {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #86efac;
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .code {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(100, 149, 237, 0.2);
+      border-radius: 4px;
+      padding: 12px;
+      margin: 12px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #94a3b8;
+      overflow-x: auto;
+    }
+
+    .preview {
+      width: 100%;
+      height: 300px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 8px;
+      border: 2px solid rgba(100, 149, 237, 0.3);
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: 700;
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .log {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(100, 149, 237, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(100, 149, 237, 0.1);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Background Manager Test</h1>
+    <p class="subtitle">Dev-only personal background override manager. Add ?bgmgr=1 to URL to force-show the panel.</p>
+
+    <div class="section">
+      <h2>1. Enable Dev Mode</h2>
+      <p>The background manager panel only shows when dev mode is enabled.</p>
+      <button onclick="enableDevMode()">Enable Dev Mode (localStorage)</button>
+      <button onclick="disableDevMode()" class="danger">Disable Dev Mode</button>
+      <button onclick="checkDevMode()">Check Dev Mode Status</button>
+      <div id="devModeStatus" class="status" style="display: none;"></div>
+      <p style="margin-top: 12px; font-size: 13px;">
+        Current URL: <code style="color: #93c5fd;">${window.location.href}</code>
+      </p>
+      <p style="font-size: 13px;">
+        💡 Tip: Add <code style="color: #93c5fd;">?bgmgr=1</code> to the URL to force-show the panel without localStorage.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>2. Background Preview</h2>
+      <p>Preview the currently active background based on manager settings.</p>
+      <button onclick="previewBackground()">Preview Current Background</button>
+      <button onclick="refreshPreview()">Refresh Preview</button>
+      <div id="backgroundPreview" class="preview" style="background-image: url('../assets/skins/daily-background.png');">
+        Background Preview
+      </div>
+      <div id="previewStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>3. Manual Override</h2>
+      <p>Set a manual background override. This takes priority over schedules and auto-selection.</p>
+      <button onclick="setOverride('xmasDay')">Override: Christmas Day</button>
+      <button onclick="setOverride('xmasEve')">Override: Christmas Eve</button>
+      <button onclick="setOverride('night')">Override: Night</button>
+      <button onclick="clearOverride()" class="danger">Clear Override</button>
+      <div id="overrideStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>4. Date-Based Scheduling</h2>
+      <p>Schedule backgrounds for specific dates (ISO format: YYYY-MM-DD).</p>
+      <button onclick="scheduleToday('xmasEve')">Schedule Today: Christmas Eve</button>
+      <button onclick="scheduleToday('xmasDay')">Schedule Today: Christmas Day</button>
+      <button onclick="clearTodaySchedule()" class="danger">Clear Today's Schedule</button>
+      <div id="scheduleStatus" class="status" style="display: none;"></div>
+      <div class="code">
+        Today's date: <span id="todayDate"></span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>5. Inspect State</h2>
+      <p>View the current manager state and preferences.</p>
+      <button onclick="inspectState()">Inspect State</button>
+      <button onclick="clearAllData()" class="danger">Clear All Data</button>
+      <div id="stateOutput" class="code" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>6. Event Log</h2>
+      <p>Monitor background change events.</p>
+      <button onclick="clearLog()">Clear Log</button>
+      <div id="eventLog" class="log">
+        <div class="log-entry">Waiting for events...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load required modules -->
+  <script>
+    // Initialize window.game namespace
+    if (!window.game) window.game = {};
+    if (!window.game.bus) {
+      // Simple event bus
+      window.game.bus = {
+        listeners: {},
+        on(event, callback) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(callback);
+        },
+        emit(event, data) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(cb => cb(data));
+          }
+        }
+      };
+    }
+  </script>
+  <script src="../js/ui/backgroundManager.js"></script>
+  <script src="../js/ui/introhubBackgroundIntegration.js"></script>
+
+  <script>
+    // Initialize
+    const BackgroundManager = window.BackgroundManager || window.game.BackgroundManager;
+    const Integration = window.IntroHubBackgroundIntegration || window.game.IntroHubBackgroundIntegration;
+
+    if (Integration && typeof Integration.init === 'function') {
+      Integration.init();
+    }
+
+    // Display today's date
+    document.getElementById('todayDate').textContent = new Date().toISOString().split('T')[0];
+
+    // Event listeners
+    window.addEventListener('bgmgr:changed', (e) => {
+      logEvent('bgmgr:changed', e.detail);
+    });
+
+    if (window.game.bus) {
+      window.game.bus.on('ui:background:changed', (data) => {
+        logEvent('ui:background:changed (bus)', data);
+      });
+    }
+
+    // Test functions
+    function enableDevMode() {
+      try {
+        localStorage.setItem('devBackgroundManager', 'true');
+        showStatus('devModeStatus', '✓ Dev mode enabled. Reload page or call BackgroundManager.showPanel()');
+        if (BackgroundManager) {
+          BackgroundManager.showPanel();
+        }
+      } catch (err) {
+        showStatus('devModeStatus', '✗ Error: ' + err.message, true);
+      }
+    }
+
+    function disableDevMode() {
+      try {
+        localStorage.removeItem('devBackgroundManager');
+        showStatus('devModeStatus', '✓ Dev mode disabled. Panel will not show on next page load.');
+        if (BackgroundManager) {
+          BackgroundManager.hidePanel();
+        }
+      } catch (err) {
+        showStatus('devModeStatus', '✗ Error: ' + err.message, true);
+      }
+    }
+
+    function checkDevMode() {
+      if (!BackgroundManager) {
+        showStatus('devModeStatus', '✗ BackgroundManager not available', true);
+        return;
+      }
+      const isEnabled = BackgroundManager.isDevModeEnabled();
+      const message = isEnabled 
+        ? '✓ Dev mode is ENABLED' 
+        : '✗ Dev mode is DISABLED';
+      showStatus('devModeStatus', message, !isEnabled);
+    }
+
+    function previewBackground() {
+      if (!Integration) {
+        showStatus('previewStatus', '✗ Integration not available', true);
+        return;
+      }
+      const resolved = Integration.resolveIntroBackground({ occasion: 'test' });
+      const preview = document.getElementById('backgroundPreview');
+      preview.style.backgroundImage = `url(${resolved.url})`;
+      preview.textContent = resolved.label || resolved.id;
+      showStatus('previewStatus', `✓ Background: ${resolved.id} (${resolved.filename})`);
+      logEvent('preview', resolved);
+    }
+
+    function refreshPreview() {
+      previewBackground();
+    }
+
+    function setOverride(id) {
+      if (!BackgroundManager) {
+        showStatus('overrideStatus', '✗ BackgroundManager not available', true);
+        return;
+      }
+      BackgroundManager.setManualOverride(id);
+      showStatus('overrideStatus', `✓ Manual override set: ${id}`);
+      previewBackground();
+    }
+
+    function clearOverride() {
+      if (!BackgroundManager) {
+        showStatus('overrideStatus', '✗ BackgroundManager not available', true);
+        return;
+      }
+      BackgroundManager.setManualOverride(null);
+      showStatus('overrideStatus', '✓ Manual override cleared');
+      previewBackground();
+    }
+
+    function scheduleToday(id) {
+      if (!BackgroundManager) {
+        showStatus('scheduleStatus', '✗ BackgroundManager not available', true);
+        return;
+      }
+      const today = new Date().toISOString().split('T')[0];
+      BackgroundManager.setScheduleEntry(today, id);
+      showStatus('scheduleStatus', `✓ Scheduled ${today}: ${id}`);
+      previewBackground();
+    }
+
+    function clearTodaySchedule() {
+      if (!BackgroundManager) {
+        showStatus('scheduleStatus', '✗ BackgroundManager not available', true);
+        return;
+      }
+      const today = new Date().toISOString().split('T')[0];
+      BackgroundManager.removeScheduleEntry(today);
+      showStatus('scheduleStatus', `✓ Cleared schedule for ${today}`);
+      previewBackground();
+    }
+
+    function inspectState() {
+      if (!BackgroundManager) {
+        document.getElementById('stateOutput').innerHTML = '✗ BackgroundManager not available';
+        document.getElementById('stateOutput').style.display = 'block';
+        return;
+      }
+      const prefs = BackgroundManager.getPreferences();
+      const output = document.getElementById('stateOutput');
+      output.innerHTML = JSON.stringify(prefs, null, 2);
+      output.style.display = 'block';
+    }
+
+    function clearAllData() {
+      if (confirm('Clear all background manager data? This cannot be undone.')) {
+        try {
+          localStorage.removeItem('bgmgr.preferences.v1');
+          localStorage.removeItem('devBackgroundManager');
+          location.reload();
+        } catch (err) {
+          alert('Error: ' + err.message);
+        }
+      }
+    }
+
+    function logEvent(eventName, data) {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${eventName}: ${JSON.stringify(data)}`;
+      log.insertBefore(entry, log.firstChild);
+      // Keep only last 20 entries
+      while (log.children.length > 20) {
+        log.removeChild(log.lastChild);
+      }
+    }
+
+    function clearLog() {
+      const log = document.getElementById('eventLog');
+      log.innerHTML = '<div class="log-entry">Waiting for events...</div>';
+    }
+
+    function showStatus(elementId, message, isError = false) {
+      const el = document.getElementById(elementId);
+      el.textContent = message;
+      el.className = isError ? 'status error' : 'status';
+      el.style.display = 'block';
+    }
+
+    // Auto-preview on load
+    setTimeout(() => {
+      previewBackground();
+      checkDevMode();
+    }, 100);
+  </script>
+</body>
+</html>
