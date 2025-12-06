@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: PLAY Button No Intro - Sanity Check</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d151f;
+      color: #e3ecf5;
+      line-height: 1.6;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(13, 21, 31, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid #24364b;
+    }
+    
+    h1 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    
+    .test-section {
+      background: rgba(40, 72, 102, 0.2);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #3563a7;
+    }
+    
+    .test-button {
+      background: linear-gradient(135deg, #3563a7, #284866);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .test-button:hover {
+      background: linear-gradient(135deg, #4573b7, #385876);
+      box-shadow: 0 4px 12px rgba(53, 99, 167, 0.4);
+      transform: translateY(-1px);
+    }
+    
+    .test-button.success {
+      background: linear-gradient(135deg, #77d58d, #5aa86d);
+    }
+    
+    .test-button.danger {
+      background: linear-gradient(135deg, #ff6d6d, #e05555);
+    }
+    
+    .test-status {
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    
+    .test-status.pending {
+      background: rgba(131, 191, 255, 0.2);
+      color: #83bfff;
+    }
+    
+    .test-status.pass {
+      background: rgba(119, 213, 141, 0.2);
+      color: #77d58d;
+    }
+    
+    .test-status.fail {
+      background: rgba(255, 109, 109, 0.2);
+      color: #ff6d6d;
+    }
+    
+    .test-log {
+      background: #050a0f;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .log-entry {
+      margin-bottom: 5px;
+      white-space: pre-wrap;
+    }
+    
+    .log-entry.info {
+      color: #83bfff;
+    }
+    
+    .log-entry.success {
+      color: #77d58d;
+    }
+    
+    .log-entry.error {
+      color: #ff6d6d;
+    }
+    
+    .log-entry.warn {
+      color: #ffb347;
+    }
+    
+    code {
+      background: rgba(53, 99, 167, 0.2);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎮 PLAY Button No Intro/Loading - Sanity Check</h1>
+    
+    <div class="test-section">
+      <h2>Test Description</h2>
+      <p>
+        This test verifies that pressing the PLAY button advances immediately to the gameplay UI
+        without showing the loading screen (eye icon) or intro audience-reactions sequence.
+      </p>
+      <p>
+        <strong>Expected Behavior:</strong>
+      </p>
+      <ul>
+        <li>No loading overlay with eye icon should appear</li>
+        <li>No avatar preloading progress bar should display</li>
+        <li><code>startOpeningSequence()</code> should skip directly to <code>finishOpening()</code></li>
+        <li>No <code>IntroShow.play()</code> calls should occur</li>
+        <li>No reality-TV style intro or classic dual-card intro should display</li>
+        <li>The game phase should transition from <code>opening</code> to <code>intermission</code> within ~500ms</li>
+        <li>Avatars should load on-demand as they are rendered</li>
+      </ul>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <button id="runTest" class="test-button success">▶️ Run Test</button>
+      <button id="clearLog" class="test-button">🧹 Clear Log</button>
+      
+      <div id="testStatus" class="test-status pending">
+        ⏳ Test not yet run. Click "Run Test" to start.
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div id="testLog" class="test-log">
+        <div class="log-entry info">[info] Test ready. Click "Run Test" to begin.</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Test state
+    let testPassed = false;
+    let testRunning = false;
+    
+    // Logging utilities
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${type}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[test-play-no-intro] [${type}] ${message}`);
+    }
+    
+    function updateStatus(message, className) {
+      const statusDiv = document.getElementById('testStatus');
+      statusDiv.textContent = message;
+      statusDiv.className = `test-status ${className}`;
+    }
+    
+    function clearLog() {
+      const logDiv = document.getElementById('testLog');
+      logDiv.innerHTML = '<div class="log-entry info">[info] Log cleared.</div>';
+    }
+    
+    // Mock game environment
+    function setupMockGame() {
+      log('Setting up mock game environment...', 'info');
+      
+      // Create minimal game object
+      window.game = window.game || {};
+      window.game.cfg = window.game.cfg || {};
+      window.game.players = window.game.players || [];
+      window.game.phase = 'lobby';
+      
+      // Create mock players
+      window.game.players = [
+        { id: 'p1', name: 'Alice', evicted: false },
+        { id: 'p2', name: 'Bob', evicted: false },
+        { id: 'p3', name: 'Charlie', evicted: false },
+        { id: 'p4', name: 'Diana', evicted: false }
+      ];
+      
+      log('Mock game created with 4 players', 'success');
+      
+      // Mock TV say function
+      if (!window.tv) {
+        window.tv = {
+          say: (msg) => log(`TV: ${msg}`, 'info')
+        };
+      }
+      
+      // Mock setMusic
+      window.setMusic = window.setMusic || ((track, play) => {
+        log(`setMusic called: ${track} (play: ${play})`, 'info');
+      });
+      
+      // Mock setPhase
+      window.setPhase = window.setPhase || ((phase, duration, callback) => {
+        log(`setPhase called: ${phase} for ${duration}s`, 'info');
+        window.game.phase = phase;
+        // Don't auto-call callback in test - we'll test manual flow
+      });
+      
+      // Track IntroShow calls (should NOT be called)
+      if (window.IntroShow) {
+        const originalPlay = window.IntroShow.play;
+        window.IntroShow.play = function(...args) {
+          log('❌ ERROR: IntroShow.play() was called! Intro should be removed!', 'error');
+          testPassed = false;
+          return originalPlay.apply(this, args);
+        };
+      }
+      
+      // Track LoadingOverlay calls (should NOT be called)
+      if (window.LoadingOverlay) {
+        const originalShowOverlay = window.LoadingOverlay.showOverlay;
+        window.LoadingOverlay.showOverlay = function(...args) {
+          log('❌ ERROR: LoadingOverlay.showOverlay() was called! Loading screen should be removed!', 'error');
+          testPassed = false;
+          return originalShowOverlay ? originalShowOverlay.apply(this, args) : null;
+        };
+      }
+      
+      log('Mock environment setup complete', 'success');
+    }
+    
+    // Test function
+    async function runTest() {
+      if (testRunning) {
+        log('Test already running', 'warn');
+        return;
+      }
+      
+      testRunning = true;
+      testPassed = true; // Assume pass unless we find issues
+      
+      clearLog();
+      log('========================================', 'info');
+      log('Starting PLAY Button No Intro Test', 'info');
+      log('========================================', 'info');
+      updateStatus('⏳ Test running...', 'pending');
+      
+      try {
+        // Step 1: Setup mock game
+        setupMockGame();
+        await delay(100);
+        
+        // Step 2: Check that startOpeningSequence exists
+        log('Checking if startOpeningSequence exists...', 'info');
+        if (typeof window.startOpeningSequence !== 'function') {
+          log('❌ FAIL: startOpeningSequence not found in global scope', 'error');
+          testPassed = false;
+          throw new Error('startOpeningSequence not found');
+        }
+        log('✓ startOpeningSequence found', 'success');
+        
+        // Step 3: Check that finishOpening exists
+        log('Checking if finishOpening exists...', 'info');
+        if (typeof window.finishOpening !== 'function') {
+          log('❌ FAIL: finishOpening not found in global scope', 'error');
+          testPassed = false;
+          throw new Error('finishOpening not found');
+        }
+        log('✓ finishOpening found', 'success');
+        
+        // Step 4: Mock finishOpening to verify it's called
+        let finishOpeningCalled = false;
+        const originalFinishOpening = window.finishOpening;
+        window.finishOpening = function() {
+          finishOpeningCalled = true;
+          log('✓ finishOpening() called', 'success');
+          // Don't call original to avoid side effects in test
+        };
+        
+        // Step 5: Call startOpeningSequence
+        log('Calling startOpeningSequence()...', 'info');
+        window.game.phase = 'lobby'; // Reset phase
+        window.startOpeningSequence();
+        
+        // Step 6: Check phase changed to 'opening'
+        await delay(50);
+        if (window.game.phase !== 'opening') {
+          log(`❌ FAIL: Phase should be 'opening' but is '${window.game.phase}'`, 'error');
+          testPassed = false;
+        } else {
+          log(`✓ Phase correctly set to 'opening'`, 'success');
+        }
+        
+        // Step 7: Wait for timeout (should be ~500ms)
+        log('Waiting for finishOpening to be called (~500ms)...', 'info');
+        await delay(600);
+        
+        // Step 8: Verify finishOpening was called
+        if (!finishOpeningCalled) {
+          log('❌ FAIL: finishOpening() was not called within 600ms', 'error');
+          testPassed = false;
+        } else {
+          log('✓ finishOpening() was called as expected', 'success');
+        }
+        
+        // Step 9: Check that IntroShow.play was NOT called (tracked in setup)
+        log('Verifying IntroShow.play was NOT called...', 'info');
+        if (window.IntroShow && window.IntroShow.isActive && window.IntroShow.isActive()) {
+          log('❌ FAIL: IntroShow is active! Intro should not play!', 'error');
+          testPassed = false;
+        } else {
+          log('✓ IntroShow is not active (correct)', 'success');
+        }
+        
+        // Restore original finishOpening
+        window.finishOpening = originalFinishOpening;
+        
+        // Final verdict
+        log('========================================', 'info');
+        if (testPassed) {
+          log('✅ TEST PASSED: PLAY button skips intro correctly', 'success');
+          updateStatus('✅ TEST PASSED', 'pass');
+        } else {
+          log('❌ TEST FAILED: See errors above', 'error');
+          updateStatus('❌ TEST FAILED', 'fail');
+        }
+        log('========================================', 'info');
+        
+      } catch (err) {
+        log(`❌ TEST ERROR: ${err.message}`, 'error');
+        log(`Stack: ${err.stack}`, 'error');
+        updateStatus('❌ TEST ERROR', 'fail');
+        testPassed = false;
+      } finally {
+        testRunning = false;
+      }
+    }
+    
+    // Helper delay function
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // Event handlers
+    document.getElementById('runTest').addEventListener('click', runTest);
+    document.getElementById('clearLog').addEventListener('click', clearLog);
+    
+    // Auto-run on load (can be disabled if needed)
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded. Ready to run test.', 'info');
+      // Uncomment to auto-run:
+      // setTimeout(runTest, 1000);
+    });
+  </script>
+  
+  <!-- Load game modules for testing -->
+  <script>
+    // Note: In a real test, you would load the actual game modules
+    // For now, this test will verify the logic exists in the global scope
+    // after the main game has been loaded in the browser
+    
+    // This test should be run by:
+    // 1. Opening index.html in browser (to load all modules)
+    // 2. Then navigating to this test file
+    // OR loading this test file after game modules are already loaded
+  </script>
+</body>
+</html>

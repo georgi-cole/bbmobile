@@ -743,9 +743,8 @@
 
   /**
    * Unified entry point for Play → main hub transition.
-   * Shows loading overlay immediately, preloads all avatars with progress tracking,
-   * then transitions to main hub only when all assets are ready.
-   * Handles errors with overlay-level Retry option.
+   * REMOVED: Loading overlay and avatar preloading per product decision
+   * Now proceeds directly to main game screen for immediate gameplay.
    */
   async function enterGameFromIntro() {
     // Guard against duplicate calls
@@ -762,82 +761,24 @@
     // Mark game as starting to prevent race conditions
     flowState.gameStarted = true;
 
-    console.info('[StartupFlow] enterGameFromIntro() - unified Play transition starting');
+    console.info('[StartupFlow] enterGameFromIntro() - immediate Play transition (no loading screen)');
 
     // Log telemetry
     if (g.Telemetry && typeof g.Telemetry.log === 'function') {
       g.Telemetry.log('startup_enter_game_from_intro_start', {});
     }
 
-    // Show loading overlay immediately
-    const LoadingOverlay = g.LoadingOverlay || window.LoadingOverlay;
-    if (!LoadingOverlay) {
-      console.error('[StartupFlow] LoadingOverlay not available, falling back to legacy enterGame');
-      await legacyEnterGame();
-      return;
-    }
-
-    LoadingOverlay.showOverlay();
+    // REMOVED: Loading overlay display and avatar preloading
+    // Avatars will load on-demand as they're rendered in the UI
 
     try {
-      // Step 1: Preload and build game cast (get players ready)
+      // Step 1: Build game cast
       console.info('[StartupFlow] Building game cast...');
       if (typeof g.buildCast === 'function') {
         g.buildCast();
       }
 
-      // Wait a tick for players to be available
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const players = g.game?.players || g.players || [];
-      
-      if (!players || players.length === 0) {
-        console.warn('[StartupFlow] No players available after buildCast, proceeding anyway');
-      }
-
-      // Step 2: Strict avatar preload with progress tracking
-      console.info('[StartupFlow] Starting strict avatar preload...');
-      
-      const AvatarQueue = g.AvatarQueue || window.AvatarQueue;
-      if (!AvatarQueue || !AvatarQueue.preloadAvatarsQueued) {
-        console.warn('[StartupFlow] AvatarQueue not available, skipping avatar preload');
-        LoadingOverlay.updateProgress({ loaded: 1, total: 1 });
-      } else {
-        const cfg = g.game?.cfg || g.cfg || {};
-        const strictMode = cfg.avatarPreloadRequireAll === true;
-        
-        const result = await AvatarQueue.preloadAvatarsQueued(players, {
-          concurrency: cfg.avatarPreloadConcurrency || 8,
-          timeout: cfg.avatarPreloadTimeoutMs || (strictMode ? 30000 : 7000),
-          strictMode: strictMode,
-          onProgress: (loaded, total) => {
-            LoadingOverlay.updateProgress({ loaded, total });
-          }
-        });
-
-        console.info('[StartupFlow] Avatar preload complete:', result);
-
-        // Check for strict mode failure
-        if (strictMode && !result.isReady) {
-          const errorMsg = `Failed to load all houseguest profiles.\n\nLoaded: ${result.loaded}/${result.total}\nFailed: ${result.failed || 0}${result.timedOut ? '\nTimed out' : ''}`;
-          
-          LoadingOverlay.showError(errorMsg, {
-            showRetry: true,
-            onRetry: async () => {
-              console.info('[StartupFlow] User requested retry');
-              // Reset state and retry
-              flowState.gameStarted = false;
-              await enterGameFromIntro();
-            }
-          });
-          
-          // Keep overlay visible, don't proceed
-          console.warn('[StartupFlow] Strict avatar preload failed, waiting for user action');
-          return;
-        }
-      }
-
-      // Step 3: Apply profile or guest mode
+      // Step 2: Apply profile or guest mode
       let profile = null;
       if (g.ProfileStorage && g.ProfileService) {
         const lastProfileId = g.ProfileStorage.getLastProfileId();
@@ -858,7 +799,7 @@
         console.info('[guest-xp] Guest mode active - XP events will be suppressed');
       }
 
-      // Step 4: Mark game as ready
+      // Step 3: Mark game as ready
       if (g.DeferredGuards) {
         g.DeferredGuards.markGameReady();
         g.DeferredGuards.flushDeferredTasks();
@@ -871,12 +812,7 @@
         g.game.cfg.autoShowRulesOnStart = false;
       }
 
-      // Step 5: Small delay to show 100% before transitioning
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Step 6: Hide overlay and build main screen
-      await LoadingOverlay.hideOverlay();
-      
+      // Step 4: Build main screen immediately
       buildMainScreen();
 
       // Mark game as started
@@ -903,22 +839,22 @@
     } catch (err) {
       console.error('[StartupFlow] Error in enterGameFromIntro:', err);
       
-      // Show error on overlay with retry
-      LoadingOverlay.showError(
-        `An error occurred while loading the game.\n\n${err.message || 'Unknown error'}`,
-        {
-          showRetry: true,
-          onRetry: async () => {
-            console.info('[StartupFlow] User requested retry after error');
-            flowState.gameStarted = false;
-            await enterGameFromIntro();
-          }
-        }
-      );
-
+      // REMOVED: Loading overlay error display
+      // Errors will surface through console and gameplay will proceed with fallbacks
+      
       // Log telemetry
       if (g.Telemetry && typeof g.Telemetry.log === 'function') {
         g.Telemetry.log('startup_enter_game_from_intro_error', { error: err.message });
+      }
+      
+      // Attempt to proceed anyway - avatars will load on demand
+      try {
+        buildMainScreen();
+        if (typeof g.startOpeningSequence === 'function') {
+          g.startOpeningSequence();
+        }
+      } catch (fallbackErr) {
+        console.error('[StartupFlow] Critical error in fallback:', fallbackErr);
       }
     }
   }
