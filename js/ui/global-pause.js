@@ -15,8 +15,8 @@
   }
 
   // Implementation (self-contained)
-  var PauseManager = (function () {
-    var openModals = new Set();
+  const PauseManager = (function () {
+    const openModals = new Set();
 
     function emit(eventName) {
       try {
@@ -28,7 +28,7 @@
           try {
             window.dispatchEvent(new CustomEvent(eventName));
           } catch (err) {
-            var ev;
+            let ev;
             try {
               ev = document.createEvent('Event');
               ev.initEvent(eventName, true, true);
@@ -48,7 +48,7 @@
     function open(id) {
       try {
         if (!id) throw new Error('PauseManager.open requires an id');
-        var wasPaused = openModals.size > 0;
+        const wasPaused = openModals.size > 0;
         openModals.add(id);
         if (!wasPaused && openModals.size > 0) {
           emit('game:pause');
@@ -85,5 +85,7 @@
   try {
     window.game = window.game || {};
     window.game.pauseManager = window.game.pauseManager || PauseManager;
-  } catch (e) { }
+  } catch (e) {
+    // Silently ignore errors when attaching to window.game
+  }
 })();
