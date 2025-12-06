@@ -1798,8 +1798,10 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   /**
-   * Add subtle glassy effects to the Play CTA
-   * Helper: finds Play CTA via common selectors and adds styling classes
+   * Add adaptive theming to the Play CTA
+   * Sets CSS variables based on runtime theme info (window.game.theme.accentColor)
+   * Computes darker gradient end and readable foreground color
+   * Adds glassy effects and animation classes
    */
   function decoratePlayCta() {
     try {
@@ -1816,11 +1818,148 @@ console.info('[IntroScreen] Script executing – pre-init');
         return;
       }
 
+      // Defensive: compute theme colors from available runtime info
+      let accentColor = null;
+      
+      // Try window.game.theme.accentColor
+      if (g?.theme?.accentColor) {
+        accentColor = g.theme.accentColor;
+      } else if (window.game?.theme?.accentColor) {
+        accentColor = window.game.theme.accentColor;
+      } else if (g?.BackgroundTheme?.getCurrent) {
+        // Try BackgroundTheme module
+        const currentTheme = g.BackgroundTheme.getCurrent();
+        if (currentTheme?.accentColor) {
+          accentColor = currentTheme.accentColor;
+        }
+      }
+      
+      // Fallback: Try reading computed background color from intro container
+      if (!accentColor) {
+        const introContainer = document.getElementById('introScreen');
+        if (introContainer) {
+          const bgLayer = introContainer.querySelector('.intro-screen__bg--current');
+          if (bgLayer) {
+            const computedStyle = window.getComputedStyle(bgLayer);
+            const bgColor = computedStyle.backgroundColor;
+            // Only use if it's not completely dark/transparent
+            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+              accentColor = bgColor;
+            }
+          }
+        }
+      }
+      
+      // Final fallback: use default cyan
+      if (!accentColor) {
+        accentColor = '#00d4ff';
+      }
+      
+      console.info('[IntroHub] Detected accent color:', accentColor);
+      
+      // Parse color to RGB for manipulation
+      const rgb = parseColor(accentColor);
+      if (!rgb) {
+        console.warn('[IntroHub] Failed to parse accent color, using default');
+        playBtn.classList.add('intro-cta--glassy', 'intro-cta--animated');
+        return;
+      }
+      
+      // Compute darker gradient end (darken by ~30%)
+      const darkerRgb = {
+        r: Math.max(0, Math.floor(rgb.r * 0.7)),
+        g: Math.max(0, Math.floor(rgb.g * 0.7)),
+        b: Math.max(0, Math.floor(rgb.b * 0.7))
+      };
+      
+      // Compute relative luminance to determine readable foreground color
+      // Formula: https://www.w3.org/TR/WCAG20/#relativeluminancedef
+      const luminance = computeLuminance(rgb);
+      const foreground = luminance > 0.5 ? '#1a1a1a' : '#ffffff';
+      
+      // Format colors as CSS rgb()
+      const startColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+      const endColor = `rgb(${darkerRgb.r}, ${darkerRgb.g}, ${darkerRgb.b})`;
+      
+      // Set CSS variables on the Play button element
+      playBtn.style.setProperty('--hub-accent-start', startColor);
+      playBtn.style.setProperty('--hub-accent-end', endColor);
+      playBtn.style.setProperty('--hub-accent-foreground', foreground);
+      
+      // Add glassy effects and animation classes
       playBtn.classList.add('intro-cta--glassy', 'intro-cta--animated');
-      console.info('[IntroHub] Play CTA decorated with glassy effects');
+      
+      console.info('[IntroHub] Play CTA decorated with adaptive theme:', {
+        start: startColor,
+        end: endColor,
+        foreground: foreground,
+        luminance: luminance.toFixed(3)
+      });
     } catch (e) {
       console.debug('[IntroHub] decoratePlayCta skipped', e);
     }
+  }
+  
+  /**
+   * Parse a CSS color string to RGB object
+   * Supports: hex (#rrggbb, #rgb), rgb(r, g, b), rgba(r, g, b, a)
+   * @param {string} color - CSS color string
+   * @returns {Object|null} {r, g, b} or null if parsing fails
+   */
+  function parseColor(color) {
+    if (!color) return null;
+    
+    // Normalize
+    color = color.trim().toLowerCase();
+    
+    // Try hex format (#rrggbb or #rgb)
+    if (color.startsWith('#')) {
+      let hex = color.slice(1);
+      if (hex.length === 3) {
+        // Expand shorthand (#rgb -> #rrggbb)
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      }
+      if (hex.length === 6) {
+        return {
+          r: parseInt(hex.slice(0, 2), 16),
+          g: parseInt(hex.slice(2, 4), 16),
+          b: parseInt(hex.slice(4, 6), 16)
+        };
+      }
+    }
+    
+    // Try rgb(r, g, b) or rgba(r, g, b, a)
+    const rgbMatch = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (rgbMatch) {
+      return {
+        r: parseInt(rgbMatch[1], 10),
+        g: parseInt(rgbMatch[2], 10),
+        b: parseInt(rgbMatch[3], 10)
+      };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Compute relative luminance for a color
+   * Used to determine if text should be light or dark
+   * @param {Object} rgb - {r, g, b} with values 0-255
+   * @returns {number} Luminance value 0-1
+   */
+  function computeLuminance(rgb) {
+    // Convert to 0-1 range
+    const rsRGB = rgb.r / 255;
+    const gsRGB = rgb.g / 255;
+    const bsRGB = rgb.b / 255;
+    
+    // Apply gamma correction
+    const r = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
+    const g = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
+    const b = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
+    
+    // Compute luminance
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
   /**

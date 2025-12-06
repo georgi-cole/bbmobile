@@ -213,8 +213,8 @@ body:not(.main-screen-built) .topbar {
 
 .intro-screen__btn {
   min-width: 200px;
-  min-height: 52px;
-  padding: 14px 28px;
+  min-height: 46px; /* Reduced from 52px */
+  padding: 10px 26px; /* Reduced from 14px 28px */
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(16px);
@@ -226,8 +226,16 @@ body:not(.main-screen-built) .topbar {
   letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 250ms ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  /* Enhanced 3D layered shadows without heavy outlines */
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.15), /* Subtle inset highlight */
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.2);
   text-align: center;
+  /* Remove text-stroke */
+  -webkit-text-stroke: 0;
+  /* Use a single, modest text-shadow for depth */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   animation: intro-btn-stagger 600ms ease-out backwards;
   animation-delay: calc(100ms + var(--stagger-index, 0) * 60ms);
 }
@@ -247,12 +255,18 @@ body:not(.main-screen-built) .topbar {
   background: rgba(255, 255, 255, 0.25);
   border-color: rgba(255, 255, 255, 0.4);
   transform: translateX(4px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 3px 6px rgba(0, 0, 0, 0.18),
+    0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
 .intro-screen__btn:active {
   transform: translateY(2px) scale(0.97);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .intro-screen__btn:focus-visible {
@@ -260,28 +274,49 @@ body:not(.main-screen-built) .topbar {
   outline-offset: 3px;
 }
 
-/* Primary Button (Play/Continue) - Neon Cyan Gradient */
+/* Primary Button (Play/Continue) - Adaptive Gradient with 3D Depth */
 .intro-screen__btn--primary {
-  background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+  /* CSS variables for adaptive theming (set via JS in decoratePlayCta) */
+  --hub-accent-start: #00d4ff; /* Default cyan start */
+  --hub-accent-end: #0088ff;   /* Default cyan end */
+  --hub-accent-foreground: #ffffff; /* Default white text */
+  
+  background: linear-gradient(135deg, var(--hub-accent-start) 0%, var(--hub-accent-end) 100%);
   border: 1px solid rgba(0, 212, 255, 0.5);
+  color: var(--hub-accent-foreground);
   font-size: 20px;
   font-weight: 700;
-  box-shadow: 0 6px 24px rgba(0, 212, 255, 0.4),
-              0 0 40px rgba(0, 212, 255, 0.2);
+  /* Enhanced 3D layered shadows + inset highlight */
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.25), /* Inset highlight for 3D effect */
+    0 3px 6px rgba(0, 0, 0, 0.2),
+    0 6px 18px rgba(0, 212, 255, 0.35),
+    0 0 30px rgba(0, 212, 255, 0.15);
+  /* Remove text-stroke, use cleaner single shadow */
+  -webkit-text-stroke: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   animation-delay: 0ms; /* Play button appears first */
 }
 
 .intro-screen__btn--primary:hover {
-  background: linear-gradient(135deg, #00e4ff 0%, #0098ff 100%);
-  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.5),
-              0 0 60px rgba(0, 212, 255, 0.3);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--hub-accent-start) 95%, white 5%) 0%, 
+    color-mix(in srgb, var(--hub-accent-end) 95%, white 5%) 100%);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.25),
+    0 8px 24px rgba(0, 212, 255, 0.4),
+    0 0 45px rgba(0, 212, 255, 0.2);
   transform: translateX(6px) scale(1.02);
 }
 
 .intro-screen__btn--primary:active {
   transform: translateY(2px) scale(0.97);
-  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.4),
-              0 0 30px rgba(0, 212, 255, 0.2);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 212, 255, 0.3),
+    0 0 20px rgba(0, 212, 255, 0.1);
 }
 
 /* ===== Chips (Bottom-Right) ===== */
