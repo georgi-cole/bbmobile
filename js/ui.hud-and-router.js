@@ -1770,92 +1770,25 @@ header.innerHTML = `
     try{ g.setMusic?.('theme_opening', true); }catch{}
     g.setPhase('opening', game.cfg?.tOpening || 90, g.finishOpening);
     
-    // Check if skipIntros is enabled - if so, skip all intro sequences
-    if (game.cfg?.skipIntros) {
-      console.info('[opening] skipIntros enabled, skipping intro sequences');
-      // Skip directly to finish
-      setTimeout(() => {
-        if (game.phase === 'opening') {
-          g.finishOpening();
-        }
-      }, 500);
-      return;
-    }
+    // REMOVED: Intro audience-reactions sequence permanently removed per product decision
+    // The game now proceeds directly to gameplay after pressing PLAY button
+    // Previously had reality-TV style intro (IntroShow) and classic dual-card intro
+    console.info('[opening] Skipping intro sequences, proceeding directly to gameplay');
     
-    // Check if reality-TV style intro is enabled and available
-    const useRealityIntro = game.cfg?.useRealityIntro !== false && 
-                            typeof g.IntroShow !== 'undefined' && 
-                            g.IntroShow.hasGsap();
-    
-    if (useRealityIntro) {
-      console.info('[opening] Using reality-TV style intro sequence');
-      try {
-        const players = [...(game.players || [])];
-        g.IntroShow.play(players, () => {
-          console.info('[opening] Reality-TV intro completed');
-          if (game.phase === 'opening') {
-            g.finishOpening();
-          }
-        });
-        return;
-      } catch (e) {
-        console.warn('[opening] Reality-TV intro failed, falling back to classic:', e);
+    // Brief delay to allow phase transition, then finish opening
+    setTimeout(() => {
+      if (game.phase === 'opening') {
+        g.finishOpening();
       }
-    }
-    
-    // Classic dual-card intro sequence (fallback)
-    console.info('[opening] Using classic dual-card intro sequence');
-    try{
-      const players=[...(game.players||[])];
-      const pairs=[]; for(let i=0;i<players.length;i+=2){ pairs.push([players[i], players[i+1]]); }
-      const perPair=5600, gap=150;
-      game.__introHandles = [];
-      game.__introPairsTotal = pairs.length;
-      game.__introPairsShown = 0;
-      game.__introEarlyFinished = false;
-      pairs.forEach((pair,idx)=>{
-        const id=setTimeout(()=>{
-          try{ 
-            const hid=showDualProfileCards(pair[0], pair[1], perPair-100); 
-            if(hid!=null) game.__introHandles.push(hid); 
-            
-            // Increment shown count
-            game.__introPairsShown = (game.__introPairsShown || 0) + 1;
-            
-            // Check if all pairs have been shown
-            if(game.__introPairsShown >= game.__introPairsTotal && 
-               game.phase === 'opening' && 
-               !game.__introEarlyFinished) {
-              console.info('[opening] All intro pairs shown, finishing early');
-              game.__introEarlyFinished = true;
-              // Ensure last card remains visible for at least 3 seconds
-              const minLastCardVisibility = 3000; // 3 seconds minimum
-              setTimeout(() => {
-                if(game.phase === 'opening') {
-                  g.finishOpening();
-                }
-              }, minLastCardVisibility);
-            }
-          }catch{}
-        }, idx*(perPair+gap));
-        game.__introHandles.push(id);
-      });
-    }catch{}
+    }, 500);
   }
   g.startOpeningSequence = startOpeningSequence;
   function skipIntro(userTriggered){
     const game=g.game||{};
     
-    // Stop reality-TV intro if active
-    if (typeof g.IntroShow !== 'undefined' && g.IntroShow.isActive()) {
-      g.IntroShow.stop();
-    }
-    
-    // Clear classic intro handles
-    if(Array.isArray(game.__introHandles)){
-      game.__introHandles.forEach(h=>clearTimeout(h));
-      game.__introHandles=[];
-    }
+    // REMOVED: Intro sequence logic removed - intro no longer exists
+    // Previously stopped IntroShow and cleared classic intro handles
+    // Now this function is a no-op placeholder for compatibility
     clearIntroDeck();
     if(userTriggered) g.finishOpening();
   }
