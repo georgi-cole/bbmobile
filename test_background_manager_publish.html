@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Manager Publish Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+    h1 {
+      margin-top: 0;
+    }
+    .info {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin: 10px 0;
+    }
+    button {
+      background: rgba(255, 255, 255, 0.3);
+      border: 2px solid white;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 10px 10px 10px 0;
+      font-size: 14px;
+    }
+    button:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+    #status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+    }
+    #status.show {
+      display: block;
+    }
+    #status.success {
+      background: rgba(34, 197, 94, 0.3);
+      border: 2px solid rgba(34, 197, 94, 0.6);
+    }
+    #status.error {
+      background: rgba(239, 68, 68, 0.3);
+      border: 2px solid rgba(239, 68, 68, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Background Manager Publish Test</h1>
+    
+    <div class="info">
+      <h3>Test Instructions:</h3>
+      <ol>
+        <li>Open browser console to see logs</li>
+        <li>Click "Enable Dev Mode" to enable the Background Manager</li>
+        <li>Click "Show Panel" to display the Background Manager UI</li>
+        <li>The panel should appear in the bottom-right corner with all features</li>
+        <li>Test the refresh button to load backgrounds from manifest</li>
+        <li>Verify the dropdown shows all 17 backgrounds</li>
+        <li>Test the publish section (without token - should show error)</li>
+      </ol>
+    </div>
+
+    <div>
+      <button onclick="enableDevMode()">Enable Dev Mode</button>
+      <button onclick="showPanel()">Show Panel</button>
+      <button onclick="hidePanel()">Hide Panel</button>
+      <button onclick="checkStatus()">Check Status</button>
+      <button onclick="testRefresh()">Test Refresh Assets</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="info" style="margin-top: 30px;">
+      <h3>Expected Features:</h3>
+      <ul>
+        <li>✅ Manual Override dropdown with 17+ backgrounds</li>
+        <li>✅ "Refresh" button to reload manifest</li>
+        <li>✅ Schedule Today selector</li>
+        <li>✅ Clear buttons for manual override and schedule</li>
+        <li>✅ GitHub token input field (password type)</li>
+        <li>✅ Commit message editor</li>
+        <li>✅ "Publish Override to Repo" button</li>
+        <li>✅ Status feedback area</li>
+        <li>✅ Warning about global effect</li>
+      </ul>
+    </div>
+
+    <div class="info">
+      <h3>Console Commands:</h3>
+      <div class="code">
+        // Check if BackgroundManager is available<br>
+        console.log(window.BackgroundManager);<br>
+        <br>
+        // Get available backgrounds<br>
+        await BackgroundManager.refreshAssetsAndPopulateUI();<br>
+        <br>
+        // Test publish (will fail without token)<br>
+        await BackgroundManager.publishOverrideToRepo('day', 'Test commit', 'fake_token');
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Background Manager modules -->
+  <script src="js/ui/backgroundManager.js"></script>
+  <script src="js/ui/introhubBackgroundIntegration.js"></script>
+
+  <script>
+    function showStatus(message, type = 'success') {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'show ' + type;
+      setTimeout(() => {
+        status.className = '';
+      }, 5000);
+    }
+
+    function enableDevMode() {
+      localStorage.setItem('devBackgroundManager', 'true');
+      showStatus('✓ Dev mode enabled. Panel will auto-show on page load.', 'success');
+      console.log('✓ Dev mode enabled');
+    }
+
+    function showPanel() {
+      if (window.BackgroundManager) {
+        window.BackgroundManager.showPanel();
+        showStatus('✓ Panel shown', 'success');
+      } else {
+        showStatus('✗ BackgroundManager not loaded', 'error');
+      }
+    }
+
+    function hidePanel() {
+      if (window.BackgroundManager) {
+        window.BackgroundManager.hidePanel();
+        showStatus('✓ Panel hidden', 'success');
+      } else {
+        showStatus('✗ BackgroundManager not loaded', 'error');
+      }
+    }
+
+    function checkStatus() {
+      if (window.BackgroundManager) {
+        const isDevMode = window.BackgroundManager.isDevModeEnabled();
+        const prefs = window.BackgroundManager.getPreferences();
+        console.log('BackgroundManager Status:', {
+          isDevMode,
+          preferences: prefs,
+          available: true
+        });
+        showStatus(`✓ BackgroundManager loaded. Dev mode: ${isDevMode}`, 'success');
+      } else {
+        showStatus('✗ BackgroundManager not available', 'error');
+      }
+    }
+
+    async function testRefresh() {
+      if (window.BackgroundManager) {
+        try {
+          const backgrounds = await window.BackgroundManager.refreshAssetsAndPopulateUI();
+          console.log('Refreshed backgrounds:', backgrounds);
+          showStatus(`✓ Loaded ${backgrounds.length} backgrounds from manifest`, 'success');
+        } catch (err) {
+          console.error('Refresh error:', err);
+          showStatus('✗ Failed to refresh: ' + err.message, 'error');
+        }
+      } else {
+        showStatus('✗ BackgroundManager not available', 'error');
+      }
+    }
+
+    // Auto-initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('=== Background Manager Test Page Loaded ===');
+      
+      // Check if modules loaded
+      if (window.BackgroundManager) {
+        console.log('✓ BackgroundManager loaded');
+        
+        // Initialize integration if available
+        if (window.IntroHubBackgroundIntegration) {
+          console.log('✓ IntroHubBackgroundIntegration loaded');
+          window.IntroHubBackgroundIntegration.init();
+        }
+        
+        // Check dev mode
+        const isDevMode = window.BackgroundManager.isDevModeEnabled();
+        console.log('Dev mode enabled:', isDevMode);
+        
+        if (!isDevMode) {
+          console.log('💡 Tip: Click "Enable Dev Mode" to activate the panel');
+        }
+      } else {
+        console.error('✗ BackgroundManager not loaded - check script paths');
+      }
+    });
+  </script>
+</body>
+</html>
