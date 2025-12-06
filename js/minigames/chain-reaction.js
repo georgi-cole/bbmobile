@@ -1,374 +1,292 @@
-// MODULE: minigames/chain-reaction.js
-// Chain Reaction - Cell explosion puzzle with strategic clicking
-
-const ChainReactionMinigame = (() => {
-  // Config
-  const config = {
-    rounds: 2,                // <-- reduced rounds
-    rows: 8,
-    cols: 6,
-    tickDelay: 80,            // ms delay between chain ticks for visual clarity
-    cssVarCellSize: '--cr-cell-size',
-    defaultCellSize: 36       // default cell size in pixels
-  };
-
-  // Private state
-  let container;
-  let grid = []; // 2D array of {count}
-  let currentRound = 0;
-  let running = false;
-
-  // Helpers
-  function createGrid(rows, cols) {
-    grid = [];
-    for (let r = 0; r < rows; r++) {
-      const row = [];
-      for (let c = 0; c < cols; c++) {
-        row.push({ count: 0, r, c, el: null });
-      }
-      grid.push(row);
-    }
-  }
-
-  function getNeighbors(r, c) {
-    const n = [];
-    if (r > 0) n.push(grid[r - 1][c]);
-    if (r < grid.length - 1) n.push(grid[r + 1][c]);
-    if (c > 0) n.push(grid[r][c - 1]);
-    if (c < grid[0].length - 1) n.push(grid[r][c + 1]);
-    return n;
-  }
-
-  function thresholdForCell(r, c) {
-    return getNeighbors(r, c).length;
-  }
-
-  function hasAnyDoubles() {
-    for (const row of grid) {
-      for (const cell of row) {
-        if (cell.count >= 2) return true;
-      }
-    }
-    return false;
-  }
-
-  function renderGrid() {
-    container.innerHTML = '';
-    const board = document.createElement('div');
-    board.className = 'cr-board';
-    board.style.setProperty(config.cssVarCellSize, config.defaultCellSize + 'px');
-
-    grid.forEach((row) => {
-      const rowEl = document.createElement('div');
-      rowEl.className = 'cr-row';
-      row.forEach((cell) => {
-        const cellEl = document.createElement('button');
-        cellEl.className = 'cr-cell';
-        cellEl.dataset.r = cell.r;
-        cellEl.dataset.c = cell.c;
-        cellEl.type = 'button';
-        cell.el = cellEl;
-        updateCellEl(cell);
-        cellEl.addEventListener('click', onCellClick);
-        rowEl.appendChild(cellEl);
-      });
-      board.appendChild(rowEl);
-    });
-    container.appendChild(board);
-  }
-
-  function updateCellEl(cell) {
-    const el = cell.el;
-    el.textContent = cell.count > 0 ? String(cell.count) : '';
-    el.classList.toggle('cr-cell--empty', cell.count === 0);
-    el.classList.toggle('cr-cell--active', cell.count >= 2);
-  }
-
-  function flashIllegalClick(cellEl) {
-    cellEl.classList.add('cr-illegal');
-    setTimeout(() => cellEl.classList.remove('cr-illegal'), 300);
-  }
-
-  function onCellClick() {
-    if (!running) return;
-    const r = Number(this.dataset.r);
-    const c = Number(this.dataset.c);
-    const cell = grid[r][c];
-
-    // Rule: if there is any cell with count >= 2, singles (<2) are NOT clickable.
-    const blockingDoubles = hasAnyDoubles();
-    if (blockingDoubles && cell.count < 2) {
-      // disallow click - visual feedback
-      flashIllegalClick(this);
-      return;
-    }
-
-    // Allowed click
-    handleIncrement(cell);
-  }
-
-  function handleIncrement(cell) {
-    incrementCell(cell);
-    processExplosions();
-  }
-
-  function incrementCell(cell) {
-    cell.count += 1;
-    updateCellEl(cell);
-  }
-
-  function setCellToZero(cell) {
-    cell.count = 0;
-    updateCellEl(cell);
-  }
-
-  function processExplosions() {
-    // Process chain reactions in ticks to allow animation and to avoid synchronous deep recursion
-    const queue = [];
-
-    // initial seeds: any cell over threshold
-    for (const row of grid) {
-      for (const cell of row) {
-        if (cell.count >= thresholdForCell(cell.r, cell.c)) {
-          queue.push(cell);
-        }
-      }
-    }
-
-    if (queue.length === 0) {
-      checkRoundEnd();
-      return;
-    }
-
-    function tick() {
-      if (queue.length === 0) {
-        checkRoundEnd();
-        return;
-      }
-
-      const cell = queue.shift();
-      if (cell.count < thresholdForCell(cell.r, cell.c)) {
-        // may have changed since queued - skip
-        setTimeout(tick, config.tickDelay);
-        return;
-      }
-
-      // explode
-      setCellToZero(cell);
-      cell.el.classList.add('cr-explode');
-      setTimeout(() => cell.el.classList.remove('cr-explode'), 250);
-
-      const neighbors = getNeighbors(cell.r, cell.c);
-      neighbors.forEach((n) => {
-        n.count += 1;
-        updateCellEl(n);
-        if (n.count >= thresholdForCell(n.r, n.c) && !queue.includes(n)) {
-          queue.push(n);
-        }
-      });
-
-      setTimeout(tick, config.tickDelay);
-    }
-
-    setTimeout(tick, config.tickDelay);
-  }
-
-  function checkRoundEnd() {
-    // Are there any non-zero cells left?
-    const anyNonZero = grid.some(row => row.some(cell => cell.count > 0));
-    if (!anyNonZero) {
-      currentRound++;
-      if (currentRound >= config.rounds) {
-        endGame(true);
-      } else {
-        setupRound();
-      }
-    } else {
-      // If non-zero left but no explosions in flight, allow further clicks (subject to single/double rule)
-    }
-  }
-
-  function setupRound() {
-    // For each new round we seed some random cells. Keep the seeding conservative.
-    for (let i = 0; i < 6 + currentRound * 2; i++) {
-      const r = Math.floor(Math.random() * config.rows);
-      const c = Math.floor(Math.random() * config.cols);
-      const cell = grid[r][c];
-      cell.count = Math.max(1, cell.count + 1);
-    }
-    renderGrid(); // re-render to attach events and update display
-  }
-
-  function endGame(won) {
-    running = false;
-    const msg = document.createElement('div');
-    msg.className = 'cr-end';
-    msg.textContent = won ? 'Cleared!' : 'Game Over';
-    container.appendChild(msg);
-    // send event on window.game.bus if available
-    try {
-      window.game?.bus?.emit?.('minigame:end', { won });
-    } catch (err) {
-      console.error('[ChainReaction] event emit error', err);
-    }
-  }
-
-  // Public API
-  function init(el) {
-    container = el;
-    container.classList.add('cr-container');
-    createGrid(config.rows, config.cols);
-    renderGrid();
-  }
-
-  function start() {
-    currentRound = 0;
-    running = true;
-    // initial seed and render
-    setupRound();
-  }
-
-  function stop() {
-    running = false;
-  }
-
-  // Expose configurable setters for quick tweaks (useful for testing)
-  function setRounds(n) {
-    config.rounds = Math.max(1, Math.floor(n));
-  }
-
-  function setCellSize(px) {
-    config.defaultCellSize = px;
-    container && container.style.setProperty(config.cssVarCellSize, px + 'px');
-  }
-
-  return {
-    init,
-    start,
-    stop,
-    setRounds,
-    setCellSize
-  };
-})();
-
-// Legacy compatibility layer for old render-based interface
-(function(g){
+(function (root) {
   'use strict';
 
-  // Score calculation constants
-  const WIN_BASE_SCORE = 60;
-  const WIN_BONUS_RANGE = 40;
-  const LOSS_MAX_SCORE = 60;
-  const FORCED_LOSS_MIN = 30;
-  const FORCED_LOSS_RANGE = 25;
-
-  /**
-   * Legacy render function for backwards compatibility
-   * Maps the old render(container, onComplete, options) API to the new ChainReactionMinigame API
-   * 
-   * @param {HTMLElement} container - Container element for the game UI
-   * @param {Function} onComplete - Callback function(score) when game ends
-   * @param {Object} options - Game options (debugMode, competitionMode)
-   */
-  function render(container, onComplete, options = {}){
-    const { 
-      debugMode = false, 
-      competitionMode = false
-    } = options;
-
-    // Initialize with new API (uses default config values: 2 rounds, 36px cells)
-    try {
-      ChainReactionMinigame.init(container);
-      ChainReactionMinigame.setRounds(2);
-      ChainReactionMinigame.setCellSize(36);
-    } catch (err) {
-      console.error('[ChainReaction] Initialization failed:', err);
-      if (typeof onComplete === 'function') {
-        onComplete(0); // Return 0 score on initialization failure
-      }
-      return;
-    }
-
-    // Mock the game bus to capture the end event and call onComplete
-    const originalBus = g.game?.bus;
-    const mockBus = {
-      emit: (event, data) => {
-        if (event === 'minigame:end') {
-          // Calculate score based on win/loss
-          // Won = high score (WIN_BASE_SCORE to 100), Lost = low score (0 to LOSS_MAX_SCORE)
-          let score = data.won ? (WIN_BASE_SCORE + Math.random() * WIN_BONUS_RANGE) : (Math.random() * LOSS_MAX_SCORE);
-          score = Math.round(score);
-
-          // Apply competition mode logic if needed
-          if (competitionMode && g.GameUtils && !debugMode) {
-            const playerSucceeded = data.won;
-            const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-            if (!shouldWin && playerSucceeded) {
-              // Force loss despite success
-              score = Math.round(FORCED_LOSS_MIN + Math.random() * FORCED_LOSS_RANGE);
-              console.log('[ChainReaction] Win probability applied: success forced to loss');
-            }
-          }
-
-          // Call the original onComplete callback
-          if (typeof onComplete === 'function') {
-            onComplete(score);
-          }
-
-          // Restore original bus
-          if (g.game) {
-            g.game.bus = originalBus;
-          }
-        }
-        // Also call original bus if it exists
-        if (originalBus && originalBus.emit) {
-          originalBus.emit(event, data);
-        }
-      }
+  const ChainReactionMinigame = (() => {
+    // Config
+    const config = {
+      rounds: 2,
+      rows: 8,
+      cols: 6,
+      colors: ['#ff6b6b', '#6bcfff', '#ffd166', '#8d6bff', '#6bffa3'],
+      cellSizeVar: '--cr-cell-size',
+      defaultCellSizePx: 36
     };
 
-    // Temporarily replace the bus
-    if (!g.game) g.game = {};
-    g.game.bus = mockBus;
+    // State
+    let container = null;
+    let grid = []; // grid[r][c] = { color: string } or null
+    let running = false;
+    let currentRound = 0;
 
-    // Start the game
-    ChainReactionMinigame.start();
+    // Helpers
+    function randColor() {
+      const idx = Math.floor(Math.random() * config.colors.length);
+      return config.colors[idx];
+    }
+
+    function createEmptyGrid() {
+      grid = [];
+      for (let r = 0; r < config.rows; r++) {
+        const row = new Array(config.cols).fill(null);
+        grid.push(row);
+      }
+    }
+
+    function seedInitialFill(fillProb = 0.8) {
+      for (let r = 0; r < config.rows; r++) {
+        for (let c = 0; c < config.cols; c++) {
+          if (Math.random() < fillProb) {
+            grid[r][c] = { color: randColor() };
+          } else {
+            grid[r][c] = null;
+          }
+        }
+      }
+    }
+
+    function seedTiles(count) {
+      const empties = [];
+      for (let r = 0; r < config.rows; r++) {
+        for (let c = 0; c < config.cols; c++) {
+          if (!grid[r][c]) empties.push([r, c]);
+        }
+      }
+      for (let i = 0; i < count && empties.length > 0; i++) {
+        const idx = Math.floor(Math.random() * empties.length);
+        const [r, c] = empties.splice(idx, 1)[0];
+        grid[r][c] = { color: randColor() };
+      }
+    }
+
+    function inBounds(r, c) {
+      return r >= 0 && r < config.rows && c >= 0 && c < config.cols;
+    }
+
+    function getGroup(r, c) {
+      const start = grid[r][c];
+      if (!start) return [];
+      const color = start.color;
+      const visited = new Set();
+      const stack = [[r, c]];
+      const group = [];
+
+      while (stack.length) {
+        const [rr, cc] = stack.pop();
+        const key = rr + ',' + cc;
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        const cell = grid[rr][cc];
+        if (!cell || cell.color !== color) continue;
+        group.push([rr, cc]);
+
+        // neighbors 4-way
+        [
+          [rr - 1, cc],
+          [rr + 1, cc],
+          [rr, cc - 1],
+          [rr, cc + 1]
+        ].forEach(([nr, nc]) => {
+          if (inBounds(nr, nc)) {
+            const nKey = nr + ',' + nc;
+            if (!visited.has(nKey)) stack.push([nr, nc]);
+          }
+        });
+      }
+
+      return group;
+    }
+
+    function anyGroupSizeGE2() {
+      const seen = new Set();
+      for (let r = 0; r < config.rows; r++) {
+        for (let c = 0; c < config.cols; c++) {
+          const cell = grid[r][c];
+          if (!cell) continue;
+          const key = r + ',' + c;
+          if (seen.has(key)) continue;
+          const group = getGroup(r, c);
+          group.forEach(([gr, gc]) => seen.add(gr + ',' + gc));
+          if (group.length >= 2) return true;
+        }
+      }
+      return false;
+    }
+
+    function removeGroup(group) {
+      group.forEach(([r, c]) => {
+        grid[r][c] = null;
+      });
+    }
+
+    function applyGravity() {
+      for (let c = 0; c < config.cols; c++) {
+        let write = config.rows - 1;
+        for (let r = config.rows - 1; r >= 0; r--) {
+          if (grid[r][c]) {
+            if (r !== write) {
+              grid[write][c] = grid[r][c];
+              grid[r][c] = null;
+            }
+            write--;
+          }
+        }
+        for (let r = write; r >= 0; r--) {
+          grid[r][c] = null;
+        }
+      }
+    }
+
+    function renderGrid() {
+      if (!container) return;
+      container.innerHTML = '';
+      const board = document.createElement('div');
+      board.className = 'cr-board';
+      board.style.setProperty(config.cellSizeVar, config.defaultCellSizePx + 'px');
+
+      for (let r = 0; r < config.rows; r++) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'cr-row';
+        for (let c = 0; c < config.cols; c++) {
+          const cellEl = document.createElement('button');
+          cellEl.className = 'cr-cell';
+          cellEl.type = 'button';
+          cellEl.dataset.r = String(r);
+          cellEl.dataset.c = String(c);
+          const cell = grid[r][c];
+          if (!cell) {
+            cellEl.classList.add('cr-cell--empty');
+            cellEl.style.background = 'transparent';
+            cellEl.textContent = '';
+          } else {
+            cellEl.classList.remove('cr-cell--empty');
+            cellEl.style.background = cell.color;
+            cellEl.textContent = '';
+          }
+          cellEl.addEventListener('click', onCellClick);
+          rowEl.appendChild(cellEl);
+        }
+        board.appendChild(rowEl);
+      }
+      container.appendChild(board);
+    }
+
+    function flashIllegalClick(cellEl) {
+      if (!cellEl) return;
+      cellEl.classList.add('cr-illegal');
+      setTimeout(() => cellEl.classList.remove('cr-illegal'), 250);
+    }
+
+    function onCellClick() {
+      if (!running) return;
+      const r = Number(this.dataset.r);
+      const c = Number(this.dataset.c);
+      const cell = grid[r][c];
+      if (!cell) {
+        flashIllegalClick(this);
+        return;
+      }
+
+      const blocking = anyGroupSizeGE2();
+      const group = getGroup(r, c);
+      if (blocking && group.length < 2) {
+        flashIllegalClick(this);
+        return;
+      }
+
+      removeGroup(group);
+      applyGravity();
+      renderGrid();
+      checkRoundEnd();
+    }
+
+    function checkRoundEnd() {
+      const anyNonEmpty = grid.some(row => row.some(cell => !!cell));
+      if (!anyNonEmpty) {
+        currentRound++;
+        if (currentRound >= config.rounds) {
+          endGame(true);
+        } else {
+          seedTiles(6 + currentRound * 2);
+          renderGrid();
+        }
+      }
+      // Game continues if tiles remain
+    }
+
+    function endGame(won) {
+      running = false;
+      if (!container) return;
+      const msg = document.createElement('div');
+      msg.className = 'cr-end';
+      msg.textContent = won ? 'Cleared!' : 'Game Over';
+      container.appendChild(msg);
+      try {
+        root.game && root.game.bus && root.game.bus.emit && root.game.bus.emit('minigame:end', { won });
+      } catch (err) {
+        // Silently fail if event bus unavailable
+      }
+    }
+
+    function init(el) {
+      container = el;
+      container && container.classList && container.classList.add('cr-container');
+      createEmptyGrid();
+      seedInitialFill(0.82);
+      renderGrid();
+    }
+
+    function start() {
+      currentRound = 0;
+      running = true;
+      const anyNonEmpty = grid.some(row => row.some(cell => !!cell));
+      if (!anyNonEmpty) seedInitialFill(0.82);
+      renderGrid();
+    }
+
+    function stop() { running = false; }
+    function setRounds(n) { config.rounds = Math.max(1, Math.floor(n)); }
+    function setCellSize(px) { 
+      try { 
+        config.defaultCellSizePx = Number(px) || config.defaultCellSizePx; 
+        if (container) { 
+          const board = container.querySelector && container.querySelector('.cr-board'); 
+          if (board) board.style.setProperty(config.cellSizeVar, config.defaultCellSizePx + 'px'); 
+        } 
+      } catch (_e) {
+        // Silently fail if querySelector unavailable
+      }
+    }
+
+    return { init, start, stop, setRounds, setCellSize };
+  })();
+
+  // register under globals
+  try {
+    root.MinigameModules = root.MinigameModules || {};
+    root.MinigameModules.chainReaction = ChainReactionMinigame;
+    root.MiniGames = root.MiniGames || {};
+    root.MiniGames.chainReaction = ChainReactionMinigame;
+    root.MiniGameModules = root.MiniGameModules || {};
+    root.MiniGameModules.chainReaction = ChainReactionMinigame;
+    root.chainReaction = ChainReactionMinigame;
+    root.ChainReactionMinigame = ChainReactionMinigame;
+    root.game = root.game || {};
+    root.game.MinigameModules = root.game.MinigameModules || {};
+    root.game.MinigameModules.chainReaction = ChainReactionMinigame;
+  } catch (_e) {
+    // Silently fail in restricted environments
   }
 
-  // Export to legacy MiniGames namespace
-  if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
-  g.MiniGames.chainReaction = { render };
-
-})(window);
-
-// Register module in global MinigameModules namespace for runtime resolution
-// The registry.js render() function checks window.MinigameModules first, then falls back to window.MiniGames
-// Both registrations point to the same object (with render method) for consistency
-(function(g){
-  'use strict';
-  
-  // Initialize MinigameModules namespace if not exists
-  if(typeof g.MinigameModules === 'undefined'){
-    g.MinigameModules = {};
+  // CommonJS export for Node.js test environments
+  /* eslint-disable no-undef */
+  try { 
+    if (typeof module !== 'undefined' && module.exports) {
+      module.exports = ChainReactionMinigame; 
+    }
+  } catch (_e) {
+    // Silently fail if CommonJS not available (browser environment)
   }
-  
-  // Register the same object that has the render() method (from MiniGames)
-  // This ensures both paths work for the registry
-  if(g.MiniGames && g.MiniGames.chainReaction){
-    g.MinigameModules.chainReaction = g.MiniGames.chainReaction;
-  }
-  
-})(window);
+  /* eslint-enable no-undef */
 
-// CommonJS export for Node.js test environments (optional - not used in browser)
-// NOTE: The browser uses window.MinigameModules.chainReaction and window.MiniGames.chainReaction registered above
-/* eslint-disable no-undef */
-try {
-  if(typeof module !== 'undefined' && typeof exports !== 'undefined'){
-    // For Node.js testing, export the module directly
-    module.exports = ChainReactionMinigame;
-  }
-} catch(e) {
-  // Silently fail - CommonJS not available (browser environment)
-}
-/* eslint-enable no-undef */
+})(typeof window !== 'undefined' ? window : this);
