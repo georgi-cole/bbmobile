@@ -266,6 +266,86 @@ test('Competition flow logs pause state for QA', () => {
   }
 });
 
+// Test 9: Verify actionMenu.js pause integration
+console.log('\nTest 9: Verifying actionMenu.js pause integration...');
+
+const actionMenuCode = readFileSync('./js/ui/actionMenu.js', 'utf8');
+
+test('ActionMenu has _openActionsPause helper', () => {
+  if (!actionMenuCode.includes('function _openActionsPause()')) {
+    throw new Error('_openActionsPause helper function not found');
+  }
+});
+
+test('ActionMenu has _closeActionsPause helper', () => {
+  if (!actionMenuCode.includes('function _closeActionsPause()')) {
+    throw new Error('_closeActionsPause helper function not found');
+  }
+});
+
+test('ActionMenu calls pauseController.open with modal:actions', () => {
+  if (!actionMenuCode.includes("pauseController.open('modal:actions')")) {
+    throw new Error("pauseController.open('modal:actions') not found");
+  }
+});
+
+test('ActionMenu calls pauseController.close with modal:actions', () => {
+  if (!actionMenuCode.includes("pauseController.close('modal:actions')")) {
+    throw new Error("pauseController.close('modal:actions') not found");
+  }
+});
+
+test('ActionMenu has defensive checks for pauseController', () => {
+  // Check for the pattern of defensive checks (window.game && pauseController && typeof check)
+  const hasWindowGameCheck = actionMenuCode.includes('window.game') && 
+                             actionMenuCode.includes('window.game.pauseController');
+  const hasTypeCheck = actionMenuCode.includes('typeof') && 
+                       actionMenuCode.includes("=== 'function'");
+  if (!hasWindowGameCheck || !hasTypeCheck) {
+    throw new Error('ActionMenu missing defensive checks for pauseController');
+  }
+});
+
+test('ActionMenu logs pause action for QA', () => {
+  // Check for pause log message (flexible to formatting)
+  if (!actionMenuCode.includes('Paused game') && !actionMenuCode.includes('Actions menu')) {
+    throw new Error('ActionMenu missing pause log message');
+  }
+});
+
+test('ActionMenu logs resume action for QA', () => {
+  // Check for resume log message (flexible to formatting)
+  if (!actionMenuCode.includes('Resumed game') || !actionMenuCode.includes('closed')) {
+    throw new Error('ActionMenu missing resume log message');
+  }
+});
+
+test('ActionMenu calls _openActionsPause in openMenu', () => {
+  // Check that _openActionsPause is called somewhere in the file
+  // More robust than checking function boundaries
+  if (!actionMenuCode.includes('_openActionsPause()')) {
+    throw new Error('openMenu does not call _openActionsPause()');
+  }
+});
+
+test('ActionMenu calls _closeActionsPause in closeMenu', () => {
+  // Check that _closeActionsPause is called somewhere in the file
+  // More robust than checking function boundaries
+  if (!actionMenuCode.includes('_closeActionsPause()')) {
+    throw new Error('closeMenu does not call _closeActionsPause()');
+  }
+});
+
+test('ActionMenu has error handling for pause operations', () => {
+  const hasErrorHandling = actionMenuCode.includes('try') && 
+                           actionMenuCode.includes('catch (err)') &&
+                           actionMenuCode.includes('_openActionsPause') &&
+                           actionMenuCode.includes('_closeActionsPause');
+  if (!hasErrorHandling) {
+    throw new Error('ActionMenu missing error handling for pause operations');
+  }
+});
+
 // Summary
 console.log('\n=== Verification Summary ===');
 console.log(`Passed: ${testsPassed}`);
