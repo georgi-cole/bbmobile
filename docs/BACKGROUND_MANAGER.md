@@ -78,6 +78,8 @@ This feature allows you to publish a background override to the repository, affe
 
 3. **Select Background**:
    - Choose a background from the "Manual Override" dropdown
+   - The dropdown now shows both the label and filename for easy identification
+   - A filename preview is displayed below the dropdown
    - OR select "(none)" to clear the global override
 
 4. **Edit Commit Message** (optional):
@@ -87,7 +89,12 @@ This feature allows you to publish a background override to the repository, affe
 5. **Publish**:
    - Click "✓ Publish Override to Repo"
    - Wait for the success message
-   - The file `/bg_override.json` is now committed to the `main` branch
+   - **If main branch is not protected**: The file `/bg_override.json` is committed directly to `main`
+   - **If main branch is protected (403/422 error)**: The manager automatically:
+     - Creates a new branch named `bgmgr/override-<filename>`
+     - Commits the change to that branch
+     - Opens a pull request targeting `main`
+     - Displays the PR URL for you to review and merge
 
 #### What Gets Published
 
@@ -110,6 +117,34 @@ If you select "Clear override" or no background, it will publish:
   "updatedBy": "BackgroundManager"
 }
 ```
+
+#### Branch Protection and Pull Request Fallback
+
+If the main branch has branch protection rules enabled (requiring pull request reviews, status checks, etc.), the Background Manager will automatically fall back to creating a pull request instead of committing directly.
+
+**When branch protection is detected:**
+1. The manager receives a 403 (Forbidden) or 422 (Unprocessable Entity) error
+2. It creates a new branch named `bgmgr/override-<filename>` (e.g., `bgmgr/override-sunset-background`)
+3. Commits the `bg_override.json` change to that branch
+4. Opens a pull request targeting the `main` branch
+5. Displays the PR URL in the status message
+
+**Example PR fallback message:**
+```
+✓ Branch protection detected. Created PR #42: https://github.com/georgi-cole/bbmobile/pull/42
+```
+
+You can then:
+- Click the PR URL to review the changes
+- Request reviews if required by branch protection
+- Merge the PR when ready
+- The background override will take effect once merged to main
+
+**Benefits:**
+- Maintains compliance with branch protection rules
+- Allows code review of background changes
+- Provides audit trail via pull request history
+- No need to disable branch protection temporarily
 
 ## Available Backgrounds
 
@@ -186,9 +221,13 @@ The Background Manager loads backgrounds from `/assets/skins/skins.json`. The cu
 - First time publishing creates the file (this is normal)
 - Check that repository name is correct: `georgi-cole/bbmobile`
 
-### Publish fails with "422 Unprocessable Entity"
-- File might have been modified by someone else
-- Refresh the page and try again (will fetch latest SHA)
+### Publish fails with "403 Forbidden" or "422 Unprocessable Entity"
+- **403**: Usually indicates branch protection is enabled - the manager will automatically create a PR
+- **422**: File might have been modified by someone else, or branch protection rules prevent direct commits
+- If the PR fallback also fails, check:
+  - Token has write permissions (`repo` scope)
+  - No conflicting branches exist (delete old `bgmgr/override-*` branches if needed)
+  - Repository allows creating branches and PRs
 
 ### Backgrounds not loading
 - Check `/assets/skins/skins.json` exists and is valid JSON

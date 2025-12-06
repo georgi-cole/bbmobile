@@ -93,6 +93,17 @@
   // ===== HELPER FUNCTIONS =====
 
   /**
+   * Generate consistent ID from filename
+   * Removes extension and -background suffix to match manifest IDs
+   * Example: "sunset-background.png" -> "sunset"
+   */
+  function makeIdFromFilename(filename) {
+    return filename
+      .replace(IMAGE_EXTENSIONS_REGEX, '')  // Remove extension
+      .replace(/-background$/i, '');         // Remove -background suffix
+  }
+
+  /**
    * Prompt user for token input using fallback prompt dialog
    */
   function promptForToken() {
@@ -153,12 +164,11 @@
       
       // Convert to background objects
       const backgrounds = imageFiles.map(file => {
-        // Extract ID from filename (remove extension)
-        const id = file.name.replace(IMAGE_EXTENSIONS_REGEX, '');
+        // Extract ID from filename using consistent mapping
+        const id = makeIdFromFilename(file.name);
         
         // Create friendly label from ID (camelCase to Title Case)
         const label = id
-          .replace(/-background$/i, '')
           .replace(/([A-Z])/g, ' $1')
           .replace(/[-_]/g, ' ')
           .trim()
@@ -312,15 +322,50 @@
     
     // 1. Check manual override
     if (preferences.manualOverride && preferences.manualOverride.id) {
-      console.info('[BackgroundManager] Using manual override:', preferences.manualOverride.id);
-      return preferences.manualOverride.id;
+      const overrideId = preferences.manualOverride.id;
+      console.info('[BackgroundManager] Using manual override:', overrideId);
+      
+      // Try to find matching background in availableBackgrounds
+      let bg = availableBackgrounds.find(b => b.id === overrideId);
+      
+      // If not found, create synthetic background object with previewUrl
+      if (!bg) {
+        console.warn('[BackgroundManager] Manual override ID not in availableBackgrounds, creating synthetic object');
+        // Try to construct filename from ID
+        const possibleFilenames = [
+          `${overrideId}-background.png`,
+          `${overrideId}-background.jpg`,
+          `${overrideId}.png`,
+          `${overrideId}.jpg`
+        ];
+        
+        bg = {
+          id: overrideId,
+          label: overrideId,
+          filename: possibleFilenames[0], // Best guess
+          url: `assets/skins/${possibleFilenames[0]}`,
+          previewUrl: `assets/skins/${possibleFilenames[0]}`,
+          source: 'synthetic'
+        };
+      }
+      
+      // Return object with previewUrl for IntroHub
+      return bg;
     }
     
     // 2. Check date-based schedule
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     if (preferences.schedule[today]) {
-      console.info('[BackgroundManager] Using scheduled background for', today, ':', preferences.schedule[today]);
-      return preferences.schedule[today];
+      const scheduledId = preferences.schedule[today];
+      console.info('[BackgroundManager] Using scheduled background for', today, ':', scheduledId);
+      
+      // Try to find matching background
+      let bg = availableBackgrounds.find(b => b.id === scheduledId);
+      if (bg) {
+        return bg;
+      }
+      // Fall through to return ID string for backward compatibility
+      return scheduledId;
     }
     
     // 3. Fall back to auto resolver
@@ -455,10 +500,161 @@
   }
 
   /**
+   * Get the SHA of the main branch HEAD
+   */
+  async function getMainBranchSHA(token) {
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs/heads/${BRANCH_NAME}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'BBMobile-BackgroundManager',
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      return data.object.sha;
+    } catch (err) {
+      console.error('[BackgroundManager] Failed to get main branch SHA:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Create a new branch from main
+   */
+  async function createBranch(token, branchName, sha) {
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs`;
+    
+    const body = {
+      ref: `refs/heads/${branchName}`,
+      sha: sha
+    };
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'BBMobile-BackgroundManager',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('[BackgroundManager] Failed to create branch:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Commit file to a specific branch
+   */
+  async function commitFileToBranch(token, branchName, content, commitMessage, sha = null) {
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${OVERRIDE_FILE_PATH}`;
+    
+    const body = {
+      message: commitMessage,
+      content: btoa(JSON.stringify(content, null, 2)),
+      branch: branchName
+    };
+    
+    if (sha) {
+      body.sha = sha;
+    }
+    
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'BBMobile-BackgroundManager',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('[BackgroundManager] Failed to commit file to branch:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Create a pull request
+   */
+  async function createPullRequest(token, headBranch, title, body) {
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls`;
+    
+    const requestBody = {
+      title: title,
+      head: headBranch,
+      base: BRANCH_NAME,
+      body: body
+    };
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'BBMobile-BackgroundManager',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('[BackgroundManager] Failed to create pull request:', err);
+      throw err;
+    }
+  }
+
+  /**
    * Publish background override to GitHub repository
    * Note: This function does not manage the publish lock internally.
    * Callers (typically the UI button handler) are responsible for managing
    * the _publishInProgress lock to prevent concurrent operations.
+   * 
+   * If direct commit to main fails with 403/422 (branch protection), this function
+   * will automatically create a new branch and open a PR.
    * 
    * Example usage (from button handler):
    *   try {
@@ -471,16 +667,13 @@
    * @param {string} manualOverrideId - Background ID to set as override (or null)
    * @param {string} commitMessage - Commit message for GitHub
    * @param {string} token - GitHub personal access token
-   * @returns {Promise<Object>} GitHub API response with commit data
+   * @returns {Promise<Object>} Result object with success info and optional PR URL
    */
   async function publishOverrideToRepo(manualOverrideId, commitMessage, token) {
     // Validate token
     if (!token || token.trim() === '') {
       throw new Error('GitHub token is required');
     }
-    
-    // Get existing file (to get SHA)
-    const fileData = await getFileFromGitHub(token);
     
     // Prepare content
     const overrideContent = {
@@ -489,11 +682,84 @@
       updatedBy: 'BackgroundManager'
     };
     
-    // Put file to GitHub
-    const result = await putFileToGitHub(token, overrideContent, commitMessage, fileData.sha);
-    
-    console.info('[BackgroundManager] Successfully published override to repo:', result);
-    return result;
+    try {
+      // Try direct commit to main first
+      console.info('[BackgroundManager] Attempting direct commit to main branch...');
+      
+      // Get existing file (to get SHA)
+      const fileData = await getFileFromGitHub(token);
+      
+      // Put file to GitHub
+      const result = await putFileToGitHub(token, overrideContent, commitMessage, fileData.sha);
+      
+      console.info('[BackgroundManager] Successfully published override to main:', result);
+      return {
+        success: true,
+        method: 'direct-commit',
+        commit: result
+      };
+    } catch (err) {
+      // Check if error is due to branch protection (403/422)
+      const errorMessage = err.message || '';
+      const isBranchProtection = /403|422/.test(errorMessage);
+      
+      if (!isBranchProtection) {
+        // Not a branch protection error, re-throw
+        console.error('[BackgroundManager] Publish failed with non-protection error:', err);
+        throw err;
+      }
+      
+      console.warn('[BackgroundManager] Direct commit blocked (branch protection), using PR fallback...');
+      
+      // Fallback: Create branch and PR
+      try {
+        // Get background filename for branch name
+        const bg = availableBackgrounds.find(b => b.id === manualOverrideId);
+        const filename = bg ? bg.filename.replace(/\.(png|jpg|jpeg|webp)$/i, '') : (manualOverrideId || 'null');
+        const branchName = `bgmgr/override-${filename}`;
+        
+        console.info('[BackgroundManager] Creating branch:', branchName);
+        
+        // Get main branch SHA
+        const mainSHA = await getMainBranchSHA(token);
+        
+        // Create new branch from main
+        await createBranch(token, branchName, mainSHA);
+        
+        // Get existing file from main (to get SHA if exists)
+        let fileSHA = null;
+        try {
+          const fileData = await getFileFromGitHub(token);
+          fileSHA = fileData.sha;
+        } catch (e) {
+          // File doesn't exist yet, that's ok
+          console.info('[BackgroundManager] File does not exist yet, creating new');
+        }
+        
+        // Commit to new branch
+        console.info('[BackgroundManager] Committing to branch:', branchName);
+        await commitFileToBranch(token, branchName, overrideContent, commitMessage, fileSHA);
+        
+        // Create PR
+        console.info('[BackgroundManager] Creating pull request...');
+        const prTitle = `bgmgr: Set background override to ${manualOverrideId || 'null'}`;
+        const prBody = `This PR updates the background override configuration.\n\n**Background ID**: \`${manualOverrideId || 'null'}\`\n**Filename**: \`${filename}\`\n\nGenerated automatically by Background Manager.`;
+        
+        const pr = await createPullRequest(token, branchName, prTitle, prBody);
+        
+        console.info('[BackgroundManager] Pull request created:', pr.html_url);
+        return {
+          success: true,
+          method: 'pull-request',
+          branch: branchName,
+          prUrl: pr.html_url,
+          prNumber: pr.number
+        };
+      } catch (fallbackErr) {
+        console.error('[BackgroundManager] PR fallback failed:', fallbackErr);
+        throw new Error(`Direct commit blocked by branch protection. PR fallback failed: ${fallbackErr.message}`);
+      }
+    }
   }
 
   // ===== DEV PANEL UI =====
@@ -553,10 +819,14 @@
         </div>
         <select id="bgmgr-manual-select" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(100, 149, 237, 0.3); color: #e2e8f0; font-size: 13px;">
           <option value="">-- Auto (use schedule or resolver) --</option>
-          ${availableBackgrounds.map(bg => `<option value="${bg.id}" ${bg.id === currentOverride ? 'selected' : ''}>${bg.label || bg.id}</option>`).join('')}
+          ${availableBackgrounds.map(bg => `<option value="${bg.id}" ${bg.id === currentOverride ? 'selected' : ''}>${bg.label || bg.id} (${bg.filename})</option>`).join('')}
         </select>
         <div style="margin-top: 4px; font-size: 11px; color: #94a3b8;">
-          Current: ${currentOverride || 'None (auto)'}
+          ${(() => {
+            if (!currentOverride) return 'Current: None (auto)';
+            const bg = availableBackgrounds.find(b => b.id === currentOverride);
+            return bg ? `Current: ${currentOverride}<br>File: ${bg.filename}` : `Current: ${currentOverride}`;
+          })()}
         </div>
       </div>
       
@@ -754,9 +1024,15 @@
           rebuildPanelUI();
           showPublishStatus('⏳ Publishing to repository...', 'info');
           
-          await publishOverrideToRepo(overrideId, commitMsg, token);
+          const result = await publishOverrideToRepo(overrideId, commitMsg, token);
           
-          showPublishStatus(`✓ Successfully published! Override set to: ${overrideId || 'null'}`, 'success');
+          if (result.method === 'pull-request') {
+            // PR fallback was used
+            showPublishStatus(`✓ Branch protection detected. Created PR #${result.prNumber}: ${result.prUrl}`, 'success', true);
+          } else {
+            // Direct commit succeeded
+            showPublishStatus(`✓ Successfully published! Override set to: ${overrideId || 'null'}`, 'success');
+          }
         } catch (err) {
           console.error('[BackgroundManager] Publish error:', err);
           
@@ -777,7 +1053,7 @@
     }
   }
   
-  function showPublishStatus(message, type = 'info') {
+  function showPublishStatus(message, type = 'info', isHtml = false) {
     if (!panelElement) return;
     
     const statusEl = panelElement.querySelector('#bgmgr-publish-status');
@@ -795,7 +1071,16 @@
     statusEl.style.background = color.bg;
     statusEl.style.border = `1px solid ${color.border}`;
     statusEl.style.color = color.text;
-    statusEl.textContent = message;
+    statusEl.style.wordBreak = 'break-word';
+    
+    if (isHtml) {
+      // Convert URLs in message to clickable links
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const htmlMessage = message.replace(urlRegex, '<a href="$1" target="_blank" style="color: #60a5fa; text-decoration: underline;">$1</a>');
+      statusEl.innerHTML = htmlMessage;
+    } else {
+      statusEl.textContent = message;
+    }
   }
 
   function showPanel() {
