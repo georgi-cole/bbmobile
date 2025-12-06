@@ -1,4 +1,7 @@
-/* Chain Reaction styles: smaller cells via --cr-cell-size */
+/* Chain Reaction styles: smaller cells via --cr-cell-size 
+ * NOTE: To use in main game, add the following to index.html:
+ * <link rel="stylesheet" href="css/minigames/chain-reaction.css">
+ */
 .cr-container {
   display: inline-block;
   font-family: inherit;
