@@ -81,6 +81,19 @@
     return text ? text.trim() : null;
   }
 
+  /**
+   * Handle token input from clipboard or prompt
+   */
+  function handleTokenInput(tokenInput, text) {
+    if (text) {
+      tokenInput.value = text;
+      storeToken(text);
+      showPublishStatus('✓ Token entered', 'success');
+    } else {
+      showPublishStatus('✗ No token entered', 'error');
+    }
+  }
+
   // ===== ASSET LOADING =====
 
   /**
@@ -106,9 +119,16 @@
       
       const files = await response.json();
       
+      // Validate response
+      if (!Array.isArray(files)) {
+        throw new Error('Invalid response from GitHub API: expected array');
+      }
+      
       // Filter for image files (png, jpg, jpeg, webp)
       const imageFiles = files.filter(file => 
+        file && 
         file.type === 'file' && 
+        file.name &&
         IMAGE_EXTENSIONS_REGEX.test(file.name)
       );
       
@@ -186,10 +206,16 @@
   }
 
   async function refreshAssetsAndPopulateUI() {
-    // Fetch from both sources in parallel
+    // Fetch from both sources in parallel, handling individual failures gracefully
     const [manifestBgs, githubBgs] = await Promise.all([
-      loadAssetsFromManifest(),
-      fetchAssetsFromGitHubContents()
+      loadAssetsFromManifest().catch(err => {
+        console.error('[BackgroundManager] Manifest load failed:', err);
+        return [];
+      }),
+      fetchAssetsFromGitHubContents().catch(err => {
+        console.error('[BackgroundManager] GitHub fetch failed:', err);
+        return [];
+      })
     ]);
     
     // Merge the results
@@ -636,8 +662,8 @@
     if (pasteTokenBtn) {
       pasteTokenBtn.addEventListener('click', async () => {
         try {
-          // Try clipboard API first (requires HTTPS or localhost)
-          if (navigator.clipboard && navigator.clipboard.readText) {
+          // Try clipboard API first (requires HTTPS or localhost and clipboard-read permission)
+          if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
             const text = await navigator.clipboard.readText();
             if (text && text.trim()) {
               tokenInput.value = text.trim();
@@ -649,25 +675,13 @@
           } else {
             // Fallback to prompt()
             const text = promptForToken();
-            if (text) {
-              tokenInput.value = text;
-              storeToken(text);
-              showPublishStatus('✓ Token entered', 'success');
-            } else {
-              showPublishStatus('✗ No token entered', 'error');
-            }
+            handleTokenInput(tokenInput, text);
           }
         } catch (err) {
           console.error('[BackgroundManager] Clipboard error:', err);
-          // Fallback to prompt() on error
+          // Fallback to prompt() on error (includes permission denied)
           const text = promptForToken();
-          if (text) {
-            tokenInput.value = text;
-            storeToken(text);
-            showPublishStatus('✓ Token entered', 'success');
-          } else {
-            showPublishStatus('✗ No token entered', 'error');
-          }
+          handleTokenInput(tokenInput, text);
         }
       });
     }
