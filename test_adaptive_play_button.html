@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Adaptive Play Button Test - BBMobile</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="css/intro.css">
+<link rel="stylesheet" href="css/introhub-mobile-fix.css">
+<style>
+  body {
+    margin: 0;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+  }
+  .controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 10000;
+    background: rgba(0,0,0,0.9);
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 320px;
+    border: 2px solid #00d4ff;
+  }
+  .controls h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #00d4ff;
+  }
+  .controls button {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    padding: 10px;
+    background: #0088ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .controls button:hover {
+    background: #0099ff;
+  }
+  .controls .info {
+    margin: 10px 0;
+    padding: 8px;
+    background: rgba(0, 212, 255, 0.1);
+    border-radius: 4px;
+    font-size: 13px;
+    border-left: 3px solid #00d4ff;
+  }
+  .controls .info strong {
+    color: #00d4ff;
+  }
+  #eventLog {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 10000;
+    background: rgba(0,0,0,0.95);
+    padding: 12px;
+    border-radius: 8px;
+    max-width: 420px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    border: 2px solid #00d4ff;
+  }
+  #eventLog .event {
+    margin: 3px 0;
+    padding: 4px 8px;
+    border-left: 3px solid #00d4ff;
+    background: rgba(0, 212, 255, 0.05);
+  }
+  #eventLog .event.warn {
+    border-left-color: #ff9500;
+    background: rgba(255, 149, 0, 0.05);
+  }
+  .test-section {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .test-section h4 {
+    margin: 0 0 10px 0;
+    color: #00d4ff;
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <h3>🎨 Adaptive Play Button Test</h3>
+  <button id="btnShow">Show IntroScreen</button>
+  <button id="btnHide">Hide IntroScreen</button>
+  <button id="btnSetCyan">Set Cyan Theme</button>
+  <button id="btnSetPurple">Set Purple Theme</button>
+  <button id="btnSetGreen">Set Green Theme</button>
+  <button id="btnSetOrange">Set Orange Theme</button>
+  <button id="btnSetRed">Set Red Theme</button>
+  <div class="info">
+    <strong>Current Accent:</strong><br>
+    <span id="currentAccent">#00d4ff (Cyan)</span><br><br>
+    <strong>Button Status:</strong><br>
+    <span id="buttonStatus">Not initialized</span>
+  </div>
+</div>
+
+<div id="eventLog">
+  <strong style="color: #00d4ff;">📋 Event Log:</strong>
+</div>
+
+<!-- Load dependencies -->
+<script src="js/bbGameBus.js"></script>
+<script src="src/utils/backgroundTheme.js"></script>
+<script src="src/ui/IntroScreen.js"></script>
+
+<script>
+(function() {
+  'use strict';
+  
+  // Initialize game namespace
+  if (!window.game) window.game = {};
+  window.game.bus = window.bbGameBus;
+  
+  // Mock audio controls for testing
+  window.game.audio = {
+    toggleMusic: function() {
+      logEvent('Music toggled');
+      return true;
+    },
+    toggleSound: function() {
+      logEvent('Sound toggled');
+      return true;
+    }
+  };
+  
+  // Mock theme with accent color
+  window.game.theme = {
+    accentColor: '#00d4ff'
+  };
+  
+  // Initialize BackgroundTheme
+  const bgTheme = window.BackgroundTheme.init({ bus: window.bbGameBus });
+  
+  // Initialize IntroScreen
+  const introScreen = window.IntroScreen.init({ bus: window.bbGameBus });
+  
+  // Test color themes
+  const themes = {
+    cyan: { color: '#00d4ff', name: 'Cyan' },
+    purple: { color: '#9b59b6', name: 'Purple' },
+    green: { color: '#27ae60', name: 'Green' },
+    orange: { color: '#e67e22', name: 'Orange' },
+    red: { color: '#e74c3c', name: 'Red' }
+  };
+  
+  // Apply theme to Play button
+  function applyTheme(colorKey) {
+    const theme = themes[colorKey];
+    if (!theme) return;
+    
+    // Update mock theme
+    window.game.theme.accentColor = theme.color;
+    
+    logEvent(`Theme changed to ${theme.name} (${theme.color})`);
+    
+    // Re-decorate Play button
+    // Wait for IntroScreen to be visible
+    setTimeout(() => {
+      const playBtn = document.querySelector('#intro-btn-play');
+      if (!playBtn) {
+        logEvent('Play button not found', null, true);
+        return;
+      }
+      
+      // Call decoratePlayCta manually since we're testing
+      // In production, this is called automatically after intro screen is visible
+      try {
+        // Get the computed values
+        const startColor = playBtn.style.getPropertyValue('--hub-accent-start');
+        const endColor = playBtn.style.getPropertyValue('--hub-accent-end');
+        const foreground = playBtn.style.getPropertyValue('--hub-accent-foreground');
+        
+        if (!startColor) {
+          // Force re-decoration
+          logEvent('Re-decorating Play button...');
+          
+          // Since decoratePlayCta is internal, we need to trigger a re-render
+          // Hide and show to force re-decoration
+          introScreen.hide();
+          setTimeout(() => {
+            introScreen.show();
+            setTimeout(checkButtonStyles, 500);
+          }, 100);
+        } else {
+          updateButtonStatus(startColor, endColor, foreground);
+        }
+      } catch (e) {
+        logEvent('Error applying theme: ' + e.message, null, true);
+      }
+    }, 500);
+  }
+  
+  // Check button styles
+  function checkButtonStyles() {
+    const playBtn = document.querySelector('#intro-btn-play');
+    if (!playBtn) {
+      logEvent('Play button not found in DOM', null, true);
+      document.getElementById('buttonStatus').textContent = 'Not found';
+      return;
+    }
+    
+    const startColor = playBtn.style.getPropertyValue('--hub-accent-start');
+    const endColor = playBtn.style.getPropertyValue('--hub-accent-end');
+    const foreground = playBtn.style.getPropertyValue('--hub-accent-foreground');
+    
+    updateButtonStatus(startColor, endColor, foreground);
+    
+    if (!startColor) {
+      logEvent('CSS variables not set on Play button', null, true);
+    } else {
+      logEvent('Play button styles detected:');
+      logEvent(`  Start: ${startColor}`);
+      logEvent(`  End: ${endColor}`);
+      logEvent(`  Foreground: ${foreground}`);
+    }
+  }
+  
+  // Update button status display
+  function updateButtonStatus(startColor, endColor, foreground) {
+    const status = document.getElementById('buttonStatus');
+    if (!startColor) {
+      status.innerHTML = '<span style="color: #ff9500;">⚠️ Not decorated</span>';
+      return;
+    }
+    
+    status.innerHTML = `
+      <span style="color: #00ff88;">✅ Decorated</span><br>
+      <small style="opacity: 0.8;">
+        Start: ${startColor}<br>
+        End: ${endColor}<br>
+        Text: ${foreground}
+      </small>
+    `;
+  }
+  
+  // Update current accent display
+  function updateAccentDisplay(colorKey) {
+    const theme = themes[colorKey];
+    if (!theme) return;
+    
+    const accentEl = document.getElementById('currentAccent');
+    accentEl.innerHTML = `
+      <span style="color: ${theme.color}; font-weight: bold;">${theme.color}</span> (${theme.name})
+    `;
+  }
+  
+  // Log events
+  function logEvent(message, data, isWarn = false) {
+    const log = document.getElementById('eventLog');
+    const entry = document.createElement('div');
+    entry.className = 'event' + (isWarn ? ' warn' : '');
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+    entry.textContent = `[${timestamp}] ${message}`;
+    if (data && typeof data === 'object') {
+      entry.textContent += ` ${JSON.stringify(data)}`;
+    }
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+  }
+  
+  // Button event handlers
+  document.getElementById('btnShow').addEventListener('click', () => {
+    introScreen.show();
+    logEvent('IntroScreen shown');
+    setTimeout(checkButtonStyles, 500);
+  });
+  
+  document.getElementById('btnHide').addEventListener('click', () => {
+    introScreen.hide();
+    logEvent('IntroScreen hidden');
+  });
+  
+  document.getElementById('btnSetCyan').addEventListener('click', () => {
+    applyTheme('cyan');
+    updateAccentDisplay('cyan');
+  });
+  
+  document.getElementById('btnSetPurple').addEventListener('click', () => {
+    applyTheme('purple');
+    updateAccentDisplay('purple');
+  });
+  
+  document.getElementById('btnSetGreen').addEventListener('click', () => {
+    applyTheme('green');
+    updateAccentDisplay('green');
+  });
+  
+  document.getElementById('btnSetOrange').addEventListener('click', () => {
+    applyTheme('orange');
+    updateAccentDisplay('orange');
+  });
+  
+  document.getElementById('btnSetRed').addEventListener('click', () => {
+    applyTheme('red');
+    updateAccentDisplay('red');
+  });
+  
+  // Listen to intro events
+  const events = [
+    'intro:play',
+    'intro:open:houseguests',
+    'intro:open:profile',
+    'intro:open:leaderboard',
+    'intro:open:credits',
+    'theme:bg-change'
+  ];
+  
+  events.forEach(event => {
+    window.bbGameBus.on(event, (data) => {
+      logEvent(`Event: ${event}`, data);
+    });
+  });
+  
+  logEvent('Test initialized - Adaptive Play Button');
+  logEvent('Click "Show IntroScreen" to begin');
+  
+  // Auto-show after 1 second for demo
+  setTimeout(() => {
+    introScreen.show();
+    logEvent('Auto-showing IntroScreen for demo');
+    setTimeout(checkButtonStyles, 800);
+  }, 1000);
+  
+})();
+</script>
+
+</body>
+</html>
