@@ -6,14 +6,9 @@
 */
 
 .intro-screen__btn,
-.intro-screen__icon-btn,
-.intro-screen a,
-.intro-screen button {
+.intro-screen__icon-btn {
   appearance: none;
   -webkit-appearance: none;
-  border: 0;
-  outline: none;
-  box-shadow: none;                     /* remove UA inner shadow */
   -webkit-tap-highlight-color: rgba(0,0,0,0);
   -webkit-user-select: none;
   user-select: none;
@@ -27,37 +22,29 @@
 }
 
 /* Prefer solid fill + text-shadow over text-stroke on mobile */
-.intro-screen__btn,
-.intro-screen__btn--primary,
-.intro-screen__icon-btn {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-text-stroke: 0 !important;   /* disable strokes that often cause grey artifacts */
-  text-shadow:
-    0 1px 0 rgba(0,0,0,0.95),
-    1px 0 0 rgba(0,0,0,0.95),
-    -1px 0 0 rgba(0,0,0,0.95),
-    0 -1px 0 rgba(0,0,0,0.95);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Only on small screens, ensure strokes stay disabled */
-@media (max-width: 820px) {
+@media (max-width: 768px) {
   .intro-screen__btn,
   .intro-screen__btn--primary,
   .intro-screen__icon-btn {
-    -webkit-text-stroke: 0 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-text-stroke: 0 !important;   /* disable strokes that often cause grey artifacts */
+    text-shadow:
+      0 1px 0 rgba(0,0,0,0.95),
+      1px 0 0 rgba(0,0,0,0.95),
+      -1px 0 0 rgba(0,0,0,0.95),
+      0 -1px 0 rgba(0,0,0,0.95);
+    -webkit-font-smoothing: antialiased;
     -webkit-text-size-adjust: 100%;
   }
 }
 
-/* Prevent focus from re-introducing UA visuals */
-.intro-screen a:focus,
-.intro-screen button:focus,
-.intro-screen__btn:focus,
-.intro-screen__icon-btn:focus {
-  outline: none;
-  box-shadow: none;
+/* Prevent focus from re-introducing UA visuals on mobile */
+@media (max-width: 768px) {
+  .intro-screen__btn:focus,
+  .intro-screen__icon-btn:focus {
+    outline: none;
+  }
 }
 
 /* If you have an overlay element inside the button, ensure it doesn't repeat/scale badly */
@@ -67,25 +54,4 @@
   background-size: cover;
   background-position: center;
   background-color: rgba(0,0,0,0.12);
-}
-
-/* Additional fix for button hover/active states to preserve visual effects */
-.intro-screen__btn:hover,
-.intro-screen__icon-btn:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
-}
-
-.intro-screen__btn--primary:hover {
-  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.5),
-              0 0 60px rgba(0, 212, 255, 0.3) !important;
-}
-
-.intro-screen__btn:active,
-.intro-screen__icon-btn:active {
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25) !important;
-}
-
-.intro-screen__btn--primary:active {
-  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.4),
-              0 0 30px rgba(0, 212, 255, 0.2) !important;
 }
