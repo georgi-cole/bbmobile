@@ -374,9 +374,19 @@
       refreshDisplay();
     });
 
+    // Load check - wait for Relations module to be available
+    function waitForRelations() {
+      if (typeof window.Relations !== 'undefined') {
+        setTimeout(refreshDisplay, 100);
+      } else {
+        console.log('Waiting for Relations module to load...');
+        setTimeout(waitForRelations, 50);
+      }
+    }
+
     // Auto-refresh on page load
     window.addEventListener('load', () => {
-      setTimeout(refreshDisplay, 100);
+      waitForRelations();
     });
   </script>
 

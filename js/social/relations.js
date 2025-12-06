@@ -245,9 +245,20 @@
     const data = {};
     
     for (const [playerId, playerRelations] of _relations.entries()) {
-      data[playerId] = {};
+      const playerData = {};
+      let hasRelations = false;
+      
       for (const [bondType, targetSet] of playerRelations.entries()) {
-        data[playerId][bondType] = Array.from(targetSet);
+        // Only include non-empty relations
+        if (targetSet.size > 0) {
+          playerData[bondType] = Array.from(targetSet);
+          hasRelations = true;
+        }
+      }
+      
+      // Only include player if they have any relations
+      if (hasRelations) {
+        data[playerId] = playerData;
       }
     }
     
