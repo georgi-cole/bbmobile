@@ -89,6 +89,10 @@
     return;
   }
   
+  if (!liveRegion) {
+    console.warn('[InitialBlocker] Live region element not found - accessibility features disabled');
+  }
+  
   // Track initialization state
   let isRemoved = false;
   let removeTimeout = null;
@@ -217,7 +221,7 @@
   gap: 1.5rem;
   opacity: 1;
   transition: opacity 500ms ease-out;
-" role="dialog" aria-modal="true" aria-labelledby="initialLoadingText" aria-busy="true">
+" role="status" aria-live="polite" aria-labelledby="initialLoadingText" aria-busy="true">
   <!-- Eye icon -->
   <div style="width: 80px; height: 80px; position: relative;">
     <div style="

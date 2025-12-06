@@ -71,16 +71,17 @@ window.InitialBlockingOverlay = {
 - Safety timeout (10 seconds) to prevent permanent blocking
 - Listens for `bb:app-ready` event as removal signal
 - ARIA attributes for accessibility
+- Exposed on `window.InitialBlockingOverlay` (not `window.game`) for early availability
 
 ### 3. StartupFlow Integration (src/startup/flow.js)
 
 ```javascript
 // After IntroScreen is fully shown:
-if (g.InitialBlockingOverlay && typeof g.InitialBlockingOverlay.remove === 'function') {
-  g.InitialBlockingOverlay.remove();
+if (window.InitialBlockingOverlay && typeof window.InitialBlockingOverlay.remove === 'function') {
+  window.InitialBlockingOverlay.remove();
 } else {
   // Fallback: dispatch event
-  g.dispatchEvent(new CustomEvent('bb:app-ready'));
+  window.dispatchEvent(new CustomEvent('bb:app-ready'));
 }
 ```
 
