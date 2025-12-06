@@ -1,0 +1,77 @@
+/* Chain Reaction styles: smaller cells via --cr-cell-size */
+.cr-container {
+  display: inline-block;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cr-board {
+  display: inline-block;
+  background: rgba(0,0,0,0.05);
+  padding: 6px;
+  border-radius: 6px;
+  --cr-cell-size: 36px; /* default smaller size; module also sets this inline */
+}
+
+.cr-row {
+  display: flex;
+}
+
+.cr-cell {
+  width: var(--cr-cell-size);
+  height: var(--cr-cell-size);
+  margin: 4px;
+  border-radius: 4px;
+  background: linear-gradient(180deg,#fff,#f3f3f3);
+  border: 1px solid rgba(0,0,0,0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: calc(var(--cr-cell-size) * 0.45);
+  color: #333;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.cr-cell--empty {
+  background: transparent;
+  border: 1px dashed rgba(0,0,0,0.06);
+}
+
+.cr-cell--active {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.cr-cell:active {
+  transform: scale(0.98);
+}
+
+.cr-explode {
+  animation: cr-explode 260ms ease;
+}
+
+@keyframes cr-explode {
+  0% { transform: scale(1); background: #ffd; }
+  50% { transform: scale(1.4); background: #ffb; }
+  100% { transform: scale(1); background: transparent; }
+}
+
+/* Illegal click feedback */
+.cr-illegal {
+  animation: cr-shake 260ms;
+  box-shadow: 0 0 0 3px rgba(255,0,0,0.12);
+}
+
+@keyframes cr-shake {
+  0% { transform: translateX(0) }
+  25% { transform: translateX(-4px) }
+  75% { transform: translateX(4px) }
+  100% { transform: translateX(0) }
+}
+
+.cr-end {
+  margin-top: 8px;
+  font-weight: 700;
+  color: #096;
+}
