@@ -2469,6 +2469,13 @@ header.innerHTML = `
     try{
       const game = g.game || {};
       const clean = JSON.parse(JSON.stringify(game, (k,v)=> (typeof v==='function' ? undefined : v)));
+      
+      // Include Relations data if available
+      if(g.Relations && typeof g.Relations._raw === 'function'){
+        clean.relations = g.Relations._raw();
+        console.info('[exportSave] Including Relations data in save');
+      }
+      
       const json = JSON.stringify(clean, null, 2);
       const blob = new Blob([json], {type:'application/json'});
       const a = document.createElement('a');
@@ -2480,7 +2487,15 @@ header.innerHTML = `
       g.addLog?.('Exported save to file.','ok');
     }catch(err){
       try{
-        const json = JSON.stringify(g.game || {}, (k,v)=> (typeof v==='function' ? undefined : v));
+        const game = g.game || {};
+        const saveData = JSON.parse(JSON.stringify(game, (k,v)=> (typeof v==='function' ? undefined : v)));
+        
+        // Include Relations data if available
+        if(g.Relations && typeof g.Relations._raw === 'function'){
+          saveData.relations = g.Relations._raw();
+        }
+        
+        const json = JSON.stringify(saveData, (k,v)=> (typeof v==='function' ? undefined : v));
         navigator.clipboard?.writeText(json);
         g.addLog?.('Exported save to clipboard.','ok');
       }catch(e2){

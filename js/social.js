@@ -232,6 +232,12 @@
       target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bumpB;
       if(actor.affinity[target.id] < ALLY_T) actor.affinity[target.id] = ALLY_T + 0.02*Math.random();
       if(target.affinity[actor.id] < ALLY_T-0.05) target.affinity[actor.id] = (ALLY_T-0.05) + 0.02*Math.random();
+      
+      // Set symmetric alliance in Relations module
+      if(global.Relations && typeof global.Relations.setRelationBoth === 'function'){
+        global.Relations.setRelationBoth(actorId, targetId, 'ally');
+      }
+      
       global.addLog?.(`<span class="soc-pos">You and ${target.name} discussed an alliance.</span>`, 'ok');
     } else if(action==='apologize'){
       const base = (actor.affinity?.[target.id]??0) < 0 ? 0.14 : 0.08;
