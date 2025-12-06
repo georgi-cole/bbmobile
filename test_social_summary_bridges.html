@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Summary & AI Auto-Driver Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1, h2 {
+      color: #4a9eff;
+      border-bottom: 2px solid #4a9eff;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #3a3a3a;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .status.pass { background: #1a4d1a; color: #4eff4e; }
+    .status.fail { background: #4d1a1a; color: #ff4e4e; }
+    .status.info { background: #1a3a4d; color: #4ea0ff; }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #3a8eef;
+    }
+    button:active {
+      background: #2a7edf;
+    }
+    pre {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      border: 1px solid #3a3a3a;
+    }
+    code {
+      color: #ffaa00;
+    }
+    .highlight {
+      background: #3a3a1a;
+      padding: 8px;
+      margin: 5px 0;
+      border-left: 3px solid #ffaa00;
+      border-radius: 2px;
+    }
+    .action-log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Social Summary & AI Auto-Driver Bridge Test</h1>
+  
+  <div class="test-section">
+    <h2>1️⃣ Module Loading Test</h2>
+    <div id="module-status"></div>
+    <button onclick="testModuleLoading()">Check Modules</button>
+  </div>
+
+  <div class="test-section">
+    <h2>2️⃣ AI Auto-Driver Test</h2>
+    <div id="autodriver-status"></div>
+    <button onclick="testAutoDriverStart()">Start Auto-Driver</button>
+    <button onclick="testAutoDriverStop()">Stop Auto-Driver</button>
+    <button onclick="testAutoDriverStatus()">Check Status</button>
+  </div>
+
+  <div class="test-section">
+    <h2>3️⃣ Summary Generation Test</h2>
+    <div id="summary-status"></div>
+    <button onclick="testSummaryGeneration()">Generate Test Summary</button>
+    <button onclick="testHighlightsGeneration()">Test Highlights</button>
+    <button onclick="viewLatestSummary()">View Latest Summary</button>
+  </div>
+
+  <div class="test-section">
+    <h2>4️⃣ Diary Room Integration Test</h2>
+    <div id="diary-status"></div>
+    <button onclick="testDiaryRoomBridge()">Check Diary Room</button>
+    <button onclick="testDiaryEntries()">View Diary Entries</button>
+  </div>
+
+  <div class="test-section">
+    <h2>5️⃣ Cost Normalization Test</h2>
+    <div id="normalize-status"></div>
+    <button onclick="testCostNormalization()">Test Normalization</button>
+  </div>
+
+  <div class="test-section">
+    <h2>6️⃣ Event Bus Test</h2>
+    <div id="eventbus-status"></div>
+    <button onclick="testEventBus()">Test Event Emission</button>
+  </div>
+
+  <div class="test-section">
+    <h2>📊 Test Results</h2>
+    <div id="test-results"></div>
+  </div>
+
+  <!-- Load test dependencies -->
+  <script>window.global = window;</script>
+  <script src="js/bbGameBus.js"></script>
+  <script>
+    // Initialize minimal game state
+    window.game = {
+      cfg: {},
+      players: [],
+      week: 1,
+      humanId: 1,
+      __socialManeuversSessionLogs: []
+    };
+
+    // Initialize event bus
+    if (!window.game.bus) {
+      window.game.bus = window.bbGameBus;
+    }
+
+    // Mock functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.safeName = (id) => {
+      const player = window.game.players.find(p => p.id === id);
+      return player?.name || `Player ${id}`;
+    };
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+
+    // Create test players
+    window.game.players = [
+      { id: 1, name: 'Alice', evicted: false },
+      { id: 2, name: 'Bob', evicted: false },
+      { id: 3, name: 'Charlie', evicted: false },
+      { id: 4, name: 'Diana', evicted: false }
+    ];
+
+    // Mock SocialManeuvers for testing
+    window.SocialManeuvers = {
+      getActionById: (id) => ({
+        id,
+        label: 'Test Action',
+        cost: 2,
+        costs: { energy: 2, influence: 0, information: 0 }
+      })
+    };
+
+    // Mock DiaryRoomLogger
+    window.DiaryRoomLogger = {
+      _entries: [],
+      getEntries: function() { return this._entries; }
+    };
+  </script>
+
+  <!-- Load bridge modules -->
+  <script src="js/social/sm-exec-normalize.js"></script>
+  <script src="js/social/social-summary-bridge.js"></script>
+  <script src="js/social/social-ai-autostart.js"></script>
+  <script src="js/dr/diary-room-bridge.js"></script>
+
+  <!-- Test functions -->
+  <script>
+    let testResults = [];
+
+    function addResult(test, status, message) {
+      testResults.push({ test, status, message, time: new Date().toLocaleTimeString() });
+      updateTestResults();
+    }
+
+    function updateTestResults() {
+      const container = document.getElementById('test-results');
+      if (testResults.length === 0) {
+        container.innerHTML = '<p>No tests run yet.</p>';
+        return;
+      }
+
+      container.innerHTML = testResults.map(r => 
+        `<div class="status ${r.status}">
+          [${r.time}] ${r.test}: ${r.message}
+        </div>`
+      ).join('');
+    }
+
+    function testModuleLoading() {
+      const container = document.getElementById('module-status');
+      const checks = [
+        { name: 'Auto-Driver', check: () => typeof window.__smAutoDriver !== 'undefined' },
+        { name: 'Summary Bridge', check: () => typeof window.__rebuildSocialSummary === 'function' },
+        { name: 'Cost Normalize', check: () => typeof window.__smCostNormalize !== 'undefined' },
+        { name: 'Diary Bridge', check: () => typeof window.__drBridge !== 'undefined' },
+        { name: 'Event Bus', check: () => typeof window.game.bus !== 'undefined' }
+      ];
+
+      let html = '<h3>Module Loading Status:</h3>';
+      let allPass = true;
+
+      checks.forEach(({ name, check }) => {
+        const pass = check();
+        allPass = allPass && pass;
+        html += `<div class="status ${pass ? 'pass' : 'fail'}">${name}: ${pass ? '✅ LOADED' : '❌ NOT FOUND'}</div>`;
+      });
+
+      container.innerHTML = html;
+      addResult('Module Loading', allPass ? 'pass' : 'fail', 
+        allPass ? 'All modules loaded successfully' : 'Some modules failed to load');
+    }
+
+    function testAutoDriverStart() {
+      const container = document.getElementById('autodriver-status');
+      try {
+        window.__smAutoDriver.start();
+        const status = window.__smAutoDriver.getStatus();
+        container.innerHTML = `<div class="status pass">✅ Auto-driver started</div>
+          <pre>${JSON.stringify(status, null, 2)}</pre>`;
+        addResult('Auto-Driver Start', 'pass', 'Started successfully');
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Auto-Driver Start', 'fail', e.message);
+      }
+    }
+
+    function testAutoDriverStop() {
+      const container = document.getElementById('autodriver-status');
+      try {
+        window.__smAutoDriver.stop();
+        const status = window.__smAutoDriver.getStatus();
+        container.innerHTML = `<div class="status info">🛑 Auto-driver stopped</div>
+          <pre>${JSON.stringify(status, null, 2)}</pre>`;
+        addResult('Auto-Driver Stop', 'pass', 'Stopped successfully');
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Auto-Driver Stop', 'fail', e.message);
+      }
+    }
+
+    function testAutoDriverStatus() {
+      const container = document.getElementById('autodriver-status');
+      try {
+        const status = window.__smAutoDriver.getStatus();
+        container.innerHTML = `<div class="status info">ℹ️ Auto-driver status:</div>
+          <pre>${JSON.stringify(status, null, 2)}</pre>`;
+        addResult('Auto-Driver Status', 'info', `Running: ${status.isRunning}, Ticks: ${status.tickCount}`);
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Auto-Driver Status', 'fail', e.message);
+      }
+    }
+
+    function testSummaryGeneration() {
+      const container = document.getElementById('summary-status');
+      try {
+        // Create mock session log
+        window.game.__socialManeuversSessionLogs = [{
+          metadata: { week: 1, startTime: Date.now() - 60000, playersCount: 4 },
+          actions: [
+            {
+              actorId: 2,
+              actorName: 'Bob',
+              targetId: 3,
+              targetName: 'Charlie',
+              type: 'compliment',
+              outcome: 'success',
+              energyCost: 2,
+              affinityDelta: 0.1,
+              timestamp: Date.now() - 50000
+            },
+            {
+              actorId: 3,
+              actorName: 'Charlie',
+              targetId: 4,
+              targetName: 'Diana',
+              type: 'form_alliance',
+              outcome: 'success',
+              energyCost: 3,
+              affinityDelta: 0.15,
+              timestamp: Date.now() - 40000
+            },
+            {
+              actorId: 4,
+              actorName: 'Diana',
+              targetId: 2,
+              targetName: 'Bob',
+              type: 'spread_rumor',
+              outcome: 'success',
+              energyCost: 2,
+              affinityDelta: -0.08,
+              timestamp: Date.now() - 30000
+            }
+          ]
+        }];
+
+        const summary = window.__rebuildSocialSummary();
+        
+        if (summary) {
+          container.innerHTML = `<div class="status pass">✅ Summary generated successfully</div>
+            <pre>${JSON.stringify(summary, null, 2)}</pre>`;
+          addResult('Summary Generation', 'pass', `Generated with ${summary.totalActions} actions and ${summary.highlights.length} highlights`);
+        } else {
+          container.innerHTML = `<div class="status fail">❌ Summary generation returned null</div>`;
+          addResult('Summary Generation', 'fail', 'Returned null');
+        }
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Summary Generation', 'fail', e.message);
+      }
+    }
+
+    function testHighlightsGeneration() {
+      const container = document.getElementById('summary-status');
+      try {
+        const summary = window.game.__latestSocialSummary;
+        if (!summary) {
+          container.innerHTML = `<div class="status fail">❌ No summary available. Run "Generate Test Summary" first.</div>`;
+          return;
+        }
+
+        let html = '<div class="status pass">✅ Highlights:</div>';
+        if (summary.highlights && summary.highlights.length > 0) {
+          summary.highlights.forEach(h => {
+            html += `<div class="highlight">${h}</div>`;
+          });
+          addResult('Highlights Generation', 'pass', `${summary.highlights.length} highlights generated`);
+        } else {
+          html += '<div class="status info">No highlights generated (this is OK if actions were mundane)</div>';
+          addResult('Highlights Generation', 'info', 'No highlights generated');
+        }
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Highlights Generation', 'fail', e.message);
+      }
+    }
+
+    function viewLatestSummary() {
+      const container = document.getElementById('summary-status');
+      try {
+        const summary = window.game.__latestSocialSummary;
+        if (summary) {
+          container.innerHTML = `<div class="status info">📊 Latest Summary:</div>
+            <pre>${JSON.stringify(summary, null, 2)}</pre>`;
+          addResult('View Summary', 'info', 'Summary displayed');
+        } else {
+          container.innerHTML = `<div class="status fail">❌ No summary available</div>`;
+          addResult('View Summary', 'fail', 'No summary available');
+        }
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('View Summary', 'fail', e.message);
+      }
+    }
+
+    function testDiaryRoomBridge() {
+      const container = document.getElementById('diary-status');
+      try {
+        const checks = [
+          { name: 'DiaryRoomLogger exists', check: () => typeof window.DiaryRoomLogger !== 'undefined' },
+          { name: '_entries array exists', check: () => Array.isArray(window.DiaryRoomLogger._entries) },
+          { name: 'getEntries method exists', check: () => typeof window.DiaryRoomLogger.getEntries === 'function' },
+          { name: '__drBridge exists', check: () => typeof window.__drBridge !== 'undefined' }
+        ];
+
+        let html = '<h3>Diary Room Bridge Status:</h3>';
+        let allPass = true;
+
+        checks.forEach(({ name, check }) => {
+          const pass = check();
+          allPass = allPass && pass;
+          html += `<div class="status ${pass ? 'pass' : 'fail'}">${name}: ${pass ? '✅ OK' : '❌ FAIL'}</div>`;
+        });
+
+        container.innerHTML = html;
+        addResult('Diary Room Bridge', allPass ? 'pass' : 'fail', 
+          allPass ? 'All checks passed' : 'Some checks failed');
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Diary Room Bridge', 'fail', e.message);
+      }
+    }
+
+    function testDiaryEntries() {
+      const container = document.getElementById('diary-status');
+      try {
+        const entries = window.__drBridge.getEntries();
+        container.innerHTML = `<div class="status info">📖 Diary Entries (${entries.length}):</div>
+          <div class="action-log"><pre>${JSON.stringify(entries, null, 2)}</pre></div>`;
+        addResult('Diary Entries', 'info', `${entries.length} entries found`);
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Diary Entries', 'fail', e.message);
+      }
+    }
+
+    function testCostNormalization() {
+      const container = document.getElementById('normalize-status');
+      try {
+        const tests = [
+          { input: 5, expected: 5, desc: 'Number' },
+          { input: '10', expected: 10, desc: 'String number' },
+          { input: { energy: 3 }, expected: 3, desc: 'Object with energy' },
+          { input: { amount: 7 }, expected: 7, desc: 'Object with amount' },
+          { input: null, expected: 0, desc: 'Null' },
+          { input: undefined, expected: 0, desc: 'Undefined' },
+          { input: -5, expected: 0, desc: 'Negative (clamped)' }
+        ];
+
+        let html = '<h3>Cost Normalization Tests:</h3>';
+        let allPass = true;
+
+        tests.forEach(({ input, expected, desc }) => {
+          const result = window.__smCostNormalize.normalizeCost(input);
+          const pass = result === expected;
+          allPass = allPass && pass;
+          html += `<div class="status ${pass ? 'pass' : 'fail'}">
+            ${desc}: ${JSON.stringify(input)} → ${result} ${pass ? '✅' : `❌ (expected ${expected})`}
+          </div>`;
+        });
+
+        container.innerHTML = html;
+        addResult('Cost Normalization', allPass ? 'pass' : 'fail',
+          allPass ? 'All normalization tests passed' : 'Some tests failed');
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Cost Normalization', 'fail', e.message);
+      }
+    }
+
+    function testEventBus() {
+      const container = document.getElementById('eventbus-status');
+      try {
+        let receivedEvents = [];
+        
+        // Listen for test events
+        window.game.bus.on('test:event', (data) => {
+          receivedEvents.push(data);
+        });
+
+        // Emit test event
+        window.game.bus.emit('test:event', { test: 'data', timestamp: Date.now() });
+
+        const pass = receivedEvents.length > 0;
+        container.innerHTML = `<div class="status ${pass ? 'pass' : 'fail'}">
+          Event Bus: ${pass ? '✅ Working' : '❌ Not working'}
+        </div>
+        <pre>Received events: ${JSON.stringify(receivedEvents, null, 2)}</pre>`;
+        
+        addResult('Event Bus', pass ? 'pass' : 'fail',
+          pass ? 'Event emission and listening working' : 'Event bus not functioning');
+      } catch (e) {
+        container.innerHTML = `<div class="status fail">❌ Error: ${e.message}</div>`;
+        addResult('Event Bus', 'fail', e.message);
+      }
+    }
+
+    // Run initial module check on load
+    window.addEventListener('load', () => {
+      setTimeout(testModuleLoading, 500);
+    });
+  </script>
+</body>
+</html>

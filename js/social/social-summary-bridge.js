@@ -236,7 +236,7 @@
       }
 
       // Positive interactions
-      if ((actionType === 'complement' || actionType === 'confide') && succeeded) {
+      if ((actionType === 'compliment' || actionType === 'confide') && succeeded) {
         const affinityDelta = coerceToNumber(action.affinityDelta || 0);
         if (affinityDelta > 0.05) {
           candidates.push({
