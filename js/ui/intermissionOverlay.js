@@ -13,6 +13,9 @@
   let continueBtn = null;
   let _isShown = false;
 
+  // Auto-close delay after minigame completion (ms)
+  const AUTO_CLOSE_DELAY_MS = 250;
+
   /**
    * Create and show full-screen intermission overlay
    * @param {Object} options
@@ -302,7 +305,7 @@
         } catch (err) {
           console.error('[IntermissionOverlay] Error while auto-closing', err);
         }
-      }, 250);
+      }, AUTO_CLOSE_DELAY_MS);
     }
   }
 

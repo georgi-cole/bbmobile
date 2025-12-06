@@ -458,31 +458,8 @@
       result = 'draw';
     }
     
-    // Update overlay UI to enable continue button and hide thinking indicator
-    try {
-      if (TicTacToeIntermission.overlayRef) {
-        const continueBtn = TicTacToeIntermission.overlayRef.querySelector('.intermission-continue');
-        const thinking = TicTacToeIntermission.overlayRef.querySelector('.thinking-indicator');
-        
-        if (continueBtn) {
-          continueBtn.disabled = false;
-          continueBtn.textContent = 'Continue';
-          continueBtn.classList.remove('disabled');
-          continueBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-          continueBtn.style.border = '2px solid #34d399';
-          continueBtn.style.color = '#fff';
-          continueBtn.style.cursor = 'pointer';
-        }
-        
-        if (thinking) {
-          thinking.style.display = 'none';
-        }
-      }
-    } catch (err) {
-      console.warn('[TicTacToe] Failed to update overlay DOM', err);
-    }
-    
     // Emit global event to notify overlay/flow that game finished
+    // The overlay's event listener will handle UI updates (continue button, thinking indicator)
     try {
       const bus = TicTacToeIntermission.bus;
       if (bus && typeof bus.emit === 'function') {
