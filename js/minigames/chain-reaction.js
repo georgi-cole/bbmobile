@@ -361,13 +361,22 @@ const ChainReactionMinigame = (() => {
     g.game.MinigameModules.chainReaction = ChainReactionMinigame;
   }
   
-  console.info('[ChainReaction] Module registered globally');
+  // Log registration only in debug environments
+  if(g.game?.cfg?.debugMode){
+    console.info('[ChainReaction] Module registered globally');
+  }
   
 })(window);
 
-// CommonJS export for Node.js environments (defensive)
+// CommonJS export for Node.js test environments (optional - not used in browser)
+// NOTE: The browser uses window.MinigameModules.chainReaction registered above
 /* eslint-disable no-undef */
-if(typeof module !== 'undefined' && module.exports){
-  module.exports = { ChainReactionMinigame };
+try {
+  if(typeof module !== 'undefined' && typeof exports !== 'undefined'){
+    // For Node.js testing, export the registered module
+    module.exports = typeof window !== 'undefined' ? window.MinigameModules.chainReaction : ChainReactionMinigame;
+  }
+} catch(e) {
+  // Silently fail - CommonJS not available (browser environment)
 }
 /* eslint-enable no-undef */
