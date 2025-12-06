@@ -1,7 +1,7 @@
 // MODULE: minigames/chain-reaction.js
 // Chain Reaction - Cell explosion puzzle with strategic clicking
 
-export const ChainReactionMinigame = (() => {
+const ChainReactionMinigame = (() => {
   // Config
   const config = {
     rounds: 2,                // <-- reduced rounds
@@ -89,7 +89,7 @@ export const ChainReactionMinigame = (() => {
     setTimeout(() => cellEl.classList.remove('cr-illegal'), 300);
   }
 
-  function onCellClick(e) {
+  function onCellClick() {
     if (!running) return;
     const r = Number(this.dataset.r);
     const c = Number(this.dataset.c);
@@ -340,3 +340,35 @@ export const ChainReactionMinigame = (() => {
   g.MiniGames.chainReaction = { render };
 
 })(window);
+
+// Register module in global MinigameModules namespace for runtime resolution
+// The registry.js render() function checks window.MinigameModules first, then falls back to window.MiniGames
+// Both registrations point to the same object (with render method) for consistency
+(function(g){
+  'use strict';
+  
+  // Initialize MinigameModules namespace if not exists
+  if(typeof g.MinigameModules === 'undefined'){
+    g.MinigameModules = {};
+  }
+  
+  // Register the same object that has the render() method (from MiniGames)
+  // This ensures both paths work for the registry
+  if(g.MiniGames && g.MiniGames.chainReaction){
+    g.MinigameModules.chainReaction = g.MiniGames.chainReaction;
+  }
+  
+})(window);
+
+// CommonJS export for Node.js test environments (optional - not used in browser)
+// NOTE: The browser uses window.MinigameModules.chainReaction and window.MiniGames.chainReaction registered above
+/* eslint-disable no-undef */
+try {
+  if(typeof module !== 'undefined' && typeof exports !== 'undefined'){
+    // For Node.js testing, export the module directly
+    module.exports = ChainReactionMinigame;
+  }
+} catch(e) {
+  // Silently fail - CommonJS not available (browser environment)
+}
+/* eslint-enable no-undef */
