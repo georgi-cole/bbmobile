@@ -119,13 +119,14 @@
 
     overlayElement.classList.remove('visible');
     
-    // Wait for transition to complete before removing
+    // Wait for CSS transition to complete before removing (matches transition: opacity 0.3s)
+    const TRANSITION_DURATION_MS = 300;
     setTimeout(() => {
       if (overlayElement && overlayElement.parentNode) {
         overlayElement.parentNode.removeChild(overlayElement);
         overlayElement = null;
       }
-    }, 300);
+    }, TRANSITION_DURATION_MS);
   }
 
   /**
