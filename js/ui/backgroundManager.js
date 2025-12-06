@@ -15,6 +15,7 @@
   const REPO_NAME = 'bbmobile';
   const BRANCH_NAME = 'main';
   const OVERRIDE_FILE_PATH = 'bg_override.json';
+  const IMAGE_EXTENSIONS_REGEX = /\.(png|jpg|jpeg|webp)$/i;
   
   let availableBackgrounds = [];
   let preferences = {
@@ -70,6 +71,16 @@
     return false;
   }
 
+  // ===== HELPER FUNCTIONS =====
+
+  /**
+   * Prompt user for token input using fallback prompt dialog
+   */
+  function promptForToken() {
+    const text = prompt('Paste your GitHub token (starts with ghp_):');
+    return text ? text.trim() : null;
+  }
+
   // ===== ASSET LOADING =====
 
   /**
@@ -83,8 +94,9 @@
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'BBMobile-BackgroundManager'
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'BBMobile-BackgroundManager',
+          'X-GitHub-Api-Version': '2022-11-28'
         }
       });
       
@@ -97,13 +109,13 @@
       // Filter for image files (png, jpg, jpeg, webp)
       const imageFiles = files.filter(file => 
         file.type === 'file' && 
-        /\.(png|jpg|jpeg|webp)$/i.test(file.name)
+        IMAGE_EXTENSIONS_REGEX.test(file.name)
       );
       
       // Convert to background objects
       const backgrounds = imageFiles.map(file => {
         // Extract ID from filename (remove extension)
-        const id = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+        const id = file.name.replace(IMAGE_EXTENSIONS_REGEX, '');
         
         // Create friendly label from ID (camelCase to Title Case)
         const label = id
@@ -323,8 +335,9 @@
         method: 'GET',
         headers: {
           'Authorization': `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'BBMobile-BackgroundManager'
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'BBMobile-BackgroundManager',
+          'X-GitHub-Api-Version': '2022-11-28'
         }
       });
       
@@ -368,9 +381,10 @@
         method: 'PUT',
         headers: {
           'Authorization': `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
+          'Accept': 'application/vnd.github+json',
           'Content-Type': 'application/json',
-          'User-Agent': 'BBMobile-BackgroundManager'
+          'User-Agent': 'BBMobile-BackgroundManager',
+          'X-GitHub-Api-Version': '2022-11-28'
         },
         body: JSON.stringify(body)
       });
@@ -634,10 +648,10 @@
             }
           } else {
             // Fallback to prompt()
-            const text = prompt('Paste your GitHub token (starts with ghp_):');
-            if (text && text.trim()) {
-              tokenInput.value = text.trim();
-              storeToken(text.trim());
+            const text = promptForToken();
+            if (text) {
+              tokenInput.value = text;
+              storeToken(text);
               showPublishStatus('✓ Token entered', 'success');
             } else {
               showPublishStatus('✗ No token entered', 'error');
@@ -646,10 +660,10 @@
         } catch (err) {
           console.error('[BackgroundManager] Clipboard error:', err);
           // Fallback to prompt() on error
-          const text = prompt('Paste your GitHub token (starts with ghp_):');
-          if (text && text.trim()) {
-            tokenInput.value = text.trim();
-            storeToken(text.trim());
+          const text = promptForToken();
+          if (text) {
+            tokenInput.value = text;
+            storeToken(text);
             showPublishStatus('✓ Token entered', 'success');
           } else {
             showPublishStatus('✗ No token entered', 'error');
