@@ -161,8 +161,10 @@ export const HoldTheWall = (() => {
     // the minigame is being closed by the client. We therefore immediately publish results
     // and request phase advance. If you want this to happen only when the host/operator
     // returns, adjust the condition to check for role.
-    if (!playerId) return;
-
+    
+    // Note: playerId validation removed - we publish results regardless of who returned
+    // This ensures results are always published when returning to main screen
+    
     // If the player who returned had not dropped, ensure they're in holding set
     // (some code paths may remove them earlier). We won't change scoring here.
     // Immediately compute/publish results and advance.
@@ -193,9 +195,16 @@ export const HoldTheWall = (() => {
     try {
       const bus = window.game && window.game.bus;
       if (bus && typeof bus.on === 'function') {
+        // Listen for external playerDropped events (from other systems)
+        // Note: We don't call onPlayerDropped here to avoid recursive event loops
+        // since onPlayerDropped already emits this event
         bus.on('minigame.playerDropped', evt => {
-          // handle external playerDropped events too
-          if (evt && evt.playerId) onPlayerDropped(evt.playerId);
+          // Only handle external drops (not from our own onPlayerDropped calls)
+          if (evt && evt.playerId && evt.game !== 'holdTheWall') {
+            // Mark as dropped without emitting another event
+            droppedPlayers.add(evt.playerId);
+            playersHolding.delete(evt.playerId);
+          }
         });
 
         // Player leaving the minigame / returning to main screen

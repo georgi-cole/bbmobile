@@ -497,7 +497,7 @@
       entry.className = 'log-entry';
       
       const elapsed = Date.now() - startTime;
-      const time = new Date(elapsed).toISOString().substr(11, 12);
+      const time = new Date(elapsed).toISOString().substring(11, 23);
       
       const timeSpan = document.createElement('span');
       timeSpan.className = 'log-time';
