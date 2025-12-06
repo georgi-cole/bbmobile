@@ -3,6 +3,10 @@
  * Consolidates multiple action buttons into a single menu for decluttered mobile UI
  */
 
+:root {
+  --action-menu-backdrop-opacity: 0.75;
+}
+
 /* Action menu chip in compact HUD - styled to match other chips with danger color */
 .compact-hud-chip.action-menu-chip {
   --chip-base: var(--danger, #c0392b); /* Use danger color variable with fallback */
@@ -179,7 +183,7 @@
 .action-menu-backdrop.visible {
   display: block;
   /* Semi-transparent backdrop that keeps background visible */
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, var(--action-menu-backdrop-opacity));
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
 }

@@ -437,8 +437,7 @@
     
     console.info(`[self-eviction] Processed eviction for ${player.name}, finalRank=${player.finalRank}, selfEvicted=${player.selfEvicted}, autoMode=${player.autoMode}`);
 
-    // Do NOT add to jury if self-evicted
-    // Self-evicted players are excluded from jury house
+    // Add to jury only if not self-evicted (self-evicted players are excluded from jury house)
     const JURY_START_AT = 9;
     if(aliveCount <= JURY_START_AT && g.cfg && g.cfg.enableJuryHouse && !player.selfEvicted){
       if(!g.juryHouse) g.juryHouse = [];
