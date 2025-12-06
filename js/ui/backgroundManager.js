@@ -728,12 +728,12 @@
           // Map common GitHub API errors to user-friendly messages
           let errorMessage = err.message;
           
-          // Check for HTTP status codes in the error message
-          if (errorMessage.includes('401')) {
+          // Check for HTTP status codes in the error message (format: "GitHub API error: 401 ...")
+          if (/GitHub API error: 401\b/.test(errorMessage) || /\bstatus[:\s]+401\b/i.test(errorMessage)) {
             errorMessage = 'Authentication failed. Please check your GitHub token and ensure it has not expired.';
-          } else if (errorMessage.includes('403')) {
+          } else if (/GitHub API error: 403\b/.test(errorMessage) || /\bstatus[:\s]+403\b/i.test(errorMessage)) {
             errorMessage = 'Permission denied. Ensure your token has the "repo" scope and you have write access to the repository.';
-          } else if (errorMessage.includes('422')) {
+          } else if (/GitHub API error: 422\b/.test(errorMessage) || /\bstatus[:\s]+422\b/i.test(errorMessage)) {
             errorMessage = 'Invalid request. The file may have been modified by someone else. Try refreshing and publishing again.';
           }
           
