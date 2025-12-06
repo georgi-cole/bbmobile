@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Intermission Overlay Fix</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .test-panel {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: rgba(30, 40, 60, 0.8);
+      border-radius: 10px;
+      border: 2px solid rgba(100, 150, 200, 0.3);
+    }
+    h1 {
+      margin-top: 0;
+      color: #60a5fa;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(20, 30, 50, 0.6);
+      border-radius: 8px;
+      border: 1px solid rgba(100, 150, 200, 0.2);
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 1rem;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border: 2px solid #60a5fa;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(10, 20, 35, 0.8);
+      border-radius: 4px;
+      border: 1px solid rgba(100, 150, 200, 0.2);
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    .success { color: #10b981; }
+    .error { color: #ef4444; }
+    .info { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="test-panel">
+    <h1>Intermission Overlay Fix Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Scenario 1: Basic Overlay with Event</h2>
+      <p>This test shows the overlay and simulates a minigame completion event after 3 seconds.</p>
+      <button onclick="testBasicOverlayWithEvent()">Run Test</button>
+      <div class="status" id="status1"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 2: Tic Tac Toe Integration</h2>
+      <p>This test launches the actual Tic Tac Toe game in the overlay. Win the game to test the completion event.</p>
+      <button onclick="testTicTacToeIntegration()">Launch Tic Tac Toe</button>
+      <div class="status" id="status2"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 3: Multiple Event Emission</h2>
+      <p>This test ensures the overlay handles multiple completion events gracefully (idempotency test).</p>
+      <button onclick="testMultipleEvents()">Run Test</button>
+      <div class="status" id="status3"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 4: X Button Emergency Close</h2>
+      <p>This test verifies the X button always works, even before completion event.</p>
+      <button onclick="testEmergencyClose()">Run Test</button>
+      <div class="status" id="status4"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/bbGameBus.js"></script>
+  <script>
+    // Initialize game object with event bus
+    if (!window.game) {
+      window.game = {
+        cfg: {},
+        bus: window.bbGameBus || {
+          listeners: {},
+          on(event, handler) {
+            if (!this.listeners[event]) this.listeners[event] = [];
+            this.listeners[event].push(handler);
+          },
+          emit(event, ...args) {
+            console.log('[TestBus] Emitting event:', event, ...args);
+            if (this.listeners[event]) {
+              this.listeners[event].forEach(h => {
+                try { h(...args); } catch(e) { console.error(`[TestBus] Error in ${event} handler:`, e); }
+              });
+            }
+          }
+        }
+      };
+    }
+  </script>
+  <script src="js/ui/intermissionOverlay.js"></script>
+  <script src="js/minigames/tictactoe-intermission.js"></script>
+
+  <script>
+    function log(statusId, message, type = 'info') {
+      const statusEl = document.getElementById(statusId);
+      const timestamp = new Date().toLocaleTimeString();
+      const colorClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+      statusEl.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+      statusEl.scrollTop = statusEl.scrollHeight;
+    }
+
+    function testBasicOverlayWithEvent() {
+      const statusId = 'status1';
+      document.getElementById(statusId).innerHTML = '';
+      log(statusId, 'Starting test...', 'info');
+
+      // Show overlay with waitingForOpponent option
+      const controller = window.IntermissionOverlay.show({
+        waitingForOpponent: true,
+        onClose: () => {
+          log(statusId, 'Overlay closed successfully!', 'success');
+        }
+      });
+
+      log(statusId, 'Overlay shown with "Thinking..." state', 'info');
+
+      // Simulate game completion after 3 seconds
+      setTimeout(() => {
+        log(statusId, 'Simulating minigame:complete event...', 'info');
+        window.game.bus.emit('minigame:complete', { id: 'test-game', result: 'human' });
+        log(statusId, 'Event emitted. Overlay should auto-close in 250ms', 'success');
+      }, 3000);
+    }
+
+    function testTicTacToeIntegration() {
+      const statusId = 'status2';
+      document.getElementById(statusId).innerHTML = '';
+      log(statusId, 'Launching Tic Tac Toe...', 'info');
+
+      const controller = window.IntermissionOverlay.show({
+        waitingForOpponent: false,
+        onClose: () => {
+          log(statusId, 'Overlay closed!', 'success');
+        }
+      });
+
+      const gameContainer = controller.getContentMount();
+      
+      window.TicTacToeIntermission.init(gameContainer, (result) => {
+        log(statusId, `Game finished with result: ${result}`, 'success');
+        setTimeout(() => {
+          controller.close();
+        }, 2000);
+      });
+
+      log(statusId, 'Tic Tac Toe initialized. Play the game!', 'info');
+      log(statusId, 'When you win/lose/draw, the completion event should fire', 'info');
+    }
+
+    function testMultipleEvents() {
+      const statusId = 'status3';
+      document.getElementById(statusId).innerHTML = '';
+      log(statusId, 'Starting idempotency test...', 'info');
+
+      const controller = window.IntermissionOverlay.show({
+        waitingForOpponent: true,
+        onClose: () => {
+          log(statusId, 'Overlay closed', 'success');
+        }
+      });
+
+      log(statusId, 'Overlay shown. Will emit 3 completion events...', 'info');
+
+      // Emit multiple events
+      setTimeout(() => {
+        log(statusId, 'Emitting event 1...', 'info');
+        window.game.bus.emit('minigame:complete', { id: 'test', result: 'human' });
+      }, 1000);
+
+      setTimeout(() => {
+        log(statusId, 'Emitting event 2 (should be idempotent)...', 'info');
+        window.game.bus.emit('minigame:complete', { id: 'test', result: 'human' });
+      }, 1500);
+
+      setTimeout(() => {
+        log(statusId, 'Emitting event 3 (should be idempotent)...', 'info');
+        window.game.bus.emit('minigame:complete', { id: 'test', result: 'human' });
+      }, 2000);
+
+      log(statusId, 'If only one auto-close happens, the fix is working correctly', 'success');
+    }
+
+    function testEmergencyClose() {
+      const statusId = 'status4';
+      document.getElementById(statusId).innerHTML = '';
+      log(statusId, 'Testing X button emergency close...', 'info');
+
+      const controller = window.IntermissionOverlay.show({
+        waitingForOpponent: true,
+        onClose: () => {
+          log(statusId, 'Overlay closed via X button!', 'success');
+        }
+      });
+
+      log(statusId, 'Overlay shown with "Thinking..." state', 'info');
+      log(statusId, 'Click the X button in the top-right to test emergency close', 'info');
+      log(statusId, 'The X button should work even though no completion event was fired', 'info');
+    }
+
+    // Log bus events for debugging
+    window.game.bus.on('minigame:complete', (data) => {
+      console.log('[TestPage] minigame:complete event received:', data);
+    });
+
+    window.game.bus.on('intermission:overlay:closed', (data) => {
+      console.log('[TestPage] intermission:overlay:closed event received:', data);
+    });
+
+    console.log('[TestPage] Test page ready. window.game.bus:', window.game.bus);
+  </script>
+</body>
+</html>

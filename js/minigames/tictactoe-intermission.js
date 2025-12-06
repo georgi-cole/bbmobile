@@ -10,7 +10,9 @@
     container: null,
     onComplete: null,
     stallGuardTimer: null,
-    isAiMoving: false
+    isAiMoving: false,
+    overlayRef: null,
+    bus: null
   };
 
   // Stall guard timeout (ms) - failsafe if AI move takes too long
@@ -25,7 +27,11 @@
     TicTacToeIntermission.container = container;
     TicTacToeIntermission.onComplete = onComplete;
     TicTacToeIntermission.isAiMoving = false;
+    TicTacToeIntermission.bus = (global.game && global.game.bus) || null;
     clearStallGuard();
+    
+    // Capture reference to intermission overlay if present
+    TicTacToeIntermission.overlayRef = document.querySelector('.intermission-fullscreen-overlay');
     
     // Initialize game state
     TicTacToeIntermission.gameState = {
@@ -452,6 +458,23 @@
       result = 'draw';
     }
     
+    // Emit global event to notify overlay/flow that game finished
+    // The overlay's event listener will handle UI updates (continue button, thinking indicator)
+    try {
+      const bus = TicTacToeIntermission.bus;
+      if (bus && typeof bus.emit === 'function') {
+        bus.emit('minigame:complete', { id: 'tic-tac-toe', result });
+        console.info('[TicTacToe] Emitted minigame:complete event', { result });
+      } else if (window.dispatchEvent) {
+        // Fallback for contexts without bus
+        window.dispatchEvent(new CustomEvent('minigame:complete', { 
+          detail: { id: 'tic-tac-toe', result } 
+        }));
+      }
+    } catch (err) {
+      console.error('[TicTacToe] Could not notify completion', err);
+    }
+    
     // Call completion callback after a short delay
     setTimeout(() => {
       if (TicTacToeIntermission.onComplete) {
@@ -469,6 +492,8 @@
     TicTacToeIntermission.container = null;
     TicTacToeIntermission.onComplete = null;
     TicTacToeIntermission.isAiMoving = false;
+    TicTacToeIntermission.overlayRef = null;
+    TicTacToeIntermission.bus = null;
   }
 
   // Export to global namespace
