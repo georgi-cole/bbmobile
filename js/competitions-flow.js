@@ -1081,6 +1081,12 @@
         return;
       }
       
+      // Skip timer updates if game is paused
+      const pc = g.game && g.game.pauseController;
+      if (pc && typeof pc.isPaused === 'function' && pc.isPaused()) {
+        return; // Timer frozen while paused
+      }
+      
       // If using phase timer, recalculate remaining time from game.phaseEndsAt
       let remaining;
       if(usePhaseTimer && game && game.phaseEndsAt){
@@ -1344,6 +1350,13 @@
   function runCompetitionFlow(gameKey, container, onComplete, options = {}){
     console.info(`[CompetitionFlow] ═══ runCompetitionFlow called ═══`);
     console.info(`[CompetitionFlow] Game: ${gameKey}, Options:`, options);
+    
+    // ═══ Guard: Check if game is paused ═══
+    const pc = g.game && g.game.pauseController;
+    if (pc && typeof pc.isPaused === 'function' && pc.isPaused()) {
+      console.info('[CompetitionFlow] Game is paused - competition flow will proceed but timer will be frozen');
+      // Note: We don't block the flow, but the timer will respect pause state
+    }
     
     // ═══ Guard: Check if called before ready ═══
     if (checkAndQueueIfNotReady('runCompetitionFlow', [gameKey, container, onComplete, options])) {

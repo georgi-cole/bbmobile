@@ -3912,6 +3912,32 @@
     console.info('[social-maneuvers] Available commands: grantEnergy, grantInfluence, grantInformation, setEnergy, setInfluence, setInformation, recordWeeklyEvent, getResources, getInfluence, showAllInfluence, getBank, setBank, adjustBank, showAllBanks');
   }
 
+  // ============================================================================
+  // GLOBAL PAUSE/RESUME EVENT LISTENERS
+  // ============================================================================
+  // Listen for global pause/resume events from pauseController
+  // This allows the social timer to respect paused state during modals
+  
+  try {
+    window.addEventListener('game:pause', () => {
+      console.info('[social-maneuvers] 🛑 Received game:pause event - social timer will respect pause state');
+      // Note: The social timer doesn't need explicit pause/resume here
+      // because it's phase-based and the main tick in ui.hud-and-router.js
+      // already handles freezing game.endAt when paused.
+      // This event is logged for QA purposes.
+    });
+
+    window.addEventListener('game:resume', () => {
+      console.info('[social-maneuvers] ▶️ Received game:resume event - social timer will continue');
+      // Note: Similarly, resume is handled by the main tick function.
+      // This event is logged for QA purposes.
+    });
+    
+    console.info('[social-maneuvers] ✓ Pause/resume event listeners installed');
+  } catch(err) {
+    console.warn('[social-maneuvers] Failed to install pause/resume listeners:', err);
+  }
+
   initDefaultFlag();
   console.info('[social-maneuvers] ✓ Module loaded successfully');
   console.info('[social-maneuvers] ✓ Enabled by default (enableSocialManeuvers=true)');
