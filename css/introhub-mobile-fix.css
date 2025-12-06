@@ -34,7 +34,6 @@
       1px 0 0 rgba(0,0,0,0.95),
       -1px 0 0 rgba(0,0,0,0.95),
       0 -1px 0 rgba(0,0,0,0.95);
-    -webkit-text-size-adjust: 100%;
   }
 }
 
@@ -43,16 +42,5 @@
   .intro-screen__btn:focus:not(:focus-visible),
   .intro-screen__icon-btn:focus:not(:focus-visible) {
     outline: none;
-  }
-}
-
-/* Prevent overlay elements from scaling badly on mobile */
-@media (max-width: 768px) {
-  .intro-screen__btn .overlay,
-  .intro-screen__icon-btn .overlay {
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
-    background-color: rgba(0,0,0,0.12);
   }
 }
