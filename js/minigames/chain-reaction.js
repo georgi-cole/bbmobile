@@ -8,7 +8,8 @@ export const ChainReactionMinigame = (() => {
     rows: 8,
     cols: 6,
     tickDelay: 80,            // ms delay between chain ticks for visual clarity
-    cssVarCellSize: '--cr-cell-size'
+    cssVarCellSize: '--cr-cell-size',
+    defaultCellSize: 36       // default cell size in pixels
   };
 
   // Private state
@@ -55,7 +56,7 @@ export const ChainReactionMinigame = (() => {
     container.innerHTML = '';
     const board = document.createElement('div');
     board.className = 'cr-board';
-    board.style.setProperty(config.cssVarCellSize, '36px'); // smaller cells (adjust if needed)
+    board.style.setProperty(config.cssVarCellSize, config.defaultCellSize + 'px');
 
     grid.forEach((row) => {
       const rowEl = document.createElement('div');
@@ -206,7 +207,7 @@ export const ChainReactionMinigame = (() => {
     container.appendChild(msg);
     // send event on window.game.bus if available
     try {
-      window.game && window.game.bus && window.game.bus.emit && window.game.bus.emit('minigame:end', { won });
+      window.game?.bus?.emit?.('minigame:end', { won });
     } catch (err) {
       console.error('[ChainReaction] event emit error', err);
     }
@@ -237,6 +238,7 @@ export const ChainReactionMinigame = (() => {
   }
 
   function setCellSize(px) {
+    config.defaultCellSize = px;
     container && container.style.setProperty(config.cssVarCellSize, px + 'px');
   }
 
@@ -253,6 +255,13 @@ export const ChainReactionMinigame = (() => {
 (function(g){
   'use strict';
 
+  // Score calculation constants
+  const WIN_BASE_SCORE = 60;
+  const WIN_BONUS_RANGE = 40;
+  const LOSS_MAX_SCORE = 60;
+  const FORCED_LOSS_MIN = 30;
+  const FORCED_LOSS_RANGE = 25;
+
   /**
    * Legacy render function for backwards compatibility
    * Maps the old render(container, onComplete, options) API to the new ChainReactionMinigame API
@@ -267,7 +276,7 @@ export const ChainReactionMinigame = (() => {
       competitionMode = false
     } = options;
 
-    // Initialize with new API
+    // Initialize with new API (uses default config values: 2 rounds, 36px cells)
     ChainReactionMinigame.init(container);
     ChainReactionMinigame.setRounds(2);
     ChainReactionMinigame.setCellSize(36);
@@ -278,8 +287,8 @@ export const ChainReactionMinigame = (() => {
       emit: (event, data) => {
         if (event === 'minigame:end') {
           // Calculate score based on win/loss
-          // Won = high score (60-100), Lost = low score (0-59)
-          let score = data.won ? (60 + Math.random() * 40) : (Math.random() * 60);
+          // Won = high score (WIN_BASE_SCORE to 100), Lost = low score (0 to LOSS_MAX_SCORE)
+          let score = data.won ? (WIN_BASE_SCORE + Math.random() * WIN_BONUS_RANGE) : (Math.random() * LOSS_MAX_SCORE);
           score = Math.round(score);
 
           // Apply competition mode logic if needed
@@ -288,7 +297,7 @@ export const ChainReactionMinigame = (() => {
             const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
             if (!shouldWin && playerSucceeded) {
               // Force loss despite success
-              score = Math.round(30 + Math.random() * 25);
+              score = Math.round(FORCED_LOSS_MIN + Math.random() * FORCED_LOSS_RANGE);
               console.log('[ChainReaction] Win probability applied: success forced to loss');
             }
           }

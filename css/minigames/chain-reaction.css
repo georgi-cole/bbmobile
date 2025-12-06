@@ -13,7 +13,7 @@
   background: rgba(0,0,0,0.05);
   padding: 6px;
   border-radius: 6px;
-  --cr-cell-size: 36px; /* default smaller size; module also sets this inline */
+  --cr-cell-size: 36px; /* CSS default (fallback); module sets inline style which takes precedence */
 }
 
 .cr-row {
