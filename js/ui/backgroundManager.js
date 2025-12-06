@@ -360,7 +360,7 @@
       console.info('[BackgroundManager] Using scheduled background for', today, ':', scheduledId);
       
       // Try to find matching background
-      let bg = availableBackgrounds.find(b => b.id === scheduledId);
+      const bg = availableBackgrounds.find(b => b.id === scheduledId);
       if (bg) {
         return bg;
       }
@@ -701,7 +701,7 @@
     } catch (err) {
       // Check if error is due to branch protection (403/422)
       const errorMessage = err.message || '';
-      const isBranchProtection = /403|422/.test(errorMessage);
+      const isBranchProtection = /\b(403|422)\b/.test(errorMessage);
       
       if (!isBranchProtection) {
         // Not a branch protection error, re-throw
@@ -715,7 +715,7 @@
       try {
         // Get background filename for branch name
         const bg = availableBackgrounds.find(b => b.id === manualOverrideId);
-        const filename = bg ? bg.filename.replace(/\.(png|jpg|jpeg|webp)$/i, '') : (manualOverrideId || 'null');
+        const filename = bg ? bg.filename.replace(IMAGE_EXTENSIONS_REGEX, '') : (manualOverrideId || 'null');
         const branchName = `bgmgr/override-${filename}`;
         
         console.info('[BackgroundManager] Creating branch:', branchName);
@@ -1074,10 +1074,31 @@
     statusEl.style.wordBreak = 'break-word';
     
     if (isHtml) {
-      // Convert URLs in message to clickable links
+      // Safely create links for URLs without using innerHTML
+      // First, escape the message and extract URLs
       const urlRegex = /(https?:\/\/[^\s]+)/g;
-      const htmlMessage = message.replace(urlRegex, '<a href="$1" target="_blank" style="color: #60a5fa; text-decoration: underline;">$1</a>');
-      statusEl.innerHTML = htmlMessage;
+      const parts = message.split(urlRegex);
+      
+      // Clear existing content
+      statusEl.textContent = '';
+      
+      // Build content with text nodes and link elements
+      parts.forEach((part, index) => {
+        if (index % 2 === 0) {
+          // Text part
+          statusEl.appendChild(document.createTextNode(part));
+        } else {
+          // URL part - create link element
+          const link = document.createElement('a');
+          link.href = part;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.style.color = '#60a5fa';
+          link.style.textDecoration = 'underline';
+          link.textContent = part;
+          statusEl.appendChild(link);
+        }
+      });
     } else {
       statusEl.textContent = message;
     }
