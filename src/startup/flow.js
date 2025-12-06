@@ -170,6 +170,17 @@
       }
     }
 
+    // Initialize IntroHub Background Integration (dev-only override manager)
+    try {
+      const bgIntegration = g.IntroHubBackgroundIntegration || (g.game && g.game.IntroHubBackgroundIntegration);
+      if (bgIntegration && typeof bgIntegration.init === 'function') {
+        bgIntegration.init();
+        console.info('[StartupFlow] IntroHubBackgroundIntegration initialized');
+      }
+    } catch (e) {
+      console.warn('[StartupFlow] IntroHubBackgroundIntegration init failed (non-critical)', e);
+    }
+
     console.info('[StartupFlow] Core services initialized');
 
     // Mark core services as ready

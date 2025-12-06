@@ -562,6 +562,35 @@
 <!-- Intro Hub Screen System -->
 <script defer src="src/utils/backgroundTheme.js"></script>
 
+<!-- Background Manager: Dev-only override system for intro hub backgrounds -->
+<script defer src="js/ui/backgroundManager.js"></script>
+<script defer src="js/ui/introhubBackgroundIntegration.js"></script>
+<script>
+// Initialize background manager data
+(function initBackgroundData() {
+  'use strict';
+  if (!window.game) window.game = {};
+  if (!window.game.data) window.game.data = {};
+  
+  // Populate available intro backgrounds from BackgroundTheme asset list
+  window.game.data.introBackgrounds = [
+    { id: 'day', label: 'Day', filename: 'daily-background.png' },
+    { id: 'night', label: 'Night', filename: 'night-background.png' },
+    { id: 'sunrise', label: 'Sunrise', filename: 'sunrise-background.png' },
+    { id: 'sunset', label: 'Sunset', filename: 'sunset-background.png' },
+    { id: 'rain', label: 'Rain', filename: 'rainy-background.png' },
+    { id: 'snow', label: 'Snow', filename: 'night-snow-background.png' },
+    { id: 'snowday', label: 'Snow Day', filename: 'snowday-background.png' },
+    { id: 'thunderstorm', label: 'Thunderstorm', filename: 'thunderstorm-background.png' },
+    { id: 'xmasDay', label: 'Christmas Day', filename: 'xmas-day-background.png' },
+    { id: 'xmasEve', label: 'Christmas Eve', filename: 'xmas-eve-background.png' },
+    { id: 'xmasyNight', label: 'Christmas Night', filename: 'xmasy-night-background.png' }
+  ];
+  
+  console.info('[BackgroundData] Initialized intro backgrounds:', window.game.data.introBackgrounds.length);
+})();
+</script>
+
 <!-- BackgroundTheme Alias Bridge: Ensure window.game.BackgroundTheme exists -->
 <script>
 (function bridgeBackgroundTheme() {
