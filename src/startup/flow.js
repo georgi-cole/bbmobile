@@ -498,7 +498,7 @@
       }
 
       // Skip if already attached
-      if (mainScreenZoomLock && mainScreenZoomLock.isAttached && mainScreenZoomLock.isAttached()) {
+      if (mainScreenZoomLock && mainScreenZoomLock.isAttached()) {
         console.info('[StartupFlow] Main screen zoom lock already attached, skipping');
         return;
       }
@@ -522,7 +522,7 @@
    */
   function detachMainScreenZoomLock() {
     try {
-      if (mainScreenZoomLock && mainScreenZoomLock.isAttached && mainScreenZoomLock.isAttached()) {
+      if (mainScreenZoomLock && mainScreenZoomLock.isAttached()) {
         mainScreenZoomLock.detach();
         mainScreenZoomLock = null;
         console.info('[StartupFlow] Zoom lock detached from main game screen');

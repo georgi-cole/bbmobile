@@ -32,14 +32,14 @@ export const ZoomLock = (() => {
         if (attached) return;
         element.addEventListener('touchstart', onTouchStart, { passive: false });
         element.addEventListener('touchmove', onTouchMove, { passive: false });
-        window.addEventListener('gesturestart', onGestureStart);
+        window.addEventListener('gesturestart', onGestureStart, { passive: false });
         attached = true;
       },
       detach() {
         if (!attached) return;
         element.removeEventListener('touchstart', onTouchStart, { passive: false });
         element.removeEventListener('touchmove', onTouchMove, { passive: false });
-        window.removeEventListener('gesturestart', onGestureStart);
+        window.removeEventListener('gesturestart', onGestureStart, { passive: false });
         attached = false;
       },
       isAttached() {

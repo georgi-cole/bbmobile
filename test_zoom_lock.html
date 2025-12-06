@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Zoom Lock Test - BBMobile</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+  }
+  .container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .test-area {
+    margin: 20px 0;
+    padding: 30px;
+    background: #2a2a2a;
+    border-radius: 8px;
+    border: 2px solid #3a3a3a;
+  }
+  .test-area.locked {
+    border-color: #c53030;
+    background: #2a1a1a;
+  }
+  .test-area.unlocked {
+    border-color: #38a169;
+    background: #1a2a1a;
+  }
+  .controls {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 10000;
+    background: rgba(0,0,0,0.9);
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 250px;
+  }
+  .controls h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+  }
+  .controls button {
+    width: 100%;
+    margin: 5px 0;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: #3182ce;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .controls button:hover {
+    background: #2c5282;
+  }
+  .controls button.active {
+    background: #38a169;
+  }
+  .status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 8px;
+  }
+  .status.locked {
+    background: #c53030;
+    color: white;
+  }
+  .status.unlocked {
+    background: #38a169;
+    color: white;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  h2 {
+    font-size: 20px;
+    margin-top: 30px;
+    margin-bottom: 10px;
+  }
+  .info {
+    background: #2c3e50;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .info code {
+    background: #1a1a1a;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+  }
+  .log {
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 10px;
+  }
+  .log-entry {
+    margin: 2px 0;
+    padding: 2px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <h3>Zoom Lock Controls</h3>
+  <button id="btnToggleArea1">Toggle Area 1 Lock</button>
+  <button id="btnToggleArea2">Toggle Area 2 Lock</button>
+  <button id="btnToggleDocument">Toggle Document Lock</button>
+  <button id="btnClearLog">Clear Log</button>
+</div>
+
+<div class="container">
+  <h1>🔒 Zoom Lock Test</h1>
+  
+  <div class="info">
+    <strong>How to test:</strong>
+    <ul>
+      <li>On mobile: Try pinch-to-zoom in locked vs unlocked areas</li>
+      <li>On desktop: Use DevTools device emulation with touch enabled</li>
+      <li>Watch the log below to see when events are prevented</li>
+    </ul>
+  </div>
+
+  <h2>Test Area 1 <span class="status unlocked" id="status1">UNLOCKED</span></h2>
+  <div class="test-area unlocked" id="area1">
+    <p>This is test area 1. Try to pinch-to-zoom here.</p>
+    <p>When locked, multi-touch gestures will be prevented.</p>
+    <p>Single-finger scrolling will still work normally.</p>
+  </div>
+
+  <h2>Test Area 2 <span class="status unlocked" id="status2">UNLOCKED</span></h2>
+  <div class="test-area unlocked" id="area2">
+    <p>This is test area 2. Try to pinch-to-zoom here.</p>
+    <p>You can independently lock/unlock each area.</p>
+    <p>This demonstrates the targeted approach of the zoom lock.</p>
+  </div>
+
+  <h2>Document Lock <span class="status unlocked" id="statusDoc">UNLOCKED</span></h2>
+  <div class="info">
+    The document lock affects the entire page, not just specific areas.
+    When active, zoom is prevented everywhere.
+  </div>
+
+  <h2>Event Log</h2>
+  <div class="log" id="eventLog">
+    <div class="log-entry">Waiting for events...</div>
+  </div>
+</div>
+
+<script type="module">
+import { ZoomLock } from './js/utils/zoom-lock.js';
+
+const area1 = document.getElementById('area1');
+const area2 = document.getElementById('area2');
+const status1 = document.getElementById('status1');
+const status2 = document.getElementById('status2');
+const statusDoc = document.getElementById('statusDoc');
+const eventLog = document.getElementById('eventLog');
+const btnArea1 = document.getElementById('btnToggleArea1');
+const btnArea2 = document.getElementById('btnToggleArea2');
+const btnDoc = document.getElementById('btnToggleDocument');
+const btnClearLog = document.getElementById('btnClearLog');
+
+let lock1 = null;
+let lock2 = null;
+let lockDoc = null;
+
+function log(message) {
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  eventLog.insertBefore(entry, eventLog.firstChild);
+  
+  // Keep only last 50 entries
+  while (eventLog.children.length > 50) {
+    eventLog.removeChild(eventLog.lastChild);
+  }
+}
+
+function updateUI(area, status, locked) {
+  if (locked) {
+    area.classList.remove('unlocked');
+    area.classList.add('locked');
+    status.classList.remove('unlocked');
+    status.classList.add('locked');
+    status.textContent = 'LOCKED';
+  } else {
+    area.classList.remove('locked');
+    area.classList.add('unlocked');
+    status.classList.remove('locked');
+    status.classList.add('unlocked');
+    status.textContent = 'UNLOCKED';
+  }
+}
+
+btnArea1.addEventListener('click', () => {
+  if (lock1 && lock1.isAttached()) {
+    lock1.detach();
+    lock1 = null;
+    updateUI(area1, status1, false);
+    log('Area 1 unlocked');
+  } else {
+    lock1 = ZoomLock.forElement(area1);
+    lock1.attach();
+    updateUI(area1, status1, true);
+    log('Area 1 locked');
+  }
+  btnArea1.classList.toggle('active', lock1 && lock1.isAttached());
+});
+
+btnArea2.addEventListener('click', () => {
+  if (lock2 && lock2.isAttached()) {
+    lock2.detach();
+    lock2 = null;
+    updateUI(area2, status2, false);
+    log('Area 2 unlocked');
+  } else {
+    lock2 = ZoomLock.forElement(area2);
+    lock2.attach();
+    updateUI(area2, status2, true);
+    log('Area 2 locked');
+  }
+  btnArea2.classList.toggle('active', lock2 && lock2.isAttached());
+});
+
+btnDoc.addEventListener('click', () => {
+  if (lockDoc && lockDoc.isAttached()) {
+    lockDoc.detach();
+    lockDoc = null;
+    statusDoc.classList.remove('locked');
+    statusDoc.classList.add('unlocked');
+    statusDoc.textContent = 'UNLOCKED';
+    log('Document unlocked');
+  } else {
+    lockDoc = ZoomLock.lockDocument();
+    statusDoc.classList.remove('unlocked');
+    statusDoc.classList.add('locked');
+    statusDoc.textContent = 'LOCKED';
+    log('Document locked');
+  }
+  btnDoc.classList.toggle('active', lockDoc && lockDoc.isAttached());
+});
+
+btnClearLog.addEventListener('click', () => {
+  eventLog.innerHTML = '<div class="log-entry">Log cleared</div>';
+});
+
+// Log touch events for debugging
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 1) {
+    log(`Multi-touch detected: ${e.touches.length} fingers`);
+  }
+}, { passive: true });
+
+log('Zoom Lock Test loaded - ready to test!');
+log('Use the controls in the top-right to toggle locks');
+</script>
+
+</body>
+</html>

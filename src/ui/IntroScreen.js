@@ -1867,7 +1867,7 @@ console.info('[IntroScreen] Script executing – pre-init');
       }
 
       // Skip if already attached
-      if (zoomLock && zoomLock.isAttached && zoomLock.isAttached()) {
+      if (zoomLock && zoomLock.isAttached()) {
         console.info('[IntroScreen] Zoom lock already attached, skipping');
         return;
       }
@@ -1891,7 +1891,7 @@ console.info('[IntroScreen] Script executing – pre-init');
    */
   function detachZoomLock() {
     try {
-      if (zoomLock && zoomLock.isAttached && zoomLock.isAttached()) {
+      if (zoomLock && zoomLock.isAttached()) {
         zoomLock.detach();
         console.info('[IntroScreen] Zoom lock detached from intro screen');
       }
