@@ -1,246 +1,341 @@
 // MODULE: minigames/chain-reaction.js
-// Chain Reaction - Create chain combos puzzle
+// Chain Reaction - Cell explosion puzzle with strategic clicking
 
+export const ChainReactionMinigame = (() => {
+  // Config
+  const config = {
+    rounds: 2,                // <-- reduced rounds
+    rows: 8,
+    cols: 6,
+    tickDelay: 80,            // ms delay between chain ticks for visual clarity
+    cssVarCellSize: '--cr-cell-size',
+    defaultCellSize: 36       // default cell size in pixels
+  };
+
+  // Private state
+  let container;
+  let grid = []; // 2D array of {count}
+  let currentRound = 0;
+  let running = false;
+
+  // Helpers
+  function createGrid(rows, cols) {
+    grid = [];
+    for (let r = 0; r < rows; r++) {
+      const row = [];
+      for (let c = 0; c < cols; c++) {
+        row.push({ count: 0, r, c, el: null });
+      }
+      grid.push(row);
+    }
+  }
+
+  function getNeighbors(r, c) {
+    const n = [];
+    if (r > 0) n.push(grid[r - 1][c]);
+    if (r < grid.length - 1) n.push(grid[r + 1][c]);
+    if (c > 0) n.push(grid[r][c - 1]);
+    if (c < grid[0].length - 1) n.push(grid[r][c + 1]);
+    return n;
+  }
+
+  function thresholdForCell(r, c) {
+    return getNeighbors(r, c).length;
+  }
+
+  function hasAnyDoubles() {
+    for (const row of grid) {
+      for (const cell of row) {
+        if (cell.count >= 2) return true;
+      }
+    }
+    return false;
+  }
+
+  function renderGrid() {
+    container.innerHTML = '';
+    const board = document.createElement('div');
+    board.className = 'cr-board';
+    board.style.setProperty(config.cssVarCellSize, config.defaultCellSize + 'px');
+
+    grid.forEach((row) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'cr-row';
+      row.forEach((cell) => {
+        const cellEl = document.createElement('button');
+        cellEl.className = 'cr-cell';
+        cellEl.dataset.r = cell.r;
+        cellEl.dataset.c = cell.c;
+        cellEl.type = 'button';
+        cell.el = cellEl;
+        updateCellEl(cell);
+        cellEl.addEventListener('click', onCellClick);
+        rowEl.appendChild(cellEl);
+      });
+      board.appendChild(rowEl);
+    });
+    container.appendChild(board);
+  }
+
+  function updateCellEl(cell) {
+    const el = cell.el;
+    el.textContent = cell.count > 0 ? String(cell.count) : '';
+    el.classList.toggle('cr-cell--empty', cell.count === 0);
+    el.classList.toggle('cr-cell--active', cell.count >= 2);
+  }
+
+  function flashIllegalClick(cellEl) {
+    cellEl.classList.add('cr-illegal');
+    setTimeout(() => cellEl.classList.remove('cr-illegal'), 300);
+  }
+
+  function onCellClick(e) {
+    if (!running) return;
+    const r = Number(this.dataset.r);
+    const c = Number(this.dataset.c);
+    const cell = grid[r][c];
+
+    // Rule: if there is any cell with count >= 2, singles (<2) are NOT clickable.
+    const blockingDoubles = hasAnyDoubles();
+    if (blockingDoubles && cell.count < 2) {
+      // disallow click - visual feedback
+      flashIllegalClick(this);
+      return;
+    }
+
+    // Allowed click
+    handleIncrement(cell);
+  }
+
+  function handleIncrement(cell) {
+    incrementCell(cell);
+    processExplosions();
+  }
+
+  function incrementCell(cell) {
+    cell.count += 1;
+    updateCellEl(cell);
+  }
+
+  function setCellToZero(cell) {
+    cell.count = 0;
+    updateCellEl(cell);
+  }
+
+  function processExplosions() {
+    // Process chain reactions in ticks to allow animation and to avoid synchronous deep recursion
+    const queue = [];
+
+    // initial seeds: any cell over threshold
+    for (const row of grid) {
+      for (const cell of row) {
+        if (cell.count >= thresholdForCell(cell.r, cell.c)) {
+          queue.push(cell);
+        }
+      }
+    }
+
+    if (queue.length === 0) {
+      checkRoundEnd();
+      return;
+    }
+
+    function tick() {
+      if (queue.length === 0) {
+        checkRoundEnd();
+        return;
+      }
+
+      const cell = queue.shift();
+      if (cell.count < thresholdForCell(cell.r, cell.c)) {
+        // may have changed since queued - skip
+        setTimeout(tick, config.tickDelay);
+        return;
+      }
+
+      // explode
+      setCellToZero(cell);
+      cell.el.classList.add('cr-explode');
+      setTimeout(() => cell.el.classList.remove('cr-explode'), 250);
+
+      const neighbors = getNeighbors(cell.r, cell.c);
+      neighbors.forEach((n) => {
+        n.count += 1;
+        updateCellEl(n);
+        if (n.count >= thresholdForCell(n.r, n.c) && !queue.includes(n)) {
+          queue.push(n);
+        }
+      });
+
+      setTimeout(tick, config.tickDelay);
+    }
+
+    setTimeout(tick, config.tickDelay);
+  }
+
+  function checkRoundEnd() {
+    // Are there any non-zero cells left?
+    const anyNonZero = grid.some(row => row.some(cell => cell.count > 0));
+    if (!anyNonZero) {
+      currentRound++;
+      if (currentRound >= config.rounds) {
+        endGame(true);
+      } else {
+        setupRound();
+      }
+    } else {
+      // If non-zero left but no explosions in flight, allow further clicks (subject to single/double rule)
+    }
+  }
+
+  function setupRound() {
+    // For each new round we seed some random cells. Keep the seeding conservative.
+    for (let i = 0; i < 6 + currentRound * 2; i++) {
+      const r = Math.floor(Math.random() * config.rows);
+      const c = Math.floor(Math.random() * config.cols);
+      const cell = grid[r][c];
+      cell.count = Math.max(1, cell.count + 1);
+    }
+    renderGrid(); // re-render to attach events and update display
+  }
+
+  function endGame(won) {
+    running = false;
+    const msg = document.createElement('div');
+    msg.className = 'cr-end';
+    msg.textContent = won ? 'Cleared!' : 'Game Over';
+    container.appendChild(msg);
+    // send event on window.game.bus if available
+    try {
+      window.game?.bus?.emit?.('minigame:end', { won });
+    } catch (err) {
+      console.error('[ChainReaction] event emit error', err);
+    }
+  }
+
+  // Public API
+  function init(el) {
+    container = el;
+    container.classList.add('cr-container');
+    createGrid(config.rows, config.cols);
+    renderGrid();
+  }
+
+  function start() {
+    currentRound = 0;
+    running = true;
+    // initial seed and render
+    setupRound();
+  }
+
+  function stop() {
+    running = false;
+  }
+
+  // Expose configurable setters for quick tweaks (useful for testing)
+  function setRounds(n) {
+    config.rounds = Math.max(1, Math.floor(n));
+  }
+
+  function setCellSize(px) {
+    config.defaultCellSize = px;
+    container && container.style.setProperty(config.cssVarCellSize, px + 'px');
+  }
+
+  return {
+    init,
+    start,
+    stop,
+    setRounds,
+    setCellSize
+  };
+})();
+
+// Legacy compatibility layer for old render-based interface
 (function(g){
   'use strict';
 
+  // Score calculation constants
+  const WIN_BASE_SCORE = 60;
+  const WIN_BONUS_RANGE = 40;
+  const LOSS_MAX_SCORE = 60;
+  const FORCED_LOSS_MIN = 30;
+  const FORCED_LOSS_RANGE = 25;
+
   /**
-   * Chain Reaction minigame
-   * Click tiles to create chain reactions
-   * Score based on longest chain created
+   * Legacy render function for backwards compatibility
+   * Maps the old render(container, onComplete, options) API to the new ChainReactionMinigame API
    * 
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
+   * @param {Object} options - Game options (debugMode, competitionMode)
    */
   function render(container, onComplete, options = {}){
-    container.innerHTML = '';
-    
     const { 
       debugMode = false, 
       competitionMode = false
     } = options;
-    
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
-    
-    const title = document.createElement('h3');
-    title.textContent = 'Chain Reaction';
-    title.style.cssText = 'margin:0;font-size:1.2rem;color:#e3ecf5;';
-    
-    const instructions = document.createElement('p');
-    instructions.textContent = 'Click tiles of the same color to create chains! (3 rounds)';
-    instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
-    
-    const scoreDiv = document.createElement('div');
-    scoreDiv.textContent = 'Score: 0';
-    scoreDiv.style.cssText = 'font-size:1.5rem;font-weight:bold;color:#83bfff;';
-    
-    const roundDiv = document.createElement('div');
-    roundDiv.textContent = 'Round: 1/3';
-    roundDiv.style.cssText = 'font-size:0.9rem;color:#95a9c0;';
-    
-    const gridDiv = document.createElement('div');
-    gridDiv.style.cssText = 'display:grid;grid-template-columns:repeat(6,50px);gap:5px;margin:20px 0;';
-    
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'btn';
-    nextBtn.textContent = 'Next Round';
-    nextBtn.style.display = 'none';
-    
-    wrapper.appendChild(title);
-    wrapper.appendChild(instructions);
-    wrapper.appendChild(scoreDiv);
-    wrapper.appendChild(roundDiv);
-    wrapper.appendChild(gridDiv);
-    wrapper.appendChild(nextBtn);
-    container.appendChild(wrapper);
-    
-    let totalScore = 0;
-    let currentRound = 1;
-    let chainSize = 0;
-    let grid = [];
-    const colors = ['#ff6b6b', '#6fd3ff', '#74e48b', '#f7b955'];
-    
-    function createGrid(){
-      gridDiv.innerHTML = '';
-      grid = [];
-      
-      for(let i = 0; i < 36; i++){
-        const tile = document.createElement('div');
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        
-        tile.style.cssText = `
-          width:50px;
-          height:50px;
-          background:${color};
-          border-radius:4px;
-          cursor:pointer;
-          transition:transform 0.2s, opacity 0.2s;
-        `;
-        tile.dataset.color = color;
-        tile.dataset.index = i;
-        tile.dataset.removed = 'false';
-        
-        tile.addEventListener('click', () => handleTileClick(tile));
-        
-        gridDiv.appendChild(tile);
-        grid.push(tile);
+
+    // Initialize with new API (uses default config values: 2 rounds, 36px cells)
+    try {
+      ChainReactionMinigame.init(container);
+      ChainReactionMinigame.setRounds(2);
+      ChainReactionMinigame.setCellSize(36);
+    } catch (err) {
+      console.error('[ChainReaction] Initialization failed:', err);
+      if (typeof onComplete === 'function') {
+        onComplete(0); // Return 0 score on initialization failure
       }
-      
-      chainSize = 0;
+      return;
     }
-    
-    function hasValidMoves(){
-      // Check if there are any 2+ connected tiles of the same color
-      const checked = new Set();
-      
-      for(let i = 0; i < grid.length; i++){
-        if(grid[i].dataset.removed === 'true') continue;
-        if(checked.has(i)) continue;
-        
-        const color = grid[i].dataset.color;
-        const connected = [];
-        
-        // Find connected tiles of same color using BFS
-        function findConnectedBFS(startIdx){
-          const queue = [startIdx];
-          const visited = new Set();
-          const result = [];
-          
-          while(queue.length > 0){
-            const idx = queue.shift();
-            if(visited.has(idx)) continue;
-            if(idx < 0 || idx >= 36) continue;
-            
-            const t = grid[idx];
-            if(t.dataset.removed === 'true' || t.dataset.color !== color) continue;
-            
-            visited.add(idx);
-            result.push(idx);
-            
-            const row = Math.floor(idx / 6);
-            const col = idx % 6;
-            
-            if(row > 0) queue.push(idx - 6); // up
-            if(row < 5) queue.push(idx + 6); // down
-            if(col > 0) queue.push(idx - 1); // left
-            if(col < 5) queue.push(idx + 1); // right
-          }
-          
-          return result;
-        }
-        
-        const connectedTiles = findConnectedBFS(i);
-        connectedTiles.forEach(idx => checked.add(idx));
-        
-        if(connectedTiles.length >= 2){
-          return true; // Found a valid move
-        }
-      }
-      
-      return false; // No valid moves
-    }
-    
-    function handleTileClick(tile){
-      if(tile.dataset.removed === 'true') return;
-      
-      const targetColor = tile.dataset.color;
-      const index = parseInt(tile.dataset.index);
-      const toRemove = [];
-      
-      // Find connected tiles of same color
-      function findConnected(idx){
-        if(idx < 0 || idx >= 36) return;
-        if(toRemove.includes(idx)) return;
-        
-        const t = grid[idx];
-        if(t.dataset.removed === 'true' || t.dataset.color !== targetColor) return;
-        
-        toRemove.push(idx);
-        
-        // Check neighbors (up, down, left, right)
-        const row = Math.floor(idx / 6);
-        const col = idx % 6;
-        
-        if(row > 0) findConnected(idx - 6); // up
-        if(row < 5) findConnected(idx + 6); // down
-        if(col > 0) findConnected(idx - 1); // left
-        if(col < 5) findConnected(idx + 1); // right
-      }
-      
-      findConnected(index);
-      
-      if(toRemove.length >= 2){
-        chainSize += toRemove.length;
-        totalScore += toRemove.length * 10;
-        scoreDiv.textContent = `Score: ${totalScore}`;
-        
-        toRemove.forEach(idx => {
-          grid[idx].dataset.removed = 'true';
-          grid[idx].style.opacity = '0';
-          grid[idx].style.transform = 'scale(0.5)';
-        });
-        
-        // Check if round complete
-        setTimeout(() => {
-          const remaining = grid.filter(t => t.dataset.removed === 'false').length;
-          const movesAvailable = hasValidMoves();
-          
-          if(remaining === 0 || !movesAvailable){
-            if(currentRound < 3){
-              // Auto-advance to next round (no stall)
-              currentRound++;
-              roundDiv.textContent = `Round: ${currentRound}/3`;
-              instructions.textContent = 'Round complete!';
-              instructions.style.color = '#74e48b';
-              
-              setTimeout(() => {
-                instructions.textContent = 'Click tiles of the same color to create chains! (3 rounds)';
-                instructions.style.color = '#95a9c0';
-                createGrid();
-              }, 1200);
-            } else {
-              endGame();
+
+    // Mock the game bus to capture the end event and call onComplete
+    const originalBus = g.game?.bus;
+    const mockBus = {
+      emit: (event, data) => {
+        if (event === 'minigame:end') {
+          // Calculate score based on win/loss
+          // Won = high score (WIN_BASE_SCORE to 100), Lost = low score (0 to LOSS_MAX_SCORE)
+          let score = data.won ? (WIN_BASE_SCORE + Math.random() * WIN_BONUS_RANGE) : (Math.random() * LOSS_MAX_SCORE);
+          score = Math.round(score);
+
+          // Apply competition mode logic if needed
+          if (competitionMode && g.GameUtils && !debugMode) {
+            const playerSucceeded = data.won;
+            const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+            if (!shouldWin && playerSucceeded) {
+              // Force loss despite success
+              score = Math.round(FORCED_LOSS_MIN + Math.random() * FORCED_LOSS_RANGE);
+              console.log('[ChainReaction] Win probability applied: success forced to loss');
             }
           }
-        }, 300);
-      }
-    }
-    
-    nextBtn.addEventListener('click', () => {
-      currentRound++;
-      roundDiv.textContent = `Round: ${currentRound}/3`;
-      nextBtn.style.display = 'none';
-      createGrid();
-    });
-    
-    function endGame(){
-      // Calculate raw score based on total points (200+ = excellent)
-      const rawScore = Math.min(100, (totalScore / 200) * 100);
-      
-      // Determine if player succeeded
-      const playerSucceeded = rawScore >= 60; // 60% threshold for success
-      
-      // Apply win probability logic
-      let finalScore = rawScore;
-      if(g.GameUtils && !debugMode && competitionMode){
-        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-        if(!shouldWin && playerSucceeded){
-          // Force loss despite success (25% win rate)
-          finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
-          console.log('[ChainReaction] Win probability applied: success forced to loss');
+
+          // Call the original onComplete callback
+          if (typeof onComplete === 'function') {
+            onComplete(score);
+          }
+
+          // Restore original bus
+          if (g.game) {
+            g.game.bus = originalBus;
+          }
+        }
+        // Also call original bus if it exists
+        if (originalBus && originalBus.emit) {
+          originalBus.emit(event, data);
         }
       }
-      
-      if(onComplete){
-        onComplete(finalScore);
-      }
-    }
-    
-    createGrid();
+    };
+
+    // Temporarily replace the bus
+    if (!g.game) g.game = {};
+    g.game.bus = mockBus;
+
+    // Start the game
+    ChainReactionMinigame.start();
   }
 
-  // Export
+  // Export to legacy MiniGames namespace
   if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
   g.MiniGames.chainReaction = { render };
 

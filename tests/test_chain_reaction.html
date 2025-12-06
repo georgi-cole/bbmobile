@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chain Reaction - Quick Manual Test</title>
+  <link rel="stylesheet" href="../css/minigames/chain-reaction.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1a2332;
+      color: #e3ecf5;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    h2 {
+      color: #83bfff;
+      margin: 0;
+    }
+    #game-container {
+      background: #2c3a4d;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: #83bfff;
+      color: #1a2332;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #a8c7e7;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid #83bfff;
+      border-radius: 4px;
+      padding: 15px;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    .info h3 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    .info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Chain Reaction - Quick Manual Test</h2>
+  
+  <div class="info">
+    <h3>How to Play:</h3>
+    <ul>
+      <li>Click cells to increment their count</li>
+      <li><strong>Rule:</strong> If any cell has count ≥ 2, you can only click cells with count ≥ 2</li>
+      <li>When a cell reaches its threshold (number of neighbors), it explodes</li>
+      <li>Explosions distribute to neighbors, causing chain reactions</li>
+      <li>Clear all cells to complete a round (2 rounds total)</li>
+    </ul>
+  </div>
+
+  <div id="game-container"></div>
+
+  <div class="controls">
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="stopGame()">Stop Game</button>
+    <button onclick="resetGame()">Reset</button>
+  </div>
+
+  <script type="module">
+    import { ChainReactionMinigame } from '../js/minigames/chain-reaction.js';
+
+    // Mock window.game.bus for event testing
+    window.game = window.game || {};
+    window.game.bus = {
+      emit: (event, data) => {
+        console.log('[Event]', event, data);
+        alert(`Game ${data.won ? 'WON' : 'LOST'}!`);
+      }
+    };
+
+    const container = document.getElementById('game-container');
+    
+    // Initialize the game
+    ChainReactionMinigame.init(container);
+    ChainReactionMinigame.setRounds(2);
+    ChainReactionMinigame.setCellSize(36);
+
+    window.startGame = () => {
+      ChainReactionMinigame.start();
+    };
+
+    window.stopGame = () => {
+      ChainReactionMinigame.stop();
+    };
+
+    window.resetGame = () => {
+      ChainReactionMinigame.stop();
+      ChainReactionMinigame.init(container);
+      ChainReactionMinigame.setRounds(2);
+      ChainReactionMinigame.setCellSize(36);
+    };
+  </script>
+</body>
+</html>
