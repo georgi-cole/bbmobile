@@ -1,4 +1,7 @@
-export const HoldTheWall = (() => {
+// MODULE: minigames/holdTheWall.js
+// Hold The Wall timer control wrapper - disables phase timer for endurance challenges
+
+const HoldTheWall = (() => {
   // HoldTheWall minigame: endurance challenge — no phase timer,
   // players who drop get 0 points, results are computed only from players
   // that have NOT dropped and are still holding. Results are shown once,
@@ -21,8 +24,8 @@ export const HoldTheWall = (() => {
   //  - emit clear events so other systems can hook in
 
   // Private state
-  let playersHolding = new Set(); // players currently holding (ids)
-  let droppedPlayers = new Set(); // players who dropped
+  const playersHolding = new Set(); // players currently holding (ids)
+  const droppedPlayers = new Set(); // players who dropped
   let resultsShown = false;
   let started = false;
   let localPlayerId = null;
@@ -150,7 +153,7 @@ export const HoldTheWall = (() => {
     }
   }
 
-  function onPlayerLeftToMainScreen(playerId) {
+  function onPlayerLeftToMainScreen(_playerId) {
     // According to the requested behavior: as soon as "they are back to the main screen"
     // the phase should advance to results and we see who from other players won (must be
     // a player that has not dropped). The "they" here refers to the user returning from
@@ -258,3 +261,89 @@ export const HoldTheWall = (() => {
     publishResults // exposed for test harnesses to call
   };
 })();
+
+// Register the module globally for use by the minigame system
+// This wraps the logic module and integrates with the existing hold-wall.js render function
+(function(g){
+  'use strict';
+  
+  // Configuration constants
+  const MAX_INIT_RETRIES = 50; // Maximum attempts to wait for hold-wall.js (5 seconds)
+  const INIT_RETRY_DELAY = 100; // Delay between retries in milliseconds
+  const DEFAULT_PLAYER_ID = 'player1'; // Fallback player ID
+  
+  let initAttempts = 0;
+  
+  // Wait for the hold-wall.js module to load, then wrap it with our timer control logic
+  function initializeHoldTheWallWrapper(){
+    // Check if hold-wall render function is available
+    if(!g.MiniGames || !g.MiniGames.holdWall || typeof g.MiniGames.holdWall.render !== 'function'){
+      initAttempts++;
+      if(initAttempts >= MAX_INIT_RETRIES){
+        console.error('[HoldTheWall] hold-wall.js failed to load after ' + MAX_INIT_RETRIES + ' attempts. Timer control will not be active.');
+        return;
+      }
+      if(initAttempts % 10 === 0){ // Log every 10 attempts to reduce noise
+        console.warn('[HoldTheWall] hold-wall.js not loaded yet, attempt ' + initAttempts + '/' + MAX_INIT_RETRIES);
+      }
+      setTimeout(initializeHoldTheWallWrapper, INIT_RETRY_DELAY);
+      return;
+    }
+    
+    const originalRender = g.MiniGames.holdWall.render;
+    
+    // Create a wrapper render function that uses our timer control logic
+    function render(container, onComplete, options = {}){
+      console.info('[HoldTheWall] Wrapper render called - disabling phase timer');
+      
+      // Get player information for initialization
+      const players = [];
+      let localPlayerId = null;
+      
+      // Try to get players from game state
+      if(g.game && g.game.players && Array.isArray(g.game.players)){
+        const alivePlayers = g.game.players.filter(p => !p.evicted);
+        alivePlayers.forEach(p => {
+          if(p && p.id){
+            players.push({ id: p.id, name: p.name || p.id });
+            if(p.human){
+              localPlayerId = p.id;
+            }
+          }
+        });
+      }
+      
+      // Start our timer control logic
+      HoldTheWall.start({
+        localPlayerId: localPlayerId || DEFAULT_PLAYER_ID,
+        players: players.length > 0 ? players : [
+          { id: DEFAULT_PLAYER_ID, name: 'You' }
+        ]
+      });
+      
+      // Wrap the onComplete callback to stop our logic when done
+      const wrappedOnComplete = (score) => {
+        console.info('[HoldTheWall] Game complete, stopping timer control logic');
+        HoldTheWall.stop();
+        if(typeof onComplete === 'function'){
+          onComplete(score);
+        }
+      };
+      
+      // Call the original render function
+      originalRender(container, wrappedOnComplete, options);
+    }
+    
+    // Replace the holdWall render function with our wrapper
+    g.MiniGames.holdWall.render = render;
+    console.info('[HoldTheWall] Successfully wrapped hold-wall.js render function');
+  }
+  
+  // Initialize when DOM is ready
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initializeHoldTheWallWrapper);
+  } else {
+    initializeHoldTheWallWrapper();
+  }
+  
+})(window);
