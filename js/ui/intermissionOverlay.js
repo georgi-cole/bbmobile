@@ -12,7 +12,6 @@
   let closeBtn = null;
   let continueBtn = null;
   let _isShown = false;
-  let _forceClosable = false;
 
   /**
    * Create and show full-screen intermission overlay
@@ -86,10 +85,7 @@
     `;
     closeBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      if (_forceClosable || !_isShown) {
-        return;
-      }
-      // Always attempt to close immediately
+      // Always attempt to close immediately - don't rely on other subsystems
       close();
     });
     closeBtn.addEventListener('mouseenter', () => {
@@ -210,7 +206,6 @@
     document.body.appendChild(overlay);
     activeOverlay = overlay;
     _isShown = true;
-    _forceClosable = false;
 
     // Attach bus listeners if not already attached
     if (!_listenersAttached) {
@@ -261,11 +256,11 @@
     _listenersAttached = true;
 
     try {
-      if (global.game && global.game.bus && typeof global.game.bus.on === 'function') {
+      if (window.game && window.game.bus && typeof window.game.bus.on === 'function') {
         // Listen for minigame completion events
-        global.game.bus.on('minigame:complete', onMinigameComplete);
+        window.game.bus.on('minigame:complete', onMinigameComplete);
         // Also accept older/alternate name for backward compatibility
-        global.game.bus.on('minigame:finished', onMinigameComplete);
+        window.game.bus.on('minigame:finished', onMinigameComplete);
         console.info('[IntermissionOverlay] ✓ Bus listeners attached');
       }
     } catch (err) {
@@ -280,9 +275,6 @@
   function onMinigameComplete(detail) {
     console.info('[IntermissionOverlay] Minigame complete event received', detail);
     
-    // Make overlay closable immediately
-    _forceClosable = true;
-
     // Update continue button
     if (continueBtn) {
       continueBtn.disabled = false;
@@ -363,8 +355,8 @@
 
       // Emit closed event
       try {
-        if (global.game && global.game.bus && typeof global.game.bus.emit === 'function') {
-          global.game.bus.emit('intermission:overlay:closed', { source: 'IntermissionOverlay' });
+        if (window.game && window.game.bus && typeof window.game.bus.emit === 'function') {
+          window.game.bus.emit('intermission:overlay:closed', { source: 'IntermissionOverlay' });
         }
       } catch (err) {
         console.warn('[IntermissionOverlay] Failed to emit closed event', err);
@@ -381,7 +373,6 @@
    * Force close immediately without animation
    */
   function forceCloseNow() {
-    _forceClosable = true;
     _isShown = false;
     
     if (activeOverlay && activeOverlay.parentNode) {

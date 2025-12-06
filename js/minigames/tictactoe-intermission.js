@@ -488,9 +488,9 @@
       if (bus && typeof bus.emit === 'function') {
         bus.emit('minigame:complete', { id: 'tic-tac-toe', result });
         console.info('[TicTacToe] Emitted minigame:complete event', { result });
-      } else if (global.dispatchEvent) {
+      } else if (window.dispatchEvent) {
         // Fallback for contexts without bus
-        global.dispatchEvent(new CustomEvent('minigame:complete', { 
+        window.dispatchEvent(new CustomEvent('minigame:complete', { 
           detail: { id: 'tic-tac-toe', result } 
         }));
       }
