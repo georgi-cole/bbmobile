@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Hover/Tap Test</title>
+  <link rel="stylesheet" href="css/houseguests-modal.css">
+  <link rel="stylesheet" href="css/guest-profile-popup.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+      color: white;
+      min-height: 100vh;
+    }
+
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      color: #00d4ff;
+    }
+
+    .test-description {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 24px;
+      border-radius: 12px;
+      margin: 24px 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .test-section h2 {
+      margin-top: 0;
+      color: #00d4ff;
+      font-size: 20px;
+    }
+
+    .guest-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    /* Guest Card Styles (matches houseguests-modal.css) */
+    .houseguests-list__item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .houseguests-list__item:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .houseguests-list__item:focus {
+      outline: 2px solid #00d4ff;
+      outline-offset: 2px;
+    }
+
+    .houseguests-list__avatar {
+      width: 56px;
+      height: 56px;
+      min-width: 56px;
+      min-height: 56px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .houseguests-list__info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .houseguests-list__name {
+      font-size: 17px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .houseguests-list__location {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .houseguests-list__arrow {
+      font-size: 28px;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1;
+    }
+
+    .instructions {
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .instructions ul {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+
+    .instructions li {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-indicator.success {
+      background: #00ff88;
+    }
+
+    .status-indicator.error {
+      background: #ff4444;
+    }
+
+    .log {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px;
+      border-left: 3px solid #00d4ff;
+      padding-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏠 Guest Profile Hover/Tap Test</h1>
+    <p class="test-description">
+      Test the new hover/tap profile popup feature for houseguest cards.
+      This validates the single source of truth for houseguest data.
+    </p>
+
+    <div class="instructions">
+      <strong>📋 Test Instructions:</strong>
+      <ul>
+        <li><strong>Desktop:</strong> Hover over any guest card to see the profile popup</li>
+        <li><strong>Mobile/Touch:</strong> Tap any guest card to open the profile popup</li>
+        <li><strong>Keyboard:</strong> Tab to a card and press Enter or Space</li>
+        <li><strong>Close:</strong> Click the X button or press Escape</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Status Checks</h2>
+      <div id="statusChecks"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Guest Cards</h2>
+      <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 16px;">
+        Hover or tap any card below to see their profile popup:
+      </p>
+      <div class="guest-cards-grid" id="guestCardsContainer"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div class="log" id="testLog"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies in order -->
+  <script src="js/avatar.js"></script>
+  <script src="js/data/houseguests.js"></script>
+  <script src="src/ui/guestProfilePopup.js"></script>
+  <script src="src/ui/houseguestsList.js"></script>
+
+  <script>
+    // Override console methods to show in log
+    const originalConsoleInfo = console.info;
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+    
+    function addToLog(message, type = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.style.borderLeftColor = {
+        'info': '#00d4ff',
+        'log': '#00ff88',
+        'warn': '#ffaa00',
+        'error': '#ff4444'
+      }[type] || '#00d4ff';
+      entry.textContent = message;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    console.info = function(...args) {
+      originalConsoleInfo.apply(console, args);
+      addToLog(args.join(' '), 'info');
+    };
+
+    console.log = function(...args) {
+      originalConsoleLog.apply(console, args);
+      addToLog(args.join(' '), 'log');
+    };
+
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      addToLog('⚠️ ' + args.join(' '), 'warn');
+    };
+
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      addToLog('❌ ' + args.join(' '), 'error');
+    };
+
+    // Status checks
+    function updateStatusChecks() {
+      const statusDiv = document.getElementById('statusChecks');
+      const checks = [
+        { 
+          name: 'Houseguests Data Module', 
+          condition: !!window.Houseguests,
+          detail: window.Houseguests ? `${window.Houseguests.getAll().length} houseguests loaded` : 'Not loaded'
+        },
+        { 
+          name: 'getById() Helper', 
+          condition: window.Houseguests && typeof window.Houseguests.getById === 'function',
+          detail: 'API method available'
+        },
+        { 
+          name: 'Guest Profile Popup Module', 
+          condition: !!window.GuestProfilePopup,
+          detail: window.GuestProfilePopup ? 'openById() and close() available' : 'Not loaded'
+        },
+        { 
+          name: 'Houseguests List Wiring', 
+          condition: !!window.HouseguestsList,
+          detail: window.HouseguestsList ? 'Event handlers ready' : 'Not loaded'
+        },
+        { 
+          name: 'Kian Data', 
+          condition: window.Houseguests && !!window.Houseguests.getById('kian'),
+          detail: window.Houseguests && window.Houseguests.getById('kian') ? 'Example guest loaded' : 'Not found'
+        }
+      ];
+
+      statusDiv.innerHTML = checks.map(check => {
+        const statusClass = check.condition ? 'success' : 'error';
+        const statusText = check.condition ? '✅' : '❌';
+        return `<div style="padding: 8px; margin: 4px 0; display: flex; align-items: center;">
+          <span class="status-indicator ${statusClass}"></span>
+          <div style="flex: 1;">
+            <strong>${check.name}:</strong> ${statusText}
+            ${check.detail ? `<br><span style="color: rgba(255,255,255,0.6); font-size: 13px; margin-left: 16px;">${check.detail}</span>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // Render guest cards
+    function renderGuestCards() {
+      const container = document.getElementById('guestCardsContainer');
+      
+      if (!window.Houseguests) {
+        container.innerHTML = '<p style="color: rgba(255,255,255,0.6);">Houseguests module not loaded</p>';
+        return;
+      }
+
+      const guests = window.Houseguests.getAll();
+      
+      // Show first 6 guests as examples
+      const sampleGuests = guests.slice(0, 6);
+      
+      container.innerHTML = '';
+      
+      sampleGuests.forEach(guest => {
+        if (window.HouseguestsList && typeof window.HouseguestsList.createCard === 'function') {
+          const card = window.HouseguestsList.createCard(guest);
+          if (card) {
+            container.appendChild(card);
+          }
+        } else {
+          // Fallback: create simple card
+          const card = document.createElement('div');
+          card.className = 'houseguests-list__item';
+          card.setAttribute('data-guest-id', guest.id);
+          
+          // Create avatar element with proper URL encoding
+          const avatar = document.createElement('div');
+          avatar.className = 'houseguests-list__avatar';
+          avatar.style.backgroundImage = `url('avatars/${encodeURIComponent(guest.name)}.png')`;
+          
+          // Create info section
+          const info = document.createElement('div');
+          info.className = 'houseguests-list__info';
+          info.innerHTML = `
+            <div class="houseguests-list__name">${guest.fullName || guest.name}</div>
+            <div class="houseguests-list__location">${guest.location || ''}</div>
+          `;
+          
+          // Create arrow
+          const arrow = document.createElement('div');
+          arrow.className = 'houseguests-list__arrow';
+          arrow.textContent = '›';
+          
+          card.appendChild(avatar);
+          card.appendChild(info);
+          card.appendChild(arrow);
+          container.appendChild(card);
+        }
+      });
+
+      console.log('Rendered', sampleGuests.length, 'guest cards');
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        updateStatusChecks();
+        renderGuestCards();
+        console.info('✅ Test page loaded and initialized');
+        console.info('👆 Hover over guest cards (desktop) or tap them (mobile) to see profile popups');
+      }, 200);
+    });
+  </script>
+</body>
+</html>
