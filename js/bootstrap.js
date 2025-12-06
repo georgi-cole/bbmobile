@@ -739,6 +739,60 @@
     // NOTE: Chip buttons (Daily, News) are now handled by StartupFlow
   }
 
+  // ---------- Diary Room System Initialization ----------
+  function initDiaryRoomSystem(){
+    try {
+      // Wait for DiaryTemplates, DiaryRoomLogger, and DiaryUI to be available
+      const checkModules = () => {
+        const hasTemplates = typeof global.DiaryTemplates !== 'undefined';
+        const hasLogger = typeof global.DiaryRoomLogger !== 'undefined';
+        const hasUI = typeof global.DiaryUI !== 'undefined';
+        
+        if (hasTemplates && hasLogger && hasUI) {
+          console.info('[Bootstrap] Initializing Diary Room system');
+          
+          // Initialize logger
+          global.DiaryRoomLogger.init();
+          
+          // Initialize UI with default button selector
+          global.DiaryUI.init({
+            buttonSelector: '#btnDiaryRoom'
+          });
+          
+          // Wire up dr:focus handler to scroll/highlight entries
+          const bus = global.bbGameBus || global.game?.bus;
+          if (bus && typeof bus.on === 'function') {
+            bus.on('dr:focus', function(payload) {
+              if (!payload || !payload.entry) return;
+              
+              console.info('[Bootstrap] DR focus requested for entry:', payload.entry.id);
+              
+              // Emit acknowledgment
+              if (typeof bus.emit === 'function') {
+                bus.emit('dr:focus:ack', { entryId: payload.entry.id });
+              }
+              
+              // If DiaryRoomModal is open, try to scroll to the entry
+              if (global.DiaryRoomModal && typeof global.DiaryRoomModal.isOpen === 'function' && global.DiaryRoomModal.isOpen()) {
+                // Entry highlighting would be handled by the modal if it supports it
+                console.info('[Bootstrap] DR modal is open, entry should be visible');
+              }
+            });
+          }
+          
+          console.info('[Bootstrap] Diary Room system initialized successfully');
+        } else {
+          // Modules not ready yet, retry
+          setTimeout(checkModules, 100);
+        }
+      };
+      
+      checkModules();
+    } catch (err) {
+      console.error('[Bootstrap] Failed to initialize Diary Room system:', err);
+    }
+  }
+
   // ---------- Boot ----------
   function bootstrap(){
     try{
@@ -804,6 +858,9 @@
       
       // Wire up IntroScreen to show after intro video (for legacy compatibility)
       wireIntroScreenFlow();
+      
+      // Initialize Diary Room Logger and UI
+      initDiaryRoomSystem();
       
       (function keepAlive(){
         wireButtons();

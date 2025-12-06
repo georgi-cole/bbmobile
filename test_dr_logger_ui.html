@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diary Room Logger & UI Test</title>
+  <link rel="stylesheet" href="css/dr/diary.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    h1 { color: #38bdf8; }
+    h2 { color: #60a5fa; margin-top: 30px; }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    button {
+      padding: 10px 16px;
+      margin: 5px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #e2e8f0;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #334155;
+    }
+    .dr-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      background: #3b82f6;
+      color: white;
+      border: 2px solid #60a5fa;
+      z-index: 1000;
+    }
+    .log-output {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      min-height: 100px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 3px solid #64748b;
+    }
+    .log-entry[data-severity="dramatic"] {
+      border-left-color: #dc2626;
+      background: rgba(220, 38, 38, 0.1);
+    }
+    .log-entry[data-severity="high"] {
+      border-left-color: #fb923c;
+      background: rgba(251, 146, 60, 0.1);
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .success { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    .error { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1>🚪 Diary Room Logger & UI Integration Test</h1>
+  
+  <!-- DR Button (the one that should blink) -->
+  <button id="btnDiaryRoom" class="dr-button">🚪 DR</button>
+  
+  <div class="test-section">
+    <h2>Status</h2>
+    <div id="status" class="status">Initializing...</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test: Social Actions</h2>
+    <p>Trigger social action events to test DR entry generation and button blinking:</p>
+    <button onclick="testSocialAction('compliment', 'neutral')">Compliment (Neutral)</button>
+    <button onclick="testSocialAction('flirt', 'neutral')">Flirt (Neutral)</button>
+    <button onclick="testSocialAction('backstab', 'high')">Backstab (High)</button>
+    <button onclick="testSocialAction('lie', 'dramatic')">Lie (Dramatic)</button>
+    <button onclick="testSocialAction('strategize', 'neutral')">Strategize (Neutral)</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test: Jury Events</h2>
+    <p>Trigger jury events to test jury DR entries:</p>
+    <button onclick="testJuryEnter()">Jury Enter (Neutral)</button>
+    <button onclick="testJuryChallenge()">Jury Challenge (Dramatic)</button>
+    <button onclick="testJuryReturn()">Jury Return (Dramatic)</button>
+    <button onclick="testJuryFinalDiscussion()">Final Discussion (High)</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test: Bond Shifts</h2>
+    <p>Trigger bond shift events:</p>
+    <button onclick="testBondShift(0.2)">Large Positive Shift (+20%)</button>
+    <button onclick="testBondShift(-0.18)">Large Negative Shift (-18%)</button>
+    <button onclick="testBondShift(0.05)">Small Shift (+5%)</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>DR Log Output</h2>
+    <div id="logOutput" class="log-output">
+      <p style="color: #64748b;">Log entries will appear here...</p>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Manual Controls</h2>
+    <button onclick="stopBlinking()">Stop Blinking</button>
+    <button onclick="clearLog()">Clear Log</button>
+  </div>
+
+  <!-- Load modules -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/dr/diaryTemplates.js"></script>
+  <script src="js/dr/diaryRoomLogger.js"></script>
+  <script src="js/dr/diaryUI.js"></script>
+
+  <script>
+    // Initialize game context
+    window.game = {
+      cfg: { humanName: 'You' },
+      me: 'player1',
+      players: [
+        { id: 'player1', name: 'You' },
+        { id: 'player2', name: 'Alice' },
+        { id: 'player3', name: 'Bob' },
+        { id: 'player4', name: 'Charlie' }
+      ],
+      week: 3,
+      drLogs: []
+    };
+
+    // Set up the event bus
+    window.game.bus = window.bbGameBus;
+
+    // Global name resolver
+    window.safeName = function(id) {
+      const player = window.game.players.find(p => p.id === id);
+      return player ? player.name : `Player ${id}`;
+    };
+
+    // Initialize the system
+    let logEntryCount = 0;
+
+    function initSystem() {
+      try {
+        // Initialize logger
+        window.DiaryRoomLogger.init();
+        
+        // Initialize UI
+        window.DiaryUI.init({
+          buttonSelector: '#btnDiaryRoom'
+        });
+        
+        // Listen for DR entries to display them
+        window.game.bus.on('dr:entry', function(entry) {
+          addLogEntry(entry);
+        });
+        
+        // Listen for DR button clicks
+        document.getElementById('btnDiaryRoom').addEventListener('click', function() {
+          updateStatus('DR Button clicked! Check console for events.', 'success');
+        });
+        
+        // Listen for dr:focus events
+        window.game.bus.on('dr:focus', function(payload) {
+          updateStatus(`DR Focus requested for entry: ${payload.entryId}`, 'success');
+          // Emit acknowledgment
+          window.game.bus.emit('dr:focus:ack', { entryId: payload.entryId });
+        });
+        
+        updateStatus('✅ System initialized successfully!', 'success');
+      } catch (err) {
+        updateStatus(`❌ Initialization error: ${err.message}`, 'error');
+        console.error(err);
+      }
+    }
+
+    function updateStatus(message, type = '') {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status ' + type;
+    }
+
+    function addLogEntry(entry) {
+      logEntryCount++;
+      const logOutput = document.getElementById('logOutput');
+      
+      // Create entry element
+      const entryEl = document.createElement('div');
+      entryEl.className = 'log-entry';
+      entryEl.setAttribute('data-severity', entry.severity);
+      entryEl.innerHTML = `
+        <strong>#${logEntryCount} [${entry.severity}]</strong> ${entry.text}
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+          ${new Date(entry.timestamp).toLocaleTimeString()} | ${entry.category}
+        </div>
+      `;
+      
+      logOutput.appendChild(entryEl);
+      
+      // Scroll to bottom
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    function testSocialAction(actionType, severity) {
+      updateStatus(`Testing: ${actionType} action with ${severity} severity...`);
+      
+      const bondDelta = severity === 'dramatic' ? -0.15 : severity === 'high' ? 0.12 : 0.05;
+      
+      window.game.bus.emit('social.action:result', {
+        actor: 'player1',
+        target: 'player2',
+        actionType: actionType,
+        severity: severity,
+        bondDelta: bondDelta,
+        outcome: severity
+      });
+    }
+
+    function testJuryEnter() {
+      updateStatus('Testing: Jury member enter...');
+      window.game.bus.emit('jury.member:enter', {
+        playerId: 'player3'
+      });
+    }
+
+    function testJuryChallenge() {
+      updateStatus('Testing: Jury challenge result...');
+      window.game.bus.emit('jury.challenge:result', {
+        winner: 'player4',
+        winnerId: 'player4'
+      });
+    }
+
+    function testJuryReturn() {
+      updateStatus('Testing: Jury member return...');
+      window.game.bus.emit('jury.member:return', {
+        playerId: 'player4'
+      });
+    }
+
+    function testJuryFinalDiscussion() {
+      updateStatus('Testing: Jury final discussion...');
+      window.game.bus.emit('jury.final:discussion', {});
+    }
+
+    function testBondShift(delta) {
+      updateStatus(`Testing: Bond shift (${delta > 0 ? '+' : ''}${(delta * 100).toFixed(0)}%)...`);
+      window.game.bus.emit('bond.shift', {
+        player1: 'player1',
+        player2: 'player2',
+        delta: delta
+      });
+    }
+
+    function stopBlinking() {
+      if (window.DiaryUI) {
+        window.DiaryUI.stopBlinking();
+        updateStatus('Blinking stopped manually', 'success');
+      }
+    }
+
+    function clearLog() {
+      document.getElementById('logOutput').innerHTML = '<p style="color: #64748b;">Log cleared...</p>';
+      logEntryCount = 0;
+      updateStatus('Log cleared', 'success');
+    }
+
+    // Initialize on load
+    window.addEventListener('load', initSystem);
+  </script>
+</body>
+</html>
