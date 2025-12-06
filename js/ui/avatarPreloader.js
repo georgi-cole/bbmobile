@@ -12,6 +12,7 @@
   let isPreloading = false;
   let progressCallbacks = [];
   let houseguestsList = [];
+  let progressCallbacksCleared = false; // Track if callbacks have been cleared for current preload
 
   /**
    * Initialize the preloader with houseguests list
@@ -57,6 +58,7 @@
 
     console.info(`[AvatarPreloader] Starting preload for ${houseguestsList.length} houseguests`);
     isPreloading = true;
+    progressCallbacksCleared = false;
 
     // Emit start event
     if (g.bbGameBus && typeof g.bbGameBus.emit === 'function') {
@@ -66,7 +68,7 @@
     // Use existing preloadAvatars function if available
     const preloadFn = g.preloadAvatars || window.preloadAvatars;
     
-    if (!preloadFn) {
+    if (!preloadFn || typeof preloadFn !== 'function') {
       console.warn('[AvatarPreloader] preloadAvatars function not available, using fallback');
       preloadPromise = fallbackPreload();
       return preloadPromise;
@@ -97,6 +99,9 @@
       
       console.info('[AvatarPreloader] Preload complete:', result);
       
+      // Clear progress callbacks to prevent accumulation
+      clearProgressCallbacks();
+      
       // Emit done event
       if (g.bbGameBus && typeof g.bbGameBus.emit === 'function') {
         g.bbGameBus.emit('avatars:preload:done', result);
@@ -108,6 +113,9 @@
       console.error('[AvatarPreloader] Preload error:', err);
       preloadResult = { loaded: 0, total: houseguestsList.length, error: err.message };
       isPreloading = false;
+      
+      // Clear progress callbacks even on error
+      clearProgressCallbacks();
       
       // Emit error event
       if (g.bbGameBus && typeof g.bbGameBus.emit === 'function') {
@@ -140,11 +148,18 @@
       // Simple parallel image loading
       const promises = houseguestsList.map(houseguest => {
         return new Promise((resolveImg) => {
-          // Resolve avatar URL
+          // Resolve avatar URL using same logic as main preloader
           let url = null;
           if (g.resolveAvatar && typeof g.resolveAvatar === 'function') {
-            url = g.resolveAvatar(houseguest);
-          } else {
+            try {
+              url = g.resolveAvatar(houseguest);
+            } catch (e) {
+              console.warn('[AvatarPreloader] resolveAvatar failed for', houseguest.name, e);
+            }
+          }
+          
+          // Fallback to name-based URL if resolveAvatar not available or failed
+          if (!url) {
             url = `avatars/${houseguest.name}.png`;
           }
 
@@ -194,11 +209,26 @@
 
   /**
    * Register a progress callback
+   * Callbacks are automatically cleared when preload completes
    * @param {Function} callback - Callback function(loaded, total)
    */
   function onProgress(callback) {
     if (typeof callback === 'function') {
-      progressCallbacks.push(callback);
+      // Avoid duplicate registrations
+      if (!progressCallbacks.includes(callback)) {
+        progressCallbacks.push(callback);
+      }
+    }
+  }
+
+  /**
+   * Clear all progress callbacks
+   * Called automatically when preload completes
+   */
+  function clearProgressCallbacks() {
+    if (!progressCallbacksCleared) {
+      progressCallbacks = [];
+      progressCallbacksCleared = true;
     }
   }
 
@@ -249,6 +279,7 @@
     preloadResult = null;
     isPreloading = false;
     progressCallbacks = [];
+    progressCallbacksCleared = false;
     console.info('[AvatarPreloader] Reset complete');
   }
 

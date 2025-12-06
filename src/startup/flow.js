@@ -292,12 +292,17 @@
 
         // Initialize and start preload
         AvatarPreloader.init(houseguests);
-        AvatarPreloader.onProgress((loaded, total) => {
-          // Log milestone progress
-          if (loaded === total || loaded % 5 === 0) {
-            console.info(`[StartupFlow] Avatar warm-up progress: ${loaded}/${total}`);
-          }
-        });
+        
+        // Only register progress callback if not already done
+        // The callback will be cleared automatically when preload completes
+        if (!AvatarPreloader.isDone()) {
+          AvatarPreloader.onProgress((loaded, total) => {
+            // Log milestone progress
+            if (loaded === total || loaded % 5 === 0) {
+              console.info(`[StartupFlow] Avatar warm-up progress: ${loaded}/${total}`);
+            }
+          });
+        }
         
         const result = await AvatarPreloader.start();
         console.info('[StartupFlow] Avatar warm-up complete:', result);
@@ -1103,10 +1108,15 @@
         if (LoadingOverlay && typeof LoadingOverlay.showOverlay === 'function') {
           LoadingOverlay.showOverlay();
           
-          // Update progress from preloader
-          AvatarPreloader.onProgress((loaded, total) => {
-            LoadingOverlay.updateProgress({ loaded, total });
-          });
+          // Register progress callback once
+          // It will be cleared automatically when preload completes
+          const progressCallback = (loaded, total) => {
+            if (LoadingOverlay && typeof LoadingOverlay.updateProgress === 'function') {
+              LoadingOverlay.updateProgress({ loaded, total });
+            }
+          };
+          
+          AvatarPreloader.onProgress(progressCallback);
         }
         
         // Wait for preload to finish
