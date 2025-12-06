@@ -342,6 +342,7 @@ const ChainReactionMinigame = (() => {
 })(window);
 
 // Register module in global MinigameModules namespace for runtime resolution
+// The registry.js render() function checks window.MinigameModules first, then falls back to window.MiniGames
 (function(g){
   'use strict';
   
@@ -350,31 +351,19 @@ const ChainReactionMinigame = (() => {
     g.MinigameModules = {};
   }
   
-  // Register the ChainReactionMinigame module under 'chainReaction' key
+  // Register ChainReactionMinigame under 'chainReaction' key
+  // This provides the new API (init, start, stop, setRounds, setCellSize)
   g.MinigameModules.chainReaction = ChainReactionMinigame;
-  
-  // Also register in window.game.MinigameModules if window.game exists
-  if(g.game && typeof g.game === 'object'){
-    if(typeof g.game.MinigameModules === 'undefined'){
-      g.game.MinigameModules = {};
-    }
-    g.game.MinigameModules.chainReaction = ChainReactionMinigame;
-  }
-  
-  // Log registration only in debug environments
-  if(g.game?.cfg?.debugMode){
-    console.info('[ChainReaction] Module registered globally');
-  }
   
 })(window);
 
 // CommonJS export for Node.js test environments (optional - not used in browser)
-// NOTE: The browser uses window.MinigameModules.chainReaction registered above
+// NOTE: The browser uses window.MinigameModules.chainReaction and window.MiniGames.chainReaction registered above
 /* eslint-disable no-undef */
 try {
   if(typeof module !== 'undefined' && typeof exports !== 'undefined'){
-    // For Node.js testing, export the registered module
-    module.exports = typeof window !== 'undefined' ? window.MinigameModules.chainReaction : ChainReactionMinigame;
+    // For Node.js testing, export the module directly
+    module.exports = ChainReactionMinigame;
   }
 } catch(e) {
   // Silently fail - CommonJS not available (browser environment)
