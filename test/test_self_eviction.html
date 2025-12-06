@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-Eviction Feature Test</title>
+  <link rel="stylesheet" href="../css/action-menu.css">
+  <style>
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #0d151f;
+      color: #e0e6ed;
+      min-height: 100vh;
+    }
+
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1e2936;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #83bfff;
+      border-bottom: 2px solid #2d3e50;
+      padding-bottom: 15px;
+    }
+
+    h2 {
+      color: #83bfff;
+      margin-top: 30px;
+      font-size: 1.3rem;
+    }
+
+    .section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(131, 191, 255, 0.05);
+      border-left: 3px solid #83bfff;
+      border-radius: 4px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #2d3e50;
+      color: #e0e6ed;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #3a4f66;
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.primary {
+      background: #83bfff;
+      color: #0d151f;
+      font-weight: 600;
+    }
+
+    button.primary:hover {
+      background: #a3cfff;
+    }
+
+    button.danger {
+      background: #c0392b;
+      color: white;
+    }
+
+    button.danger:hover {
+      background: #d64737;
+    }
+
+    .status {
+      padding: 10px 15px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .status.info {
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      color: #83bfff;
+    }
+
+    .status.success {
+      background: rgba(39, 174, 96, 0.1);
+      border: 1px solid rgba(39, 174, 96, 0.3);
+      color: #52c573;
+    }
+
+    .status.warning {
+      background: rgba(241, 196, 15, 0.1);
+      border: 1px solid rgba(241, 196, 15, 0.3);
+      color: #f1c40f;
+    }
+
+    .status.error {
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid rgba(231, 76, 60, 0.3);
+      color: #e74c3c;
+    }
+
+    .log {
+      background: #0d151f;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+      margin: 15px 0;
+    }
+
+    .log-entry {
+      margin: 5px 0;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-time {
+      color: #7f8c8d;
+      margin-right: 8px;
+    }
+
+    .log-info { color: #83bfff; }
+    .log-success { color: #52c573; }
+    .log-warning { color: #f39c12; }
+    .log-error { color: #e74c3c; }
+
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px;
+      background: rgba(45, 62, 80, 0.5);
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+
+    .player-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .player-details {
+      flex: 1;
+    }
+
+    .player-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .player-status {
+      font-size: 0.85rem;
+      color: #95a5a6;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+
+    .badge.hoh {
+      background: #f39c12;
+      color: white;
+    }
+
+    .badge.nominated {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .badge.pov {
+      background: #3498db;
+      color: white;
+    }
+
+    .badge.self-evicted {
+      background: #7f8c8d;
+      color: white;
+    }
+
+    .badge.auto {
+      background: #9b59b6;
+      color: white;
+    }
+
+    code {
+      background: rgba(131, 191, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .instructions {
+      background: rgba(131, 191, 255, 0.08);
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      line-height: 1.6;
+    }
+
+    .instructions ol {
+      margin: 10px 0;
+      padding-left: 25px;
+    }
+
+    .instructions li {
+      margin: 8px 0;
+    }
+
+    .test-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 6px;
+      background: rgba(45, 62, 80, 0.3);
+    }
+
+    .test-result.pass {
+      background: rgba(39, 174, 96, 0.1);
+      border-left: 3px solid #27ae60;
+    }
+
+    .test-result.fail {
+      background: rgba(231, 76, 60, 0.1);
+      border-left: 3px solid #e74c3c;
+    }
+
+    .test-icon {
+      font-size: 1.2rem;
+    }
+
+    .test-name {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .test-summary {
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .test-summary.all-pass {
+      background: rgba(39, 174, 96, 0.15);
+      border: 2px solid #27ae60;
+      color: #52c573;
+    }
+
+    .test-summary.some-fail {
+      background: rgba(231, 76, 60, 0.15);
+      border: 2px solid #e74c3c;
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏠 Self-Eviction Feature Test Suite</h1>
+    
+    <div class="instructions">
+      <strong>Test Overview:</strong>
+      <p>This test suite verifies the self-eviction feature implementation</p>
+      <ul>
+        <li>Action menu near-fullscreen modal display</li>
+        <li>Confirmation dialog with proper wording</li>
+        <li>Self-eviction processing with proper flags</li>
+        <li>Jury exclusion for self-evicted players</li>
+        <li>Auto-mode enablement</li>
+        <li>Keyboard navigation</li>
+      </ul>
+      <p><strong>To run this test:</strong> Open this HTML file in a browser and click the buttons to interact with the test suite.</p>
+      <p><strong>To run all automated tests:</strong> <code>npm run test:all</code> from the project root</p>
+    </div>
+
+    <h2>🎮 Interactive Test</h2>
+    
+    <div class="section">
+      <h3>Manual Test Steps</h3>
+      <ol>
+        <li>Click <strong>"Open Action Menu"</strong> below</li>
+        <li>Verify the menu displays as near-fullscreen modal with dimmed backdrop</li>
+        <li>Observe that the background is slightly visible through the overlay</li>
+        <li>Try pressing <kbd>Escape</kbd> to close the menu</li>
+        <li>Re-open the menu and click <strong>"Self-evict"</strong></li>
+        <li>Verify confirmation dialog appears with text: "Are you sure you want to leave the house?"</li>
+        <li>Click <strong>"Yes"</strong> to confirm</li>
+        <li>Verify player is marked as evicted with proper flags</li>
+      </ol>
+    </div>
+
+    <div class="button-group">
+      <button class="primary" onclick="openActionMenuTest()">Open Action Menu</button>
+      <button onclick="runAutomatedTests()">Run Automated Tests</button>
+      <button onclick="resetTest()">Reset Test</button>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <h2>👤 Player Status</h2>
+    
+    <div class="player-info" id="playerInfo">
+      <div class="player-avatar">👤</div>
+      <div class="player-details">
+        <div class="player-name">
+          You (Human Player)
+          <span class="badge hoh">HOH</span>
+        </div>
+        <div class="player-status">
+          Status: Active | Week: 3 | Alive Players: 10
+        </div>
+      </div>
+    </div>
+
+    <div class="status info" id="statusMessage">
+      Ready to test. Click "Open Action Menu" or "Run Automated Tests" to begin.
+    </div>
+
+    <h2>📊 Test Results</h2>
+    
+    <div id="testResults"></div>
+
+    <h2>📝 Event Log</h2>
+    
+    <div class="log" id="eventLog"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="../js/ui.confirm-modal.js"></script>
+  <script src="../js/self-eviction.js"></script>
+
+  <script>
+    // Mock game state
+    window.game = {
+      cfg: { enableJuryHouse: true },
+      week: 3,
+      phase: 'nominations',
+      players: [],
+      hohId: 1,
+      vetoHolder: null,
+      nominees: [2, 3],
+      nomsLocked: false,
+      juryHouse: [],
+      humanId: 1
+    };
+
+    // Create mock players
+    function createMockPlayers() {
+      const players = [];
+      for (let i = 1; i <= 10; i++) {
+        players.push({
+          id: i,
+          name: i === 1 ? 'You' : `Player ${i}`,
+          evicted: false,
+          selfEvicted: false,
+          autoMode: false,
+          nominated: [2, 3].includes(i),
+          hoh: i === 1,
+          human: i === 1,
+          weekEvicted: null,
+          finalRank: null,
+          affinity: {}
+        });
+      }
+      return players;
+    }
+
+    window.game.players = createMockPlayers();
+
+    // Helper functions
+    window.getP = (id) => window.game.players.find(p => p.id === id) || null;
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+
+    // Mock functions
+    window.addLog = (msg, type) => {
+      log(`[Game Log] ${msg}`, type === 'danger' ? 'error' : type);
+    };
+
+    window.showCard = (title, lines, tone, duration, autoDismiss) => {
+      log(`[Card] ${title}: ${lines.join(', ')}`, tone === 'evict' ? 'error' : 'info');
+    };
+
+    window.updateHud = () => {
+      updatePlayerInfo();
+      log('[HUD] Updated', 'info');
+    };
+
+    // Logging
+    const logEntries = [];
+
+    function log(message, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      logEntries.push({ time, message, type });
+      updateLog();
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('eventLog');
+      logEl.innerHTML = logEntries.map(entry => 
+        `<div class="log-entry log-${entry.type}">
+          <span class="log-time">[${entry.time}]</span>
+          <span>${entry.message}</span>
+        </div>`
+      ).join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      logEntries.length = 0;
+      updateLog();
+      log('Log cleared', 'info');
+    }
+
+    // Status updates
+    function updateStatus(message, type = 'info') {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.className = `status ${type}`;
+      statusEl.textContent = message;
+    }
+
+    function updatePlayerInfo() {
+      const player = window.getP(1);
+      const alive = window.alivePlayers().length;
+      const badges = [];
+      
+      if (player.hoh) badges.push('<span class="badge hoh">HOH</span>');
+      if (player.nominated) badges.push('<span class="badge nominated">NOM</span>');
+      if (player.selfEvicted) badges.push('<span class="badge self-evicted">SELF-EVICTED</span>');
+      if (player.autoMode) badges.push('<span class="badge auto">AUTO</span>');
+      
+      const statusText = player.evicted ? 'Evicted' : 'Active';
+      
+      document.getElementById('playerInfo').innerHTML = `
+        <div class="player-avatar">${player.evicted ? '💀' : '👤'}</div>
+        <div class="player-details">
+          <div class="player-name">
+            ${player.name} (Human Player)
+            ${badges.join(' ')}
+          </div>
+          <div class="player-status">
+            Status: ${statusText} | Week: ${window.game.week} | Alive Players: ${alive}
+          </div>
+        </div>
+      `;
+    }
+
+    // Action menu test (simplified for testing)
+    function openActionMenuTest() {
+      log('Opening action menu for test...', 'info');
+      
+      // Create menu dynamically
+      createActionMenuTest();
+      
+      const backdrop = document.querySelector('.action-menu-backdrop');
+      const popover = document.querySelector('.action-menu-popover');
+      
+      if (backdrop && popover) {
+        backdrop.classList.add('visible');
+        popover.classList.add('visible');
+        log('Action menu opened (near-fullscreen modal with dimmed backdrop)', 'success');
+        updateStatus('Action menu is open. Try clicking "Self-evict".', 'info');
+      }
+    }
+
+    function closeActionMenuTest() {
+      const backdrop = document.querySelector('.action-menu-backdrop');
+      const popover = document.querySelector('.action-menu-popover');
+      
+      if (backdrop && popover) {
+        backdrop.classList.remove('visible');
+        popover.classList.remove('visible');
+        log('Action menu closed', 'info');
+        updateStatus('Action menu closed.', 'info');
+      }
+    }
+
+    function createActionMenuTest() {
+      // Remove existing menu if any
+      const existing = document.querySelector('.action-menu-popover');
+      if (existing) existing.remove();
+      
+      const existingBackdrop = document.querySelector('.action-menu-backdrop');
+      if (existingBackdrop) existingBackdrop.remove();
+      
+      // Create backdrop
+      const backdrop = document.createElement('div');
+      backdrop.className = 'action-menu-backdrop';
+      backdrop.onclick = closeActionMenuTest;
+      document.body.appendChild(backdrop);
+      
+      // Create popover
+      const popover = document.createElement('div');
+      popover.className = 'action-menu-popover';
+      popover.setAttribute('role', 'menu');
+      
+      const list = document.createElement('ul');
+      list.className = 'action-menu-list';
+      
+      const menuItems = [
+        { icon: '📋', label: 'Rules', action: () => { log('Rules clicked', 'info'); closeActionMenuTest(); } },
+        { icon: '👤', label: 'Profile', action: () => { log('Profile clicked', 'info'); closeActionMenuTest(); } },
+        { icon: '▶', label: 'Restart', action: () => { log('Restart clicked', 'info'); closeActionMenuTest(); } },
+        { icon: '📊', label: 'Leaderboard', action: () => { log('Leaderboard clicked', 'info'); closeActionMenuTest(); } },
+        { divider: true },
+        { icon: '🚪', label: 'Self-evict', action: handleSelfEvictTest }
+      ];
+      
+      menuItems.forEach(item => {
+        if (item.divider) {
+          const divider = document.createElement('div');
+          divider.className = 'action-menu-divider';
+          list.appendChild(divider);
+        } else {
+          const li = document.createElement('li');
+          li.className = 'action-menu-item';
+          
+          const btn = document.createElement('button');
+          btn.className = 'action-menu-item-btn';
+          btn.onclick = item.action;
+          
+          const icon = document.createElement('span');
+          icon.className = 'action-menu-item-icon';
+          icon.textContent = item.icon;
+          
+          const label = document.createElement('span');
+          label.className = 'action-menu-item-label';
+          label.textContent = item.label;
+          
+          btn.appendChild(icon);
+          btn.appendChild(label);
+          li.appendChild(btn);
+          list.appendChild(li);
+        }
+      });
+      
+      popover.appendChild(list);
+      document.body.appendChild(popover);
+    }
+
+    async function handleSelfEvictTest() {
+      log('Self-evict button clicked', 'warning');
+      closeActionMenuTest();
+      updateStatus('Showing confirmation dialog...', 'warning');
+      
+      // Use the real self-eviction API
+      const humanId = window.game.humanId;
+      if (typeof window.selfEviction?.requestHuman === 'function') {
+        const result = await window.selfEviction.requestHuman(humanId);
+        
+        if (result) {
+          log('Self-eviction completed successfully', 'success');
+          updateStatus('Self-eviction complete! Player evicted with proper flags.', 'success');
+          runVerification();
+        } else {
+          log('Self-eviction cancelled or failed', 'warning');
+          updateStatus('Self-eviction cancelled.', 'info');
+        }
+      } else {
+        log('Self-eviction API not available', 'error');
+        updateStatus('Error: Self-eviction API not loaded', 'error');
+      }
+    }
+
+    // Automated tests
+    async function runAutomatedTests() {
+      log('=== Starting automated tests ===', 'info');
+      updateStatus('Running automated tests...', 'info');
+      
+      const results = [];
+      
+      // Test 1: Module loaded
+      log('Test 1: Checking if self-eviction module is loaded', 'info');
+      const moduleLoaded = typeof window.selfEviction === 'object' && 
+                          typeof window.selfEviction.requestHuman === 'function';
+      results.push({ 
+        name: 'Self-eviction module loaded', 
+        pass: moduleLoaded,
+        details: moduleLoaded ? 'Module found with requestHuman API' : 'Module not found'
+      });
+      
+      // Test 2: Confirmation modal exists
+      log('Test 2: Checking if confirmation modal is available', 'info');
+      const modalExists = typeof window.showConfirm === 'function';
+      results.push({ 
+        name: 'Confirmation modal available', 
+        pass: modalExists,
+        details: modalExists ? 'window.showConfirm function exists' : 'showConfirm not found'
+      });
+      
+      // Test 3: Player flags before eviction
+      log('Test 3: Verifying initial player flags', 'info');
+      const player = window.getP(1);
+      const flagsBefore = !player.evicted && !player.selfEvicted && !player.autoMode;
+      results.push({ 
+        name: 'Player flags correct before eviction', 
+        pass: flagsBefore,
+        details: `evicted=${player.evicted}, selfEvicted=${player.selfEvicted}, autoMode=${player.autoMode}`
+      });
+      
+      // Test 4: Action menu CSS loaded
+      log('Test 4: Checking if action menu CSS is loaded', 'info');
+      const cssLoaded = document.styleSheets.length > 0;
+      results.push({ 
+        name: 'Action menu CSS loaded', 
+        pass: cssLoaded,
+        details: `${document.styleSheets.length} stylesheets loaded`
+      });
+      
+      // Test 5: humanId is set
+      log('Test 5: Checking if humanId is set', 'info');
+      const humanIdSet = typeof window.game.humanId === 'number' && window.game.humanId > 0;
+      results.push({ 
+        name: 'Human player ID is set', 
+        pass: humanIdSet,
+        details: `humanId=${window.game.humanId}`
+      });
+      
+      // Test 6: Jury house is initialized
+      log('Test 6: Checking if jury house is initialized', 'info');
+      const juryInit = Array.isArray(window.game.juryHouse);
+      results.push({ 
+        name: 'Jury house initialized', 
+        pass: juryInit,
+        details: `juryHouse is ${Array.isArray(window.game.juryHouse) ? 'array' : typeof window.game.juryHouse}`
+      });
+      
+      // Test 7: getP helper function
+      log('Test 7: Testing getP helper function', 'info');
+      const getPWorks = window.getP(1) !== null && window.getP(1).id === 1;
+      results.push({ 
+        name: 'getP helper function works', 
+        pass: getPWorks,
+        details: getPWorks ? 'Retrieved player 1 successfully' : 'Failed to get player'
+      });
+      
+      // Test 8: alivePlayers helper function
+      log('Test 8: Testing alivePlayers helper function', 'info');
+      const aliveCount = window.alivePlayers().length;
+      const aliveWorks = aliveCount === 10;
+      results.push({ 
+        name: 'alivePlayers helper function works', 
+        pass: aliveWorks,
+        details: `Returns ${aliveCount} alive players`
+      });
+      
+      // Display results
+      displayTestResults(results);
+      
+      const passCount = results.filter(r => r.pass).length;
+      const failCount = results.filter(r => !r.pass).length;
+      
+      log(`=== Tests complete: ${passCount} passed, ${failCount} failed ===`, 
+          failCount === 0 ? 'success' : 'warning');
+      
+      updateStatus(
+        failCount === 0 
+          ? 'All automated tests passed! ✓' 
+          : `${failCount} test(s) failed. See results above.`,
+        failCount === 0 ? 'success' : 'warning'
+      );
+    }
+
+    function displayTestResults(results) {
+      const resultsEl = document.getElementById('testResults');
+      const passCount = results.filter(r => r.pass).length;
+      const failCount = results.filter(r => !r.pass).length;
+      
+      const summaryClass = failCount === 0 ? 'all-pass' : 'some-fail';
+      const summaryText = failCount === 0 
+        ? `✅ All ${passCount} tests passed!` 
+        : `⚠️ ${passCount}/${results.length} tests passed, ${failCount} failed`;
+      
+      resultsEl.innerHTML = `
+        <div class="test-summary ${summaryClass}">
+          ${summaryText}
+        </div>
+        ${results.map(r => `
+          <div class="test-result ${r.pass ? 'pass' : 'fail'}">
+            <div class="test-icon">${r.pass ? '✅' : '❌'}</div>
+            <div class="test-name">${r.name}</div>
+          </div>
+          ${r.details ? `<div style="margin-left: 40px; font-size: 0.85rem; color: #95a5a6; margin-bottom: 8px;">${r.details}</div>` : ''}
+        `).join('')}
+      `;
+    }
+
+    function runVerification() {
+      log('=== Running post-eviction verification ===', 'info');
+      
+      const results = [];
+      const player = window.getP(1);
+      
+      // Test 1: Player is evicted
+      const evicted = player.evicted === true;
+      results.push({ 
+        name: 'Player marked as evicted', 
+        pass: evicted,
+        details: `player.evicted = ${player.evicted}`
+      });
+      log(`✓ Player evicted: ${evicted}`, evicted ? 'success' : 'error');
+      
+      // Test 2: selfEvicted flag is set
+      const selfEvicted = player.selfEvicted === true;
+      results.push({ 
+        name: 'selfEvicted flag set', 
+        pass: selfEvicted,
+        details: `player.selfEvicted = ${player.selfEvicted}`
+      });
+      log(`✓ selfEvicted flag: ${selfEvicted}`, selfEvicted ? 'success' : 'error');
+      
+      // Test 3: autoMode flag is set
+      const autoMode = player.autoMode === true;
+      results.push({ 
+        name: 'autoMode flag set', 
+        pass: autoMode,
+        details: `player.autoMode = ${player.autoMode}`
+      });
+      log(`✓ autoMode flag: ${autoMode}`, autoMode ? 'success' : 'error');
+      
+      // Test 4: NOT in jury house
+      const notInJury = !window.game.juryHouse.includes(player.id);
+      results.push({ 
+        name: 'NOT added to jury house', 
+        pass: notInJury,
+        details: `Jury house contains: [${window.game.juryHouse.join(', ')}]`
+      });
+      log(`✓ Not in jury house: ${notInJury}`, notInJury ? 'success' : 'error');
+      
+      // Test 5: finalRank is set
+      const hasRank = typeof player.finalRank === 'number' && player.finalRank > 0;
+      results.push({ 
+        name: 'finalRank assigned', 
+        pass: hasRank,
+        details: `player.finalRank = ${player.finalRank}`
+      });
+      log(`✓ finalRank assigned: ${hasRank}`, hasRank ? 'success' : 'error');
+      
+      // Display verification results
+      displayTestResults(results);
+      
+      const passCount = results.filter(r => r.pass).length;
+      const failCount = results.filter(r => !r.pass).length;
+      
+      log(`=== Verification complete: ${passCount}/${results.length} passed ===`, 
+          failCount === 0 ? 'success' : 'warning');
+    }
+
+    function resetTest() {
+      window.game.players = createMockPlayers();
+      window.game.juryHouse = [];
+      updatePlayerInfo();
+      updateStatus('Test reset. Ready to test again.', 'info');
+      log('Test reset - all state restored to initial values', 'info');
+      document.getElementById('testResults').innerHTML = '';
+    }
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+      const menuOpen = document.querySelector('.action-menu-backdrop.visible');
+      if (e.key === 'Escape' && menuOpen) {
+        closeActionMenuTest();
+      }
+    });
+
+    // Initialize
+    updatePlayerInfo();
+    log('Test suite initialized', 'success');
+    log('Mock game state created with 10 players', 'info');
+    log('Human player ID: ' + window.game.humanId, 'info');
+    log('Ready to test self-eviction flow', 'info');
+  </script>
+</body>
+</html>

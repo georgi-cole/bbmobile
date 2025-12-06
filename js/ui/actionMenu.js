@@ -370,8 +370,16 @@
       // Use requestAnimationFrame for better responsiveness
       requestAnimationFrame(() => {
         // Trigger self-eviction functionality
+        const game = global.game || {};
+        const humanId = game.humanId;
+        
+        if (!humanId) {
+          console.error('[ActionMenu] No human player ID found');
+          return;
+        }
+        
         if (typeof global.selfEviction?.requestHuman === 'function') {
-          global.selfEviction.requestHuman();
+          global.selfEviction.requestHuman(humanId);
         } else {
           console.warn('[ActionMenu] selfEviction.requestHuman not available');
         }
