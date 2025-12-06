@@ -91,11 +91,11 @@
     // Detect modals that were opened (new in currentModalIds, not in previousModals)
     currentModalIds.forEach(modalId => {
       if (!previousModals.has(modalId)) {
-        // Modal opened - notify GlobalPauseController (defensive check)
-        if (g.game && g.game.pauseController && typeof g.game.pauseController.open === 'function') {
+        // Modal opened - notify PauseManager (defensive check)
+        if (g.game && g.game.pauseManager && typeof g.game.pauseManager.open === 'function') {
           console.info('[HubModalBridge] Modal opened, pausing game:', modalId);
           try {
-            g.game.pauseController.open(modalId);
+            g.game.pauseManager.open(modalId);
           } catch (err) {
             console.error('[HubModalBridge] Failed to pause for modal:', modalId, err);
           }
@@ -106,11 +106,11 @@
     // Detect modals that were closed (in previousModals, not in currentModalIds)
     previousModals.forEach(modalId => {
       if (!currentModalIds.has(modalId)) {
-        // Modal closed - notify GlobalPauseController (defensive check)
-        if (g.game && g.game.pauseController && typeof g.game.pauseController.close === 'function') {
+        // Modal closed - notify PauseManager (defensive check)
+        if (g.game && g.game.pauseManager && typeof g.game.pauseManager.close === 'function') {
           console.info('[HubModalBridge] Modal closed, resuming game:', modalId);
           try {
-            g.game.pauseController.close(modalId);
+            g.game.pauseManager.close(modalId);
           } catch (err) {
             console.error('[HubModalBridge] Failed to resume for modal:', modalId, err);
           }
