@@ -191,8 +191,11 @@ If a nominee self-evicts during or after voting has started:
 Run the test suite:
 
 ```bash
-# View test file in browser
-open test_self_eviction_modal.html
+# Open test file in browser
+open test/test_self_eviction.html
+
+# Or run all automated tests
+npm run test:all
 ```
 
 Test coverage includes:
@@ -315,7 +318,8 @@ Potential improvements for future versions:
 - **Quick Reference**: `/SELF_EVICTION_QUICKREF.md`
 - **Test Files**: 
   - `/test_self_eviction.html` - Original test suite
-  - `/test_self_eviction_modal.html` - Modal-focused tests
+  - `/test_self_eviction_modal.html` - Modal-focused tests (existing)
+  - `/test/test_self_eviction.html` - Comprehensive test suite (new)
 - **Related Documentation**:
   - `/docs/eviction-modal.md` - Eviction modal system
   - `/EVICTION_FLOW_DIAGRAM.md` - Overall eviction flow
