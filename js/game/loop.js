@@ -1,5 +1,5 @@
 // Game loop - handles animation frame ticking
-// Checks for global pause state via window.game.pauseController
+// Checks for global pause state via window.game.pauseManager
 
 let lastTs = performance.now();
 function tick(ts) {
@@ -7,7 +7,7 @@ function tick(ts) {
   lastTs = ts;
 
   // Check if game is paused by modal system
-  if (window.game?.pauseController?.isPaused()) {
+  if (window.game?.pauseManager?.isPaused()) {
     requestAnimationFrame(tick);
     return;
   }

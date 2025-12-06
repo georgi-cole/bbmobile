@@ -2299,7 +2299,7 @@ header.innerHTML = `
 
     function tick(){
       // Skip ticking if game is globally paused (modals open)
-      if(g.game?.pauseController?.isPaused()){
+      if(g.game?.pauseManager?.isPaused()){
         return;
       }
       

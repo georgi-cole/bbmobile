@@ -526,9 +526,9 @@
     if(Config.ensureGameCfg) Config.ensureGameCfg();
     
     // Pause game when settings modal opens (defensive check)
-    if(global.game && global.game.pauseController && typeof global.game.pauseController.open === 'function'){
+    if(global.game && global.game.pauseManager && typeof global.game.pauseManager.open === 'function'){
       try{
-        global.game.pauseController.open('modal:settings');
+        global.game.pauseManager.open('modal:settings');
         console.info('[settings/render] Paused game for settings modal');
       }catch(err){
         console.error('[settings/render] Failed to pause game for settings modal:', err);
@@ -609,9 +609,9 @@
     if(dim) dim.style.display = 'none';
     
     // Resume game when settings modal closes (defensive check)
-    if(global.game && global.game.pauseController && typeof global.game.pauseController.close === 'function'){
+    if(global.game && global.game.pauseManager && typeof global.game.pauseManager.close === 'function'){
       try{
-        global.game.pauseController.close('modal:settings');
+        global.game.pauseManager.close('modal:settings');
         console.info('[settings/render] Resumed game after settings modal closed');
       }catch(err){
         console.error('[settings/render] Failed to resume game after settings modal:', err);

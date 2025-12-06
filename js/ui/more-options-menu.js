@@ -14,14 +14,14 @@ export const MoreOptionsMenu = (() => {
   }
 
   function onOpen() { 
-    if (window.game?.pauseController?.open) {
-      window.game.pauseController.open(id);
+    if (window.game?.pauseManager?.open) {
+      window.game.pauseManager.open(id);
     }
   }
   
   function onClose() { 
-    if (window.game?.pauseController?.close) {
-      window.game.pauseController.close(id);
+    if (window.game?.pauseManager?.close) {
+      window.game.pauseManager.close(id);
     }
   }
 
@@ -32,15 +32,15 @@ export const MoreOptionsMenu = (() => {
 
   function open() { 
     if (el) el.classList.add('visible'); 
-    if (window.game?.pauseController?.open) {
-      window.game.pauseController.open(id);
+    if (window.game?.pauseManager?.open) {
+      window.game.pauseManager.open(id);
     }
   }
   
   function close() { 
     if (el) el.classList.remove('visible'); 
-    if (window.game?.pauseController?.close) {
-      window.game.pauseController.close(id);
+    if (window.game?.pauseManager?.close) {
+      window.game.pauseManager.close(id);
     }
   }
 
