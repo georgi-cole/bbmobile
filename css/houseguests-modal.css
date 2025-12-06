@@ -28,22 +28,23 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(24, 30, 45, 0.6);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   cursor: pointer;
 }
 
-/* ===== Modal Content (Bottom Sheet) ===== */
+/* ===== Modal Content (Full Screen) ===== */
 .houseguests-modal__content {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
-  max-height: 85vh;
+  bottom: 0;
+  height: 100vh;
   background: linear-gradient(180deg, #1a1f2e 0%, #0f1419 100%);
-  border-radius: 24px 24px 0 0;
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  border-radius: 24px 24px 24px 24px;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   transform: translateY(100%);
@@ -366,16 +367,18 @@
 
 /* ===== Responsive Adjustments ===== */
 
-/* Larger screens */
+/* Larger screens - centered modal with margins */
 @media (min-width: 768px) {
   .houseguests-modal__content {
+    top: 5vh;
     left: 50%;
     right: auto;
+    bottom: 5vh;
+    height: auto;
     transform: translate(-50%, 100%);
     max-width: 600px;
+    max-height: 90vh;
     border-radius: 24px;
-    bottom: 5vh;
-    max-height: 80vh;
   }
   
   .houseguests-modal--visible .houseguests-modal__content {
@@ -422,10 +425,6 @@
 
 /* Landscape mobile orientation */
 @media (max-height: 600px) and (orientation: landscape) {
-  .houseguests-modal__content {
-    max-height: 92vh;
-  }
-  
   .houseguests-detail__avatar {
     width: 80px;
     height: 80px;
