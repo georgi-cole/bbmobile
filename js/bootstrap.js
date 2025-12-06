@@ -759,6 +759,16 @@
             buttonSelector: '#btnDiaryRoom'
           });
           
+          // Initialize Social Simulator
+          if (typeof global.SocialSimulator !== 'undefined') {
+            global.SocialSimulator.init({
+              enabled: true,
+              defaultEnergy: 5,
+              skipLocalPlayer: false
+            });
+            console.info('[Bootstrap] Social Simulator initialized');
+          }
+          
           // Wire up dr:focus handler to scroll/highlight entries
           const bus = global.bbGameBus || global.game?.bus;
           if (bus && typeof bus.on === 'function') {

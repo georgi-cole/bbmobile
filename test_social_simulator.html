@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Simulator Test</title>
+  <link rel="stylesheet" href="css/dr/diary.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    h1 { color: #38bdf8; }
+    h2 { color: #60a5fa; margin-top: 30px; }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    button {
+      padding: 10px 16px;
+      margin: 5px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #e2e8f0;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #334155;
+    }
+    button.primary {
+      background: #3b82f6;
+      border-color: #60a5fa;
+    }
+    button.primary:hover {
+      background: #2563eb;
+    }
+    .dr-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      background: #3b82f6;
+      color: white;
+      border: 2px solid #60a5fa;
+      z-index: 1000;
+    }
+    .log-output {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .log-entry.event {
+      color: #60a5fa;
+    }
+    .log-entry.action {
+      color: #34d399;
+    }
+    .log-entry.bond {
+      color: #fbbf24;
+    }
+    .log-entry.summary {
+      color: #c084fc;
+      font-weight: bold;
+    }
+    .log-entry.error {
+      color: #f87171;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .status.success { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    .status.error { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .player-card {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .player-card .name {
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    .player-card .energy {
+      color: #fbbf24;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .stat-card {
+      background: rgba(59, 130, 246, 0.1);
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #60a5fa;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Phase Simulator Test</h1>
+  
+  <!-- DR Button (should blink on dramatic events) -->
+  <button id="btnDiaryRoom" class="dr-button">🚪 DR</button>
+  
+  <div class="test-section">
+    <h2>Status</h2>
+    <div id="status" class="status">Initializing...</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Controls</h2>
+    <div class="controls">
+      <button class="primary" onclick="runSimulation()">▶️ Run Simulation</button>
+      <button onclick="resetGame()">🔄 Reset Game</button>
+      <button onclick="clearLogs()">🗑️ Clear Logs</button>
+      <button onclick="showConfig()">⚙️ Show Config</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Statistics</h2>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="statActions">0</div>
+        <div class="stat-label">Actions Simulated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statBonds">0</div>
+        <div class="stat-label">Bond Shifts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statDramatic">0</div>
+        <div class="stat-label">Dramatic Events</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Active Players</h2>
+    <div id="playerGrid" class="player-grid">
+      <!-- Player cards will be added here -->
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <div id="eventLog" class="log-output">
+      <div class="log-entry">Waiting for simulation...</div>
+    </div>
+  </div>
+
+  <!-- Load modules -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/dr/diaryTemplates.js"></script>
+  <script src="js/dr/diaryRoomLogger.js"></script>
+  <script src="js/dr/diaryUI.js"></script>
+  <script src="js/dr/socialSimulator.js"></script>
+
+  <script>
+    // Test harness state
+    let stats = {
+      actions: 0,
+      bonds: 0,
+      dramatic: 0
+    };
+
+    // Initialize game context
+    function initGame() {
+      window.game = {
+        cfg: { 
+          humanName: 'You',
+          numPlayers: 8,
+          enableSocialManeuvers: true
+        },
+        me: 1,
+        meId: 1,
+        humanId: 1,
+        week: 2,
+        players: [],
+        relationships: {},
+        drLogs: [],
+        __sm_bankEnergy: new Map()
+      };
+
+      // Set up the event bus
+      window.game.bus = window.bbGameBus;
+
+      // Global name resolver
+      window.safeName = function(id) {
+        const player = window.game.players.find(p => p.id === id);
+        return player ? player.name : `Player ${id}`;
+      };
+
+      // Global player getter
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+
+      // alivePlayers helper
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted);
+      };
+
+      // Create test players
+      const names = ['You', 'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace'];
+      for (let i = 0; i < 8; i++) {
+        const player = {
+          id: i + 1,
+          name: names[i],
+          human: i === 0,
+          evicted: false,
+          persona: {
+            aggr: 0.3 + Math.random() * 0.5,
+            loyalty: 0.3 + Math.random() * 0.5,
+            chaos: 0.2 + Math.random() * 0.4
+          },
+          skill: 0.4 + Math.random() * 0.3,
+          affinity: {}
+        };
+
+        window.game.players.push(player);
+
+        // Initialize energy
+        window.game.__sm_bankEnergy.set(player.id, 5);
+      }
+
+      // Initialize affinities
+      for (const p1 of window.game.players) {
+        for (const p2 of window.game.players) {
+          if (p1.id !== p2.id) {
+            p1.affinity[p2.id] = (Math.random() - 0.5) * 0.4;
+          }
+        }
+      }
+
+      updatePlayerGrid();
+      logEvent('Game initialized with 8 players', 'event');
+      updateStatus('✅ Game initialized', 'success');
+    }
+
+    // Initialize the system
+    function initSystem() {
+      try {
+        // Initialize game
+        initGame();
+
+        // Initialize logger
+        window.DiaryRoomLogger.init();
+        
+        // Initialize UI
+        window.DiaryUI.init({
+          buttonSelector: '#btnDiaryRoom'
+        });
+
+        // Initialize simulator
+        window.SocialSimulator.init({
+          enabled: true,
+          defaultEnergy: 5,
+          skipLocalPlayer: false,
+          maxActionsPerPhase: 30
+        });
+        
+        // Listen for events to display them
+        window.game.bus.on('social.action:result', function(payload) {
+          stats.actions++;
+          const actor = window.safeName(payload.actor);
+          const target = window.safeName(payload.target);
+          const delta = payload.magnitude >= 0 ? `+${payload.magnitude.toFixed(2)}` : payload.magnitude.toFixed(2);
+          logEvent(`${actor} → ${target}: ${payload.actionType} (${payload.success ? '✓' : '✗'}) bond ${delta}`, 'action');
+          
+          if (payload.severity === 'dramatic' || payload.severity === 'high') {
+            stats.dramatic++;
+          }
+          
+          updateStats();
+        });
+
+        window.game.bus.on('bond.shift', function(payload) {
+          stats.bonds++;
+          const p1 = window.safeName(payload.player1);
+          const p2 = window.safeName(payload.player2);
+          const delta = payload.delta >= 0 ? `+${payload.delta.toFixed(2)}` : payload.delta.toFixed(2);
+          logEvent(`Bond shift: ${p1} ↔ ${p2} ${delta}`, 'bond');
+          updateStats();
+        });
+
+        window.game.bus.on('social.phase:end', function(payload) {
+          logEvent(`Phase complete: ${payload.actionCount} actions, ${payload.bondShifts.length} bond shifts`, 'summary');
+          updateStatus(`✅ Simulation complete: ${payload.actionCount} actions`, 'success');
+        });
+        
+        // Listen for DR entries
+        window.game.bus.on('dr:entry', function(entry) {
+          logEvent(`DR Entry [${entry.severity}]: ${entry.text}`, 'event');
+        });
+
+        // Listen for DR alerts
+        window.game.bus.on('dr:alert', function(payload) {
+          logEvent(`🚨 DR Alert [${payload.severity}]: ${payload.entry.text}`, 'event');
+        });
+        
+        // Listen for DR button clicks
+        document.getElementById('btnDiaryRoom').addEventListener('click', function() {
+          updateStatus('DR Button clicked - check console', 'success');
+          logEvent('DR button clicked', 'event');
+        });
+        
+        // Listen for dr:focus events
+        window.game.bus.on('dr:focus', function(payload) {
+          logEvent(`DR Focus requested for entry: ${payload.entryId}`, 'event');
+          // Emit acknowledgment
+          window.game.bus.emit('dr:focus:ack', { entryId: payload.entryId });
+        });
+        
+        updateStatus('✅ System initialized successfully!', 'success');
+      } catch (err) {
+        updateStatus(`❌ Initialization error: ${err.message}`, 'error');
+        logEvent(`Error: ${err.message}`, 'error');
+        console.error(err);
+      }
+    }
+
+    function updateStatus(message, type = '') {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status ' + type;
+    }
+
+    function logEvent(message, type = 'event') {
+      const logOutput = document.getElementById('eventLog');
+      const timestamp = new Date().toLocaleTimeString();
+      
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = `[${timestamp}] ${message}`;
+      
+      logOutput.appendChild(entry);
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    function updateStats() {
+      document.getElementById('statActions').textContent = stats.actions;
+      document.getElementById('statBonds').textContent = stats.bonds;
+      document.getElementById('statDramatic').textContent = stats.dramatic;
+    }
+
+    function updatePlayerGrid() {
+      const grid = document.getElementById('playerGrid');
+      grid.innerHTML = '';
+      
+      window.game.players.forEach(player => {
+        const energy = window.game.__sm_bankEnergy.get(player.id) || 0;
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        card.innerHTML = `
+          <div class="name">${player.name}</div>
+          <div>ID: ${player.id}</div>
+          <div class="energy">⚡ Energy: ${energy}</div>
+          <div>Aggr: ${player.persona.aggr.toFixed(2)}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function runSimulation() {
+      updateStatus('Running simulation...', '');
+      logEvent('=== Starting social phase simulation ===', 'summary');
+      
+      // Reset energy for all players
+      window.game.players.forEach(player => {
+        window.game.__sm_bankEnergy.set(player.id, 5);
+      });
+      updatePlayerGrid();
+      
+      // Emit social phase start event
+      window.game.bus.emit('social.phase:start', {
+        week: window.game.week,
+        source: 'test'
+      });
+    }
+
+    function resetGame() {
+      stats = { actions: 0, bonds: 0, dramatic: 0 };
+      updateStats();
+      initGame();
+      clearLogs();
+      updateStatus('Game reset', 'success');
+    }
+
+    function clearLogs() {
+      document.getElementById('eventLog').innerHTML = '<div class="log-entry">Log cleared...</div>';
+    }
+
+    function showConfig() {
+      const config = window.SocialSimulator.config;
+      const configStr = JSON.stringify(config, null, 2);
+      logEvent('Current configuration:', 'event');
+      logEvent(configStr, 'event');
+      console.log('SocialSimulator config:', config);
+      updateStatus('Config logged to console', 'success');
+    }
+
+    // Initialize on load
+    window.addEventListener('load', initSystem);
+  </script>
+</body>
+</html>
