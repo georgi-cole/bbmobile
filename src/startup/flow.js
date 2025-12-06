@@ -449,6 +449,16 @@
         g.Telemetry.log('startup_show_hub_done', {});
       }
 
+      // CRITICAL: Remove initial blocking overlay now that intro hub is visible
+      // This signals that the app is ready and prevents half-loaded UI from showing
+      console.info('[StartupFlow] Intro hub fully visible, removing initial blocking overlay');
+      if (g.InitialBlockingOverlay && typeof g.InitialBlockingOverlay.remove === 'function') {
+        g.InitialBlockingOverlay.remove();
+      } else {
+        // Fallback: dispatch event for overlay to listen to
+        g.dispatchEvent(new CustomEvent('bb:app-ready'));
+      }
+
       // Play intro hub lobby music if enabled
       if (typeof g.playIntroHubMusic === 'function') {
         const cfg = (g.game && g.game.cfg) || g.cfg || {};

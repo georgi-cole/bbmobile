@@ -4,9 +4,22 @@
 
 /* ===== Main Game Screen Hiding (before Play) ===== */
 /* Hide main game elements until StartupFlow.buildMainScreen() is called */
+/* CRITICAL: Multiple layers of hiding to prevent any flash of unstyled content */
 body:not(.main-screen-built) .wrap,
 body:not(.main-screen-built) .topbar {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Show main game elements only after explicitly built */
+body.main-screen-built .wrap,
+body.main-screen-built .topbar {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* ===== Root Container ===== */
@@ -16,15 +29,19 @@ body:not(.main-screen-built) .topbar {
   left: 0;
   width: 100vw;
   height: 100vh; /* Fallback for older browsers */
-  z-index: 9990; /* Below modals (10050), below video overlay (9999) */
+  z-index: 9990; /* Below modals (10050), below video overlay (9999), below initial blocker (99999) */
   display: none;
   opacity: 0;
   transition: opacity 400ms ease-in-out;
   overflow: hidden;
+  /* Additional safeguard: ensure nothing shows until explicitly made visible */
+  visibility: hidden;
 }
 
 .intro-screen--visible {
   display: flex !important;
+  visibility: visible !important;
+  opacity: 1;
 }
 
 /* Use dvh for modern browsers that support it */
@@ -32,10 +49,6 @@ body:not(.main-screen-built) .topbar {
   .intro-screen {
     height: 100dvh;
   }
-}
-
-.intro-screen--visible {
-  opacity: 1;
 }
 
 /* ===== Background Layers ===== */
