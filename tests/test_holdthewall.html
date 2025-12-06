@@ -296,10 +296,11 @@
     </div>
   </div>
 
-  <script type="module">
-    import { HoldTheWall } from '../js/minigames/holdTheWall.js';
-    
-    // Make available globally for onclick handlers
+  <!-- Load the HoldTheWall module -->
+  <script src="../js/minigames/holdTheWall.js"></script>
+  
+  <script>
+    // HoldTheWall is now available as a global variable
     window.HoldTheWallModule = HoldTheWall;
     
     // Mock window.game infrastructure
