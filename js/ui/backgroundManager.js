@@ -17,6 +17,25 @@
   const OVERRIDE_FILE_PATH = 'bg_override.json';
   const IMAGE_EXTENSIONS_REGEX = /\.(png|jpg|jpeg|webp)$/i;
   
+  // Map of GitHub API error status codes to user-friendly messages
+  const GITHUB_ERROR_MAPPINGS = [
+    {
+      // Match HTTP 401 status codes
+      pattern: /GitHub API error: 401(?!\d)|status[:\s]+401(?!\d)/i,
+      message: 'Authentication failed. Please check your GitHub token and ensure it has not expired.'
+    },
+    {
+      // Match HTTP 403 status codes
+      pattern: /GitHub API error: 403(?!\d)|status[:\s]+403(?!\d)/i,
+      message: 'Permission denied. Ensure your token has the "repo" scope and you have write access to the repository.'
+    },
+    {
+      // Match HTTP 422 status codes
+      pattern: /GitHub API error: 422(?!\d)|status[:\s]+422(?!\d)/i,
+      message: 'Invalid request. The file may have been modified by someone else. Try refreshing and publishing again.'
+    }
+  ];
+  
   let availableBackgrounds = [];
   let preferences = {
     manualOverride: null,      // { id: string } or null
@@ -24,7 +43,7 @@
   };
   let panelElement = null;
   let isInitialized = false;
-  let publishInProgress = false;
+  let _publishInProgress = false;
 
   // ===== STORAGE =====
 
@@ -429,11 +448,11 @@
   }
 
   async function publishOverrideToRepo(manualOverrideId, commitMessage, token) {
-    if (publishInProgress) {
-      throw new Error('Publish already in progress');
+    if (_publishInProgress) {
+      throw new Error('Publish already in progress. Please wait for the current operation to complete.');
     }
     
-    publishInProgress = true;
+    _publishInProgress = true;
     
     try {
       // Validate token
@@ -457,7 +476,7 @@
       console.info('[BackgroundManager] Successfully published override to repo:', result);
       return result;
     } finally {
-      publishInProgress = false;
+      _publishInProgress = false;
     }
   }
 
@@ -573,9 +592,9 @@
         </div>
         
         <button id="bgmgr-publish" 
-          ${publishInProgress ? 'disabled' : ''}
-          style="width: 100%; padding: 10px 12px; border-radius: 6px; background: ${publishInProgress ? 'rgba(100, 149, 237, 0.3)' : 'rgba(34, 197, 94, 0.3)'}; border: 2px solid ${publishInProgress ? 'rgba(100, 149, 237, 0.5)' : 'rgba(34, 197, 94, 0.6)'}; color: ${publishInProgress ? '#94a3b8' : '#86efac'}; cursor: ${publishInProgress ? 'not-allowed' : 'pointer'}; font-weight: 700; font-size: 13px;">
-          ${publishInProgress ? '⏳ Publishing...' : '✓ Publish Override to Repo'}
+          ${_publishInProgress ? 'disabled' : ''}
+          style="width: 100%; padding: 10px 12px; border-radius: 6px; background: ${_publishInProgress ? 'rgba(100, 149, 237, 0.3)' : 'rgba(34, 197, 94, 0.3)'}; border: 2px solid ${_publishInProgress ? 'rgba(100, 149, 237, 0.5)' : 'rgba(34, 197, 94, 0.6)'}; color: ${_publishInProgress ? '#94a3b8' : '#86efac'}; cursor: ${_publishInProgress ? 'not-allowed' : 'pointer'}; font-weight: 700; font-size: 13px;">
+          ${_publishInProgress ? '⏳ Publishing...' : '✓ Publish Override to Repo'}
         </button>
         
         <div id="bgmgr-publish-status" style="margin-top: 8px; padding: 8px; border-radius: 6px; font-size: 11px; display: none;"></div>
@@ -694,7 +713,11 @@
     
     if (publishBtn) {
       publishBtn.addEventListener('click', async () => {
-        if (publishInProgress) return;
+        // Check lock first - prevent concurrent publishes
+        if (_publishInProgress) {
+          showPublishStatus('⏳ Publish already in progress. Please wait for the current operation to complete.', 'info');
+          return;
+        }
         
         const token = tokenInput ? tokenInput.value.trim() : '';
         const commitMsg = commitMsgInput ? commitMsgInput.value.trim() : '';
@@ -711,7 +734,7 @@
         }
         
         try {
-          publishInProgress = true;
+          _publishInProgress = true;
           rebuildPanelUI();
           showPublishStatus('⏳ Publishing to repository...', 'info');
           
@@ -720,9 +743,18 @@
           showPublishStatus(`✓ Successfully published! Override set to: ${overrideId || 'null'}`, 'success');
         } catch (err) {
           console.error('[BackgroundManager] Publish error:', err);
-          showPublishStatus('✗ Publish failed: ' + err.message, 'error');
+          
+          // Map common GitHub API errors to user-friendly messages
+          let errorMessage = err.message;
+          const mapping = GITHUB_ERROR_MAPPINGS.find(m => m.pattern.test(errorMessage));
+          if (mapping) {
+            errorMessage = mapping.message;
+          }
+          
+          showPublishStatus('✗ Publish failed: ' + errorMessage, 'error');
         } finally {
-          publishInProgress = false;
+          // Always clear the lock and re-enable the button
+          _publishInProgress = false;
           setTimeout(() => rebuildPanelUI(), 100);
         }
       });
