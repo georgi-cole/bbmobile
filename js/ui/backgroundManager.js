@@ -454,6 +454,25 @@
     }
   }
 
+  /**
+   * Publish background override to GitHub repository
+   * Note: This function does not manage the publish lock internally.
+   * Callers (typically the UI button handler) are responsible for managing
+   * the _publishInProgress lock to prevent concurrent operations.
+   * 
+   * Example usage (from button handler):
+   *   try {
+   *     _publishInProgress = true;
+   *     await publishOverrideToRepo(id, message, token);
+   *   } finally {
+   *     _publishInProgress = false;
+   *   }
+   * 
+   * @param {string} manualOverrideId - Background ID to set as override (or null)
+   * @param {string} commitMessage - Commit message for GitHub
+   * @param {string} token - GitHub personal access token
+   * @returns {Promise<Object>} GitHub API response with commit data
+   */
   async function publishOverrideToRepo(manualOverrideId, commitMessage, token) {
     // Validate token
     if (!token || token.trim() === '') {
