@@ -1,11 +1,13 @@
-import { PauseManager } from '../ui/pause-manager.js';
+// Game loop - handles animation frame ticking
+// Checks for global pause state via window.game.pauseController
 
 let lastTs = performance.now();
 function tick(ts) {
   const dt = ts - lastTs;
   lastTs = ts;
 
-  if (PauseManager.isPaused()) {
+  // Check if game is paused by modal system
+  if (window.game?.pauseController?.isPaused()) {
     requestAnimationFrame(tick);
     return;
   }

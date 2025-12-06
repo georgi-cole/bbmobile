@@ -1,4 +1,4 @@
-import { PauseManager } from './pause-manager.js';
+// More Options Menu - integrates with GlobalPauseController
 
 export const MoreOptionsMenu = (() => {
   const id = 'modal:more-options';
@@ -13,16 +13,36 @@ export const MoreOptionsMenu = (() => {
     if (toggleBtn) toggleBtn.addEventListener('click', toggle);
   }
 
-  function onOpen() { PauseManager.open(id); }
-  function onClose() { PauseManager.close(id); }
+  function onOpen() { 
+    if (window.game?.pauseController?.open) {
+      window.game.pauseController.open(id);
+    }
+  }
+  
+  function onClose() { 
+    if (window.game?.pauseController?.close) {
+      window.game.pauseController.close(id);
+    }
+  }
 
   function toggle() {
     if (!el) return;
     if (el.classList.contains('visible')) close(); else open();
   }
 
-  function open() { if (el) el.classList.add('visible'); PauseManager.open(id); }
-  function close() { if (el) el.classList.remove('visible'); PauseManager.close(id); }
+  function open() { 
+    if (el) el.classList.add('visible'); 
+    if (window.game?.pauseController?.open) {
+      window.game.pauseController.open(id);
+    }
+  }
+  
+  function close() { 
+    if (el) el.classList.remove('visible'); 
+    if (window.game?.pauseController?.close) {
+      window.game.pauseController.close(id);
+    }
+  }
 
   return { init, open, close, toggle };
 })();

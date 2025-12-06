@@ -1,4 +1,4 @@
-import { PauseManager } from './pause-manager.js';
+// Settings Modal - integrates with GlobalPauseController
 
 export const SettingsModal = (() => {
   const id = 'modal:settings';
@@ -13,20 +13,33 @@ export const SettingsModal = (() => {
     if (closeBtn) closeBtn.addEventListener('click', close);
   }
 
-  function onOpen() { PauseManager.open(id); }
-  function onClose() { PauseManager.close(id); }
+  function onOpen() { 
+    if (window.game?.pauseController?.open) {
+      window.game.pauseController.open(id);
+    }
+  }
+  
+  function onClose() { 
+    if (window.game?.pauseController?.close) {
+      window.game.pauseController.close(id);
+    }
+  }
 
   function open() {
     try {
       if (el) el.classList.add('visible');
-      PauseManager.open(id);
+      if (window.game?.pauseController?.open) {
+        window.game.pauseController.open(id);
+      }
     } catch (err) { console.error('[SettingsModal] open', err); }
   }
 
   function close() {
     try {
       if (el) el.classList.remove('visible');
-      PauseManager.close(id);
+      if (window.game?.pauseController?.close) {
+        window.game.pauseController.close(id);
+      }
     } catch (err) { console.error('[SettingsModal] close', err); }
   }
 

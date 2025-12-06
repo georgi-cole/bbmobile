@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Verify PauseManager Integration
- * Tests that PauseManager is properly integrated with HubModalBridge
+ * Verify GlobalPauseController Integration
+ * Tests that GlobalPauseController is properly integrated with HubModalBridge and settings
  */
 
 import { readFileSync } from 'fs';
 
-console.log('\n=== PauseManager Integration Verification ===\n');
+console.log('\n=== GlobalPauseController Integration Verification ===\n');
 
 let testsPassed = 0;
 let testsFailed = 0;
@@ -26,55 +26,67 @@ function test(name, fn) {
   }
 }
 
-// Test 1: Verify PauseManager code structure
-console.log('Test 1: Verifying PauseManager code structure...');
-const pauseManagerCode = readFileSync('./js/ui/pause-manager.js', 'utf8');
+// Test 1: Verify GlobalPauseController code structure
+console.log('Test 1: Verifying GlobalPauseController code structure...');
+const globalPauseCode = readFileSync('./js/ui/global-pause.js', 'utf8');
 
-test('PauseManager exports const', () => {
-  if (!pauseManagerCode.includes('export const PauseManager')) {
-    throw new Error('PauseManager export not found');
+test('GlobalPauseController file exists', () => {
+  if (!globalPauseCode || globalPauseCode.length === 0) {
+    throw new Error('GlobalPauseController file not found or empty');
   }
 });
 
-test('PauseManager has open function', () => {
-  if (!pauseManagerCode.includes('function open(id)')) {
+test('GlobalPauseController has open function', () => {
+  if (!globalPauseCode.includes('function open(id)')) {
     throw new Error('open function not found');
   }
 });
 
-test('PauseManager has close function', () => {
-  if (!pauseManagerCode.includes('function close(id)')) {
+test('GlobalPauseController has close function', () => {
+  if (!globalPauseCode.includes('function close(id)')) {
     throw new Error('close function not found');
   }
 });
 
-test('PauseManager has isPaused function', () => {
-  if (!pauseManagerCode.includes('function isPaused()')) {
+test('GlobalPauseController has isPaused function', () => {
+  if (!globalPauseCode.includes('function isPaused()')) {
     throw new Error('isPaused function not found');
   }
 });
 
-test('PauseManager has getOpenModals function', () => {
-  if (!pauseManagerCode.includes('function getOpenModals()')) {
+test('GlobalPauseController has getOpenModals function', () => {
+  if (!globalPauseCode.includes('function getOpenModals()')) {
     throw new Error('getOpenModals function not found');
   }
 });
 
-test('PauseManager attaches to window.game.pauseManager', () => {
-  if (!pauseManagerCode.includes('window.game.pauseManager')) {
-    throw new Error('window.game.pauseManager not set up');
+test('GlobalPauseController has reset function', () => {
+  if (!globalPauseCode.includes('function reset()')) {
+    throw new Error('reset function not found');
   }
 });
 
-test('PauseManager emits game:pause event', () => {
-  if (!pauseManagerCode.includes("emit('game:pause')")) {
+test('GlobalPauseController attaches to window.game.pauseController', () => {
+  if (!globalPauseCode.includes('window.game.pauseController')) {
+    throw new Error('window.game.pauseController not set up');
+  }
+});
+
+test('GlobalPauseController emits game:pause event', () => {
+  if (!globalPauseCode.includes("emitEvent('game:pause')")) {
     throw new Error('game:pause event not emitted');
   }
 });
 
-test('PauseManager emits game:resume event', () => {
-  if (!pauseManagerCode.includes("emit('game:resume')")) {
+test('GlobalPauseController emits game:resume event', () => {
+  if (!globalPauseCode.includes("emitEvent('game:resume')")) {
     throw new Error('game:resume event not emitted');
+  }
+});
+
+test('GlobalPauseController manages overlay', () => {
+  if (!globalPauseCode.includes('showOverlay') || !globalPauseCode.includes('hideOverlay')) {
+    throw new Error('Overlay management functions not found');
   }
 });
 
@@ -110,21 +122,21 @@ test('Modal ID patterns are correct', () => {
 // Test 3: Verify integration points
 console.log('\nTest 3: Verifying integration points...');
 
-test('HubModalBridge checks for pauseManager', () => {
-  if (!hubModalBridgeCode.includes('g.game.pauseManager')) {
-    throw new Error('HubModalBridge does not check for g.game.pauseManager');
+test('HubModalBridge checks for pauseController', () => {
+  if (!hubModalBridgeCode.includes('g.game.pauseController')) {
+    throw new Error('HubModalBridge does not check for g.game.pauseController');
   }
 });
 
-test('HubModalBridge calls pauseManager.open', () => {
-  if (!hubModalBridgeCode.includes('g.game.pauseManager.open')) {
-    throw new Error('HubModalBridge does not call g.game.pauseManager.open');
+test('HubModalBridge calls pauseController.open', () => {
+  if (!hubModalBridgeCode.includes('g.game.pauseController.open')) {
+    throw new Error('HubModalBridge does not call g.game.pauseController.open');
   }
 });
 
-test('HubModalBridge calls pauseManager.close', () => {
-  if (!hubModalBridgeCode.includes('g.game.pauseManager.close')) {
-    throw new Error('HubModalBridge does not call g.game.pauseManager.close');
+test('HubModalBridge calls pauseController.close', () => {
+  if (!hubModalBridgeCode.includes('g.game.pauseController.close')) {
+    throw new Error('HubModalBridge does not call g.game.pauseController.close');
   }
 });
 
@@ -146,62 +158,62 @@ test('Modal state change detection is implemented', () => {
 console.log('\nTest 3b: Verifying settings/render.js integration...');
 const renderCode = readFileSync('./js/settings/render.js', 'utf8');
 
-test('Settings render calls pauseManager.open', () => {
-  if (!renderCode.includes("global.game.pauseManager.open('modal:settings')")) {
-    throw new Error('Settings render does not call pauseManager.open');
+test('Settings render calls pauseController.open', () => {
+  if (!renderCode.includes("global.game.pauseController.open('modal:settings')")) {
+    throw new Error('Settings render does not call pauseController.open');
   }
 });
 
-test('Settings render calls pauseManager.close', () => {
-  if (!renderCode.includes("global.game.pauseManager.close('modal:settings')")) {
-    throw new Error('Settings render does not call pauseManager.close');
+test('Settings render calls pauseController.close', () => {
+  if (!renderCode.includes("global.game.pauseController.close('modal:settings')")) {
+    throw new Error('Settings render does not call pauseController.close');
   }
 });
 
 test('Settings render has defensive checks', () => {
-  const hasCheck = renderCode.includes('global.game && global.game.pauseManager && typeof global.game.pauseManager');
+  const hasCheck = renderCode.includes('global.game && global.game.pauseController && typeof global.game.pauseController');
   if (!hasCheck) {
-    throw new Error('Settings render missing defensive checks for pauseManager');
+    throw new Error('Settings render missing defensive checks for pauseController');
   }
 });
 
 test('Settings render has error handling', () => {
   const hasErrorHandling = renderCode.includes('try') && renderCode.includes('catch(err)');
   if (!hasErrorHandling) {
-    throw new Error('Settings render missing error handling for pauseManager calls');
+    throw new Error('Settings render missing error handling for pauseController calls');
   }
 });
 
-// Test 4: Verify index.html loading
-console.log('\nTest 4: Verifying index.html integration...');
+// Test 4: Verify bootstrap.js loads global-pause.js
+console.log('\nTest 4: Verifying bootstrap.js integration...');
+
+const bootstrapCode = readFileSync('./js/bootstrap.js', 'utf8');
+
+test('bootstrap.js loads global-pause.js', () => {
+  if (!bootstrapCode.includes('js/ui/global-pause.js')) {
+    throw new Error('bootstrap.js does not load global-pause.js');
+  }
+});
+
+// Test 5: Verify CSS is loaded
+console.log('\nTest 5: Verifying CSS integration...');
 
 const indexHtml = readFileSync('./index.html', 'utf8');
 
-test('pause-manager.js is loaded in index.html', () => {
-  if (!indexHtml.includes('js/ui/pause-manager.js')) {
-    throw new Error('pause-manager.js not loaded in index.html');
+test('pause-overlay.css is loaded in index.html', () => {
+  if (!indexHtml.includes('pause-overlay.css')) {
+    throw new Error('pause-overlay.css not loaded in index.html');
   }
 });
 
-test('pause-manager.js loaded as module', () => {
-  const match = indexHtml.match(/<script[^>]*type="module"[^>]*src="[^"]*pause-manager\.js"/);
-  if (!match) {
-    throw new Error('pause-manager.js not loaded as ES module');
-  }
-});
+// Test 6: Verify timer integration
+console.log('\nTest 6: Verifying timer integration...');
 
-test('pause-manager.js loaded before bootstrap.js', () => {
-  // Find the main bootstrap.js file specifically (not other *-bootstrap.js files)
-  const pauseIdx = indexHtml.indexOf('js/ui/pause-manager.js');
-  const bootstrapIdx = indexHtml.indexOf('src="js/bootstrap.js"');
-  if (pauseIdx === -1) {
-    throw new Error('pause-manager.js not found in index.html');
-  }
-  if (bootstrapIdx === -1) {
-    throw new Error('bootstrap.js not found in index.html');
-  }
-  if (pauseIdx > bootstrapIdx) {
-    throw new Error(`pause-manager.js (line ${pauseIdx}) should be loaded before bootstrap.js (line ${bootstrapIdx})`);
+const hudRouterCode = readFileSync('./js/ui.hud-and-router.js', 'utf8');
+
+test('Timer tick checks pauseController', () => {
+  if (!hudRouterCode.includes('pauseController?.isPaused()')) {
+    throw new Error('Timer tick does not check pauseController.isPaused()');
   }
 });
 

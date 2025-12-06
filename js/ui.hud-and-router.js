@@ -2298,7 +2298,12 @@ header.innerHTML = `
     game.pausedTimeRemaining = null;
 
     function tick(){
-      // Skip ticking if paused
+      // Skip ticking if game is globally paused (modals open)
+      if(g.game?.pauseController?.isPaused()){
+        return;
+      }
+      
+      // Skip ticking if timer is paused
       if(game.timerPaused){
         return;
       }

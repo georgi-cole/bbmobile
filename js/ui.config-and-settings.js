@@ -1670,9 +1670,9 @@
       g.PauseController.pause('settings');
     }
     
-    // Also notify PauseManager if available
-    if(g.game?.pauseManager && typeof g.game.pauseManager.open === 'function'){
-      g.game.pauseManager.open('modal:settings');
+    // Also notify GlobalPauseController if available
+    if(g.game?.pauseController && typeof g.game.pauseController.open === 'function'){
+      g.game.pauseController.open('modal:settings');
     }
     
     ensureGameCfg();
@@ -1738,9 +1738,9 @@
         g.PauseController.resume();
       }
       
-      // Also notify PauseManager if available
-      if(g.game?.pauseManager && typeof g.game.pauseManager.close === 'function'){
-        g.game.pauseManager.close('modal:settings');
+      // Also notify GlobalPauseController if available
+      if(g.game?.pauseController && typeof g.game.pauseController.close === 'function'){
+        g.game.pauseController.close('modal:settings');
       }
     }
   }
