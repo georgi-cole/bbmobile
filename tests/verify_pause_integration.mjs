@@ -72,6 +72,12 @@ test('PauseManager attaches to window.game.pauseManager', () => {
   }
 });
 
+test('PauseManager also attaches to window.game.pauseController (alias)', () => {
+  if (!globalPauseCode.includes('window.game.pauseController')) {
+    throw new Error('window.game.pauseController alias not set up');
+  }
+});
+
 test('PauseManager emits game:pause event', () => {
   if (!globalPauseCode.includes("emit('game:pause')") && !globalPauseCode.includes("'game:pause'")) {
     throw new Error('game:pause event not emitted');
@@ -208,6 +214,55 @@ const hudRouterCode = readFileSync('./js/ui.hud-and-router.js', 'utf8');
 test('Timer tick checks pauseManager', () => {
   if (!hudRouterCode.includes('pauseManager?.isPaused()')) {
     throw new Error('Timer tick does not check pauseManager.isPaused()');
+  }
+});
+
+test('Timer tick checks pauseController', () => {
+  if (!hudRouterCode.includes('pauseController') || !hudRouterCode.includes('isPaused')) {
+    throw new Error('Timer tick does not check pauseController');
+  }
+});
+
+// Test 7: Verify social-maneuvers.js pause integration
+console.log('\nTest 7: Verifying social-maneuvers.js pause integration...');
+
+const socialManeuversCode = readFileSync('./js/social-maneuvers.js', 'utf8');
+
+test('Social maneuvers listens for game:pause event', () => {
+  if (!socialManeuversCode.includes("addEventListener('game:pause'")) {
+    throw new Error('Social maneuvers does not listen for game:pause event');
+  }
+});
+
+test('Social maneuvers listens for game:resume event', () => {
+  if (!socialManeuversCode.includes("addEventListener('game:resume'")) {
+    throw new Error('Social maneuvers does not listen for game:resume event');
+  }
+});
+
+test('Social maneuvers logs pause events for QA', () => {
+  const hasPauseLog = socialManeuversCode.includes('Received game:pause') || socialManeuversCode.includes('game:pause event');
+  const hasResumeLog = socialManeuversCode.includes('Received game:resume') || socialManeuversCode.includes('game:resume event');
+  if (!hasPauseLog || !hasResumeLog) {
+    throw new Error('Social maneuvers missing QA logs for pause/resume events');
+  }
+});
+
+// Test 8: Verify competitions-flow.js pause integration
+console.log('\nTest 8: Verifying competitions-flow.js pause integration...');
+
+const competitionsFlowCode = readFileSync('./js/competitions-flow.js', 'utf8');
+
+test('Competition flow checks pauseController', () => {
+  if (!competitionsFlowCode.includes('pauseController') || !competitionsFlowCode.includes('isPaused')) {
+    throw new Error('Competition flow does not check pauseController');
+  }
+});
+
+test('Competition flow logs pause state for QA', () => {
+  const hasLog = competitionsFlowCode.includes('paused') && competitionsFlowCode.includes('console.info');
+  if (!hasLog) {
+    throw new Error('Competition flow missing QA logs for pause state');
   }
 });
 

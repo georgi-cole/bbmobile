@@ -85,6 +85,8 @@
   try {
     window.game = window.game || {};
     window.game.pauseManager = window.game.pauseManager || PauseManager;
+    // Alias for compatibility - pauseController is the same as pauseManager
+    window.game.pauseController = window.game.pauseController || window.game.pauseManager;
   } catch (e) {
     // Silently ignore errors when attaching to window.game
   }

@@ -2299,7 +2299,23 @@ header.innerHTML = `
 
     function tick(){
       // Skip ticking if game is globally paused (modals open)
+      const pc = g.game && g.game.pauseController;
+      if (pc && typeof pc.isPaused === 'function' && pc.isPaused()) {
+        // Extend endAt to freeze time while paused
+        if (game.endAt) {
+          game.endAt += 200; // Add the tick interval to freeze time
+          if (game.phaseEndsAt) game.phaseEndsAt += 200;
+        }
+        return;
+      }
+      
+      // Fallback check for pauseManager (legacy compatibility)
       if(g.game?.pauseManager?.isPaused()){
+        // Extend endAt to freeze time while paused
+        if (game.endAt) {
+          game.endAt += 200; // Add the tick interval to freeze time
+          if (game.phaseEndsAt) game.phaseEndsAt += 200;
+        }
         return;
       }
       
