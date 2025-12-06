@@ -111,20 +111,20 @@ test('Modal ID patterns are correct', () => {
 console.log('\nTest 3: Verifying integration points...');
 
 test('HubModalBridge checks for pauseManager', () => {
-  if (!hubModalBridgeCode.includes('g.pauseManager')) {
-    throw new Error('HubModalBridge does not check for pauseManager');
+  if (!hubModalBridgeCode.includes('g.game.pauseManager')) {
+    throw new Error('HubModalBridge does not check for g.game.pauseManager');
   }
 });
 
 test('HubModalBridge calls pauseManager.open', () => {
-  if (!hubModalBridgeCode.includes('g.pauseManager.open')) {
-    throw new Error('HubModalBridge does not call pauseManager.open');
+  if (!hubModalBridgeCode.includes('g.game.pauseManager.open')) {
+    throw new Error('HubModalBridge does not call g.game.pauseManager.open');
   }
 });
 
 test('HubModalBridge calls pauseManager.close', () => {
-  if (!hubModalBridgeCode.includes('g.pauseManager.close')) {
-    throw new Error('HubModalBridge does not call pauseManager.close');
+  if (!hubModalBridgeCode.includes('g.game.pauseManager.close')) {
+    throw new Error('HubModalBridge does not call g.game.pauseManager.close');
   }
 });
 
@@ -139,6 +139,36 @@ test('Modal state change detection is implemented', () => {
   const hasClosed = hubModalBridgeCode.includes('Modal closed') || hubModalBridgeCode.includes('closed, resuming');
   if (!hasOpened || !hasClosed) {
     throw new Error('Modal state change detection not properly implemented');
+  }
+});
+
+// Test 3b: Verify settings/render.js integration
+console.log('\nTest 3b: Verifying settings/render.js integration...');
+const renderCode = readFileSync('./js/settings/render.js', 'utf8');
+
+test('Settings render calls pauseManager.open', () => {
+  if (!renderCode.includes("global.game.pauseManager.open('modal:settings')")) {
+    throw new Error('Settings render does not call pauseManager.open');
+  }
+});
+
+test('Settings render calls pauseManager.close', () => {
+  if (!renderCode.includes("global.game.pauseManager.close('modal:settings')")) {
+    throw new Error('Settings render does not call pauseManager.close');
+  }
+});
+
+test('Settings render has defensive checks', () => {
+  const hasCheck = renderCode.includes('global.game && global.game.pauseManager && typeof global.game.pauseManager');
+  if (!hasCheck) {
+    throw new Error('Settings render missing defensive checks for pauseManager');
+  }
+});
+
+test('Settings render has error handling', () => {
+  const hasErrorHandling = renderCode.includes('try') && renderCode.includes('catch(err)');
+  if (!hasErrorHandling) {
+    throw new Error('Settings render missing error handling for pauseManager calls');
   }
 });
 
