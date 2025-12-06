@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Manager Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    .intro-screen__bg {
+      width: 100%;
+      height: 300px;
+      background-size: cover;
+      background-position: center;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 2px solid #475569;
+    }
+    .test-section {
+      background: rgba(30, 41, 59, 0.8);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #475569;
+    }
+    h2 {
+      margin-top: 0;
+      color: #93c5fd;
+    }
+    .log {
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      color: #94a3b8;
+    }
+    button {
+      background: rgba(34, 197, 94, 0.3);
+      border: 2px solid rgba(34, 197, 94, 0.6);
+      color: #86efac;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    button:hover {
+      background: rgba(34, 197, 94, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Background Manager Test</h1>
+  
+  <div class="test-section">
+    <h2>Preview Area</h2>
+    <div class="intro-screen__bg"></div>
+    <p>Current background should update when you select a new one in the panel.</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Actions</h2>
+    <button id="test-load-assets">Load Assets</button>
+    <button id="test-select-sunset">Select Sunset</button>
+    <button id="test-clear-override">Clear Override</button>
+    <button id="test-apply">Apply to Preview</button>
+    <button id="enable-panel">Enable Panel (localStorage)</button>
+    <button id="show-panel">Show Panel</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>Console Log</h2>
+    <div class="log" id="console-log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="test-results" style="font-size: 14px;"></div>
+  </div>
+
+  <script type="module">
+    // Initialize window.game namespace
+    window.game = window.game || {};
+    window.game.bus = {
+      emit: (event, data) => {
+        log(`[GameBus] Event: ${event}`, data);
+      }
+    };
+
+    // Load backgroundManager
+    const script1 = document.createElement('script');
+    script1.src = 'js/ui/backgroundManager.js';
+    document.head.appendChild(script1);
+    
+    // Load introhubBackgroundIntegration
+    const script2 = document.createElement('script');
+    script2.src = 'js/ui/introhubBackgroundIntegration.js';
+    document.head.appendChild(script2);
+
+    // Logging
+    const logEl = document.getElementById('console-log');
+    function log(...args) {
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ');
+      console.log(...args);
+      logEl.innerHTML += `${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Override console methods to capture logs
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    console.log = (...args) => { originalLog(...args); log('[LOG]', ...args); };
+    console.info = (...args) => { originalInfo(...args); log('[INFO]', ...args); };
+    console.warn = (...args) => { originalWarn(...args); log('[WARN]', ...args); };
+    console.error = (...args) => { originalError(...args); log('[ERROR]', ...args); };
+
+    // Wait for scripts to load
+    setTimeout(() => {
+      const results = document.getElementById('test-results');
+      
+      // Test 1: Check if modules loaded
+      if (window.BackgroundManager) {
+        results.innerHTML += '✅ BackgroundManager loaded\n';
+      } else {
+        results.innerHTML += '❌ BackgroundManager not loaded\n';
+      }
+      
+      if (window.IntroHubBackgroundIntegration) {
+        results.innerHTML += '✅ IntroHubBackgroundIntegration loaded\n';
+      } else {
+        results.innerHTML += '❌ IntroHubBackgroundIntegration not loaded\n';
+      }
+
+      // Initialize
+      window.IntroHubBackgroundIntegration.init();
+
+      // Button handlers
+      document.getElementById('test-load-assets').addEventListener('click', async () => {
+        log('Loading assets...');
+        try {
+          const assets = await window.BackgroundManager.refreshAssetsAndPopulateUI();
+          results.innerHTML += `✅ Loaded ${assets.length} backgrounds\n`;
+          
+          // Test makeIdFromFilename
+          log('\nTesting makeIdFromFilename:');
+          log('  sunset-background.png -> should map to "sunset"');
+          const sunset = assets.find(a => a.filename === 'sunset-background.png');
+          if (sunset) {
+            log(`  Found: id="${sunset.id}", label="${sunset.label}"`);
+            results.innerHTML += `✅ Sunset ID correctly mapped: ${sunset.id}\n`;
+          } else {
+            results.innerHTML += `❌ Sunset not found in assets\n`;
+          }
+        } catch (err) {
+          results.innerHTML += `❌ Failed to load assets: ${err.message}\n`;
+        }
+      });
+
+      document.getElementById('test-select-sunset').addEventListener('click', () => {
+        log('Setting manual override to "sunset"...');
+        window.BackgroundManager.setManualOverride('sunset');
+        results.innerHTML += '✅ Manual override set to "sunset"\n';
+      });
+
+      document.getElementById('test-clear-override').addEventListener('click', () => {
+        log('Clearing manual override...');
+        window.BackgroundManager.setManualOverride(null);
+        results.innerHTML += '✅ Manual override cleared\n';
+      });
+
+      document.getElementById('test-apply').addEventListener('click', () => {
+        log('Applying background to preview...');
+        window.IntroHubBackgroundIntegration.applyIntroBackground();
+        results.innerHTML += '✅ Applied background to preview\n';
+      });
+
+      document.getElementById('enable-panel').addEventListener('click', () => {
+        localStorage.setItem('devBackgroundManager', 'true');
+        results.innerHTML += '✅ Panel enabled in localStorage. Reload page to see it.\n';
+      });
+
+      document.getElementById('show-panel').addEventListener('click', () => {
+        window.BackgroundManager.showPanel();
+        results.innerHTML += '✅ Panel shown\n';
+      });
+
+      // Listen for bgmgr:changed events
+      window.addEventListener('bgmgr:changed', (evt) => {
+        log('*** bgmgr:changed event received! ***', evt.detail);
+        results.innerHTML += '✅ bgmgr:changed event fired\n';
+      });
+
+      results.innerHTML += '\n📋 Test Instructions:\n';
+      results.innerHTML += '1. Click "Load Assets" to fetch backgrounds\n';
+      results.innerHTML += '2. Click "Select Sunset" to set manual override\n';
+      results.innerHTML += '3. Check that bgmgr:changed event fires\n';
+      results.innerHTML += '4. Click "Apply to Preview" to see background change\n';
+      results.innerHTML += '5. Click "Enable Panel" then reload to see full UI\n';
+      
+    }, 1000);
+  </script>
+</body>
+</html>

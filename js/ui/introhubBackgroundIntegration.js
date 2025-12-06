@@ -89,8 +89,22 @@
       return getBackgroundData(id);
     }
     
-    const activeId = BackgroundManager.getActiveBackground(meta, autoResolveIntroBackground);
-    return getBackgroundData(activeId);
+    const activeResult = BackgroundManager.getActiveBackground(meta, autoResolveIntroBackground);
+    
+    // Check if result is an object (new behavior) or string (backward compatibility)
+    if (typeof activeResult === 'object' && activeResult !== null) {
+      // New behavior: return object directly, it already has previewUrl
+      console.info('[IntroHubBackgroundIntegration] Got background object:', activeResult);
+      return {
+        id: activeResult.id,
+        url: activeResult.previewUrl || activeResult.url || `assets/skins/${activeResult.filename}`,
+        filename: activeResult.filename,
+        label: activeResult.label
+      };
+    }
+    
+    // Backward compatibility: convert ID string to background data
+    return getBackgroundData(activeResult);
   }
 
   /**
@@ -200,12 +214,13 @@
     // Listen for manager changes and reapply background
     // Only add the listener once to avoid duplicates
     if (!bgmgrListenerAdded) {
-      window.addEventListener('bgmgr:changed', () => {
-        console.info('[IntroHubBackgroundIntegration] Manager preferences changed, reapplying background');
+      window.addEventListener('bgmgr:changed', (evt) => {
+        console.info('[IntroHubBackgroundIntegration] *** Manager preferences changed, reapplying background ***');
+        console.info('[IntroHubBackgroundIntegration] Event detail:', evt.detail);
         applyIntroBackground();
       });
       bgmgrListenerAdded = true;
-      console.info('[IntroHubBackgroundIntegration] Event listener for bgmgr:changed added');
+      console.info('[IntroHubBackgroundIntegration] ✓ Event listener for bgmgr:changed installed');
     }
     
     isInitialized = true;
