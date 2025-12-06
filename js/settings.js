@@ -669,7 +669,18 @@
         fr.onload = function(){
           try{
             var obj = JSON.parse(fr.result);
+            
+            // Extract Relations data if present
+            var relationsData = obj.relations;
+            delete obj.relations; // Remove from game object
+            
             global.game = obj;
+            
+            // Restore Relations data if available
+            if(relationsData && global.Relations && typeof global.Relations._replaceRaw === 'function'){
+              global.Relations._replaceRaw(relationsData);
+              console.info('[settings] Restored Relations data from save');
+            }
             
             // Safety: Clear any saved FFWD state after import
             if(typeof global.deactivateFastForward === 'function'){

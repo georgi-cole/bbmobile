@@ -1212,6 +1212,12 @@
         const boostDelta = 0.10 + Math.random() * 0.05;
         if(actor.affinity){ actor.affinity[targetId] = (actor.affinity[targetId] ?? 0) + boostDelta; }
         if(target.affinity){ target.affinity[actorId] = (target.affinity[actorId] ?? 0) + boostDelta; }
+        
+        // Set symmetric alliance in Relations module
+        if(global.Relations && typeof global.Relations.setRelationBoth === 'function'){
+          global.Relations.setRelationBoth(actorId, targetId, 'ally');
+        }
+        
         recordActionInMemory(actorId, targetId, action, 'success');
         global.addLog?.(`${actorName} and ${targetName} formed an alliance!`, 'success');
         return { type: 'success', message: `Alliance formed with ${targetName}! Stronger together.`, affinityChange: boostDelta, allianceFormed: true, participants: [actorId, targetId] };

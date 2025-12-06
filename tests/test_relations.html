@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relations Module Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a2634;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #ff9933;
+      border-bottom: 2px solid #ff9933;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #66ccff;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: #2d3e50;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #3d4e60;
+    }
+    button {
+      background: #ff9933;
+      color: #1a2634;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #ffaa55;
+    }
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    .result {
+      background: #1a2634;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border-left: 4px solid #66ccff;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+    }
+    .success {
+      border-left-color: #66ff66;
+      color: #66ff66;
+    }
+    .error {
+      border-left-color: #ff6666;
+      color: #ff6666;
+    }
+    .player-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .player-card {
+      background: #3d4e60;
+      padding: 15px;
+      border-radius: 5px;
+      border: 1px solid #4d5e70;
+    }
+    .player-name {
+      font-weight: bold;
+      color: #ff9933;
+      margin-bottom: 10px;
+    }
+    .relation-section {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #4d5e70;
+    }
+    .relation-label {
+      color: #66ccff;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .relation-value {
+      color: #e0e0e0;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔗 Relations Module Test</h1>
+  
+  <div class="test-section">
+    <h2>1. Initialize Game State</h2>
+    <button id="btnInit">Initialize Game</button>
+    <div id="resultInit" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Test Symmetric Relations</h2>
+    <p>Set alliance between Player 1 and Player 2 (both directions)</p>
+    <button id="btnSetAlly">Set Alliance (1 ↔ 2)</button>
+    <button id="btnRemoveAlly">Remove Alliance (1 ↔ 2)</button>
+    <div id="resultSymmetric" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Test Directional Relations</h2>
+    <p>Set one-way alliance from Player 3 to Player 4</p>
+    <button id="btnSetOneWay">Set One-Way Alliance (3 → 4)</button>
+    <button id="btnRemoveOneWay">Remove One-Way Alliance (3 → 4)</button>
+    <div id="resultOneWay" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Test Enemy Relations</h2>
+    <p>Set enemy relation between Player 1 and Player 3 (both directions)</p>
+    <button id="btnSetEnemy">Set Enemy (1 ↔ 3)</button>
+    <button id="btnRemoveEnemy">Remove Enemy (1 ↔ 3)</button>
+    <div id="resultEnemy" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Test Query Helpers</h2>
+    <button id="btnQueryAllies">Get Player 1 Allies</button>
+    <button id="btnQueryEnemies">Get Player 1 Enemies</button>
+    <button id="btnShowAll">Show All Relations</button>
+    <div id="resultQuery" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>6. Test Persistence</h2>
+    <button id="btnExport">Export Relations</button>
+    <button id="btnImport">Import Relations</button>
+    <button id="btnClear">Clear All Relations</button>
+    <div id="resultPersistence" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>7. Current Relations Display</h2>
+    <button id="btnRefresh">Refresh Display</button>
+    <div id="playersDisplay" class="player-list"></div>
+  </div>
+
+  <script>
+    // Mock game state
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', evicted: false },
+        { id: 2, name: 'Bob', evicted: false },
+        { id: 3, name: 'Charlie', evicted: false },
+        { id: 4, name: 'Diana', evicted: false },
+        { id: 5, name: 'Eve', evicted: false }
+      ],
+      bus: {
+        emit: function(event, data) {
+          console.log(`[Bus] Event emitted: ${event}`, data);
+        },
+        on: function(event, handler) {
+          console.log(`[Bus] Listener registered: ${event}`);
+        }
+      }
+    };
+
+    // Track exported data for import test
+    let exportedData = null;
+
+    function log(elementId, message, isSuccess = true) {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.textContent = message;
+        el.className = isSuccess ? 'result success' : 'result error';
+      }
+    }
+
+    function refreshDisplay() {
+      const container = document.getElementById('playersDisplay');
+      container.innerHTML = '';
+
+      window.game.players.forEach(player => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'player-name';
+        nameDiv.textContent = player.name;
+        card.appendChild(nameDiv);
+
+        const relationsDiv = document.createElement('div');
+        relationsDiv.className = 'relation-section';
+
+        // Allies
+        const alliesLabel = document.createElement('div');
+        alliesLabel.className = 'relation-label';
+        alliesLabel.textContent = 'Allies:';
+        relationsDiv.appendChild(alliesLabel);
+
+        const alliesValue = document.createElement('div');
+        alliesValue.className = 'relation-value';
+        const allies = window.Relations ? window.Relations.getAllies(player.id) : [];
+        alliesValue.textContent = allies.length > 0
+          ? allies.map(id => window.game.players.find(p => p.id === id)?.name || id).join(', ')
+          : 'None';
+        relationsDiv.appendChild(alliesValue);
+
+        // Enemies
+        const enemiesLabel = document.createElement('div');
+        enemiesLabel.className = 'relation-label';
+        enemiesLabel.textContent = 'Enemies:';
+        relationsDiv.appendChild(enemiesLabel);
+
+        const enemiesValue = document.createElement('div');
+        enemiesValue.className = 'relation-value';
+        const enemies = window.Relations ? window.Relations.getEnemies(player.id) : [];
+        enemiesValue.textContent = enemies.length > 0
+          ? enemies.map(id => window.game.players.find(p => p.id === id)?.name || id).join(', ')
+          : 'None';
+        relationsDiv.appendChild(enemiesValue);
+
+        card.appendChild(relationsDiv);
+        container.appendChild(card);
+      });
+    }
+
+    // Initialize
+    document.getElementById('btnInit').addEventListener('click', () => {
+      try {
+        // The Relations module initializes automatically on load
+        log('resultInit', '✓ Game initialized with 5 players\n✓ Relations module loaded', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultInit', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    // Symmetric relations
+    document.getElementById('btnSetAlly').addEventListener('click', () => {
+      try {
+        window.Relations.setRelationBoth(1, 2, 'ally');
+        log('resultSymmetric', '✓ Set alliance between Alice (1) and Bob (2)\nCheck console for detailed logs', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultSymmetric', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    document.getElementById('btnRemoveAlly').addEventListener('click', () => {
+      try {
+        window.Relations.removeRelationBoth(1, 2, 'ally');
+        log('resultSymmetric', '✓ Removed alliance between Alice (1) and Bob (2)', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultSymmetric', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    // One-way relations
+    document.getElementById('btnSetOneWay').addEventListener('click', () => {
+      try {
+        window.Relations.setRelationOneWay(3, 4, 'ally');
+        log('resultOneWay', '✓ Set one-way alliance: Charlie (3) → Diana (4)\n(Diana does NOT see Charlie as ally)', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultOneWay', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    document.getElementById('btnRemoveOneWay').addEventListener('click', () => {
+      try {
+        window.Relations.removeRelationOneWay(3, 4, 'ally');
+        log('resultOneWay', '✓ Removed one-way alliance: Charlie (3) → Diana (4)', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultOneWay', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    // Enemy relations
+    document.getElementById('btnSetEnemy').addEventListener('click', () => {
+      try {
+        window.Relations.setRelationBoth(1, 3, 'enemy');
+        log('resultEnemy', '✓ Set enemy relation between Alice (1) and Charlie (3)', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultEnemy', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    document.getElementById('btnRemoveEnemy').addEventListener('click', () => {
+      try {
+        window.Relations.removeRelationBoth(1, 3, 'enemy');
+        log('resultEnemy', '✓ Removed enemy relation between Alice (1) and Charlie (3)', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultEnemy', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    // Query helpers
+    document.getElementById('btnQueryAllies').addEventListener('click', () => {
+      try {
+        const allies = window.Relations.getAllies(1);
+        const names = allies.map(id => window.game.players.find(p => p.id === id)?.name || id);
+        log('resultQuery', `✓ Alice's allies: ${names.length > 0 ? names.join(', ') : 'None'}`, true);
+      } catch (e) {
+        log('resultQuery', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    document.getElementById('btnQueryEnemies').addEventListener('click', () => {
+      try {
+        const enemies = window.Relations.getEnemies(1);
+        const names = enemies.map(id => window.game.players.find(p => p.id === id)?.name || id);
+        log('resultQuery', `✓ Alice's enemies: ${names.length > 0 ? names.join(', ') : 'None'}`, true);
+      } catch (e) {
+        log('resultQuery', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    document.getElementById('btnShowAll').addEventListener('click', () => {
+      try {
+        window.Relations.showAllRelations();
+        log('resultQuery', '✓ All relations logged to console', true);
+      } catch (e) {
+        log('resultQuery', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    // Persistence
+    document.getElementById('btnExport').addEventListener('click', () => {
+      try {
+        exportedData = window.Relations._raw();
+        log('resultPersistence', `✓ Exported relations data:\n${JSON.stringify(exportedData, null, 2)}`, true);
+      } catch (e) {
+        log('resultPersistence', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    document.getElementById('btnImport').addEventListener('click', () => {
+      try {
+        if (!exportedData) {
+          log('resultPersistence', '✗ No exported data available. Export first!', false);
+          return;
+        }
+        window.Relations._replaceRaw(exportedData);
+        log('resultPersistence', '✓ Imported relations data successfully', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultPersistence', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => {
+      try {
+        window.Relations._replaceRaw({});
+        log('resultPersistence', '✓ Cleared all relations', true);
+        refreshDisplay();
+      } catch (e) {
+        log('resultPersistence', `✗ Error: ${e.message}`, false);
+      }
+    });
+
+    // Refresh
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+      refreshDisplay();
+    });
+
+    // Load check - wait for Relations module to be available
+    function waitForRelations() {
+      if (typeof window.Relations !== 'undefined') {
+        setTimeout(refreshDisplay, 100);
+      } else {
+        console.log('Waiting for Relations module to load...');
+        setTimeout(waitForRelations, 50);
+      }
+    }
+
+    // Auto-refresh on page load
+    window.addEventListener('load', () => {
+      waitForRelations();
+    });
+  </script>
+
+  <!-- Load the Relations module -->
+  <script src="../js/social/relations.js"></script>
+</body>
+</html>

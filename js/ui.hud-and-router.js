@@ -619,7 +619,34 @@ header.innerHTML = `
       return { allies: [], enemies: [] };
     }
     
-    // Use new SocialRelations system if available
+    // Use new Relations module if available (takes priority)
+    if(global.Relations?.getAllies && global.Relations?.getEnemies){
+      const allyIds = global.Relations.getAllies(p.id);
+      const enemyIds = global.Relations.getEnemies(p.id);
+      
+      // Convert to the format expected by renderBioContent
+      const allies = allyIds.map(id => {
+        const other = g.players.find(pl => pl.id === id);
+        return {
+          id,
+          name: other?.name || '?',
+          affinity: p.affinity?.[id] ?? 0
+        };
+      });
+      
+      const enemies = enemyIds.map(id => {
+        const other = g.players.find(pl => pl.id === id);
+        return {
+          id,
+          name: other?.name || '?',
+          affinity: p.affinity?.[id] ?? 0
+        };
+      });
+      
+      return { allies, enemies };
+    }
+    
+    // Fallback to SocialRelations system if available
     if(global.SocialRelations?.computeAlliesEnemies){
       const result = global.SocialRelations.computeAlliesEnemies(p.id);
       
@@ -2469,6 +2496,13 @@ header.innerHTML = `
     try{
       const game = g.game || {};
       const clean = JSON.parse(JSON.stringify(game, (k,v)=> (typeof v==='function' ? undefined : v)));
+      
+      // Include Relations data if available
+      if(g.Relations && typeof g.Relations._raw === 'function'){
+        clean.relations = g.Relations._raw();
+        console.info('[exportSave] Including Relations data in save');
+      }
+      
       const json = JSON.stringify(clean, null, 2);
       const blob = new Blob([json], {type:'application/json'});
       const a = document.createElement('a');
@@ -2480,7 +2514,15 @@ header.innerHTML = `
       g.addLog?.('Exported save to file.','ok');
     }catch(err){
       try{
-        const json = JSON.stringify(g.game || {}, (k,v)=> (typeof v==='function' ? undefined : v));
+        const game = g.game || {};
+        const saveData = JSON.parse(JSON.stringify(game, (k,v)=> (typeof v==='function' ? undefined : v)));
+        
+        // Include Relations data if available
+        if(g.Relations && typeof g.Relations._raw === 'function'){
+          saveData.relations = g.Relations._raw();
+        }
+        
+        const json = JSON.stringify(saveData, (k,v)=> (typeof v==='function' ? undefined : v));
         navigator.clipboard?.writeText(json);
         g.addLog?.('Exported save to clipboard.','ok');
       }catch(e2){
