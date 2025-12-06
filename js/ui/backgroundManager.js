@@ -728,13 +728,31 @@
           // Map common GitHub API errors to user-friendly messages
           let errorMessage = err.message;
           
-          // Check for HTTP status codes in the error message (format: "GitHub API error: 401 ...")
-          if (/GitHub API error: 401\b/.test(errorMessage) || /\bstatus[:\s]+401\b/i.test(errorMessage)) {
-            errorMessage = 'Authentication failed. Please check your GitHub token and ensure it has not expired.';
-          } else if (/GitHub API error: 403\b/.test(errorMessage) || /\bstatus[:\s]+403\b/i.test(errorMessage)) {
-            errorMessage = 'Permission denied. Ensure your token has the "repo" scope and you have write access to the repository.';
-          } else if (/GitHub API error: 422\b/.test(errorMessage) || /\bstatus[:\s]+422\b/i.test(errorMessage)) {
-            errorMessage = 'Invalid request. The file may have been modified by someone else. Try refreshing and publishing again.';
+          // Map of status codes to user-friendly messages
+          const errorMappings = [
+            {
+              // Match HTTP 401 status codes
+              pattern: /GitHub API error: 401(?!\d)|status[:\s]+401(?!\d)/i,
+              message: 'Authentication failed. Please check your GitHub token and ensure it has not expired.'
+            },
+            {
+              // Match HTTP 403 status codes
+              pattern: /GitHub API error: 403(?!\d)|status[:\s]+403(?!\d)/i,
+              message: 'Permission denied. Ensure your token has the "repo" scope and you have write access to the repository.'
+            },
+            {
+              // Match HTTP 422 status codes
+              pattern: /GitHub API error: 422(?!\d)|status[:\s]+422(?!\d)/i,
+              message: 'Invalid request. The file may have been modified by someone else. Try refreshing and publishing again.'
+            }
+          ];
+          
+          // Check each error mapping
+          for (const mapping of errorMappings) {
+            if (mapping.pattern.test(errorMessage)) {
+              errorMessage = mapping.message;
+              break;
+            }
           }
           
           showPublishStatus('✗ Publish failed: ' + errorMessage, 'error');
