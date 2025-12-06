@@ -267,12 +267,26 @@ const HoldTheWall = (() => {
 (function(g){
   'use strict';
   
+  // Configuration constants
+  const MAX_INIT_RETRIES = 50; // Maximum attempts to wait for hold-wall.js (5 seconds)
+  const INIT_RETRY_DELAY = 100; // Delay between retries in milliseconds
+  const DEFAULT_PLAYER_ID = 'player1'; // Fallback player ID
+  
+  let initAttempts = 0;
+  
   // Wait for the hold-wall.js module to load, then wrap it with our timer control logic
   function initializeHoldTheWallWrapper(){
     // Check if hold-wall render function is available
     if(!g.MiniGames || !g.MiniGames.holdWall || typeof g.MiniGames.holdWall.render !== 'function'){
-      console.warn('[HoldTheWall] hold-wall.js not loaded yet, will retry...');
-      setTimeout(initializeHoldTheWallWrapper, 100);
+      initAttempts++;
+      if(initAttempts >= MAX_INIT_RETRIES){
+        console.error('[HoldTheWall] hold-wall.js failed to load after ' + MAX_INIT_RETRIES + ' attempts. Timer control will not be active.');
+        return;
+      }
+      if(initAttempts % 10 === 0){ // Log every 10 attempts to reduce noise
+        console.warn('[HoldTheWall] hold-wall.js not loaded yet, attempt ' + initAttempts + '/' + MAX_INIT_RETRIES);
+      }
+      setTimeout(initializeHoldTheWallWrapper, INIT_RETRY_DELAY);
       return;
     }
     
@@ -301,9 +315,9 @@ const HoldTheWall = (() => {
       
       // Start our timer control logic
       HoldTheWall.start({
-        localPlayerId: localPlayerId || 'player1',
+        localPlayerId: localPlayerId || DEFAULT_PLAYER_ID,
         players: players.length > 0 ? players : [
-          { id: 'player1', name: 'You' }
+          { id: DEFAULT_PLAYER_ID, name: 'You' }
         ]
       });
       
