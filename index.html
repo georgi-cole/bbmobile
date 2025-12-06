@@ -49,6 +49,7 @@
 <link rel="stylesheet" href="css/news-modal.css">
 <link rel="stylesheet" href="css/ui-accessibility.css">
 <link rel="stylesheet" href="css/introhub-mobile-fix.css">
+<link rel="stylesheet" href="css/pause-overlay.css">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -506,8 +507,7 @@
 <!-- News modal and credits video -->
 <script src="js/ui/newsModal.js"></script>
 <script src="js/ui/creditsVideo.js"></script>
-<!-- Pause Manager - pauses game progression when modals are open -->
-<script type="module" src="js/ui/pause-manager.js"></script>
+<!-- Global pause controller loaded via bootstrap.js -->
 <script src="js/bootstrap.js"></script>
 <!-- Initialize UI Cleanup after bootstrap -->
 <script type="module">

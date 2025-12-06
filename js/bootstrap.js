@@ -2,6 +2,14 @@
 // Boot + Start wiring + roster/table view + music controls + cast editor + rebuild game.
 // Adds Settings modal tab switching (Timers, Features, Twists, Manage) and live settings apply.
 
+// Load global pause controller early for game pause functionality
+(function(){
+  const script = document.createElement('script');
+  script.src = 'js/ui/global-pause.js';
+  script.async = false; // Ensure synchronous execution
+  document.head.appendChild(script);
+})();
+
 (function(global){
   const $ = (sel)=>document.querySelector(sel);
 

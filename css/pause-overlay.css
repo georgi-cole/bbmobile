@@ -1,0 +1,46 @@
+/**
+ * Global Pause Overlay
+ * 
+ * Renders a dim overlay when the game is paused due to blocking modals.
+ * Blocks pointer events on the game area to prevent interaction while paused.
+ */
+
+.global-pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; /* Below modals (10050+) but above game content */
+  
+  /* Dark semi-transparent overlay */
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  
+  /* Subtle backdrop blur for modern browsers */
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  
+  /* Block all pointer events on game content behind modals */
+  pointer-events: auto;
+  
+  /* Smooth fade in/out */
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.global-pause-overlay.visible {
+  opacity: 1;
+}
+
+/* Ensure overlay doesn't interfere with modals */
+.global-pause-overlay ~ .modal,
+.global-pause-overlay ~ .modal-backdrop,
+.global-pause-overlay ~ .settingsDim,
+.global-pause-overlay ~ .rulesDim,
+.global-pause-overlay ~ .profile-modal-dim,
+.global-pause-overlay ~ .creditsDim,
+.global-pause-overlay ~ .leaderboardDim,
+.global-pause-overlay ~ .helpDim {
+  pointer-events: auto;
+}

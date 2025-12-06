@@ -2,54 +2,221 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Pause Manager Test</title>
+  <title>Global Pause Controller Test</title>
+  <link rel="stylesheet" href="../css/pause-overlay.css">
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .modal { display: none; border: 1px solid #ccc; padding: 10px; margin: 5px 0; }
-    .modal.visible { display: block; background: #f9f9f9; }
+    body { 
+      font-family: sans-serif; 
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    .info-box {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 4px solid #1976d2;
+    }
+    .modal { 
+      display: none; 
+      position: fixed;
+      inset: 0;
+      z-index: 10050;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.visible { display: flex; }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      min-width: 300px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      background: #1976d2;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover { background: #1565c0; }
+    button.close { background: #d32f2f; }
+    button.close:hover { background: #c62828; }
+    .tick-counter {
+      font-size: 36px;
+      font-weight: bold;
+      color: #1976d2;
+      text-align: center;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .status {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      margin: 5px;
+    }
+    .status.paused { background: #ffebee; color: #c62828; }
+    .status.running { background: #e8f5e9; color: #2e7d32; }
   </style>
 </head>
 <body>
-  <h1>Pause Manager Test</h1>
+  <h1>🎮 Global Pause Controller Test</h1>
 
-  <button id="openSettings">Open Settings</button>
-  <button id="closeSettings">Close Settings</button>
-  <div id="settingsModal" class="modal">Settings modal <button class="close">Close</button></div>
+  <div class="info-box">
+    <h3>Test Instructions:</h3>
+    <p>1. Watch the tick counter below increase steadily</p>
+    <p>2. Click "Open Settings" - counter should pause and overlay should appear</p>
+    <p>3. Click "Close Settings" - counter should resume and overlay should disappear</p>
+    <p>4. Test opening multiple modals - counter stays paused until all are closed</p>
+  </div>
 
-  <button id="openMore">Open 3-dots</button>
-  <button id="closeMore">Close 3-dots</button>
-  <div id="moreOptionsMenu" class="modal">More options <button class="close">Close</button></div>
+  <div class="info-box">
+    <p><strong>Pause Status:</strong> <span class="status" id="pauseStatus">Running</span></p>
+    <p><strong>Open Modals:</strong> <span id="modalList">None</span></p>
+  </div>
 
-  <p>Game tick counter: <span id="tickCount">0</span></p>
-  <script type="module">
-    import { PauseManager } from '../js/ui/pause-manager.js';
+  <div class="tick-counter">
+    Game Ticks: <span id="tickCount">0</span>
+  </div>
+
+  <div>
+    <button id="openSettings">Open Settings</button>
+    <button id="openMore">Open More Options</button>
+    <button id="openHub">Open Hub Modal</button>
+  </div>
+
+  <!-- Modal Templates -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <h2>⚙️ Settings Modal</h2>
+      <p>This is a simulated settings modal.</p>
+      <p>The game should be paused while this is open.</p>
+      <button id="closeSettings" class="close">Close</button>
+    </div>
+  </div>
+
+  <div id="moreOptionsMenu" class="modal">
+    <div class="modal-content">
+      <h2>📋 More Options</h2>
+      <p>This is a simulated more options menu.</p>
+      <p>The game should be paused while this is open.</p>
+      <button id="closeMore" class="close">Close</button>
+    </div>
+  </div>
+
+  <div id="hubModal" class="modal">
+    <div class="modal-content">
+      <h2>🏠 Hub Modal</h2>
+      <p>This is a simulated hub modal.</p>
+      <p>The game should be paused while this is open.</p>
+      <button id="closeHub" class="close">Close</button>
+    </div>
+  </div>
+
+  <script src="../js/ui/global-pause.js"></script>
+  <script>
+    // Initialize game object if not present
+    window.game = window.game || {};
 
     const settingsModal = document.getElementById('settingsModal');
     const moreModal = document.getElementById('moreOptionsMenu');
+    const hubModal = document.getElementById('hubModal');
+    const pauseStatusEl = document.getElementById('pauseStatus');
+    const modalListEl = document.getElementById('modalList');
 
+    // Update status display
+    function updateStatus() {
+      const isPaused = window.game?.pauseController?.isPaused() || false;
+      const openModals = window.game?.pauseController?.getOpenModals() || [];
+      
+      pauseStatusEl.textContent = isPaused ? 'Paused' : 'Running';
+      pauseStatusEl.className = 'status ' + (isPaused ? 'paused' : 'running');
+      
+      modalListEl.textContent = openModals.length > 0 ? openModals.join(', ') : 'None';
+    }
+
+    // Settings Modal
     document.getElementById('openSettings').addEventListener('click', () => {
       settingsModal.classList.add('visible');
-      PauseManager.open('modal:settings');
+      if (window.game?.pauseController) {
+        window.game.pauseController.open('modal:settings');
+        updateStatus();
+      }
     });
     document.getElementById('closeSettings').addEventListener('click', () => {
       settingsModal.classList.remove('visible');
-      PauseManager.close('modal:settings');
+      if (window.game?.pauseController) {
+        window.game.pauseController.close('modal:settings');
+        updateStatus();
+      }
     });
 
+    // More Options Modal
     document.getElementById('openMore').addEventListener('click', () => {
       moreModal.classList.add('visible');
-      PauseManager.open('modal:more-options');
+      if (window.game?.pauseController) {
+        window.game.pauseController.open('modal:more-options');
+        updateStatus();
+      }
     });
     document.getElementById('closeMore').addEventListener('click', () => {
       moreModal.classList.remove('visible');
-      PauseManager.close('modal:more-options');
+      if (window.game?.pauseController) {
+        window.game.pauseController.close('modal:more-options');
+        updateStatus();
+      }
     });
 
+    // Hub Modal
+    document.getElementById('openHub').addEventListener('click', () => {
+      hubModal.classList.add('visible');
+      if (window.game?.pauseController) {
+        window.game.pauseController.open('modal:hub:test');
+        updateStatus();
+      }
+    });
+    document.getElementById('closeHub').addEventListener('click', () => {
+      hubModal.classList.remove('visible');
+      if (window.game?.pauseController) {
+        window.game.pauseController.close('modal:hub:test');
+        updateStatus();
+      }
+    });
+
+    // Tick counter - respects pause state
     const tickEl = document.getElementById('tickCount');
     let ticks = 0;
     setInterval(() => {
-      if (!PauseManager.isPaused()) { ticks++; tickEl.textContent = String(ticks); }
+      if (!window.game?.pauseController?.isPaused()) {
+        ticks++;
+        tickEl.textContent = String(ticks);
+      }
     }, 200);
+
+    // Listen for pause events
+    window.addEventListener('game:pause', () => {
+      console.log('🛑 Game paused event received');
+      updateStatus();
+    });
+
+    window.addEventListener('game:resume', () => {
+      console.log('▶️ Game resumed event received');
+      updateStatus();
+    });
+
+    // Initial status
+    updateStatus();
   </script>
 </body>
 </html>
