@@ -425,15 +425,21 @@
     player.evicted = true;
     player.weekEvicted = g.week;
     
+    // Mark as self-evicted to exclude from jury house
+    player.selfEvicted = true;
+    
+    // Enable auto-mode for self-evicted player
+    player.autoMode = true;
+    
     // Assign final rank
     const aliveCount = global.alivePlayers ? global.alivePlayers().length + 1 : 1;
     player.finalRank = aliveCount;
     
-    console.info(`[self-eviction] Processed eviction for ${player.name}, finalRank=${player.finalRank}`);
+    console.info(`[self-eviction] Processed eviction for ${player.name}, finalRank=${player.finalRank}, selfEvicted=${player.selfEvicted}, autoMode=${player.autoMode}`);
 
-    // Add to jury if applicable
+    // Add to jury only if not self-evicted (self-evicted players are excluded from jury house)
     const JURY_START_AT = 9;
-    if(aliveCount <= JURY_START_AT && g.cfg && g.cfg.enableJuryHouse){
+    if(aliveCount <= JURY_START_AT && g.cfg && g.cfg.enableJuryHouse && !player.selfEvicted){
       if(!g.juryHouse) g.juryHouse = [];
       if(!g.juryHouse.includes(playerId)){
         g.juryHouse.push(playerId);
@@ -651,17 +657,17 @@
   async function showSelfEvictionConfirmation(playerName){
     if(typeof global.showConfirm === 'function'){
       return await global.showConfirm(
-        `Are you sure you want to self-evict as ${playerName}? This action cannot be undone and will immediately remove you from the game.`,
+        'Are you sure you want to leave the house?',
         {
-          title: 'Confirm Self-Eviction',
-          confirmText: 'Exit Game',
-          cancelText: 'Stay',
+          title: 'Self-Eviction',
+          confirmText: 'Yes',
+          cancelText: 'No',
           tone: 'danger'
         }
       );
     } else {
       // Fallback to native confirm
-      return confirm(`Self-evict as ${playerName}? This cannot be undone!`);
+      return confirm('Are you sure you want to leave the house?');
     }
   }
 

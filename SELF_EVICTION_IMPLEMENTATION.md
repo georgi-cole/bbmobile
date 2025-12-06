@@ -27,18 +27,26 @@ Implemented a robust, phase-aware self-eviction system for the Big Brother game 
 
 ### 2. UI Integration
 
-#### Exit Button (Top Bar)
-- Added 🚪 door icon button to topbar
-- Styled with `danger` class for visual emphasis
-- Visibility logic:
-  - Hidden during lobby and finale phases
-  - Hidden for evicted players
-  - Only shown for active human player during gameplay
+#### Self-Evict Button (Action Menu)
+- Integrated into the near-fullscreen Action Menu (three-dot button in compact HUD)
+- Button label: "Self-evict" with 🚪 door icon
+- Menu now displays as a near-fullscreen modal with semi-transparent backdrop
+- Visibility: Available to active human player during gameplay
+
+#### Near-Fullscreen Action Menu Modal
+- Updated CSS for larger, near-fullscreen presentation
+- Dimensions: `calc(100vw - 32px)` width, `max-width: 600px`
+- Maximum height: `calc(100vh - 64px)` with overflow scroll
+- Semi-transparent backdrop: `rgba(0, 0, 0, 0.75)` keeps background slightly visible
+- Blur effect: `backdrop-filter: blur(3px)` for depth
+- Larger touch targets (56px min-height) for better mobile UX
+- Keyboard accessible: Escape to close, arrow keys to navigate
 
 #### Confirmation Modal
-- Professional confirmation dialog using existing modal system
-- Clear warning about irreversible action
-- "Stay" (cancel) and "Exit Game" (confirm) buttons
+- Professional confirmation dialog: "Are you sure you want to leave the house?"
+- Simple Yes/No buttons for quick decision
+- "Yes" confirms self-eviction
+- "No" cancels and returns to game
 - Prevents accidental self-evictions
 
 ### 3. Integration with Existing Systems
@@ -228,3 +236,77 @@ While the current implementation meets all requirements, potential future improv
 - All existing game flows continue to work as before
 - The centralized handler can be extended for future game modes
 - Test suite provides confidence for future modifications
+
+---
+
+## Recent Updates (December 2025)
+
+### Enhanced UI with Near-Fullscreen Modal
+
+The self-eviction feature has been updated with a modern, near-fullscreen modal design:
+
+#### Changes Made:
+
+1. **Near-Fullscreen Action Menu**
+   - Integrated into the three-dot Action Menu in the Compact HUD
+   - Modal dimensions: `calc(100vw - 32px)` width, max 600px
+   - Maximum height: `calc(100vh - 64px)` with scroll support
+   - Larger touch targets (56px min-height) for improved mobile UX
+   - Increased font sizes and icon sizes for better readability
+
+2. **Enhanced Backdrop**
+   - Semi-transparent backdrop: `rgba(0, 0, 0, 0.75)`
+   - Background remains slightly visible through dimmed overlay
+   - Blur effect: `backdrop-filter: blur(3px)`
+   - Smooth transitions for opening/closing
+
+3. **Updated Button Label**
+   - Changed from "EXIT" to "Self-evict" for clarity
+   - Maintains 🚪 door icon for visual recognition
+
+4. **Simplified Confirmation Dialog**
+   - Question: "Are you sure you want to leave the house?"
+   - Simple Yes/No buttons
+   - Clearer, more direct language
+
+5. **Self-Evicted Flag & Auto-Mode**
+   - Players marked with `selfEvicted: true` flag
+   - Automatically excluded from jury house
+   - Auto-mode enabled (`autoMode: true`) so game continues without input
+   - Prevents self-evicted players from voting or participating in jury
+
+6. **Jury Exclusion Logic**
+   - Updated `js/self-eviction.js` to skip jury addition for self-evicted players
+   - Updated `js/veto.js` to check `selfEvicted` flag before jury addition
+   - Updated `js/competitions.js` to check `selfEvicted` flag before jury addition
+
+7. **New Test File**
+   - Created `test_self_eviction_modal.html` for comprehensive testing
+   - Interactive demo of near-fullscreen modal
+   - Verification of selfEvicted and autoMode flags
+   - Confirmation that jury exclusion works correctly
+
+#### Files Modified:
+
+- `css/action-menu.css` - Near-fullscreen modal styling
+- `js/ui/actionMenu.js` - Button label change to "Self-evict"
+- `js/self-eviction.js` - Added selfEvicted flag, autoMode, updated confirmation text, jury exclusion
+- `js/veto.js` - Added selfEvicted check for jury addition
+- `js/competitions.js` - Added selfEvicted check for jury addition
+- `test_self_eviction_modal.html` - New comprehensive test file
+
+#### Testing Instructions:
+
+1. Open `test_self_eviction_modal.html` in a browser
+2. Click "Open Action Menu" to see the near-fullscreen modal
+3. Observe the semi-transparent backdrop keeping background visible
+4. Click "Self-evict" button
+5. Confirm with "Yes" in the dialog
+6. Verify:
+   - Player is marked as evicted
+   - `selfEvicted` flag is set to true
+   - `autoMode` flag is set to true
+   - Player is NOT added to jury house
+
+All verification tests pass successfully! ✅
+

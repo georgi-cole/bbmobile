@@ -31,8 +31,8 @@
       { id: 'btnProfile', icon: '👤', label: 'Profile' },
       { id: 'btnStartQuick', icon: '▶', label: 'Restart' },
       { id: 'xpLeaderboardBadge', icon: '📊', label: 'Leaderboard' },
-      // EXIT triggers self-eviction functionality
-      { id: 'btnExit', icon: '🚪', label: 'EXIT', action: 'exit' },
+      // Self-evict triggers self-eviction functionality
+      { id: 'btnExit', icon: '🚪', label: 'Self-evict', action: 'exit' },
     ],
   };
 
@@ -127,8 +127,6 @@
 
     // Add menu items for each grouped button
     validButtons.forEach((buttonConfig, index) => {
-      const originalButton = document.getElementById(buttonConfig.id);
-
       // Create menu item
       const item = document.createElement('li');
       item.className = 'action-menu-item';
