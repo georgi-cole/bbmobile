@@ -619,7 +619,34 @@ header.innerHTML = `
       return { allies: [], enemies: [] };
     }
     
-    // Use new SocialRelations system if available
+    // Use new Relations module if available (takes priority)
+    if(global.Relations?.getAllies && global.Relations?.getEnemies){
+      const allyIds = global.Relations.getAllies(p.id);
+      const enemyIds = global.Relations.getEnemies(p.id);
+      
+      // Convert to the format expected by renderBioContent
+      const allies = allyIds.map(id => {
+        const other = g.players.find(pl => pl.id === id);
+        return {
+          id,
+          name: other?.name || '?',
+          affinity: p.affinity?.[id] ?? 0
+        };
+      });
+      
+      const enemies = enemyIds.map(id => {
+        const other = g.players.find(pl => pl.id === id);
+        return {
+          id,
+          name: other?.name || '?',
+          affinity: p.affinity?.[id] ?? 0
+        };
+      });
+      
+      return { allies, enemies };
+    }
+    
+    // Fallback to SocialRelations system if available
     if(global.SocialRelations?.computeAlliesEnemies){
       const result = global.SocialRelations.computeAlliesEnemies(p.id);
       
