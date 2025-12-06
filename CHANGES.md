@@ -2,10 +2,10 @@
 
 ## [Unreleased] - 2025-12-06
 
-### Removed - Intro Audience-Reactions Sequence
-**Breaking Change**: Permanently removed the post-PLAY intro sequence that displayed animated contestant cards with audience reactions.
+### Removed - Loading Screen and Intro Sequence
+**Breaking Change**: Permanently removed the loading screen (eye icon with progress bar) and intro audience-reactions sequence that appeared after pressing PLAY button.
 
-**Rationale**: Streamline gameplay experience by advancing immediately to the game after pressing PLAY button.
+**Rationale**: Streamline gameplay experience by advancing immediately to the game after pressing PLAY button. Removes 30-60 second delay before gameplay starts. Avatars now load on-demand as they are rendered in the UI.
 
 **Files Removed:**
 - `js/introShow.js` (789 lines) - Reality-TV style intro sequence with GSAP animations
@@ -18,12 +18,19 @@
   - Removed reality-TV intro (IntroShow) logic
   - Removed classic dual-card intro logic
   - Simplified `skipIntro()` function to no-op placeholder
+- `src/startup/flow.js`:
+  - `enterGameFromIntro()` now proceeds directly to `buildMainScreen()`
+  - Removed LoadingOverlay display and avatar preloading logic
+  - Avatars now load on-demand as rendered in UI
+  - Removed error retry flow (errors handled gracefully with fallbacks)
 - `index.html`:
   - Removed `<link>` tag for `styles-intro-show.css`
   - Removed `<script>` tag for `js/introShow.js`
 
 **New Files:**
-- `tests/test_play_no_intro.html` - Sanity test verifying PLAY proceeds directly to gameplay
+- `tests/test_play_no_intro.html` - Sanity test verifying PLAY proceeds directly to gameplay without loading screen or intro
+
+**Note:** LoadingOverlay module and CSS remain in codebase for potential future use in other contexts (e.g., manual avatar preload, settings, etc.) but are no longer invoked during PLAY transition.
 
 **Testing:**
 ✅ All test suites pass (test:all)

@@ -129,22 +129,25 @@
 </head>
 <body>
   <div class="test-container">
-    <h1>🎮 PLAY Button No Intro - Sanity Check</h1>
+    <h1>🎮 PLAY Button No Intro/Loading - Sanity Check</h1>
     
     <div class="test-section">
       <h2>Test Description</h2>
       <p>
         This test verifies that pressing the PLAY button advances immediately to the gameplay UI
-        without showing the intro audience-reactions sequence.
+        without showing the loading screen (eye icon) or intro audience-reactions sequence.
       </p>
       <p>
         <strong>Expected Behavior:</strong>
       </p>
       <ul>
+        <li>No loading overlay with eye icon should appear</li>
+        <li>No avatar preloading progress bar should display</li>
         <li><code>startOpeningSequence()</code> should skip directly to <code>finishOpening()</code></li>
         <li>No <code>IntroShow.play()</code> calls should occur</li>
         <li>No reality-TV style intro or classic dual-card intro should display</li>
         <li>The game phase should transition from <code>opening</code> to <code>intermission</code> within ~500ms</li>
+        <li>Avatars should load on-demand as they are rendered</li>
       </ul>
     </div>
     
@@ -239,6 +242,16 @@
           log('❌ ERROR: IntroShow.play() was called! Intro should be removed!', 'error');
           testPassed = false;
           return originalPlay.apply(this, args);
+        };
+      }
+      
+      // Track LoadingOverlay calls (should NOT be called)
+      if (window.LoadingOverlay) {
+        const originalShowOverlay = window.LoadingOverlay.showOverlay;
+        window.LoadingOverlay.showOverlay = function(...args) {
+          log('❌ ERROR: LoadingOverlay.showOverlay() was called! Loading screen should be removed!', 'error');
+          testPassed = false;
+          return originalShowOverlay ? originalShowOverlay.apply(this, args) : null;
         };
       }
       
