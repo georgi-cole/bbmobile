@@ -18,6 +18,7 @@
   let mainScreenBuilt = false;
   let bus = null;
   let handlersWired = false; // Track if event handlers have been registered
+  let mainScreenZoomLock = null; // Zoom lock instance for main game screen
 
   // Centralized flow state to prevent duplicate initialization
   const flowState = {
@@ -481,6 +482,56 @@
     }
   }
 
+  // ===== ZOOM LOCK FOR MAIN SCREEN =====
+
+  /**
+   * Dynamically import and attach zoom lock to main game screen (.wrap element).
+   * Prevents pinch-to-zoom during gameplay.
+   */
+  async function attachMainScreenZoomLock() {
+    try {
+      // Find main game screen element
+      const mainScreen = document.querySelector('.wrap');
+      if (!mainScreen) {
+        console.warn('[StartupFlow] Cannot attach zoom lock - main screen not found');
+        return;
+      }
+
+      // Skip if already attached
+      if (mainScreenZoomLock && mainScreenZoomLock.isAttached()) {
+        console.info('[StartupFlow] Main screen zoom lock already attached, skipping');
+        return;
+      }
+
+      // Dynamically import ZoomLock module
+      const { ZoomLock } = await import('../../js/utils/zoom-lock.js');
+      
+      // Create lock for main screen
+      mainScreenZoomLock = ZoomLock.forElement(mainScreen);
+      mainScreenZoomLock.attach();
+      
+      console.info('[StartupFlow] Zoom lock attached to main game screen');
+    } catch (err) {
+      // Fail gracefully - zoom lock is a progressive enhancement
+      console.warn('[StartupFlow] Failed to attach main screen zoom lock:', err);
+    }
+  }
+
+  /**
+   * Detach zoom lock from main game screen.
+   */
+  function detachMainScreenZoomLock() {
+    try {
+      if (mainScreenZoomLock && mainScreenZoomLock.isAttached()) {
+        mainScreenZoomLock.detach();
+        mainScreenZoomLock = null;
+        console.info('[StartupFlow] Zoom lock detached from main game screen');
+      }
+    } catch (err) {
+      console.warn('[StartupFlow] Failed to detach main screen zoom lock:', err);
+    }
+  }
+
   // ===== MAIN SCREEN INITIALIZATION =====
 
   /**
@@ -540,6 +591,9 @@
     // Update UI
     if (g.updateHud) g.updateHud();
     if (g.renderPanel) g.renderPanel();
+
+    // Attach zoom lock to main game screen
+    attachMainScreenZoomLock();
 
     console.info('[StartupFlow] Main screen built');
   }
@@ -1212,6 +1266,9 @@
     if (g.Telemetry && typeof g.Telemetry.log === 'function') {
       g.Telemetry.log('startup_restart_to_hub', {});
     }
+    
+    // Detach zoom lock from main screen before hiding
+    detachMainScreenZoomLock();
     
     // Hide main screen
     const mainScreen = document.querySelector('.wrap');
