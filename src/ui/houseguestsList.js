@@ -9,6 +9,7 @@
   let initialized = false;
   let hoverDebounceTimeout = null;
   const HOVER_DEBOUNCE_DELAY = 200; // ms delay before showing popup on hover
+  const initializedCards = new WeakSet(); // Track initialized cards without memory leaks
 
   /**
    * Initialize houseguest card event handlers
@@ -120,10 +121,10 @@
     const cards = document.querySelectorAll('[data-guest-id]');
     
     cards.forEach(card => {
-      // Check if handlers are already attached by checking for a custom property
-      if (!card._houseguestsListInitialized) {
+      // Check if handlers are already attached using WeakSet
+      if (!initializedCards.has(card)) {
         attachHandlers(card);
-        card._houseguestsListInitialized = true;
+        initializedCards.add(card);
       }
     });
 
@@ -186,9 +187,9 @@
     card.appendChild(info);
     card.appendChild(arrow);
 
-    // Attach handlers
+    // Attach handlers and track initialization
     attachHandlers(card);
-    card._houseguestsListInitialized = true;
+    initializedCards.add(card);
 
     return card;
   }

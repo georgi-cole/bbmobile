@@ -325,14 +325,28 @@
           const card = document.createElement('div');
           card.className = 'houseguests-list__item';
           card.setAttribute('data-guest-id', guest.id);
-          card.innerHTML = `
-            <div class="houseguests-list__avatar" style="background-image: url('avatars/${guest.name}.png')"></div>
-            <div class="houseguests-list__info">
-              <div class="houseguests-list__name">${guest.fullName || guest.name}</div>
-              <div class="houseguests-list__location">${guest.location || ''}</div>
-            </div>
-            <div class="houseguests-list__arrow">›</div>
+          
+          // Create avatar element with proper URL encoding
+          const avatar = document.createElement('div');
+          avatar.className = 'houseguests-list__avatar';
+          avatar.style.backgroundImage = `url('avatars/${encodeURIComponent(guest.name)}.png')`;
+          
+          // Create info section
+          const info = document.createElement('div');
+          info.className = 'houseguests-list__info';
+          info.innerHTML = `
+            <div class="houseguests-list__name">${guest.fullName || guest.name}</div>
+            <div class="houseguests-list__location">${guest.location || ''}</div>
           `;
+          
+          // Create arrow
+          const arrow = document.createElement('div');
+          arrow.className = 'houseguests-list__arrow';
+          arrow.textContent = '›';
+          
+          card.appendChild(avatar);
+          card.appendChild(info);
+          card.appendChild(arrow);
           container.appendChild(card);
         }
       });

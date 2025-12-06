@@ -123,12 +123,17 @@
 
 /* Responsive Adjustments */
 @media (max-width: 480px) {
+  /* On mobile, constrain popup width and center it */
   .guest-profile-popup {
     max-width: calc(100vw - 32px);
     min-width: auto;
-    left: 16px !important;
     right: 16px;
     width: auto;
+  }
+  
+  /* Override positioning for mobile - center horizontally */
+  .guest-profile-popup--visible {
+    left: 16px;
   }
 
   .guest-profile-popup__content {

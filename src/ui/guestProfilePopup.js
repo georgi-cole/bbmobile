@@ -11,6 +11,7 @@
   let hideTimeout = null;
 
   const HIDE_DELAY = 300; // ms delay before hiding on mouse leave
+  const POPUP_MARGIN = 10; // px margin from viewport edges
 
   /**
    * Initialize popup DOM structure
@@ -183,27 +184,27 @@
     const viewportHeight = window.innerHeight;
 
     // Default: position to the right of the anchor
-    let left = rect.right + 10;
+    let left = rect.right + POPUP_MARGIN;
     let top = rect.top;
 
     // If popup would overflow right edge, position to the left
-    if (left + popupRect.width > viewportWidth - 10) {
-      left = rect.left - popupRect.width - 10;
+    if (left + popupRect.width > viewportWidth - POPUP_MARGIN) {
+      left = rect.left - popupRect.width - POPUP_MARGIN;
     }
 
     // If still overflows left edge, center horizontally
-    if (left < 10) {
+    if (left < POPUP_MARGIN) {
       left = (viewportWidth - popupRect.width) / 2;
     }
 
     // Ensure popup doesn't overflow bottom
-    if (top + popupRect.height > viewportHeight - 10) {
-      top = viewportHeight - popupRect.height - 10;
+    if (top + popupRect.height > viewportHeight - POPUP_MARGIN) {
+      top = viewportHeight - popupRect.height - POPUP_MARGIN;
     }
 
     // Ensure popup doesn't overflow top
-    if (top < 10) {
-      top = 10;
+    if (top < POPUP_MARGIN) {
+      top = POPUP_MARGIN;
     }
 
     popupElement.style.left = `${left}px`;
