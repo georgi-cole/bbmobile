@@ -343,6 +343,7 @@ const ChainReactionMinigame = (() => {
 
 // Register module in global MinigameModules namespace for runtime resolution
 // The registry.js render() function checks window.MinigameModules first, then falls back to window.MiniGames
+// Both registrations point to the same object (with render method) for consistency
 (function(g){
   'use strict';
   
@@ -351,9 +352,11 @@ const ChainReactionMinigame = (() => {
     g.MinigameModules = {};
   }
   
-  // Register ChainReactionMinigame under 'chainReaction' key
-  // This provides the new API (init, start, stop, setRounds, setCellSize)
-  g.MinigameModules.chainReaction = ChainReactionMinigame;
+  // Register the same object that has the render() method (from MiniGames)
+  // This ensures both paths work for the registry
+  if(g.MiniGames && g.MiniGames.chainReaction){
+    g.MinigameModules.chainReaction = g.MiniGames.chainReaction;
+  }
   
 })(window);
 
