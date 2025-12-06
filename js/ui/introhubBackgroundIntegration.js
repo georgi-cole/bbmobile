@@ -30,7 +30,7 @@
   // This is a simplified version. In production, this should call the actual
   // BackgroundTheme logic or replicate its key determination logic.
 
-  function autoResolveIntroBackground(meta) {
+  function autoResolveIntroBackground(_meta) {
     // Placeholder auto-resolution logic
     // In real usage, this should call BackgroundTheme.getCurrent() or similar
     

@@ -465,7 +465,6 @@
     const tokenInput = panelElement.querySelector('#bgmgr-token');
     const commitMsgInput = panelElement.querySelector('#bgmgr-commit-msg');
     const publishBtn = panelElement.querySelector('#bgmgr-publish');
-    const publishStatus = panelElement.querySelector('#bgmgr-publish-status');
     
     if (closeBtn) {
       closeBtn.addEventListener('click', () => {
