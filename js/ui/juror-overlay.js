@@ -145,7 +145,7 @@ export const JurorReturnOverlay = (() => {
       </div>
       
       <div class="juror-overlay__content" id="juror-overlay-content">
-        <!-- Original jury voting UI will be moved here -->
+        <!-- Cloned jury voting UI will be displayed here (original remains untouched) -->
       </div>
       
       <div class="juror-overlay__quick-vote">
@@ -270,8 +270,9 @@ export const JurorReturnOverlay = (() => {
 
     // Remove cloned jury UI from overlay
     // No need to restore anything - the original panel was never moved
-    if (originalPanelContent && originalPanelContent.parentNode) {
-      originalPanelContent.remove();
+    const clonedContent = originalPanelContent;
+    if (clonedContent && clonedContent.parentNode) {
+      clonedContent.remove();
     }
     originalPanelContent = null;
 
