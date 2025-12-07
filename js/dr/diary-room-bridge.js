@@ -104,6 +104,62 @@
       }
     }
   }
+  
+  /**
+   * Handle social.entry:story event (from sm-to-dr-adapter)
+   * @param {Object} payload - Story entry payload
+   */
+  function handleSocialStory(payload) {
+    if (!payload) return;
+    
+    const config = getConfig();
+    
+    // Story payload already has diary entry structure
+    const entry = {
+      id: payload.id || `dr-story-${Date.now()}`,
+      timestamp: payload.timestamp || Date.now(),
+      type: payload.type || 'social_action',
+      category: payload.category || 'social',
+      severity: payload.severity || 'neutral',
+      title: payload.title || 'Social Action',
+      text: payload.text || payload.narrative || 'No narrative available',
+      bondShifts: payload.bondShifts || [],
+      actor: payload.actor,
+      targets: payload.targets,
+      action: payload.action
+    };
+    
+    // Add to DiaryRoomLogger
+    addDiaryEntry(entry);
+    
+    // Emit dr:entry event for UI
+    const bus = getBus();
+    if (bus) {
+      bus.emit('dr:entry', { entry });
+      
+      if (config.verbose) {
+        console.log('[diary-room-bridge] Added social story entry:', entry.title);
+      }
+    }
+  }
+  
+  /**
+   * Handle player.relations:updated event (for profile UI updates)
+   * @param {Object} payload - Relations update payload
+   */
+  function handleRelationsUpdated(payload) {
+    if (!payload || !payload.playerId) return;
+    
+    const config = getConfig();
+    
+    if (config.verbose) {
+      console.log('[diary-room-bridge] Player relations updated:', payload.playerName || payload.playerId);
+    }
+    
+    // This event is primarily for UI consumption
+    // The UI layer can listen to this event and update player profile badges
+    // No diary entry is created for this event
+  }
 
   /**
    * Convert social summary to diary entry format
@@ -235,6 +291,14 @@
     // Listen for social summary events
     bus.on('social.summary:updated', handleSocialSummary);
     console.info('[diary-room-bridge] ✓ Listening for social.summary:updated events');
+    
+    // Listen for social.entry:story events (from sm-to-dr-adapter)
+    bus.on('social.entry:story', handleSocialStory);
+    console.info('[diary-room-bridge] ✓ Listening for social.entry:story events');
+    
+    // Listen for player.relations:updated events (for profile UI updates)
+    bus.on('player.relations:updated', handleRelationsUpdated);
+    console.info('[diary-room-bridge] ✓ Listening for player.relations:updated events');
 
     // Also listen for dr:entry events from other sources and ensure they're added to _entries
     bus.on('dr:entry', (payload) => {

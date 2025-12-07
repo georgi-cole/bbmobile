@@ -115,9 +115,18 @@
 
   /**
    * Helper function to check if a phase name is a social phase
+   * Accepts both 'intermission' and 'social_intermission' as valid
    */
   function isSocialPhaseName(phaseName) {
     return phaseName === 'social_intermission' || phaseName === 'intermission';
+  }
+  
+  /**
+   * Check if currently in a social phase
+   */
+  function isCurrentlySocialPhase() {
+    const currentPhase = window.game?.phase;
+    return isSocialPhaseName(currentPhase);
   }
 
   /**
@@ -141,12 +150,17 @@
       }
 
       if (window.game?.cfg?.debugSocialAI) {
-        console.info('[social-ai-autostart] Detected social intermission (autostart) - starting scheduler/autodriver');
+        console.info('[social-ai-autostart] 🎬 Detected social phase (autostart)');
         console.info('[social-ai-autostart] Phase transition:', previousPhase, '->', nextPhase);
+        console.info('[social-ai-autostart] Starting SocialAIScheduler and auto-driver');
       }
 
       // Start the AI scheduler (SocialAIScheduler is independent system)
-      window.SocialAIScheduler?.startAiSocialPhase?.({}, 'autostart');
+      if (window.SocialAIScheduler?.startAiSocialPhase) {
+        window.SocialAIScheduler.startAiSocialPhase({}, 'autostart');
+      } else {
+        console.warn('[social-ai-autostart] SocialAIScheduler not available');
+      }
       
       // Start the local autodriver tick loop
       start();
@@ -154,8 +168,16 @@
       // Leaving social phase
       if (isRunning) {
         if (window.game?.cfg?.debugSocialAI) {
-          console.info('[social-ai-autostart] Leaving social phase - stopping auto-driver');
+          console.info('[social-ai-autostart] 🛑 Leaving social phase - stopping auto-driver and scheduler');
+          console.info('[social-ai-autostart] Phase transition:', previousPhase, '->', nextPhase);
         }
+        
+        // Stop the scheduler first
+        if (window.SocialAIScheduler?.stopAiSocialPhase) {
+          window.SocialAIScheduler.stopAiSocialPhase('phase_ended');
+        }
+        
+        // Then stop the auto-driver
         stop();
       }
     }

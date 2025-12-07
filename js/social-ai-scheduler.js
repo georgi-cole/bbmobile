@@ -18,7 +18,9 @@
     emptyEnergyBurstCount: 3,         // Total AI interactions during empty-energy skip
     emptyEnergyBurstDelay: 800,       // Delay between burst interactions (ms)
     verbose: false,                    // Verbose logging for debugging
-    maxTicksPerPhase: 1000            // Safety cap to prevent infinite loops
+    maxTicksPerPhase: 1000,           // Safety cap to prevent infinite loops
+    compactLogs: true,                // Compact logging (periodic summaries instead of every tick)
+    compactLogInterval: 10            // Log summary every N ticks when compactLogs is true
   };
 
   function getConfig() {
@@ -34,7 +36,9 @@
       emptyEnergyBurstCount: DEFAULT_CONFIG.emptyEnergyBurstCount,
       emptyEnergyBurstDelay: DEFAULT_CONFIG.emptyEnergyBurstDelay,
       highlightsEnabled: cfg.socialHighlightsEnabled ?? true,
-      verbose: cfg.aiSocialVerbose ?? DEFAULT_CONFIG.verbose
+      verbose: cfg.aiSocialVerbose ?? DEFAULT_CONFIG.verbose,
+      compactLogs: cfg.aiSocialCompactLogs ?? DEFAULT_CONFIG.compactLogs,
+      compactLogInterval: cfg.aiSocialCompactLogInterval ?? DEFAULT_CONFIG.compactLogInterval
     };
   }
 
@@ -80,14 +84,36 @@
   
   /**
    * Info-level logging - important lifecycle events
-   * Only logs when debugSocialAI flag is enabled
+   * Respects compactLogs configuration:
+   * - If compactLogs is true, only logs on startup/shutdown and periodic summaries
+   * - If debugSocialAI is true, logs all info messages
    */
   function infoLog(message, reason = '') {
+    const config = getConfig();
     const debugEnabled = global.game?.cfg?.debugSocialAI;
-    if (!debugEnabled) return;
     
-    const reasonStr = reason ? ` (reason: ${reason})` : '';
-    console.info(`[ai-scheduler] ${message}${reasonStr}`);
+    // Always log if debug is explicitly enabled
+    if (debugEnabled) {
+      const reasonStr = reason ? ` (reason: ${reason})` : '';
+      console.info(`[ai-scheduler] ${message}${reasonStr}`);
+      return;
+    }
+    
+    // If compact logs is enabled, suppress most info logs
+    // Only log lifecycle events (start/stop) and summaries
+    if (config.compactLogs) {
+      const isLifecycleEvent = message.includes('▶️') || message.includes('◼️') || 
+                               message.includes('🛑') || message.includes('⏸️') ||
+                               message.includes('Phase summary:');
+      if (isLifecycleEvent) {
+        const reasonStr = reason ? ` (reason: ${reason})` : '';
+        console.info(`[ai-scheduler] ${message}${reasonStr}`);
+      }
+    } else {
+      // Compact logs disabled - log everything
+      const reasonStr = reason ? ` (reason: ${reason})` : '';
+      console.info(`[ai-scheduler] ${message}${reasonStr}`);
+    }
   }
   
   /**
@@ -339,6 +365,18 @@
   }
 
   // ============================================================================
+  // PHASE DETECTION
+  // ============================================================================
+  /**
+   * Check if currently in a social phase
+   * Accepts both 'intermission' and 'social_intermission'
+   */
+  function isSocialPhase() {
+    const currentPhase = global.game?.phase;
+    return currentPhase === 'intermission' || currentPhase === 'social_intermission';
+  }
+
+  // ============================================================================
   // SCHEDULER LOGIC - ROBUST TICK LOOP
   // ============================================================================
   // Use setInterval as primary heartbeat + RAF pump for responsiveness
@@ -347,6 +385,13 @@
     // Guard: prevent re-entry and check if still running
     if (!isRunning) {
       debugLog('scheduleNextTick: not running, skip');
+      return;
+    }
+    
+    // Guard: stop if not in social phase
+    if (!isSocialPhase()) {
+      warnLog('⚠️ Not in social phase - stopping scheduler');
+      stopAiSocialPhase('not_in_social_phase');
       return;
     }
 
@@ -430,10 +475,26 @@
       debugLog('performTick: paused, skipping work');
       return;
     }
+    
+    // Guard: stop if not in social phase
+    if (!isSocialPhase()) {
+      warnLog('⚠️ Not in social phase during tick - stopping');
+      stopAiSocialPhase('phase_changed');
+      return;
+    }
 
     lastTickTime = Date.now(); // Update watchdog timestamp
     tickCount++;
-    debugLog(`Tick #${tickCount}, lastTickTime: ${lastTickTime}`);
+    
+    const config = getConfig();
+    
+    // Compact logging: only log periodic summaries
+    if (config.compactLogs && tickCount % config.compactLogInterval === 0) {
+      const totalActions = Array.from(actionCounts.values()).reduce((a, b) => a + b, 0);
+      console.info(`[ai-scheduler] 📊 Tick ${tickCount}: ${totalActions} total actions (${actionCounts.size} active players)`);
+    } else {
+      debugLog(`Tick #${tickCount}, lastTickTime: ${lastTickTime}`);
+    }
     
     const aiPlayers = getEligibleAIPlayers();
     
@@ -521,7 +582,9 @@
       
       // Use safe navigation for outcome type (already normalized in executeAIAction)
       const outcomeType = result.outcome?.type || 'unknown';
-      infoLog(`${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`);
+      
+      // Only log individual actions if debug is enabled (respects compact mode)
+      debugLog(`${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`);
       return true; // Action executed successfully
     } else if (result && !result.success) {
       // Action failed (e.g., insufficient resources) - log at debug level
