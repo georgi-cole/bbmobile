@@ -347,7 +347,7 @@ export const JurorReturnOverlay = (() => {
       setTimeout(() => { button.disabled = false; }, 1000);
     }
 
-    console.info('[JurorOverlay] Quick vote processed:', matchedPlayer.name);
+    console.info('[JurorReturnOverlay] Quick vote processed:', matchedJuror.name);
   }
 
   /**
