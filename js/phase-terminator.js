@@ -5,6 +5,9 @@
 (function(global) {
   'use strict';
 
+  // Configuration constants
+  const SOCIAL_INTERMISSION_DELAYED_STOP_MS = 600;
+  
   const PhaseTerminator = {
     /**
      * Run comprehensive cleanup when transitioning between phases
@@ -59,6 +62,26 @@
     },
     
     /**
+     * Helper: Schedule delayed stop for AI scheduler
+     */
+    _scheduleDelayedStop() {
+      setTimeout(() => {
+        if (typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function') {
+          global.SocialAIScheduler.stopAiSocialPhase('phase-terminator:delayed');
+          console.debug('[phase-cleanup] Social AI Scheduler stopped (delayed)');
+        }
+      }, SOCIAL_INTERMISSION_DELAYED_STOP_MS);
+    },
+    
+    /**
+     * Helper: Check if scheduler is available and running
+     */
+    _isSchedulerRunning() {
+      return global.SocialAIScheduler && 
+             (global.SocialAIScheduler.isRunning?.() || false);
+    },
+    
+    /**
      * Stop Social AI Scheduler if it's running
      * Only stops for non-social phases that shouldn't have background social chatter
      * For social_intermission, uses pause/delayed stop to allow AI ticks to occur
@@ -69,40 +92,21 @@
         // Special handling for social_intermission: pause + delayed stop
         // This allows AI scheduler to tick before cleanup completes
         if (nextPhase === 'social_intermission') {
-          if (global.SocialAIScheduler) {
-            const wasRunning = global.SocialAIScheduler.isRunning?.() || false;
-            
-            if (wasRunning) {
-              // Try pause first if available
-              if (typeof global.SocialAIScheduler.pauseAiSocialPhase === 'function') {
-                global.SocialAIScheduler.pauseAiSocialPhase('phase-terminator');
-                console.debug('[phase-cleanup] Social AI Scheduler paused for social_intermission');
-                
-                // Schedule delayed stop after ~600ms
-                setTimeout(() => {
-                  if (typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
-                    global.SocialAIScheduler.stopAiSocialPhase('phase-terminator:delayed');
-                    console.debug('[phase-cleanup] Social AI Scheduler stopped (delayed)');
-                  }
-                }, 600);
-                
-                return 'paused+delayed-stop';
-              } else {
-                // Fallback: delay stop if pause() not available
-                setTimeout(() => {
-                  if (typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
-                    global.SocialAIScheduler.stopAiSocialPhase('phase-terminator:delayed');
-                    console.debug('[phase-cleanup] Social AI Scheduler stopped (delayed, no pause)');
-                  }
-                }, 600);
-                
-                return 'delayed-stop';
-              }
-            } else {
-              return 'already-stopped';
-            }
+          if (!this._isSchedulerRunning()) {
+            return 'already-stopped';
           }
-          return 'not-applicable';
+          
+          // Try pause first if available
+          if (typeof global.SocialAIScheduler.pauseAiSocialPhase === 'function') {
+            global.SocialAIScheduler.pauseAiSocialPhase('phase-terminator');
+            console.debug('[phase-cleanup] Social AI Scheduler paused for social_intermission');
+            this._scheduleDelayedStop();
+            return 'paused+delayed-stop';
+          } else {
+            // Fallback: delay stop if pause() not available
+            this._scheduleDelayedStop();
+            return 'delayed-stop';
+          }
         }
         
         // Standard handling for non-social phases: immediate stop
@@ -116,17 +120,11 @@
         
         const shouldStop = NON_SOCIAL_PHASES.includes(global.game?.phase);
         
-        if (shouldStop && global.SocialAIScheduler) {
-          const wasRunning = global.SocialAIScheduler.isRunning?.() || false;
-          
-          if (wasRunning) {
-            if (typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
-              global.SocialAIScheduler.stopAiSocialPhase('phase-terminator:immediate');
-              console.debug('[phase-cleanup] Social AI Scheduler stopped (immediate)');
-              return 'stopped';
-            }
-          } else {
-            return 'already-stopped';
+        if (shouldStop && this._isSchedulerRunning()) {
+          if (typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
+            global.SocialAIScheduler.stopAiSocialPhase('phase-terminator:immediate');
+            console.debug('[phase-cleanup] Social AI Scheduler stopped (immediate)');
+            return 'stopped';
           }
         }
         
