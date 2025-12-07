@@ -4,22 +4,23 @@
 
 This document covers custom UI components and modules for the BBMobile game, including modals, overlays, and enhanced interaction patterns.
 
-## Juror Voting Overlay
+## Juror Return Overlay (America's Vote)
 
 ### Purpose
 
-The Juror Overlay provides an immersive fullscreen voting experience during the finale jury voting phase. It enhances engagement with visual feedback, animated audience messages, and a quick-vote feature.
+The Juror Return Overlay provides an immersive fullscreen experience for the America's Vote twist (Juror Return). It displays eliminated players with live vote percentages and enhances public engagement with visual feedback, animated public reaction messages, and a quick-vote feature.
 
 ### Features
 
 - **Fullscreen Modal**: Covers the entire viewport with a dimmed, blurred background
-- **Animated Audience Messages**: SMS-like messages that slide up and fade, simulating live audience reactions
+- **Juror Display**: Shows 4-6 eliminated players (random or from `window.game.juryHouse`) with vote percentages below their photos
+- **Animated Public Reactions**: SMS-like messages that slide up and fade, simulating live public reactions to the vote
 - **Floating Emojis**: Gentle floating emoji animations throughout the background
-- **Quick Vote Input**: Allows visual voting by typing a player name
-  - Validates against current player list
+- **Quick Vote Input**: Allows visual voting by typing an eliminated player's name
+  - Validates against current juror list (from `window.game.juryHouse`)
   - Provides inline error messages for invalid names
   - Shows success feedback with avatar flash and pulse effects
-  - Adds custom audience messages when votes are cast
+  - Adds custom public reaction messages when votes are cast
 - **Accessibility**: Full keyboard navigation, ARIA attributes, focus trapping
 - **Responsive**: Mobile-first design that adapts to all screen sizes
 - **Reduced Motion Support**: Respects `prefers-reduced-motion` accessibility preference
@@ -31,49 +32,62 @@ The overlay is implemented as an ES module in `js/ui/juror-overlay.js`.
 #### Basic Usage
 
 ```javascript
-import { JurorOverlay } from './js/ui/juror-overlay.js';
+import { JurorReturnOverlay } from './js/ui/juror-overlay.js';
 
 // Show the overlay
-JurorOverlay.show();
+JurorReturnOverlay.show();
 
 // Hide the overlay
-JurorOverlay.hide();
+JurorReturnOverlay.hide();
 
 // Check if overlay is showing
-const isShowing = JurorOverlay.isShowing();
+const isShowing = JurorReturnOverlay.isShowing();
 
 // Cleanup when no longer needed
-JurorOverlay.destroy();
+JurorReturnOverlay.destroy();
 ```
 
-#### Integration with Existing Jury Voting
+#### Integration with America's Vote Panel
 
-The overlay automatically detects and moves existing jury voting UI (element with id `humanJuryVote` in the `#panel` container) into the overlay content area. When the overlay is hidden, the UI is restored to its original location.
+The overlay automatically detects and moves the existing America's Vote panel (from `js/jury_return_vote.js`) into the overlay content area. When the overlay is hidden, the UI is restored to its original location.
 
-This means you can use the overlay without modifying your existing jury voting logic:
+This means you can use the overlay without modifying your existing America's Vote logic:
 
 ```javascript
-// In your jury voting flow
-function startJuryVoting() {
-  // Create your normal jury voting UI in #panel
-  renderHumanJuryUI(finalistA, finalistB);
+// In js/jury_return_vote.js - showReturnVotePanel function
+function showReturnVotePanel(jurors, voteSecs, onDone) {
+  const panel = document.getElementById('panel');
+  // ... create panel content ...
+  panel.appendChild(container);
   
   // Show the overlay to wrap it in the enhanced experience
-  JurorOverlay.show();
+  if (window.JurorReturnOverlay) {
+    window.JurorReturnOverlay.show();
+  }
 }
 ```
 
-### Player Data
+### Juror Data
 
-The overlay attempts to read player data from `window.game.players` for validation. If not available, it falls back to a sample player list. For best results, ensure `window.game.players` is populated with objects containing:
+The overlay attempts to read juror data from `window.game.juryHouse` (array of player IDs) for validation. It looks up player details from `window.game.cast` or uses `window.getP(id)`. If not available, it falls back to a sample juror list. For best results, ensure:
 
 ```javascript
-{
-  id: 1,
-  name: 'PlayerName',
-  evicted: false,
-  avatar: 'url-to-avatar' // optional
-}
+window.game = {
+  juryHouse: [1, 2, 3, 4], // Array of eliminated player IDs
+  cast: [
+    {
+      id: 1,
+      name: 'PlayerName',
+      evicted: true,
+      avatar: 'url-to-avatar' // optional
+    },
+    // ... more players
+  ]
+};
+
+// Also helpful to have these helper functions:
+window.getP = (id) => window.game.cast.find(p => p.id === id);
+window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
 ```
 
 ### Quick Vote Behavior
@@ -113,18 +127,18 @@ The overlay styles are in `css/juror-overlay.css`. Key CSS classes:
 
 A comprehensive test page is available at `test_juror_overlay.html`. It includes:
 
-- Mock game data setup
+- Mock America's Vote data setup (4 eliminated players)
 - Buttons to show/hide overlay
 - Demonstration of quick-vote validation
 - Instructions for manual testing
-- Player list display
+- Juror list display with vote percentages
 
 To test:
 
 1. Open `test_juror_overlay.html` in a browser
-2. Click "Add Mock Jury Panel" to create a sample voting UI
+2. Click "Add Mock Jury Panel" to create a sample America's Vote UI
 3. Click "Show Overlay" to see the fullscreen experience
-4. Try the Quick Vote feature with valid names (Alex, Jordan, Taylor, Morgan)
+4. Try the Quick Vote feature with valid names (Juror 1, Juror 2, Juror 3, Juror 4)
 5. Try invalid names to see error messages
 6. Test keyboard navigation (Tab, Escape)
 7. Test on mobile viewport (resize browser or use device emulation)

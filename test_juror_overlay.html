@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Juror Overlay Test</title>
+  <title>Juror Return Overlay Test - America's Vote</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -219,16 +219,17 @@
 </head>
 <body>
   <div class="container">
-    <h1>🎭 Juror Overlay Test Page</h1>
+    <h1>🗳️ Juror Return Overlay Test - America's Vote</h1>
     
     <div class="info-section">
       <h2>Test Instructions</h2>
-      <p>This page demonstrates the enhanced juror voting overlay with animated audience messages and quick-vote functionality.</p>
+      <p>This page demonstrates the Juror Return overlay (America's Vote twist) with animated public reactions and quick-vote functionality.</p>
       <ul>
-        <li>Click "Show Overlay" to open the fullscreen voting experience</li>
-        <li>Watch SMS-like audience messages and floating emojis animate in the background</li>
-        <li>Use the Quick Vote input to type a player name and send a visual vote</li>
-        <li>Valid names: Alex, Jordan, Taylor, Morgan (case-insensitive)</li>
+        <li>Click "Show Overlay" to open the fullscreen America's Vote experience</li>
+        <li>Displays 4-6 eliminated players (jurors) with vote percentages below photos</li>
+        <li>Watch SMS-like public reaction messages and floating emojis animate in the background</li>
+        <li>Use the Quick Vote input to type a juror name and send a visual vote</li>
+        <li>Valid names: Juror 1, Juror 2, Juror 3, Juror 4 (case-insensitive)</li>
         <li>Valid votes trigger avatar flash effects and add custom messages</li>
         <li>Invalid names show inline error messages with suggestions</li>
         <li>Close overlay with the × button, Escape key, or "Hide Overlay" button</li>
@@ -239,12 +240,13 @@
     <div class="info-section">
       <h2>Features Demonstrated</h2>
       <ul>
-        <li>Fullscreen modal overlay with dimmed background and backdrop blur</li>
-        <li>Animated SMS-style audience messages flowing vertically</li>
+        <li>Fullscreen modal overlay with dimmed background (America's Vote context)</li>
+        <li>Displays 4-6 eliminated players (jurors) with vote percentages</li>
+        <li>Animated SMS-style public reaction messages flowing vertically</li>
         <li>Floating emoji sprites with gentle drift animations</li>
-        <li>Quick-vote input with player name validation</li>
+        <li>Quick-vote input where public can vote for who should return</li>
         <li>Visual feedback: avatar flash and pulse effects on valid votes</li>
-        <li>Custom audience messages when you vote</li>
+        <li>Custom public reaction messages when you vote</li>
         <li>Accessible keyboard navigation (Tab, Shift+Tab, Escape)</li>
         <li>ARIA attributes for screen readers</li>
         <li>Mobile-responsive layout</li>
@@ -261,7 +263,7 @@
     </div>
     
     <div class="demo-panel">
-      <h3>Current Players (Mock Data)</h3>
+      <h3>Current Jurors - Eliminated Players (Mock Data)</h3>
       <div class="player-list" id="playerList"></div>
     </div>
     
@@ -271,119 +273,164 @@
   
   <!-- Load juror overlay module -->
   <script type="module">
-    import { JurorOverlay } from './js/ui/juror-overlay.js';
+    import { JurorReturnOverlay } from './js/ui/juror-overlay.js';
     
-    // Mock game data for testing
+    // Mock game data for testing - Juror Return twist (America's Vote)
     window.game = {
-      players: [
+      juryHouse: [1, 2, 3, 4], // IDs of eliminated players in jury
+      cast: [
         { 
           id: 1, 
-          name: 'Alex', 
-          evicted: false,
-          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex'
+          name: 'Juror 1', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror1'
         },
         { 
           id: 2, 
-          name: 'Jordan', 
-          evicted: false,
-          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jordan'
+          name: 'Juror 2', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror2'
         },
         { 
           id: 3, 
-          name: 'Taylor', 
-          evicted: false,
-          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Taylor'
+          name: 'Juror 3', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror3'
         },
         { 
           id: 4, 
-          name: 'Morgan', 
+          name: 'Juror 4', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror4'
+        },
+        { 
+          id: 5, 
+          name: 'Player 5', 
           evicted: false,
-          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Morgan'
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Player5'
+        },
+        { 
+          id: 6, 
+          name: 'Player 6', 
+          evicted: false,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Player6'
         }
       ],
-      humanId: 1,
-      finalTwo: [1, 2]
+      humanId: 5
+    };
+    
+    // Helper function to get player by ID
+    window.getP = (id) => {
+      return window.game.cast.find(p => p.id === id);
     };
     
     // Helper function to get safe player name
     window.safeName = (id) => {
-      const player = window.game.players.find(p => p.id === id);
-      return player ? player.name : String(id);
+      const player = window.getP(id);
+      return player ? player.name : `Player ${id}`;
     };
     
-    // Render player list
+    // Render juror list (eliminated players)
     function renderPlayerList() {
       const container = document.getElementById('playerList');
       container.innerHTML = '';
       
-      window.game.players.forEach(player => {
-        const card = document.createElement('div');
-        card.className = 'player-card';
-        card.innerHTML = `
-          <img src="${player.avatar}" alt="${player.name}">
-          <div class="name">${player.name}</div>
-        `;
-        container.appendChild(card);
+      window.game.juryHouse.forEach(id => {
+        const player = window.getP(id);
+        if (player) {
+          const card = document.createElement('div');
+          card.className = 'player-card';
+          card.innerHTML = `
+            <img src="${player.avatar}" alt="${player.name}">
+            <div class="name">${player.name}</div>
+          `;
+          container.appendChild(card);
+        }
       });
     }
     
-    // Add mock jury voting panel
+    // Add mock America's Vote panel (simulates jury_return_vote.js panel)
     function addMockJuryPanel() {
       const panel = document.getElementById('panel');
+      panel.innerHTML = '';
       
-      // Remove existing if present
-      const existing = panel.querySelector('#humanJuryVote');
-      if (existing) {
-        existing.remove();
-      }
-      
-      const box = document.createElement('div');
-      box.className = 'minigame-host';
-      box.id = 'humanJuryVote';
-      box.innerHTML = `
-        <h3>Your Jury Vote</h3>
-        <div class="row" style="gap:8px; margin-top:8px">
-          <button class="btn ok" id="btnVoteA">Vote ${window.safeName(1)}</button>
-          <button class="btn danger" id="btnVoteB">Vote ${window.safeName(2)}</button>
-        </div>
-        <div class="tiny muted" style="margin-top:6px">Cast your vote for the winner.</div>
+      // Create a simplified version of the America's Vote panel
+      const container = document.createElement('div');
+      container.style.cssText = `
+        background: linear-gradient(135deg, rgba(13,27,42,0.95) 0%, rgba(27,38,59,0.95) 100%);
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        max-width: 900px;
+        margin: 0 auto;
       `;
       
-      panel.appendChild(box);
+      const header = document.createElement('div');
+      header.style.cssText = 'text-align:center;margin-bottom:28px;';
+      header.innerHTML = `
+        <h2 style="font-size:2rem;font-weight:700;margin:0 0 8px 0;color:#00e0cc;">🗳️ America's Vote</h2>
+        <div style="font-size:1.1rem;color:#8fb4d4;font-weight:500;">Which juror deserves a second chance?</div>
+      `;
+      container.appendChild(header);
       
-      // Add event listeners
-      box.querySelector('#btnVoteA').addEventListener('click', () => {
-        alert(`You voted for ${window.safeName(1)}!`);
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;';
+      
+      window.game.juryHouse.forEach(id => {
+        const player = window.getP(id);
+        if (!player) return;
+        
+        const card = document.createElement('div');
+        card.setAttribute('data-j-id', id);
+        card.style.cssText = `
+          background:rgba(20,35,55,0.8);
+          border-radius:16px;
+          padding:20px;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          gap:12px;
+          border:1px solid rgba(143,211,255,0.2);
+        `;
+        
+        card.innerHTML = `
+          <img src="${player.avatar}" alt="${player.name}" style="
+            width:120px;
+            height:120px;
+            border-radius:50%;
+            border:3px solid #00e0cc;
+          ">
+          <div style="font-size:1.1rem;font-weight:700;color:#e8f4ff;">${player.name}</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#00e0cc;">${Math.floor(Math.random() * 30)}%</div>
+          <div style="font-size:0.85rem;color:#8fb4d4;">of votes</div>
+        `;
+        
+        grid.appendChild(card);
       });
       
-      box.querySelector('#btnVoteB').addEventListener('click', () => {
-        alert(`You voted for ${window.safeName(2)}!`);
-      });
+      container.appendChild(grid);
+      panel.appendChild(container);
       
-      console.log('[Test] Mock jury panel added');
+      console.log('[Test] Mock America\'s Vote panel added');
     }
     
-    // Remove jury panel
+    // Remove America's Vote panel
     function removeJuryPanel() {
       const panel = document.getElementById('panel');
-      const existing = panel.querySelector('#humanJuryVote');
-      if (existing) {
-        existing.remove();
-        console.log('[Test] Jury panel removed');
-      } else {
-        console.log('[Test] No jury panel to remove');
-      }
+      panel.innerHTML = '';
+      console.log('[Test] America\'s Vote panel removed');
     }
     
     // Button event listeners
     document.getElementById('showOverlay').addEventListener('click', () => {
       console.log('[Test] Showing overlay...');
-      JurorOverlay.show();
+      JurorReturnOverlay.show();
     });
     
     document.getElementById('hideOverlay').addEventListener('click', () => {
       console.log('[Test] Hiding overlay...');
-      JurorOverlay.hide();
+      JurorReturnOverlay.hide();
     });
     
     document.getElementById('addJuryPanel').addEventListener('click', () => {
@@ -395,7 +442,7 @@
     });
     
     document.getElementById('checkStatus').addEventListener('click', () => {
-      const status = JurorOverlay.isShowing() ? 'SHOWN' : 'HIDDEN';
+      const status = JurorReturnOverlay.isShowing() ? 'SHOWN' : 'HIDDEN';
       alert(`Overlay status: ${status}`);
       console.log('[Test] Overlay status:', status);
     });
@@ -411,10 +458,11 @@
     
     // Log window.game for debugging
     console.log('[Test] Mock window.game:', window.game);
-    console.log('[Test] JurorOverlay module loaded:', typeof JurorOverlay);
+    console.log('[Test] JurorReturnOverlay module loaded:', typeof JurorReturnOverlay);
     
-    // Make JurorOverlay globally available for console testing
-    window.JurorOverlay = JurorOverlay;
+    // Make JurorReturnOverlay globally available for console testing
+    window.JurorReturnOverlay = JurorReturnOverlay;
+    window.JurorOverlay = JurorReturnOverlay; // Alias for compatibility
   </script>
 </body>
 </html>

@@ -623,11 +623,6 @@
     panel.appendChild(box);
     return box;
   }
-  // INTEGRATION NOTE: Enhanced Juror Overlay
-  // To enable the fullscreen overlay experience, wrap this function with:
-  //   if (window.JurorOverlay) window.JurorOverlay.show();
-  // The overlay will automatically move the voting UI into the modal.
-  // See: js/ui/juror-overlay.js and docs/ui.md for details.
   function waitForHumanJuryVote(A,B){
     return new Promise(resolve=>{
       const box = renderHumanJuryUI(A,B);

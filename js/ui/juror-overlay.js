@@ -1,19 +1,21 @@
 /**
- * Juror Overlay Module
+ * Juror Return Overlay Module
  * 
- * Provides an immersive fullscreen overlay for jury voting with:
- * - Animated SMS-like audience messages
+ * Provides an immersive fullscreen overlay for the Juror Return twist (America's Vote) with:
+ * - Fullscreen dimmed background showing eliminated players
+ * - Player avatars with live vote percentages below photos
+ * - Animated SMS-like public reactions/messages
  * - Floating emoji animations
- * - Quick-vote input with player name validation
+ * - Quick-vote input where users can type a juror name to vote
  * - Visual feedback for votes (avatar flash, pulse effects)
  * - Mobile-first responsive design
  * - Full accessibility support
  * 
- * This module wraps the existing jury voting UI without changing game logic.
+ * This module wraps the existing America's Vote panel (jury_return_vote.js) without changing game logic.
  * Quick votes are visual-only and don't affect actual vote tallies.
  */
 
-export const JurorOverlay = (() => {
+export const JurorReturnOverlay = (() => {
   'use strict';
 
   // State management
@@ -24,56 +26,74 @@ export const JurorOverlay = (() => {
   let originalPanelContent = null;
   let focusedElementBeforeOpen = null;
 
-  // Sample audience messages for visual effect
+  // Sample public reaction messages for visual effect (Juror Return context)
   const sampleMessages = [
-    "I voted for {player1}, they were amazing! 🔥",
-    "{player2} was on fire the entire time! 💯",
-    "{player3} got robbed! 😤",
-    "{player1} played the best strategic game 🧠",
-    "Can't believe {player2} made it this far! 🎉",
-    "{player3} deserves this win 100% 👑",
-    "My pick is {player1} all the way! ⭐",
-    "{player2}'s social game was incredible 🤝",
-    "Nobody played like {player3}! 🏆",
-    "{player1} won my heart ❤️",
-    "Team {player2} forever! 💪",
-    "{player3} is the true mastermind 🎯",
-    "Voting for {player1} was easy! ✨",
-    "{player2} controlled the whole house 🏠",
-    "{player3} had the best comp wins 🥇"
+    "I voted for {player1}, bring them back! 🔥",
+    "{player2} deserves a second chance! 💯",
+    "{player3} got robbed, let them return! 😤",
+    "{player1} needs to come back and shake things up 🧠",
+    "Can't believe {player2} was evicted! Bring them back! 🎉",
+    "{player3} deserves to return 100% 👑",
+    "My vote is for {player1} all the way! ⭐",
+    "{player2} was eliminated too soon 🤝",
+    "Nobody played like {player3}! Bring them back! 🏆",
+    "{player1} should get another shot ❤️",
+    "Team {player2} for the return! 💪",
+    "{player3} was evicted unfairly 🎯",
+    "Voting {player1} to come back! ✨",
+    "{player2} would shake up the house 🏠",
+    "{player3} still has game left 🥇"
   ];
 
   // Emoji pool for floating effects
   const emojiPool = ['🎉', '🔥', '⭐', '💯', '👑', '❤️', '💪', '✨', '🏆', '🎯', '😍', '🤩', '👏', '🙌', '💥'];
 
   /**
-   * Get player list from window.game or use fallback
+   * Get juror list (eliminated players) from window.game or use fallback
    */
-  function getPlayerList() {
+  function getJurorList() {
     try {
-      // Try to get from window.game
-      if (window.game && Array.isArray(window.game.players)) {
-        return window.game.players
-          .filter(p => p && !p.evicted && p.name)
-          .map(p => ({
-            id: p.id,
-            name: p.name,
-            avatarUrl: p.avatar || p.avatarUrl || getAvatarFallback(p.name)
-          }));
+      // Try to get from window.game.juryHouse
+      if (window.game && Array.isArray(window.game.juryHouse)) {
+        const jurors = window.game.juryHouse.map(id => {
+          const player = window.getP ? window.getP(id) : null;
+          if (player) {
+            return {
+              id: player.id,
+              name: player.name || window.safeName ? window.safeName(id) : `Player ${id}`,
+              avatarUrl: player.avatar || player.avatarUrl || getAvatarFallback(player.name)
+            };
+          }
+          return {
+            id: id,
+            name: window.safeName ? window.safeName(id) : `Player ${id}`,
+            avatarUrl: getDicebearUrl(`Player${id}`)
+          };
+        });
+        
+        if (jurors.length > 0) {
+          return jurors;
+        }
       }
 
-      // Fallback to sample list
-      return [
-        { id: 1, name: 'Alex', avatarUrl: getDicebearUrl('Alex') },
-        { id: 2, name: 'Jordan', avatarUrl: getDicebearUrl('Jordan') },
-        { id: 3, name: 'Taylor', avatarUrl: getDicebearUrl('Taylor') },
-        { id: 4, name: 'Morgan', avatarUrl: getDicebearUrl('Morgan') }
-      ];
+      // Fallback to sample list (4-6 eliminated players)
+      const numJurors = 4 + Math.floor(Math.random() * 3); // Random 4-6
+      const fallbackJurors = [];
+      for (let i = 1; i <= numJurors; i++) {
+        fallbackJurors.push({
+          id: i,
+          name: `Juror ${i}`,
+          avatarUrl: getDicebearUrl(`Juror${i}`)
+        });
+      }
+      return fallbackJurors;
     } catch (err) {
-      console.warn('[JurorOverlay] Error getting player list:', err);
+      console.warn('[JurorReturnOverlay] Error getting juror list:', err);
       return [
-        { id: 1, name: 'Alex', avatarUrl: getDicebearUrl('Alex') },
-        { id: 2, name: 'Jordan', avatarUrl: getDicebearUrl('Jordan') }
+        { id: 1, name: 'Juror 1', avatarUrl: getDicebearUrl('Juror1') },
+        { id: 2, name: 'Juror 2', avatarUrl: getDicebearUrl('Juror2') },
+        { id: 3, name: 'Juror 3', avatarUrl: getDicebearUrl('Juror3') },
+        { id: 4, name: 'Juror 4', avatarUrl: getDicebearUrl('Juror4') }
       ];
     }
   }
@@ -113,8 +133,8 @@ export const JurorOverlay = (() => {
       <div class="juror-overlay__audience-messages" aria-hidden="true"></div>
       
       <div class="juror-overlay__header">
-        <h2 class="juror-overlay__title" id="juror-overlay-title">Jury Voting</h2>
-        <p class="juror-overlay__subtitle">Cast your vote for the winner</p>
+        <h2 class="juror-overlay__title" id="juror-overlay-title">🗳️ America's Vote</h2>
+        <p class="juror-overlay__subtitle">Which juror deserves a second chance?</p>
       </div>
       
       <div class="juror-overlay__content" id="juror-overlay-content">
@@ -153,16 +173,16 @@ export const JurorOverlay = (() => {
    */
   function show() {
     if (isShowing) {
-      console.warn('[JurorOverlay] Already showing');
+      console.warn('[JurorReturnOverlay] Already showing');
       return;
     }
 
     // Save currently focused element
     focusedElementBeforeOpen = document.activeElement;
 
-    // Find existing jury panel
+    // Find existing America's Vote panel (from jury_return_vote.js)
     const panel = document.getElementById('panel');
-    const existingJuryUI = panel ? panel.querySelector('#humanJuryVote') : null;
+    const existingJuryUI = panel ? panel.children[0] : null; // The panel content from showReturnVotePanel
 
     // Create overlay if it doesn't exist
     if (!overlayElement) {
@@ -194,7 +214,7 @@ export const JurorOverlay = (() => {
     // Trap focus within overlay
     trapFocus(overlayElement);
 
-    console.info('[JurorOverlay] Overlay shown');
+    console.info('[JurorReturnOverlay] Overlay shown');
   }
 
   /**
@@ -230,7 +250,7 @@ export const JurorOverlay = (() => {
       focusedElementBeforeOpen.focus();
     }
 
-    console.info('[JurorOverlay] Overlay hidden');
+    console.info('[JurorReturnOverlay] Overlay hidden');
   }
 
   /**
@@ -290,16 +310,16 @@ export const JurorOverlay = (() => {
       return;
     }
 
-    // Get player list and validate
-    const players = getPlayerList();
-    const matchedPlayer = players.find(p => 
+    // Get juror list and validate
+    const jurors = getJurorList();
+    const matchedJuror = jurors.find(p => 
       p.name.toLowerCase() === playerName.toLowerCase()
     );
 
-    if (!matchedPlayer) {
+    if (!matchedJuror) {
       showValidation(
         validationDiv, 
-        `Player "${playerName}" not found. Try: ${players.map(p => p.name).join(', ')}`,
+        `Juror "${playerName}" not found. Try: ${jurors.map(p => p.name).join(', ')}`,
         'error'
       );
       return;
@@ -308,15 +328,15 @@ export const JurorOverlay = (() => {
     // Valid vote - trigger visual effects
     showValidation(
       validationDiv,
-      `Vote sent for ${matchedPlayer.name}! 🎉`,
+      `Vote sent for ${matchedJuror.name}! 🎉`,
       'success'
     );
 
     // Flash avatar if visible
-    flashPlayerAvatar(matchedPlayer);
+    flashPlayerAvatar(matchedJuror);
 
     // Add a custom audience message
-    addAudienceMessage(`${matchedPlayer.name} got a vote from you! ⭐`, true);
+    addAudienceMessage(`${matchedJuror.name} got a vote to return! ⭐`, true);
 
     // Clear input
     input.value = '';
@@ -350,9 +370,9 @@ export const JurorOverlay = (() => {
   }
 
   /**
-   * Flash player avatar for visual feedback
+   * Flash juror avatar for visual feedback
    */
-  function flashPlayerAvatar(player) {
+  function flashPlayerAvatar(juror) {
     // Try to find avatar in the overlay content
     const contentContainer = overlayElement.querySelector('#juror-overlay-content');
     if (!contentContainer) return;
@@ -361,13 +381,21 @@ export const JurorOverlay = (() => {
     const avatars = contentContainer.querySelectorAll('img');
     let targetAvatar = null;
 
-    // Try to match by alt text or src containing player name
+    // Try to match by alt text, src, or data-j-id attribute on parent
     for (const avatar of avatars) {
       const alt = (avatar.alt || '').toLowerCase();
       const src = (avatar.src || '').toLowerCase();
-      const playerNameLower = player.name.toLowerCase();
+      const jurorNameLower = juror.name.toLowerCase();
       
-      if (alt.includes(playerNameLower) || src.includes(playerNameLower)) {
+      // Check if this avatar matches the juror
+      if (alt.includes(jurorNameLower) || src.includes(jurorNameLower.replace(/\s/g, ''))) {
+        targetAvatar = avatar;
+        break;
+      }
+      
+      // Also check parent card for data-j-id attribute
+      const card = avatar.closest('[data-j-id]');
+      if (card && String(card.getAttribute('data-j-id')) === String(juror.id)) {
         targetAvatar = avatar;
         break;
       }
@@ -405,8 +433,8 @@ export const JurorOverlay = (() => {
     const messagesContainer = overlayElement.querySelector('.juror-overlay__audience-messages');
     if (!messagesContainer) return;
 
-    // Get player names for message interpolation
-    const players = getPlayerList();
+    // Get juror names for message interpolation
+    const jurors = getJurorList();
 
     // Create initial messages
     for (let i = 0; i < 3; i++) {
@@ -426,8 +454,8 @@ export const JurorOverlay = (() => {
     const messagesContainer = overlayElement.querySelector('.juror-overlay__audience-messages');
     if (!messagesContainer) return;
 
-    const players = getPlayerList();
-    if (players.length === 0) return;
+    const jurors = getJurorList();
+    if (jurors.length === 0) return;
 
     // Create message element
     const message = document.createElement('div');
@@ -439,11 +467,11 @@ export const JurorOverlay = (() => {
       messageText = customMessage;
     } else {
       const template = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
-      // Replace placeholders with random player names
+      // Replace placeholders with random juror names
       messageText = template
-        .replace('{player1}', players[Math.floor(Math.random() * players.length)].name)
-        .replace('{player2}', players[Math.floor(Math.random() * players.length)].name)
-        .replace('{player3}', players[Math.floor(Math.random() * players.length)].name);
+        .replace('{player1}', jurors[Math.floor(Math.random() * jurors.length)].name)
+        .replace('{player2}', jurors[Math.floor(Math.random() * jurors.length)].name)
+        .replace('{player3}', jurors[Math.floor(Math.random() * jurors.length)].name);
     }
     
     message.textContent = messageText;
@@ -590,7 +618,7 @@ export const JurorOverlay = (() => {
     overlayElement = null;
     document.removeEventListener('keydown', handleEscapeKey);
     
-    console.info('[JurorOverlay] Destroyed');
+    console.info('[JurorReturnOverlay] Destroyed');
   }
 
   // Public API
@@ -604,5 +632,7 @@ export const JurorOverlay = (() => {
 
 // Make globally available for compatibility
 if (typeof window !== 'undefined') {
-  window.JurorOverlay = JurorOverlay;
+  window.JurorReturnOverlay = JurorReturnOverlay;
+  // Also export as JurorOverlay for backward compatibility
+  window.JurorOverlay = JurorReturnOverlay;
 }
