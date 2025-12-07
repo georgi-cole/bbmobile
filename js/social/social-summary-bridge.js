@@ -186,62 +186,118 @@
    * @param {Array} actions - Array of action objects
    * @param {Map} affinityChanges - Map of player pair keys to affinity change data
    * @param {Object} config - Configuration
-   * @returns {Array} Array of highlight strings
+   * @returns {Object} Highlights object with categories and alerts
    */
   function generateHighlights(actions, affinityChanges, config) {
-    const highlights = [];
+    const highlights = {
+      alliances: [],
+      betrayals: [],
+      fights: [],
+      romances: [],
+      groupEvents: [],
+      general: []
+    };
     const candidates = [];
+    const alerts = [];
 
-    // 1. Extract highlights from specific action types
+    // 1. Extract highlights from specific action types with spicy narratives
     actions.forEach(action => {
       const actorName = action.actorName || getPlayerName(action.actorId);
       const targetName = action.targetName || getPlayerName(action.targetId);
       const actionType = action.type || action.actionId;
       const succeeded = action.outcome === 'success' || action.succeeded;
+      const affinityDelta = coerceToNumber(action.affinityDelta || 0);
 
       // Group hangout success
       if (actionType === 'group_hangout' && succeeded) {
         const targetCount = action.targetCount || 1;
+        const spicyText = getSpicyText('group_hangout', actorName, targetName, targetCount);
         candidates.push({
-          text: `${actorName} organized a group hangout with ${targetCount} houseguest${targetCount > 1 ? 's' : ''}`,
-          importance: 3 + targetCount
+          text: spicyText,
+          importance: 3 + targetCount,
+          category: 'groupEvents'
         });
       }
 
-      // Alliance formation
+      // Alliance formation (with alert for big alliances)
       if (actionType === 'form_alliance' && succeeded) {
+        const spicyText = getSpicyText('form_alliance', actorName, targetName);
+        const importance = 8;
         candidates.push({
-          text: `${actorName} formed an alliance with ${targetName}`,
-          importance: 8
+          text: spicyText,
+          importance,
+          category: 'alliances'
         });
-      }
-
-      // Betrayal/backstab
-      if ((actionType === 'spread_rumor' || actionType === 'expose_secret') && succeeded) {
-        candidates.push({
-          text: `${actorName} spread information about ${targetName}`,
-          importance: 6
-        });
-      }
-
-      // Failed aggressive action
-      if ((actionType === 'confront' || actionType === 'expose_secret') && !succeeded) {
-        const affinityDelta = coerceToNumber(action.affinityDelta || 0);
-        if (affinityDelta < -0.03) {
-          candidates.push({
-            text: `${actorName}'s attempt backfired with ${targetName}`,
-            importance: 5
+        
+        // Alert for major alliances
+        if (affinityDelta > 0.1) {
+          alerts.push({
+            type: 'alliance',
+            text: `🤝 Major Alliance Alert: ${actorName} and ${targetName} have formed a powerful bond!`,
+            actorName,
+            targetName,
+            importance: 10
           });
         }
       }
 
-      // Positive interactions
-      if ((actionType === 'compliment' || actionType === 'confide') && succeeded) {
-        const affinityDelta = coerceToNumber(action.affinityDelta || 0);
-        if (affinityDelta > 0.05) {
+      // Betrayal/backstab (with alert)
+      if ((actionType === 'spread_rumor' || actionType === 'expose_secret') && succeeded) {
+        const spicyText = getSpicyText('betrayal', actorName, targetName, actionType);
+        candidates.push({
+          text: spicyText,
+          importance: 6,
+          category: 'betrayals'
+        });
+        
+        // Alert for major betrayals
+        if (affinityDelta <= -0.06) {
+          alerts.push({
+            type: 'betrayal',
+            text: `😱 Betrayal Alert: ${actorName}'s actions against ${targetName} caused major damage!`,
+            actorName,
+            targetName,
+            importance: 9
+          });
+        }
+      }
+
+      // Failed aggressive action (with fight detection)
+      if ((actionType === 'confront' || actionType === 'expose_secret') && !succeeded) {
+        if (affinityDelta < -0.03) {
+          const spicyText = getSpicyText('backfire', actorName, targetName);
           candidates.push({
-            text: `${actorName} and ${targetName} had a positive interaction`,
-            importance: 4
+            text: spicyText,
+            importance: 5,
+            category: 'general'
+          });
+        }
+        
+        // Fight alert
+        if (affinityDelta <= -0.08) {
+          alerts.push({
+            type: 'fight',
+            text: `💥 Fight Alert: ${actorName} and ${targetName} had a major blowup!`,
+            actorName,
+            targetName,
+            importance: 9
+          });
+          candidates.push({
+            text: `${actorName} and ${targetName} got into a heated argument that left both sides fuming`,
+            importance: 8,
+            category: 'fights'
+          });
+        }
+      }
+
+      // Positive interactions (romance/bromance detection)
+      if ((actionType === 'compliment' || actionType === 'confide' || actionType === 'strategize') && succeeded) {
+        if (affinityDelta > 0.05) {
+          const spicyText = getSpicyText('positive', actorName, targetName, actionType);
+          candidates.push({
+            text: spicyText,
+            importance: 4,
+            category: 'general'
           });
         }
       }
@@ -253,32 +309,106 @@
       const target = getPlayerName(change.targetId);
       const delta = change.delta;
 
-      // Significant positive relationship (bromance/showmance)
+      // Significant positive relationship (bromance/showmance with alert)
       if (delta > config.significantDelta) {
+        const spicyText = getSpicyText('bromance', actor, target, delta);
         candidates.push({
-          text: `Bromance alert: ${actor} and ${target} grew closer (+${(delta * 100).toFixed(0)}%)`,
-          importance: 7
+          text: spicyText,
+          importance: 7,
+          category: 'romances'
         });
+        
+        // Romance alert for very high affinity
+        if (delta > 0.12) {
+          alerts.push({
+            type: 'romance',
+            text: `💕 Romance Alert: ${actor} and ${target} are getting VERY close!`,
+            actorName: actor,
+            targetName: target,
+            importance: 8
+          });
+        }
       }
 
       // Notable beef/conflict
       if (delta < -config.minAffinityDelta) {
+        const spicyText = getSpicyText('beef', actor, target, delta);
         candidates.push({
-          text: `Notable beef: ${actor} and ${target} had tension (-${Math.abs(delta * 100).toFixed(0)}%)`,
-          importance: 6
+          text: spicyText,
+          importance: 6,
+          category: 'fights'
         });
       }
     });
 
-    // 3. Sort by importance and take top N
+    // 3. Sort by importance and categorize
     candidates.sort((a, b) => b.importance - a.importance);
     
-    const topCandidates = candidates.slice(0, config.maxHighlights);
+    const topCandidates = candidates.slice(0, config.maxHighlights * 2); // Get more for categorization
     topCandidates.forEach(candidate => {
-      highlights.push(candidate.text);
+      highlights[candidate.category].push(candidate.text);
     });
 
+    // Also populate general highlights array (backwards compatibility)
+    highlights.general = topCandidates.slice(0, config.maxHighlights).map(c => c.text);
+
+    // Attach alerts
+    highlights.alerts = alerts;
+
     return highlights;
+  }
+
+  /**
+   * Get spicy narrative text for an action
+   * @param {string} type - Action type
+   * @param {string} actor - Actor name
+   * @param {string} target - Target name
+   * @param {*} extra - Extra data
+   * @returns {string} Spicy text
+   */
+  function getSpicyText(type, actor, target, extra) {
+    const spicyTemplates = {
+      group_hangout: [
+        `${actor} rallied ${extra} houseguests for a late-night strategy session`,
+        `${actor} organized an epic group hangout — the house is buzzing`,
+        `${actor} brought everyone together — is this a new power alliance forming?`
+      ],
+      form_alliance: [
+        `${actor} and ${target} sealed a deal — they're in it together now`,
+        `${actor} and ${target} bonded over strategy — a new alliance is born`,
+        `${actor} confided in ${target} — trust is building between them`
+      ],
+      betrayal: [
+        `${actor} spread a rumor about ${target} — the house is talking`,
+        `${actor} exposed ${target}'s secrets — trust is shattered`,
+        `${actor} threw ${target} under the bus — game on`
+      ],
+      backfire: [
+        `${actor}'s move against ${target} backfired spectacularly — yikes`,
+        `${actor} tried to play ${target} but it blew up in their face`,
+        `${actor}'s scheme against ${target} failed — awkward`
+      ],
+      positive: [
+        `${actor} and ${target} had a heart-to-heart — they're growing closer`,
+        `${actor} bonded with ${target} over a late-night chat`,
+        `${actor} and ${target} are vibing — could this be a duo to watch?`
+      ],
+      bromance: [
+        `Bromance alert! ${actor} and ${target} are inseparable (+${(extra * 100).toFixed(0)}%)`,
+        `${actor} and ${target} are ride-or-die now — their bond is unbreakable`,
+        `${actor} and ${target} have become the house's power duo`
+      ],
+      beef: [
+        `Tension alert! ${actor} and ${target} are NOT getting along (-${Math.abs(extra * 100).toFixed(0)}%)`,
+        `${actor} and ${target}'s relationship is ice cold — feud incoming?`,
+        `${actor} and ${target} can barely stand each other anymore`
+      ]
+    };
+
+    const templates = spicyTemplates[type];
+    if (!templates) return `${actor} → ${target}`;
+    
+    return templates[Math.floor(Math.random() * templates.length)];
   }
 
   // ============================================================================
@@ -303,6 +433,7 @@
     // Emit diary room entry event
     const diaryEntry = {
       type: 'social_summary',
+      category: 'social',
       week: summary.week,
       timestamp: summary.timestamp,
       title: `Week ${summary.week} Social Phase`,
@@ -312,6 +443,26 @@
 
     bus.emit('dr:entry', { entry: diaryEntry });
     console.info('[social-summary-bridge] ✓ Emitted dr:entry event');
+
+    // Emit interactive alerts
+    if (summary.highlights && summary.highlights.alerts) {
+      summary.highlights.alerts.forEach(alert => {
+        const alertEntry = {
+          type: alert.type,
+          category: 'social_alert',
+          week: summary.week,
+          timestamp: Date.now(),
+          title: alert.text,
+          text: alert.text,
+          severity: alert.type === 'fight' || alert.type === 'betrayal' ? 'high' : 'medium',
+          interactive: true,
+          data: alert
+        };
+        
+        bus.emit('dr:alert', { alert: alertEntry });
+        console.info(`[social-summary-bridge] 🚨 Emitted dr:alert: ${alert.type}`);
+      });
+    }
   }
 
   /**
@@ -324,12 +475,40 @@
     
     lines.push(`${summary.totalActions} social interaction${summary.totalActions !== 1 ? 's' : ''} occurred this week.`);
     
-    if (summary.highlights.length > 0) {
-      lines.push('');
-      lines.push('Highlights:');
-      summary.highlights.forEach(highlight => {
-        lines.push(`• ${highlight}`);
-      });
+    // Handle both old (array) and new (object) highlight formats
+    const highlights = summary.highlights;
+    if (highlights) {
+      if (Array.isArray(highlights)) {
+        // Old format: simple array
+        if (highlights.length > 0) {
+          lines.push('');
+          lines.push('Highlights:');
+          highlights.forEach(highlight => {
+            lines.push(`• ${highlight}`);
+          });
+        }
+      } else if (typeof highlights === 'object') {
+        // New format: categorized object
+        const categories = [
+          { key: 'alliances', label: '🤝 Alliances' },
+          { key: 'betrayals', label: '😱 Betrayals' },
+          { key: 'fights', label: '💥 Fights' },
+          { key: 'romances', label: '💕 Romances' },
+          { key: 'groupEvents', label: '👥 Group Events' },
+          { key: 'general', label: '📋 General' }
+        ];
+        
+        for (const category of categories) {
+          const items = highlights[category.key];
+          if (items && items.length > 0) {
+            lines.push('');
+            lines.push(category.label + ':');
+            items.slice(0, 3).forEach(item => { // Limit per category
+              lines.push(`• ${item}`);
+            });
+          }
+        }
+      }
     }
 
     // Top energy spenders

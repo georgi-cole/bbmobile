@@ -403,6 +403,78 @@
   }
 
   // ============================================================================
+  // EVENT TAGGING (for social engine)
+  // ============================================================================
+  
+  // Storage for event tags: Map<pairKey, Set<eventType>>
+  const _eventTags = new Map();
+
+  function _getPairKey(playerA, playerB) {
+    return [playerA, playerB].sort((a, b) => a - b).join('-');
+  }
+
+  /**
+   * Tag an event between two players (betrayal, fight, romance, etc.)
+   * @param {number} playerA - First player ID
+   * @param {number} playerB - Second player ID
+   * @param {string} eventType - Event type ('betrayal', 'fight', 'romance', 'bromance')
+   */
+  function tagEvent(playerA, playerB, eventType) {
+    if (playerA === playerB) return;
+    
+    const pairKey = _getPairKey(playerA, playerB);
+    if (!_eventTags.has(pairKey)) {
+      _eventTags.set(pairKey, new Set());
+    }
+    
+    const tags = _eventTags.get(pairKey);
+    const hadTag = tags.has(eventType);
+    tags.add(eventType);
+
+    if (!hadTag) {
+      const g = global.game;
+      const nameA = g?.players?.find(p => p.id === playerA)?.name || `Player ${playerA}`;
+      const nameB = g?.players?.find(p => p.id === playerB)?.name || `Player ${playerB}`;
+      console.info(`[Relations] 🏷️ Tagged ${eventType}: ${nameA} ↔ ${nameB}`);
+    }
+  }
+
+  /**
+   * Check if two players have an event tag
+   * @param {number} playerA - First player ID
+   * @param {number} playerB - Second player ID
+   * @param {string} eventType - Event type
+   * @returns {boolean} True if tag exists
+   */
+  function hasEventTag(playerA, playerB, eventType) {
+    const pairKey = _getPairKey(playerA, playerB);
+    if (!_eventTags.has(pairKey)) return false;
+    return _eventTags.get(pairKey).has(eventType);
+  }
+
+  /**
+   * Get all event tags for a pair
+   * @param {number} playerA - First player ID
+   * @param {number} playerB - Second player ID
+   * @returns {string[]} Array of event types
+   */
+  function getEventTags(playerA, playerB) {
+    const pairKey = _getPairKey(playerA, playerB);
+    if (!_eventTags.has(pairKey)) return [];
+    return Array.from(_eventTags.get(pairKey));
+  }
+
+  /**
+   * Clear event tags for a pair
+   * @param {number} playerA - First player ID
+   * @param {number} playerB - Second player ID
+   */
+  function clearEventTags(playerA, playerB) {
+    const pairKey = _getPairKey(playerA, playerB);
+    _eventTags.delete(pairKey);
+  }
+
+  // ============================================================================
   // INITIALIZATION
   // ============================================================================
   
@@ -428,6 +500,12 @@
     getOther,
     hasRelation,
     
+    // Event tagging
+    tagEvent,
+    hasEventTag,
+    getEventTags,
+    clearEventTags,
+    
     // Persistence helpers
     _raw,
     _replaceRaw,
@@ -439,10 +517,12 @@
 
   // Export to global scope
   global.Relations = Relations;
+  global.SocialRelations = Relations; // Alias for social engine
 
   // Also expose on window.game if available
   if (global.game) {
     global.game.Relations = Relations;
+    global.game.SocialRelations = Relations;
   }
 
   console.info('[Relations] ✓ Relations module loaded');
