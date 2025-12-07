@@ -1,0 +1,388 @@
+/* Juror Return Overlay - Fullscreen Modal Enhancement for America's Vote */
+/* This overlay transforms the America's Vote (Juror Return twist) from a panel-based layout to an immersive fullscreen experience */
+
+/* Fullscreen modal overlay with dimmed background */
+.juror-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 15, 22, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  animation: overlayFadeIn 0.3s ease;
+  opacity: 1;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.juror-overlay.hidden {
+  display: none;
+}
+
+/* Overlay header */
+.juror-overlay__header {
+  text-align: center;
+  margin-bottom: 20px;
+  z-index: 2;
+  position: relative;
+}
+
+.juror-overlay__title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #00e0cc;
+  text-shadow: 0 2px 10px rgba(0, 224, 204, 0.4);
+  margin-bottom: 8px;
+}
+
+.juror-overlay__subtitle {
+  font-size: 0.9rem;
+  color: #a8c5db;
+  font-weight: 400;
+}
+
+/* Main content container (preserves original jury UI) */
+.juror-overlay__content {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Audience messages background layer */
+.juror-overlay__audience-messages {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Individual message bubble */
+.audience-message {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 8px 14px;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  max-width: 280px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: messageSlideUp 8s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes messageSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  10% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px);
+  }
+}
+
+/* Floating emojis */
+.floating-emoji {
+  position: absolute;
+  font-size: 1.5rem;
+  pointer-events: none;
+  animation: emojiFloat 6s ease-in-out forwards;
+  opacity: 0;
+}
+
+@keyframes emojiFloat {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  20% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift-x, 30px), var(--drift-y, -120px)) rotate(var(--rotate, 15deg));
+  }
+}
+
+/* Quick vote section */
+.juror-overlay__quick-vote {
+  background: rgba(0, 224, 204, 0.1);
+  border: 1px solid rgba(0, 224, 204, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+  z-index: 2;
+  position: relative;
+}
+
+.juror-overlay__quick-vote h3 {
+  font-size: 1.1rem;
+  color: #00e0cc;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.juror-overlay__quick-vote-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.juror-overlay__quick-vote-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #e8f4ff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.juror-overlay__quick-vote-input:focus {
+  border-color: #00e0cc;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(0, 224, 204, 0.15);
+}
+
+.juror-overlay__quick-vote-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.juror-overlay__quick-vote-button {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+  color: #001a18;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+}
+
+.juror-overlay__quick-vote-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+}
+
+.juror-overlay__quick-vote-button:active {
+  transform: translateY(0);
+}
+
+.juror-overlay__quick-vote-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Validation message */
+.juror-overlay__validation {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  animation: validationFadeIn 0.2s ease;
+}
+
+@keyframes validationFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.juror-overlay__validation--error {
+  background: rgba(255, 51, 102, 0.15);
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  color: #ff6b8a;
+}
+
+.juror-overlay__validation--success {
+  background: rgba(0, 224, 204, 0.15);
+  border: 1px solid rgba(0, 224, 204, 0.4);
+  color: #00e0cc;
+}
+
+/* Avatar flash effect for validated votes */
+@keyframes avatarFlash {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.15);
+    filter: brightness(1.5);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.3);
+  }
+  75% {
+    transform: scale(1.15);
+    filter: brightness(1.5);
+  }
+}
+
+.avatar-flash {
+  animation: avatarFlash 0.8s ease;
+}
+
+/* Pulse effect near avatar */
+.vote-pulse {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 224, 204, 0.4);
+  animation: pulseFade 1s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes pulseFade {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Close button */
+.juror-overlay__close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: #e8f4ff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.juror-overlay__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .juror-overlay {
+    padding: 16px;
+  }
+
+  .juror-overlay__title {
+    font-size: 1.5rem;
+  }
+
+  .juror-overlay__subtitle {
+    font-size: 0.85rem;
+  }
+
+  .juror-overlay__quick-vote-form {
+    flex-direction: column;
+  }
+
+  .juror-overlay__quick-vote-input {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .juror-overlay__quick-vote-button {
+    width: 100%;
+  }
+
+  .audience-message {
+    max-width: 220px;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .floating-emoji {
+    font-size: 1.2rem;
+  }
+
+  .juror-overlay__close {
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    font-size: 1.3rem;
+  }
+}
+
+/* Accessibility: high contrast focus */
+.juror-overlay__quick-vote-input:focus-visible,
+.juror-overlay__quick-vote-button:focus-visible,
+.juror-overlay__close:focus-visible {
+  outline: 3px solid #00e0cc;
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .juror-overlay,
+  .audience-message,
+  .floating-emoji,
+  .juror-overlay__validation,
+  .avatar-flash,
+  .vote-pulse {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

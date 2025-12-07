@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juror Return Overlay Test - America's Vote</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2.2rem;
+      color: #00e0cc;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .info-section {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .info-section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      color: #00e0cc;
+    }
+    
+    .info-section p {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    
+    .info-section ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .info-section li {
+      padding: 6px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+    
+    .info-section li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00e0cc;
+      font-weight: bold;
+    }
+    
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    
+    button.secondary {
+      background: linear-gradient(135deg, #3a5d7c 0%, #2a4d6c 100%);
+      color: #e8f4ff;
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff3366 0%, #cc0033 100%);
+      color: #fff;
+    }
+    
+    .demo-panel {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .demo-panel h3 {
+      font-size: 1.1rem;
+      color: #00e0cc;
+      margin-bottom: 16px;
+    }
+    
+    .player-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    
+    .player-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    
+    .player-card img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      margin-bottom: 8px;
+      object-fit: cover;
+    }
+    
+    .player-card .name {
+      font-weight: 600;
+      color: #e8f4ff;
+    }
+    
+    #panel {
+      min-height: 50px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+    }
+    
+    .minigame-host {
+      background: rgba(0, 224, 204, 0.15);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    .minigame-host h3 {
+      color: #00e0cc;
+      margin-bottom: 12px;
+    }
+    
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn.ok {
+      background: #00e0cc;
+      color: #001a18;
+    }
+    
+    .btn.danger {
+      background: #ff3366;
+      color: #fff;
+    }
+    
+    .tiny {
+      font-size: 0.85rem;
+    }
+    
+    .muted {
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      .controls {
+        flex-direction: column;
+      }
+      
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+  
+  <!-- Load juror overlay CSS -->
+  <link rel="stylesheet" href="css/juror-overlay.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🗳️ Juror Return Overlay Test - America's Vote</h1>
+    
+    <div class="info-section">
+      <h2>Test Instructions</h2>
+      <p>This page demonstrates the Juror Return overlay (America's Vote twist) with animated public reactions and quick-vote functionality.</p>
+      <ul>
+        <li>Click "Show Overlay" to open the fullscreen America's Vote experience</li>
+        <li>Displays 4-6 eliminated players (jurors) with vote percentages below photos</li>
+        <li>Watch SMS-like public reaction messages and floating emojis animate in the background</li>
+        <li>Use the Quick Vote input to type a juror name and send a visual vote</li>
+        <li>Valid names: Juror 1, Juror 2, Juror 3, Juror 4 (case-insensitive)</li>
+        <li>Valid votes trigger avatar flash effects and add custom messages</li>
+        <li>Invalid names show inline error messages with suggestions</li>
+        <li>Close overlay with the × button, Escape key, or "Hide Overlay" button</li>
+        <li>Test keyboard navigation and screen reader accessibility</li>
+      </ul>
+    </div>
+    
+    <div class="info-section">
+      <h2>Features Demonstrated</h2>
+      <ul>
+        <li>Fullscreen modal overlay with dimmed background (America's Vote context)</li>
+        <li>Displays 4-6 eliminated players (jurors) with vote percentages</li>
+        <li>Animated SMS-style public reaction messages flowing vertically</li>
+        <li>Floating emoji sprites with gentle drift animations</li>
+        <li>Quick-vote input where public can vote for who should return</li>
+        <li>Visual feedback: avatar flash and pulse effects on valid votes</li>
+        <li>Custom public reaction messages when you vote</li>
+        <li>Accessible keyboard navigation (Tab, Shift+Tab, Escape)</li>
+        <li>ARIA attributes for screen readers</li>
+        <li>Mobile-responsive layout</li>
+        <li>Reduced motion support for accessibility preferences</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button id="showOverlay">🎬 Show Overlay</button>
+      <button id="hideOverlay" class="secondary">🚪 Hide Overlay</button>
+      <button id="addJuryPanel" class="secondary">➕ Add Mock Jury Panel</button>
+      <button id="removeJuryPanel" class="danger">➖ Remove Jury Panel</button>
+      <button id="checkStatus" class="secondary">ℹ️ Check Status</button>
+    </div>
+    
+    <div class="demo-panel">
+      <h3>Current Jurors - Eliminated Players (Mock Data)</h3>
+      <div class="player-list" id="playerList"></div>
+    </div>
+    
+    <!-- Panel where jury UI normally appears -->
+    <div id="panel"></div>
+  </div>
+  
+  <!-- Load juror overlay module -->
+  <script type="module">
+    import { JurorReturnOverlay } from './js/ui/juror-overlay.js';
+    
+    // Mock game data for testing - Juror Return twist (America's Vote)
+    window.game = {
+      juryHouse: [1, 2, 3, 4], // IDs of eliminated players in jury
+      cast: [
+        { 
+          id: 1, 
+          name: 'Juror 1', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror1'
+        },
+        { 
+          id: 2, 
+          name: 'Juror 2', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror2'
+        },
+        { 
+          id: 3, 
+          name: 'Juror 3', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror3'
+        },
+        { 
+          id: 4, 
+          name: 'Juror 4', 
+          evicted: true,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Juror4'
+        },
+        { 
+          id: 5, 
+          name: 'Player 5', 
+          evicted: false,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Player5'
+        },
+        { 
+          id: 6, 
+          name: 'Player 6', 
+          evicted: false,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Player6'
+        }
+      ],
+      humanId: 5
+    };
+    
+    // Helper function to get player by ID
+    window.getP = (id) => {
+      return window.game.cast.find(p => p.id === id);
+    };
+    
+    // Helper function to get safe player name
+    window.safeName = (id) => {
+      const player = window.getP(id);
+      return player ? player.name : `Player ${id}`;
+    };
+    
+    // Render juror list (eliminated players)
+    function renderPlayerList() {
+      const container = document.getElementById('playerList');
+      container.innerHTML = '';
+      
+      window.game.juryHouse.forEach(id => {
+        const player = window.getP(id);
+        if (player) {
+          const card = document.createElement('div');
+          card.className = 'player-card';
+          card.innerHTML = `
+            <img src="${player.avatar}" alt="${player.name}">
+            <div class="name">${player.name}</div>
+          `;
+          container.appendChild(card);
+        }
+      });
+    }
+    
+    // Add mock America's Vote panel (simulates jury_return_vote.js panel)
+    function addMockJuryPanel() {
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      
+      // Create a simplified version of the America's Vote panel
+      const container = document.createElement('div');
+      container.style.cssText = `
+        background: linear-gradient(135deg, rgba(13,27,42,0.95) 0%, rgba(27,38,59,0.95) 100%);
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        max-width: 900px;
+        margin: 0 auto;
+      `;
+      
+      const header = document.createElement('div');
+      header.style.cssText = 'text-align:center;margin-bottom:28px;';
+      header.innerHTML = `
+        <h2 style="font-size:2rem;font-weight:700;margin:0 0 8px 0;color:#00e0cc;">🗳️ America's Vote</h2>
+        <div style="font-size:1.1rem;color:#8fb4d4;font-weight:500;">Which juror deserves a second chance?</div>
+      `;
+      container.appendChild(header);
+      
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;';
+      
+      window.game.juryHouse.forEach(id => {
+        const player = window.getP(id);
+        if (!player) return;
+        
+        const card = document.createElement('div');
+        card.setAttribute('data-j-id', id);
+        card.style.cssText = `
+          background:rgba(20,35,55,0.8);
+          border-radius:16px;
+          padding:20px;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          gap:12px;
+          border:1px solid rgba(143,211,255,0.2);
+        `;
+        
+        card.innerHTML = `
+          <img src="${player.avatar}" alt="${player.name}" style="
+            width:120px;
+            height:120px;
+            border-radius:50%;
+            border:3px solid #00e0cc;
+          ">
+          <div style="font-size:1.1rem;font-weight:700;color:#e8f4ff;">${player.name}</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#00e0cc;">${Math.floor(Math.random() * 30)}%</div>
+          <div style="font-size:0.85rem;color:#8fb4d4;">of votes</div>
+        `;
+        
+        grid.appendChild(card);
+      });
+      
+      container.appendChild(grid);
+      panel.appendChild(container);
+      
+      console.log('[Test] Mock America\'s Vote panel added');
+    }
+    
+    // Remove America's Vote panel
+    function removeJuryPanel() {
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      console.log('[Test] America\'s Vote panel removed');
+    }
+    
+    // Button event listeners
+    document.getElementById('showOverlay').addEventListener('click', () => {
+      console.log('[Test] Showing overlay...');
+      JurorReturnOverlay.show();
+    });
+    
+    document.getElementById('hideOverlay').addEventListener('click', () => {
+      console.log('[Test] Hiding overlay...');
+      JurorReturnOverlay.hide();
+    });
+    
+    document.getElementById('addJuryPanel').addEventListener('click', () => {
+      addMockJuryPanel();
+    });
+    
+    document.getElementById('removeJuryPanel').addEventListener('click', () => {
+      removeJuryPanel();
+    });
+    
+    document.getElementById('checkStatus').addEventListener('click', () => {
+      const status = JurorReturnOverlay.isShowing() ? 'SHOWN' : 'HIDDEN';
+      alert(`Overlay status: ${status}`);
+      console.log('[Test] Overlay status:', status);
+    });
+    
+    // Initialize
+    renderPlayerList();
+    
+    // Auto-add jury panel on load for easier testing
+    setTimeout(() => {
+      addMockJuryPanel();
+      console.log('[Test] Page initialized with mock data');
+    }, 100);
+    
+    // Log window.game for debugging
+    console.log('[Test] Mock window.game:', window.game);
+    console.log('[Test] JurorReturnOverlay module loaded:', typeof JurorReturnOverlay);
+    
+    // Make JurorReturnOverlay globally available for console testing
+    window.JurorReturnOverlay = JurorReturnOverlay;
+    window.JurorOverlay = JurorReturnOverlay; // Alias for compatibility
+  </script>
+</body>
+</html>
