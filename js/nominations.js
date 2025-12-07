@@ -10,6 +10,13 @@
   function aliveIds(){ return global.alivePlayers().map(p=>p.id); }
   function eligibleNomIds(){ const g=global.game; return aliveIds().filter(id=>id!==g.hohId); }
   function requiredSlots(){ return Math.max(2, Math.min(4, global.game?.__twistNomSlots || 2)); }
+  
+  // Helper to ensure provisional nominations buffer is initialized
+  function ensureProvisionalBuffer(){
+    if(!Array.isArray(global.__provisionalNominations)) {
+      global.__provisionalNominations = [];
+    }
+  }
 
   function aiPickNominees(count=2){
     const g=global.game; const hoh=global.getP(g.hohId);
@@ -80,6 +87,12 @@
     if(hoh && hoh.human){
       console.log('[noms] Human HOH detected - showing intro card (need:', need, ')');
       
+      // Set guard flag to prevent premature nomination badge display
+      // Any programmatic nominations (from twists/social-maneuvers) will be buffered
+      global.__awaitingHumanNominations = true;
+      ensureProvisionalBuffer();
+      console.log('[noms] ✓ Set __awaitingHumanNominations flag - nominations will be buffered');
+      
       // Pre-flight: Ensure #tvOverlay exists before attempting to use any helpers
       // This is critical for multi-eviction weeks where the intro may fail to appear
       let tvOverlay = document.getElementById('tvOverlay');
@@ -122,6 +135,10 @@
             need: need,
             onNominate: () => {
               console.log('[noms] NOMINATE button clicked via TVCards');
+              
+              // Note: __awaitingHumanNominations flag remains set during selection
+              // It will be cleared in finalizeNoms() after selections are confirmed
+              console.log('[noms] Opening selector - flag will be cleared in finalizeNoms()');
               
               // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
               if(global.NomsFS && typeof global.NomsFS.open === 'function'){
@@ -204,6 +221,10 @@
       nominateBtn.addEventListener('click', () => {
         console.log('[noms] Fallback NOMINATE button clicked');
         nominateBtn.disabled = true;
+        
+        // Note: __awaitingHumanNominations flag remains set during selection
+        // It will be cleared in finalizeNoms() after selections are confirmed
+        console.log('[noms] Opening selector (fallback) - flag will be cleared in finalizeNoms()');
         
         // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
         if(global.NomsFS && typeof global.NomsFS.open === 'function'){
@@ -309,6 +330,19 @@
     }
     // Ensure affinity object exists
     if (!hoh.affinity) hoh.affinity = {};
+    
+    // Check if we're awaiting human HOH nominations - if so, buffer instead of applying
+    if(global.__awaitingHumanNominations && hoh && hoh.human){
+      console.log('[noms] Buffering nominations while awaiting human HOH selection');
+      ensureProvisionalBuffer();
+      g.nominees.forEach(id=>{
+        if(!global.__provisionalNominations.includes(id)){
+          global.__provisionalNominations.push(id);
+          console.info(`[noms] ✓ Buffered provisional nomination: Player ${id} while awaiting human HOH`);
+        }
+      });
+      return; // Don't apply side effects yet
+    }
     
     g.nominees.forEach(id=>{
       const p=global.getP(id); p.nominated=true;
@@ -494,7 +528,33 @@
     
     if(!g.__nomsCommitInProgress) g.__nomsCommitInProgress = true;
 
+    // Clear awaiting flag - we're now committing nominations
+    if(global.__awaitingHumanNominations){
+      console.log('[noms] Clearing __awaitingHumanNominations flag - finalizing nominations');
+      global.__awaitingHumanNominations = false;
+    }
+
     g.nominees=ensureValidDistinct(); 
+    
+    // Apply any buffered provisional nominations (avoid duplicates)
+    if(Array.isArray(global.__provisionalNominations) && global.__provisionalNominations.length > 0){
+      console.log('[noms] Applying buffered provisional nominations:', global.__provisionalNominations);
+      const currentNominees = new Set(g.nominees);
+      const poolSet = new Set(eligibleNomIds()); // Use Set for O(1) lookups
+      global.__provisionalNominations.forEach(id => {
+        if(!currentNominees.has(id) && id !== g.hohId){
+          // Only add if not already nominated and not the HOH
+          if(poolSet.has(id)){
+            g.nominees.push(id);
+            currentNominees.add(id);
+            console.info(`[noms] ✓ Applied buffered nomination: Player ${id}`);
+          }
+        }
+      });
+      // Clear the buffer
+      global.__provisionalNominations = [];
+    }
+    
     g.nomsLocked=true; 
     g.__nomsCommitted = true;
     applyNominationSideEffects();
