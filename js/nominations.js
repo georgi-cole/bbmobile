@@ -131,9 +131,9 @@
             onNominate: () => {
               console.log('[noms] NOMINATE button clicked via TVCards');
               
-              // Clear the awaiting flag since HOH is now making selections
-              // Provisional nominations will be applied when finalizeNoms is called
-              console.log('[noms] Clearing __awaitingHumanNominations flag - HOH is selecting');
+              // Note: __awaitingHumanNominations flag remains set during selection
+              // It will be cleared in finalizeNoms() after selections are confirmed
+              console.log('[noms] Opening selector - flag will be cleared in finalizeNoms()');
               
               // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
               if(global.NomsFS && typeof global.NomsFS.open === 'function'){
@@ -217,8 +217,9 @@
         console.log('[noms] Fallback NOMINATE button clicked');
         nominateBtn.disabled = true;
         
-        // Clear the awaiting flag since HOH is now making selections
-        console.log('[noms] Clearing __awaitingHumanNominations flag - HOH is selecting (fallback)');
+        // Note: __awaitingHumanNominations flag remains set during selection
+        // It will be cleared in finalizeNoms() after selections are confirmed
+        console.log('[noms] Opening selector (fallback) - flag will be cleared in finalizeNoms()');
         
         // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
         if(global.NomsFS && typeof global.NomsFS.open === 'function'){
@@ -534,10 +535,10 @@
     if(Array.isArray(global.__provisionalNominations) && global.__provisionalNominations.length > 0){
       console.log('[noms] Applying buffered provisional nominations:', global.__provisionalNominations);
       const currentNominees = new Set(g.nominees);
+      const pool = eligibleNomIds(); // Call once before loop
       global.__provisionalNominations.forEach(id => {
         if(!currentNominees.has(id) && id !== g.hohId){
           // Only add if not already nominated and not the HOH
-          const pool = eligibleNomIds();
           if(pool.includes(id)){
             g.nominees.push(id);
             currentNominees.add(id);
