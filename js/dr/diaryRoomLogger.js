@@ -216,23 +216,43 @@
       return;
     }
 
-    const actorId = payload.actor || payload.actorId;
-    const targetId = payload.target || payload.targetId;
-    const actionType = payload.actionType || payload.action || 'generic';
+    // NEW: Check if payload has pre-built narrative (from sm-to-dr-adapter)
+    let text;
+    if (payload.narrative && typeof payload.narrative === 'string' && payload.narrative.length > 0) {
+      // Use pre-built narrative from adapter
+      text = payload.narrative;
+      
+      // Optionally append bond shifts inline
+      if (payload.bondShifts && payload.bondShifts.length > 0) {
+        const significantShifts = payload.bondShifts.filter(s => Math.abs(s.delta) > 0.01);
+        if (significantShifts.length > 0 && templates.deltaStr) {
+          const shiftTexts = significantShifts.map(s => {
+            const deltaText = templates.deltaStr(s.delta);
+            return `${s.targetName}: ${deltaText}`;
+          }).join(', ');
+          text += ` [${shiftTexts}]`;
+        }
+      }
+    } else {
+      // Fallback: use template system (backwards compat)
+      const actorId = payload.actor?.id || payload.actorId;
+      const targetId = payload.target?.id || payload.targetId;
+      const actionType = payload.actionType || payload.action || 'generic';
 
-    const actor = templates.resolveName(actorId);
-    const target = templates.resolveName(targetId);
+      const actor = templates.resolveName(actorId);
+      const target = templates.resolveName(targetId);
 
-    // Get template and render
-    const template = templates.getSocialTemplate(actionType);
-    let text = templates.render(template, { actor, target });
+      // Get template and render
+      const template = templates.getSocialTemplate(actionType);
+      text = templates.render(template, { actor, target });
 
-    // Add bond delta if available
-    const bondDelta = payload.bondDelta || payload.delta;
-    if (bondDelta !== null && bondDelta !== undefined && Math.abs(bondDelta) > 0.01) {
-      const deltaText = templates.deltaStr(bondDelta);
-      if (deltaText) {
-        text += ` ${deltaText}`;
+      // Add bond delta if available
+      const bondDelta = payload.bondDelta || payload.delta;
+      if (bondDelta !== null && bondDelta !== undefined && Math.abs(bondDelta) > 0.01) {
+        const deltaText = templates.deltaStr(bondDelta);
+        if (deltaText) {
+          text += ` ${deltaText}`;
+        }
       }
     }
 

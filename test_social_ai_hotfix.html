@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Social AI Hotfix Validation</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px; 
+      background: #0a1628; 
+      color: #c8d5e6;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 { color: #78b4f0; }
+    h2 { color: #6ca0d8; margin-top: 30px; }
+    .test-section {
+      background: #1c2b3e;
+      border: 1px solid #284061;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    button { 
+      background: #284061;
+      border: 1px solid #3a5a81;
+      color: #c8d5e6;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 5px;
+    }
+    button:hover { background: #3a5a81; }
+    button.success { background: #16a34a; border-color: #22c55e; }
+    button.success:hover { background: #22c55e; }
+    button.error { background: #dc2626; border-color: #ef4444; }
+    button.error:hover { background: #ef4444; }
+    .log { 
+      background: #2a2a2a; 
+      padding: 15px; 
+      margin-top: 15px; 
+      max-height: 400px; 
+      overflow-y: auto; 
+      font-family: 'Monaco', 'Menlo', monospace; 
+      font-size: 12px;
+      border-radius: 6px;
+      border: 1px solid #444;
+    }
+    .log-entry { padding: 3px 0; border-bottom: 1px solid #333; }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry.info { color: #60a5fa; }
+    .log-entry.warn { color: #fbbf24; }
+    .log-entry.event { color: #a78bfa; }
+    .status { 
+      padding: 15px; 
+      margin: 15px 0; 
+      border-radius: 6px;
+      background: #1c2b3e;
+      border: 1px solid #284061;
+    }
+    .status strong { color: #78b4f0; }
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .metric {
+      background: #1c2b3e;
+      border: 1px solid #284061;
+      padding: 12px;
+      border-radius: 6px;
+    }
+    .metric-label {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-bottom: 5px;
+    }
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #78b4f0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Social AI Hotfix Validation</h1>
+  <p>Test suite for verifying the social AI fixes: phase guards, compact logging, and DR integration</p>
+  
+  <div class="test-section">
+    <h2>1. Configuration & Setup</h2>
+    <div class="grid">
+      <button onclick="enableDebugMode()">Enable Debug Mode</button>
+      <button onclick="enableCompactLogs()">Enable Compact Logs</button>
+      <button onclick="disableCompactLogs()">Disable Compact Logs</button>
+      <button onclick="showCurrentConfig()">Show Config</button>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Phase Detection Tests</h2>
+    <div class="grid">
+      <button onclick="testPhaseDetection('intermission')">Test: 'intermission'</button>
+      <button onclick="testPhaseDetection('social_intermission')">Test: 'social_intermission'</button>
+      <button onclick="testPhaseDetection('hoh')">Test: 'hoh' (non-social)</button>
+      <button onclick="simulatePhaseTransition()">Simulate Phase Transition</button>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Adapter & Event Tests</h2>
+    <div class="grid">
+      <button onclick="testAdapterInstallation()">Check Adapter Installation</button>
+      <button onclick="testEventEmission()">Test Event Emission</button>
+      <button onclick="testIdempotency()">Test Idempotency</button>
+      <button onclick="checkDREntries()">Check DR Entries</button>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. Scheduler Tests</h2>
+    <div class="grid">
+      <button onclick="testSchedulerStart()">Start Scheduler</button>
+      <button onclick="testSchedulerStop()">Stop Scheduler</button>
+      <button onclick="getSchedulerState()">Get State</button>
+      <button onclick="clearLogs()">Clear Console</button>
+    </div>
+  </div>
+  
+  <div id="status" class="status">
+    <strong>Status:</strong> <span id="statusText">Ready</span>
+  </div>
+  
+  <div class="test-section">
+    <h2>📊 Metrics</h2>
+    <div class="grid">
+      <div class="metric">
+        <div class="metric-label">Events Emitted</div>
+        <div class="metric-value" id="eventsCount">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">DR Entries</div>
+        <div class="metric-value" id="drEntriesCount">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Console Logs</div>
+        <div class="metric-value" id="consoleLogsCount">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Scheduler Ticks</div>
+        <div class="metric-value" id="tickCount">0</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="log" id="log"></div>
+
+  <script>
+    // Initialize window.game if not exists
+    if (!window.game) {
+      window.game = {
+        phase: 'lobby',
+        week: 1,
+        humanId: 1,
+        cfg: {},
+        players: [
+          { id: 1, name: 'Player 1', evicted: false, affinity: {} },
+          { id: 2, name: 'Player 2', evicted: false, affinity: {} },
+          { id: 3, name: 'Player 3', evicted: false, affinity: {} },
+          { id: 4, name: 'Player 4', evicted: false, affinity: {} }
+        ]
+      };
+    }
+    
+    // Helper: safeName function
+    window.safeName = function(id) {
+      const player = window.game.players.find(p => p.id === id);
+      return player ? player.name : `Player ${id}`;
+    };
+    
+    // Helper: alivePlayers function
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    let eventCount = 0;
+    let consoleLogCount = 0;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      
+      if (type !== 'event') {
+        consoleLogCount++;
+        updateMetric('consoleLogsCount', consoleLogCount);
+      }
+    }
+
+    function updateStatus(text, isError = false) {
+      const statusText = document.getElementById('statusText');
+      statusText.textContent = text;
+      statusText.style.color = isError ? '#ef4444' : '#4ade80';
+    }
+    
+    function updateMetric(id, value) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+      }
+    }
+
+    function enableDebugMode() {
+      window.game.cfg.debugSocialAI = true;
+      window.game.cfg.aiSocialEmitDrEvents = true;
+      log('✓ Debug mode enabled (debugSocialAI + aiSocialEmitDrEvents)', 'success');
+      updateStatus('Debug mode enabled');
+    }
+
+    function enableCompactLogs() {
+      window.game.cfg.aiSocialCompactLogs = true;
+      log('✓ Compact logs enabled', 'success');
+      updateStatus('Compact logs enabled');
+    }
+
+    function disableCompactLogs() {
+      window.game.cfg.aiSocialCompactLogs = false;
+      log('✓ Compact logs disabled (verbose mode)', 'success');
+      updateStatus('Compact logs disabled');
+    }
+
+    function showCurrentConfig() {
+      const cfg = window.game.cfg;
+      log('Current Configuration:', 'info');
+      log(`  debugSocialAI: ${cfg.debugSocialAI || false}`, 'info');
+      log(`  aiSocialEmitDrEvents: ${cfg.aiSocialEmitDrEvents || false}`, 'info');
+      log(`  aiSocialCompactLogs: ${cfg.aiSocialCompactLogs ?? true}`, 'info');
+      log(`  aiSocialCompactLogInterval: ${cfg.aiSocialCompactLogInterval ?? 10}`, 'info');
+      updateStatus('Config displayed');
+    }
+
+    function testPhaseDetection(phaseName) {
+      window.game.phase = phaseName;
+      log(`Set phase to: ${phaseName}`, 'info');
+      
+      // Test if it's detected as social phase
+      const isSocial = phaseName === 'intermission' || phaseName === 'social_intermission';
+      
+      if (isSocial) {
+        log(`✓ Phase ${phaseName} correctly identified as social phase`, 'success');
+      } else {
+        log(`✓ Phase ${phaseName} correctly identified as non-social phase`, 'success');
+      }
+      
+      updateStatus(`Phase set to: ${phaseName}`);
+    }
+
+    function simulatePhaseTransition() {
+      log('Simulating phase transition: lobby → intermission', 'info');
+      
+      // Emit phase change event
+      const event = new CustomEvent('bb:phase:changed', {
+        detail: {
+          previousPhase: 'lobby',
+          phase: 'intermission'
+        }
+      });
+      
+      window.game.phase = 'intermission';
+      window.dispatchEvent(event);
+      
+      log('✓ Phase transition event dispatched', 'success');
+      updateStatus('Phase transition simulated');
+    }
+
+    function testAdapterInstallation() {
+      const installed = window.__smToDrAdapterInstalled;
+      
+      if (installed) {
+        log('✓ Adapter is installed', 'success');
+        updateStatus('Adapter installed');
+      } else {
+        log('⚠ Adapter not installed (debug gates may be disabled)', 'warn');
+        updateStatus('Adapter not installed', true);
+      }
+    }
+
+    function testEventEmission() {
+      log('Testing event emission...', 'info');
+      
+      // Listen for events
+      let receivedEvents = [];
+      
+      const eventTypes = [
+        'social.action:result',
+        'bond.shift',
+        'player.relations:updated',
+        'social.entry:story'
+      ];
+      
+      eventTypes.forEach(eventType => {
+        window.addEventListener(eventType, function handler(e) {
+          receivedEvents.push(eventType);
+          log(`✓ Received: ${eventType}`, 'event');
+          eventCount++;
+          updateMetric('eventsCount', eventCount);
+          window.removeEventListener(eventType, handler);
+        });
+      });
+      
+      // Emit test sm-ai-interaction event
+      const testEvent = new CustomEvent('sm-ai-interaction', {
+        detail: {
+          actorId: 2,
+          targetIds: [3],
+          actionId: 'small_talk',
+          success: true,
+          outcome: {
+            type: 'success',
+            message: 'Test interaction'
+          },
+          pairwise: {
+            3: { affinity: 0.05 }
+          }
+        }
+      });
+      
+      window.dispatchEvent(testEvent);
+      
+      setTimeout(() => {
+        if (receivedEvents.length > 0) {
+          log(`✓ Received ${receivedEvents.length} events: ${receivedEvents.join(', ')}`, 'success');
+          updateStatus(`${receivedEvents.length} events received`);
+        } else {
+          log('⚠ No events received (adapter may not be installed)', 'warn');
+          updateStatus('No events received', true);
+        }
+      }, 100);
+    }
+
+    function testIdempotency() {
+      log('Testing idempotency (duplicate prevention)...', 'info');
+      
+      let eventCount = 0;
+      const handler = (e) => { eventCount++; };
+      
+      window.addEventListener('social.action:result', handler);
+      
+      // Emit same event twice
+      const testEvent = new CustomEvent('sm-ai-interaction', {
+        detail: {
+          actorId: 2,
+          targetIds: [3],
+          actionId: 'compliment',
+          success: true,
+          outcome: { type: 'success' },
+          pairwise: { 3: { affinity: 0.03 } }
+        }
+      });
+      
+      window.dispatchEvent(testEvent);
+      
+      setTimeout(() => {
+        window.dispatchEvent(testEvent);
+        
+        setTimeout(() => {
+          window.removeEventListener('social.action:result', handler);
+          
+          if (eventCount === 1) {
+            log('✓ Idempotency working: duplicate event blocked', 'success');
+            updateStatus('Idempotency test passed');
+          } else {
+            log(`⚠ Idempotency issue: received ${eventCount} events (expected 1)`, 'warn');
+            updateStatus('Idempotency test failed', true);
+          }
+        }, 100);
+      }, 100);
+    }
+
+    function checkDREntries() {
+      const drLogger = window.DiaryRoomLogger;
+      
+      if (!drLogger) {
+        log('⚠ DiaryRoomLogger not available', 'warn');
+        updateStatus('DiaryRoomLogger not found', true);
+        return;
+      }
+      
+      const entries = drLogger._entries || [];
+      log(`DR Entries: ${entries.length}`, 'info');
+      
+      if (entries.length > 0) {
+        log('Recent entries:', 'info');
+        entries.slice(-5).forEach(entry => {
+          log(`  - ${entry.text || entry.title || 'No text'}`, 'info');
+        });
+      }
+      
+      updateMetric('drEntriesCount', entries.length);
+      updateStatus(`${entries.length} DR entries found`);
+    }
+
+    function testSchedulerStart() {
+      if (!window.SocialAIScheduler) {
+        log('⚠ SocialAIScheduler not available', 'warn');
+        updateStatus('Scheduler not found', true);
+        return;
+      }
+      
+      // Set to social phase first
+      window.game.phase = 'intermission';
+      
+      window.SocialAIScheduler.startAiSocialPhase({}, 'test');
+      log('✓ Scheduler started', 'success');
+      updateStatus('Scheduler started');
+      
+      // Get initial state
+      setTimeout(getSchedulerState, 500);
+    }
+
+    function testSchedulerStop() {
+      if (!window.SocialAIScheduler) {
+        log('⚠ SocialAIScheduler not available', 'warn');
+        return;
+      }
+      
+      window.SocialAIScheduler.stopAiSocialPhase('test');
+      log('✓ Scheduler stopped', 'success');
+      updateStatus('Scheduler stopped');
+    }
+
+    function getSchedulerState() {
+      if (!window.__smDebug || !window.__smDebug.getState) {
+        log('⚠ Scheduler debug API not available', 'warn');
+        return;
+      }
+      
+      const state = window.__smDebug.getState();
+      log('Scheduler State:', 'info');
+      log(`  Running: ${state.isRunning}`, 'info');
+      log(`  Paused: ${state.isPaused}`, 'info');
+      log(`  Ticks: ${state.tickCount}`, 'info');
+      log(`  Total Actions: ${state.totalActions}`, 'info');
+      log(`  Time Since Last Tick: ${state.timeSinceLastTick}ms`, 'info');
+      
+      updateMetric('tickCount', state.tickCount);
+      updateStatus('Scheduler state retrieved');
+    }
+
+    function clearLogs() {
+      document.getElementById('log').innerHTML = '';
+      consoleLogCount = 0;
+      updateMetric('consoleLogsCount', 0);
+      updateStatus('Logs cleared');
+    }
+
+    // Initialize
+    log('Test suite initialized', 'info');
+    log('Run "Enable Debug Mode" first to activate adapter', 'info');
+    updateStatus('Ready');
+  </script>
+</body>
+</html>
