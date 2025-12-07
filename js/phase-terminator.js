@@ -77,8 +77,8 @@
      * Uses randomized delay between min/max to allow scheduler ticks
      */
     _scheduleDelayedStop() {
-      const delay = SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS + 
-                    Math.floor(Math.random() * (SOCIAL_INTERMISSION_DELAYED_STOP_MAX_MS - SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS));
+      const delayRange = SOCIAL_INTERMISSION_DELAYED_STOP_MAX_MS - SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS;
+      const delay = SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS + Math.floor(Math.random() * delayRange);
       debugLog(`Scheduling delayed stop in ${delay}ms`);
       setTimeout(() => {
         if (typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function') {
@@ -100,7 +100,6 @@
      * Helper: Safely pause or delay-stop the AI scheduler
      * Tries pause first (if available), falls back to delayed stop
      * @param {string} reason - Reason for pause/delay (for logging)
-     * @param {number} delayMs - Delay for stop (optional, uses config range if not provided)
      * @returns {string} Result status ('paused+delayed-stop', 'delayed-stop', 'already-stopped')
      */
     _safePauseOrDelayStop(reason) {
