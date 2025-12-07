@@ -2075,6 +2075,11 @@
     const g = global.game;
     if (!g) return;
     
+    // Pause AI scheduler (use new pause() API)
+    if (global.SocialAIScheduler && typeof global.SocialAIScheduler.pauseAiSocialPhase === 'function') {
+      global.SocialAIScheduler.pauseAiSocialPhase('modal-open');
+    }
+    
     // Prefer GameTimer.pause() if available
     if (global.GameTimer && typeof global.GameTimer.pause === 'function') {
       try {
@@ -2124,6 +2129,16 @@
     
     const g = global.game;
     if (!g) return;
+    
+    // Resume AI scheduler (use new resume() API)
+    if (global.SocialAIScheduler && typeof global.SocialAIScheduler.resumeAiSocialPhase === 'function') {
+      global.SocialAIScheduler.resumeAiSocialPhase('modal-closed');
+    }
+    
+    // Flush any queued executor actions (modal closed)
+    if (global.SocialActionExecutor && typeof global.SocialActionExecutor.flushQueue === 'function') {
+      global.SocialActionExecutor.flushQueue();
+    }
     
     // Prefer GameTimer.resume() if available
     if (global.GameTimer && typeof global.GameTimer.resume === 'function') {
