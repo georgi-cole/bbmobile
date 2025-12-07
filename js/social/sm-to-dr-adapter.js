@@ -40,7 +40,11 @@
 
       if (d.pairwise && typeof d.pairwise === 'object') {
         Object.entries(d.pairwise).forEach(([tid, delta]) => {
-          const to = { id: Number(tid), name: safeName(Number(tid)) };
+          const targetId = Number(tid);
+          // Skip invalid IDs
+          if (isNaN(targetId)) return;
+          
+          const to = { id: targetId, name: safeName(targetId) };
           const bondPayload = {
             from: actor,
             to,

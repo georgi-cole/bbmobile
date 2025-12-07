@@ -145,13 +145,11 @@
         console.info('[social-ai-autostart] Phase transition:', previousPhase, '->', nextPhase);
       }
 
-      // Start the scheduler
+      // Start the AI scheduler (SocialAIScheduler is independent system)
       window.SocialAIScheduler?.startAiSocialPhase?.({}, 'autostart');
       
-      // Also start the autodriver explicitly (if not already started)
-      if (window.__smAutoDriver?.start && !isRunning) {
-        start();
-      }
+      // Start the local autodriver tick loop
+      start();
     } else if (isSocialPhaseName(previousPhase) && !isSocialPhaseName(nextPhase)) {
       // Leaving social phase
       if (isRunning) {
