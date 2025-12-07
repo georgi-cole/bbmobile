@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Phase Terminator Social AI Fix Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: #eee; }
+    h1 { color: #4da6ff; }
+    button { padding: 10px 20px; margin: 5px; font-size: 14px; cursor: pointer; }
+    .log { background: #2a2a2a; padding: 15px; margin-top: 20px; max-height: 500px; overflow-y: auto; }
+    .log-entry { padding: 5px; border-bottom: 1px solid #444; }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry.info { color: #60a5fa; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .status.running { background: #065f46; border: 2px solid #10b981; }
+    .status.stopped { background: #7c2d12; border: 2px solid #ef4444; }
+    .status.paused { background: #a16207; border: 2px solid #f59e0b; }
+  </style>
+</head>
+<body>
+  <h1>🔧 Phase Terminator Social AI Fix Test</h1>
+  <p>This test verifies that the AI scheduler is not immediately stopped when entering social_intermission.</p>
+  
+  <div id="status" class="status stopped">
+    <strong>Scheduler Status:</strong> <span id="statusText">Stopped</span>
+  </div>
+  
+  <div>
+    <h2>Test Steps</h2>
+    <button onclick="setupTest()">1. Setup Test Environment</button>
+    <button onclick="startScheduler()">2. Start AI Scheduler</button>
+    <button onclick="simulatePhaseTransition()">3. Simulate Phase Transition to social_intermission</button>
+    <button onclick="checkSchedulerState()">4. Check Scheduler State</button>
+    <button onclick="runFullTest()">▶ Run Full Test</button>
+  </div>
+  
+  <div class="log" id="log"></div>
+
+  <!-- Load required modules -->
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-ai-scheduler.js"></script>
+  <script src="js/phase-terminator.js"></script>
+
+  <script>
+    let testEnv = {
+      game: null,
+      players: [],
+      initialTicks: 0
+    };
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[Test] ${message}`);
+    }
+
+    function updateStatus(status, text) {
+      const statusDiv = document.getElementById('status');
+      const statusText = document.getElementById('statusText');
+      statusDiv.className = `status ${status}`;
+      statusText.textContent = text;
+    }
+
+    function setupTest() {
+      log('Setting up test environment...');
+      
+      // Create mock game
+      window.game = {
+        phase: 'lobby',
+        week: 1,
+        humanId: 0,
+        currentPhaseToken: 0,
+        cfg: {
+          aiSocialEnabled: true,
+          debugSocialAI: true,
+          enableSocialManeuvers: true
+        }
+      };
+      
+      // Create mock players
+      window.players = [];
+      for (let i = 0; i < 8; i++) {
+        window.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false
+        });
+      }
+      
+      // Create mock functions
+      window.alivePlayers = () => window.players.filter(p => !p.evicted);
+      window.safeName = (id) => `Player ${id}`;
+      window.getP = (id) => window.players.find(p => p.id === id);
+      
+      // Initialize social maneuvers if needed
+      if (window.SocialManeuvers && window.SocialManeuvers.onSocialPhaseStart) {
+        // Initialize energy banks
+        window.game.__sm_bankEnergy = new Map();
+        window.game.__sm_bankInfluence = new Map();
+        window.game.__sm_bankInformation = new Map();
+        
+        for (let i = 0; i < 8; i++) {
+          window.game.__sm_bankEnergy.set(i, 10);
+          window.game.__sm_bankInfluence.set(i, 0);
+          window.game.__sm_bankInformation.set(i, 0);
+        }
+      }
+      
+      log('✓ Test environment setup complete', 'success');
+      log(`Created ${window.players.length} mock players`);
+    }
+
+    function startScheduler() {
+      log('Starting AI scheduler...');
+      
+      if (!window.SocialAIScheduler) {
+        log('✗ SocialAIScheduler not loaded!', 'error');
+        return;
+      }
+      
+      if (window.SocialAIScheduler.isRunning && window.SocialAIScheduler.isRunning()) {
+        log('Scheduler already running, stopping first...');
+        window.SocialAIScheduler.stopAiSocialPhase('test-reset');
+      }
+      
+      // Start the scheduler
+      window.SocialAIScheduler.startAiSocialPhase({}, 'test-start');
+      
+      // Update status
+      setTimeout(() => {
+        if (window.SocialAIScheduler.isRunning()) {
+          log('✓ AI scheduler started successfully', 'success');
+          updateStatus('running', 'Running');
+          
+          // Log initial state
+          const state = window.__smDebug?.getState();
+          if (state) {
+            testEnv.initialTicks = state.tickCount;
+            log(`Initial state: ${JSON.stringify(state)}`);
+          }
+        } else {
+          log('✗ AI scheduler failed to start', 'error');
+          updateStatus('stopped', 'Stopped');
+        }
+      }, 500);
+    }
+
+    function simulatePhaseTransition() {
+      log('Simulating phase transition to social_intermission...');
+      
+      if (!window.PhaseTerminator) {
+        log('✗ PhaseTerminator not loaded!', 'error');
+        return;
+      }
+      
+      const previousPhase = window.game.phase;
+      const nextPhase = 'social_intermission';
+      
+      log(`Calling PhaseTerminator.runCleanup('${previousPhase}', '${nextPhase}', 1)`);
+      
+      // Call the phase terminator
+      const result = window.PhaseTerminator.runCleanup(previousPhase, nextPhase, 1);
+      
+      log(`Phase terminator result: ${JSON.stringify(result)}`);
+      
+      // Update game phase
+      window.game.phase = nextPhase;
+      
+      // Check scheduler state immediately after
+      setTimeout(() => {
+        const isRunning = window.SocialAIScheduler.isRunning();
+        const state = window.__smDebug?.getState();
+        
+        if (state && state.isPaused) {
+          log('✓ Scheduler is PAUSED (as expected)', 'success');
+          updateStatus('paused', 'Paused (waiting for delayed stop)');
+        } else if (isRunning) {
+          log('✓ Scheduler is still RUNNING (as expected)', 'success');
+          updateStatus('running', 'Running');
+        } else {
+          log('✗ Scheduler was STOPPED immediately (BUG!)', 'error');
+          updateStatus('stopped', 'Stopped (BUG)');
+        }
+        
+        if (state) {
+          log(`Current state: ticks=${state.tickCount}, paused=${state.isPaused}, running=${state.isRunning}`);
+        }
+      }, 100);
+      
+      // Check again after 700ms (after delayed stop should have fired)
+      setTimeout(() => {
+        const isRunning = window.SocialAIScheduler.isRunning();
+        const state = window.__smDebug?.getState();
+        
+        if (!isRunning) {
+          log('✓ Scheduler was stopped after delay (as expected)', 'success');
+          updateStatus('stopped', 'Stopped (after delay)');
+        } else {
+          log('⚠ Scheduler still running after 700ms', 'info');
+        }
+        
+        if (state) {
+          log(`Final state: ticks=${state.tickCount}, totalActions=${state.totalActions}`);
+          
+          if (state.tickCount > testEnv.initialTicks) {
+            log(`✓ Scheduler ticked ${state.tickCount - testEnv.initialTicks} times during transition!`, 'success');
+          } else {
+            log(`✗ Scheduler did not tick during transition (ticks=${state.tickCount}, initial=${testEnv.initialTicks})`, 'error');
+          }
+        }
+      }, 700);
+    }
+
+    function checkSchedulerState() {
+      log('Checking scheduler state...');
+      
+      const isRunning = window.SocialAIScheduler.isRunning();
+      const state = window.__smDebug?.getState();
+      
+      if (state) {
+        log(`Scheduler state: ${JSON.stringify(state, null, 2)}`);
+        
+        if (state.isRunning) {
+          updateStatus('running', 'Running');
+        } else if (state.isPaused) {
+          updateStatus('paused', 'Paused');
+        } else {
+          updateStatus('stopped', 'Stopped');
+        }
+      } else {
+        log('State not available');
+      }
+    }
+
+    function runFullTest() {
+      log('======================================');
+      log('Starting full automated test...');
+      log('======================================');
+      
+      setupTest();
+      
+      setTimeout(() => {
+        startScheduler();
+        
+        setTimeout(() => {
+          simulatePhaseTransition();
+          
+          setTimeout(() => {
+            checkSchedulerState();
+            log('======================================');
+            log('Full test complete!');
+            log('======================================');
+          }, 1000);
+        }, 1500);
+      }, 500);
+    }
+
+    // Log module loading
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded');
+      if (window.SocialManeuvers) log('✓ SocialManeuvers loaded');
+      if (window.SocialAIScheduler) log('✓ SocialAIScheduler loaded');
+      if (window.PhaseTerminator) log('✓ PhaseTerminator loaded');
+    });
+  </script>
+</body>
+</html>

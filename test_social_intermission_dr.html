@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Social Intermission DR Verification</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: #eee; }
+    h1 { color: #4da6ff; }
+    button { padding: 10px 20px; margin: 5px; font-size: 14px; cursor: pointer; }
+    .log { background: #2a2a2a; padding: 15px; margin-top: 20px; max-height: 600px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    .log-entry { padding: 3px; border-bottom: 1px solid #444; }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry.info { color: #60a5fa; }
+    .log-entry.event { color: #fbbf24; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .screenshot-area { margin-top: 20px; padding: 15px; background: #2a2a2a; border-radius: 8px; }
+    .screenshot-area img { max-width: 100%; border: 2px solid #4da6ff; border-radius: 4px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>🎯 Social Intermission DR Verification Test</h1>
+  <p>This test simulates reaching social_intermission, triggers AI interactions, and captures DR evidence.</p>
+  
+  <div>
+    <h2>Test Steps</h2>
+    <button onclick="setupFullTest()">1. Setup Mock Game & Enable AI</button>
+    <button onclick="runToSocialIntermission()">2. Fast-Track to social_intermission</button>
+    <button onclick="triggerAIInteractions()">3. Trigger AI Interactions</button>
+    <button onclick="checkDRButton()">4. Check DR Button State</button>
+    <button onclick="showDREntries()">5. Show DR Entries</button>
+  </div>
+  
+  <div id="status" class="status">
+    <strong>Status:</strong> <span id="statusText">Ready</span>
+  </div>
+  
+  <div class="log" id="log"></div>
+  
+  <div class="screenshot-area" id="screenshots">
+    <h3>Screenshots & Evidence</h3>
+    <div id="screenshotContent">No screenshots yet. Run the test to generate verification artifacts.</div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-ai-scheduler.js"></script>
+  <script src="js/social-highlights.js"></script>
+  <script src="js/dr/diaryRoomLogger.js"></script>
+
+  <script>
+    let testContext = {
+      game: null,
+      players: [],
+      drEntries: []
+    };
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[Test] ${message}`);
+    }
+
+    function updateStatus(text) {
+      document.getElementById('statusText').textContent = text;
+    }
+
+    function setupFullTest() {
+      log('Setting up full test environment...');
+      
+      // Create comprehensive mock game
+      window.game = {
+        phase: 'social_intermission',
+        week: 3,
+        humanId: 0,
+        currentPhaseToken: 5,
+        hohId: 2,
+        nominees: [3, 4],
+        vetoHolder: null,
+        vetoUsed: false,
+        cfg: {
+          aiSocialEnabled: true,
+          debugSocialAI: true,
+          enableSocialManeuvers: true
+        },
+        __sm_bankEnergy: new Map(),
+        __sm_bankInfluence: new Map(),
+        __sm_bankInformation: new Map()
+      };
+      
+      // Create mock players with diverse names
+      const playerNames = ['You', 'Remy', 'Rae', 'Rey', 'Jax', 'Nova', 'Lux', 'Kai'];
+      window.players = [];
+      for (let i = 0; i < 8; i++) {
+        window.players.push({
+          id: i,
+          name: playerNames[i],
+          evicted: false,
+          human: i === 0
+        });
+        
+        // Initialize banks
+        window.game.__sm_bankEnergy.set(i, 10);
+        window.game.__sm_bankInfluence.set(i, 0);
+        window.game.__sm_bankInformation.set(i, 0);
+      }
+      
+      // Setup helper functions
+      window.alivePlayers = () => window.players.filter(p => !p.evicted);
+      window.safeName = (id) => {
+        const p = window.players.find(p => p.id === id);
+        return p ? p.name : `Player ${id}`;
+      };
+      window.getP = (id) => window.players.find(p => p.id === id);
+      
+      // Initialize DiaryRoomLogger if available
+      if (window.DiaryRoomLogger) {
+        window.DiaryRoomLogger._entries = [];
+        log('✓ DiaryRoomLogger initialized', 'success');
+      }
+      
+      log('✓ Test environment setup complete', 'success');
+      log(`Created ${window.players.length} mock players with energy banks`);
+      updateStatus('Ready for social_intermission test');
+    }
+
+    function runToSocialIntermission() {
+      log('Fast-tracking to social_intermission phase...');
+      
+      if (!window.game) {
+        log('✗ Game not setup! Run step 1 first.', 'error');
+        return;
+      }
+      
+      window.game.phase = 'social_intermission';
+      log('✓ Phase set to social_intermission', 'success');
+      updateStatus('In social_intermission phase');
+    }
+
+    function triggerAIInteractions() {
+      log('Triggering AI social interactions...');
+      
+      if (!window.SocialAIScheduler) {
+        log('✗ SocialAIScheduler not loaded!', 'error');
+        return;
+      }
+      
+      // Setup event listener for social actions
+      if (window.game && window.game.bus) {
+        window.game.bus.on('social.action:result', (event) => {
+          const { actorId, action, targetIds, outcome } = event;
+          const actorName = window.safeName(actorId);
+          const targetName = window.safeName(targetIds[0]);
+          log(`📢 Event: ${actorName} → ${action} → ${targetName} (${outcome})`, 'event');
+          
+          // Store DR entry
+          testContext.drEntries.push({
+            timestamp: new Date(),
+            actor: actorName,
+            action,
+            target: targetName,
+            outcome
+          });
+        });
+        log('✓ Event listener attached for social.action:result', 'success');
+      }
+      
+      // Start the AI scheduler
+      log('Starting AI scheduler...');
+      window.SocialAIScheduler.startAiSocialPhase({}, 'test-verification');
+      
+      setTimeout(() => {
+        const state = window.__smDebug?.getState();
+        if (state && state.isRunning) {
+          log(`✓ AI scheduler running (ticks=${state.tickCount})`, 'success');
+          updateStatus('AI Scheduler active');
+        } else {
+          log('⚠ AI scheduler may not be running', 'info');
+        }
+      }, 500);
+      
+      // Run manual tick
+      setTimeout(() => {
+        log('Running manual AI tick...');
+        if (window.__smDebug && window.__smDebug.runAiTickOnce) {
+          window.__smDebug.runAiTickOnce();
+          log('✓ Manual tick executed', 'success');
+        }
+      }, 1000);
+    }
+
+    function checkDRButton() {
+      log('Checking DR button state...');
+      
+      // Check if DR button exists and is blinking
+      const drButton = document.querySelector('#btnDiaryRoom') || document.querySelector('[data-dr-button]');
+      
+      if (drButton) {
+        const isBlinking = drButton.classList.contains('blink') || 
+                          drButton.classList.contains('alert') ||
+                          drButton.classList.contains('has-new') ||
+                          drButton.style.animation.includes('blink');
+        
+        log(`✓ DR button found: ${drButton.tagName}`, 'success');
+        log(`DR button classes: ${drButton.className}`);
+        log(`Is blinking: ${isBlinking ? 'YES ✓' : 'NO'}`, isBlinking ? 'success' : 'info');
+        
+        if (isBlinking) {
+          updateStatus('DR button is BLINKING - New important events!');
+        } else {
+          updateStatus('DR button found but not blinking');
+        }
+      } else {
+        log('⚠ DR button not found in DOM', 'info');
+        log('This is a test page - DR button may only exist in main game', 'info');
+      }
+    }
+
+    function showDREntries() {
+      log('Showing Diary Room entries...');
+      
+      // Check DiaryRoomLogger
+      if (window.DiaryRoomLogger && window.DiaryRoomLogger.getEntries) {
+        const entries = window.DiaryRoomLogger.getEntries();
+        log(`Found ${entries.length} DR entries from DiaryRoomLogger`, 'success');
+        
+        entries.forEach((entry, idx) => {
+          log(`Entry ${idx + 1}: ${JSON.stringify(entry)}`, 'info');
+        });
+      }
+      
+      // Check test context entries
+      if (testContext.drEntries.length > 0) {
+        log(`Found ${testContext.drEntries.length} DR entries from test capture`, 'success');
+        
+        testContext.drEntries.forEach((entry, idx) => {
+          const msg = `${entry.actor} ${entry.action} ${entry.target} (${entry.outcome})`;
+          log(`Captured ${idx + 1}: ${msg}`, 'event');
+        });
+        
+        // Display in screenshot area
+        const screenshotDiv = document.getElementById('screenshotContent');
+        let html = '<h4>Captured Social Interactions:</h4><ul>';
+        testContext.drEntries.forEach(entry => {
+          html += `<li><strong>${entry.actor}</strong> → ${entry.action} → <strong>${entry.target}</strong> (${entry.outcome})</li>`;
+        });
+        html += '</ul>';
+        screenshotDiv.innerHTML = html;
+        
+        updateStatus(`${testContext.drEntries.length} interactions captured`);
+      } else {
+        log('No DR entries captured yet', 'info');
+        log('Try running step 3 (Trigger AI Interactions) and wait a few seconds', 'info');
+      }
+    }
+
+    // Log module loading
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded');
+      if (window.SocialManeuvers) log('✓ SocialManeuvers loaded');
+      if (window.SocialAIScheduler) log('✓ SocialAIScheduler loaded');
+      if (window.SocialHighlights) log('✓ SocialHighlights loaded');
+      if (window.DiaryRoomLogger) log('✓ DiaryRoomLogger loaded');
+    });
+  </script>
+</body>
+</html>
