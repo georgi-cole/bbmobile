@@ -11,8 +11,15 @@
  * - Mobile-first responsive design
  * - Full accessibility support
  * 
+ * SAFETY DESIGN:
+ * - This module CLONES the existing America's Vote panel instead of moving it
+ * - The original panel DOM node remains untouched in document.getElementById('panel')
+ * - This prevents breaking game references that could cause phase skipping
+ * - Quick votes are local/visual-only and don't affect actual vote tallies
+ * - Player name validation uses window.game.players fallback
+ * - Show/hide handlers don't trigger any game actions or phase transitions
+ * 
  * This module wraps the existing America's Vote panel (jury_return_vote.js) without changing game logic.
- * Quick votes are visual-only and don't affect actual vote tallies.
  */
 
 export const JurorReturnOverlay = (() => {
@@ -170,6 +177,13 @@ export const JurorReturnOverlay = (() => {
 
   /**
    * Show overlay with existing jury UI content
+   * 
+   * SAFETY: This implementation always CLONES the juror panel instead of moving it.
+   * This prevents breaking game references to the original DOM node, which could
+   * cause the engine to skip the juror interaction phase and jump to HOH comp.
+   * 
+   * The original panel node remains untouched in document.getElementById('panel'),
+   * allowing the game to continue referencing it as expected.
    */
   function show() {
     if (isShowing) {
@@ -190,11 +204,32 @@ export const JurorReturnOverlay = (() => {
       attachEventListeners();
     }
 
-    // Move existing jury UI to overlay content if present
+    // CLONE existing jury UI to overlay content if present
+    // IMPORTANT: We clone rather than move to avoid breaking game references.
+    // The original DOM node stays in #panel so game logic can continue to reference it.
     const contentContainer = overlayElement.querySelector('#juror-overlay-content');
     if (existingJuryUI && contentContainer) {
-      originalPanelContent = existingJuryUI.cloneNode(true);
-      contentContainer.appendChild(existingJuryUI);
+      // Deep clone the panel content for display in overlay
+      const clonedPanel = existingJuryUI.cloneNode(true);
+      contentContainer.appendChild(clonedPanel);
+      
+      // Store reference to cloned content for cleanup
+      originalPanelContent = clonedPanel;
+      
+      // ALTERNATIVE APPROACH (commented out for safety):
+      // If you need the overlay to have interactive elements that modify the original panel,
+      // you could move the node and restore it on close:
+      //
+      // contentContainer.appendChild(existingJuryUI);  // Move original
+      // originalPanelContent = { movedNode: existingJuryUI };  // Track for restore
+      //
+      // Then in hide(), restore it:
+      // if (originalPanelContent && originalPanelContent.movedNode) {
+      //   panel.appendChild(originalPanelContent.movedNode);
+      // }
+      //
+      // However, this approach is RISKY as it can break game references.
+      // Only use if you're certain the game doesn't reference the panel during overlay display.
     }
 
     // Show overlay
@@ -214,11 +249,15 @@ export const JurorReturnOverlay = (() => {
     // Trap focus within overlay
     trapFocus(overlayElement);
 
-    console.info('[JurorReturnOverlay] Overlay shown');
+    console.info('[JurorReturnOverlay] Overlay shown (panel cloned, original untouched)');
   }
 
   /**
-   * Hide overlay and restore original state
+   * Hide overlay and clean up cloned content
+   * 
+   * Since we clone the panel instead of moving it, we just need to remove
+   * the cloned content from the overlay. The original panel remains intact
+   * in the DOM and the game can continue to reference it normally.
    */
   function hide() {
     if (!isShowing || !overlayElement) {
@@ -229,17 +268,12 @@ export const JurorReturnOverlay = (() => {
     stopAudienceMessages();
     stopFloatingEmojis();
 
-    // Restore original jury UI to panel if needed
-    if (originalPanelContent) {
-      const panel = document.getElementById('panel');
-      if (panel) {
-        const existingJuryUI = overlayElement.querySelector('#humanJuryVote');
-        if (existingJuryUI) {
-          panel.appendChild(existingJuryUI);
-        }
-      }
-      originalPanelContent = null;
+    // Remove cloned jury UI from overlay
+    // No need to restore anything - the original panel was never moved
+    if (originalPanelContent && originalPanelContent.parentNode) {
+      originalPanelContent.remove();
     }
+    originalPanelContent = null;
 
     // Hide overlay
     overlayElement.classList.add('hidden');
@@ -250,7 +284,7 @@ export const JurorReturnOverlay = (() => {
       focusedElementBeforeOpen.focus();
     }
 
-    console.info('[JurorReturnOverlay] Overlay hidden');
+    console.info('[JurorReturnOverlay] Overlay hidden (cloned content removed, original panel intact)');
   }
 
   /**
