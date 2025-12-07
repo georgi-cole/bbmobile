@@ -48,6 +48,9 @@
   <script src="js/social-ai-scheduler.js"></script>
   <script src="js/social-highlights.js"></script>
   <script src="js/dr/diaryRoomLogger.js"></script>
+  <!-- Event adapter for AI interactions to Diary Room (debug-gated) -->
+  <script src="js/social/sm-to-dr-adapter.js"></script>
+  <script src="js/social/social-ai-autostart.js"></script>
 
   <script>
     let testContext = {
@@ -119,10 +122,56 @@
       };
       window.getP = (id) => window.players.find(p => p.id === id);
       
+      // Setup event bus for DiaryRoomLogger
+      window.game.bus = {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        },
+        emit(event, data) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(h => h(data));
+          }
+        },
+        off(event, handler) {
+          if (this.listeners[event]) {
+            this.listeners[event] = this.listeners[event].filter(h => h !== handler);
+          }
+        }
+      };
+      window.bbGameBus = window.game.bus;
+      
+      // Setup DR logs array and function
+      window.game.drLogs = [];
+      window.game.drLog = (text, category) => {
+        const entry = { text, category, ts: Date.now() };
+        window.game.drLogs.push(entry);
+        log(`DR Log: ${text} [${category}]`, 'event');
+      };
+      
       // Initialize DiaryRoomLogger if available
-      if (window.DiaryRoomLogger) {
-        window.DiaryRoomLogger._entries = [];
-        log('✓ DiaryRoomLogger initialized', 'success');
+      if (window.DiaryRoomLogger && window.DiaryRoomLogger.init) {
+        window.DiaryRoomLogger.init();
+        log('✓ DiaryRoomLogger initialized with event bus', 'success');
+      }
+      
+      // Load DiaryTemplates mock for testing
+      if (!window.DiaryTemplates) {
+        window.DiaryTemplates = {
+          resolveName: (id) => window.safeName(id),
+          render: (template, data) => {
+            let text = template;
+            Object.keys(data).forEach(key => {
+              text = text.replace(`{${key}}`, data[key]);
+            });
+            return text;
+          },
+          getSocialTemplate: (action) => `{actor} performed ${action} on {target}`,
+          getSocialSummaryTemplate: () => '{actor} completed {count} actions in week {week}',
+          deltaStr: (delta) => delta > 0 ? `(+${delta.toFixed(2)})` : `(${delta.toFixed(2)})`
+        };
+        log('✓ DiaryTemplates mock created', 'success');
       }
       
       log('✓ Test environment setup complete', 'success');
@@ -151,25 +200,56 @@
         return;
       }
       
-      // Setup event listener for social actions
-      if (window.game && window.game.bus) {
-        window.game.bus.on('social.action:result', (event) => {
-          const { actorId, action, targetIds, outcome } = event;
-          const actorName = window.safeName(actorId);
-          const targetName = window.safeName(targetIds[0]);
-          log(`📢 Event: ${actorName} → ${action} → ${targetName} (${outcome})`, 'event');
-          
-          // Store DR entry
-          testContext.drEntries.push({
-            timestamp: new Date(),
-            actor: actorName,
-            action,
-            target: targetName,
-            outcome
-          });
-        });
-        log('✓ Event listener attached for social.action:result', 'success');
+      // Check if adapter is loaded
+      if (window.__smToDrAdapterInstalled) {
+        log('✓ sm-to-dr-adapter is installed', 'success');
+      } else {
+        log('⚠ sm-to-dr-adapter NOT installed - check if debugSocialAI is enabled', 'info');
       }
+      
+      // Setup event listener for sm-ai-interaction (scheduler output)
+      window.addEventListener('sm-ai-interaction', (event) => {
+        const d = event.detail;
+        const actorName = window.safeName(d.actorId);
+        const targetName = d.targetIds ? window.safeName(d.targetIds[0]) : 'unknown';
+        log(`🤖 [sm-ai-interaction] ${actorName} → ${d.actionId} → ${targetName}`, 'event');
+      });
+      log('✓ Listener for sm-ai-interaction attached', 'success');
+      
+      // Setup event listener for social.action:result (adapter output)
+      window.addEventListener('social.action:result', (event) => {
+        const d = event.detail;
+        const actorName = d.actor?.name || 'unknown';
+        const targetName = d.target?.name || 'unknown';
+        log(`📢 [social.action:result] ${actorName} → ${d.action} → ${targetName} (success: ${d.success})`, 'event');
+        
+        // Store DR entry
+        testContext.drEntries.push({
+          timestamp: new Date(),
+          actor: actorName,
+          action: d.action,
+          target: targetName,
+          success: d.success
+        });
+      });
+      log('✓ Listener for social.action:result attached', 'success');
+      
+      // Setup event listener for bond.shift (adapter output)
+      window.addEventListener('bond.shift', (event) => {
+        const d = event.detail;
+        const fromName = d.from?.name || 'unknown';
+        const toName = d.to?.name || 'unknown';
+        log(`💛 [bond.shift] ${fromName} ↔ ${toName}: ${d.delta > 0 ? '+' : ''}${d.delta.toFixed(2)}`, 'event');
+      });
+      log('✓ Listener for bond.shift attached', 'success');
+      
+      // Check energy before starting
+      log('Checking AI player energy levels...');
+      const aiPlayers = window.alivePlayers().filter(p => !p.human);
+      aiPlayers.forEach(p => {
+        const energy = window.game.__sm_bankEnergy.get(p.id) || 0;
+        log(`  ${p.name}: ${energy} energy`, 'info');
+      });
       
       // Start the AI scheduler
       log('Starting AI scheduler...');
@@ -185,12 +265,21 @@
         }
       }, 500);
       
-      // Run manual tick
+      // Run manual tick and wait for results
       setTimeout(() => {
         log('Running manual AI tick...');
         if (window.__smDebug && window.__smDebug.runAiTickOnce) {
           window.__smDebug.runAiTickOnce();
           log('✓ Manual tick executed', 'success');
+          
+          // Check energy after tick
+          setTimeout(() => {
+            log('Checking AI player energy after tick...');
+            aiPlayers.forEach(p => {
+              const energy = window.game.__sm_bankEnergy.get(p.id) || 0;
+              log(`  ${p.name}: ${energy} energy`, 'info');
+            });
+          }, 500);
         }
       }, 1000);
     }
@@ -225,35 +314,56 @@
     function showDREntries() {
       log('Showing Diary Room entries...');
       
+      // Check game.drLogs array
+      if (window.game && window.game.drLogs && window.game.drLogs.length > 0) {
+        log(`Found ${window.game.drLogs.length} DR logs from game.drLogs`, 'success');
+        window.game.drLogs.forEach((entry, idx) => {
+          log(`  DR Log ${idx + 1}: ${entry.text} [${entry.category}]`, 'info');
+        });
+      } else {
+        log('No entries in game.drLogs', 'info');
+      }
+      
       // Check DiaryRoomLogger
       if (window.DiaryRoomLogger && window.DiaryRoomLogger.getEntries) {
         const entries = window.DiaryRoomLogger.getEntries();
-        log(`Found ${entries.length} DR entries from DiaryRoomLogger`, 'success');
+        log(`Found ${entries.length} DR entries from DiaryRoomLogger.getEntries()`, 'success');
         
         entries.forEach((entry, idx) => {
-          log(`Entry ${idx + 1}: ${JSON.stringify(entry)}`, 'info');
+          log(`  Entry ${idx + 1}: ${JSON.stringify(entry)}`, 'info');
         });
       }
       
       // Check test context entries
       if (testContext.drEntries.length > 0) {
-        log(`Found ${testContext.drEntries.length} DR entries from test capture`, 'success');
+        log(`Found ${testContext.drEntries.length} DR entries from event capture`, 'success');
         
         testContext.drEntries.forEach((entry, idx) => {
-          const msg = `${entry.actor} ${entry.action} ${entry.target} (${entry.outcome})`;
-          log(`Captured ${idx + 1}: ${msg}`, 'event');
+          const msg = `${entry.actor} → ${entry.action} → ${entry.target} (success: ${entry.success})`;
+          log(`  Captured ${idx + 1}: ${msg}`, 'event');
         });
         
         // Display in screenshot area
         const screenshotDiv = document.getElementById('screenshotContent');
-        let html = '<h4>Captured Social Interactions:</h4><ul>';
+        let html = '<h4>✅ Captured Social Interactions via Adapter:</h4><ul>';
         testContext.drEntries.forEach(entry => {
-          html += `<li><strong>${entry.actor}</strong> → ${entry.action} → <strong>${entry.target}</strong> (${entry.outcome})</li>`;
+          const icon = entry.success ? '✅' : '❌';
+          html += `<li>${icon} <strong>${entry.actor}</strong> → <em>${entry.action}</em> → <strong>${entry.target}</strong></li>`;
         });
         html += '</ul>';
+        
+        // Add DR logs if any
+        if (window.game && window.game.drLogs && window.game.drLogs.length > 0) {
+          html += '<h4>📝 Diary Room Logs (from DiaryRoomLogger):</h4><ul>';
+          window.game.drLogs.forEach(entry => {
+            html += `<li><span style="color: #fbbf24;">${entry.category}</span>: ${entry.text}</li>`;
+          });
+          html += '</ul>';
+        }
+        
         screenshotDiv.innerHTML = html;
         
-        updateStatus(`${testContext.drEntries.length} interactions captured`);
+        updateStatus(`${testContext.drEntries.length} interactions captured, ${window.game?.drLogs?.length || 0} DR logs`);
       } else {
         log('No DR entries captured yet', 'info');
         log('Try running step 3 (Trigger AI Interactions) and wait a few seconds', 'info');
