@@ -80,6 +80,14 @@
     if(hoh && hoh.human){
       console.log('[noms] Human HOH detected - showing intro card (need:', need, ')');
       
+      // Set guard flag to prevent premature nomination badge display
+      // Any programmatic nominations (from twists/social-maneuvers) will be buffered
+      global.__awaitingHumanNominations = true;
+      if(!Array.isArray(global.__provisionalNominations)) {
+        global.__provisionalNominations = [];
+      }
+      console.log('[noms] ✓ Set __awaitingHumanNominations flag - nominations will be buffered');
+      
       // Pre-flight: Ensure #tvOverlay exists before attempting to use any helpers
       // This is critical for multi-eviction weeks where the intro may fail to appear
       let tvOverlay = document.getElementById('tvOverlay');
@@ -122,6 +130,10 @@
             need: need,
             onNominate: () => {
               console.log('[noms] NOMINATE button clicked via TVCards');
+              
+              // Clear the awaiting flag since HOH is now making selections
+              // Provisional nominations will be applied when finalizeNoms is called
+              console.log('[noms] Clearing __awaitingHumanNominations flag - HOH is selecting');
               
               // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
               if(global.NomsFS && typeof global.NomsFS.open === 'function'){
@@ -204,6 +216,9 @@
       nominateBtn.addEventListener('click', () => {
         console.log('[noms] Fallback NOMINATE button clicked');
         nominateBtn.disabled = true;
+        
+        // Clear the awaiting flag since HOH is now making selections
+        console.log('[noms] Clearing __awaitingHumanNominations flag - HOH is selecting (fallback)');
         
         // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
         if(global.NomsFS && typeof global.NomsFS.open === 'function'){
@@ -309,6 +324,19 @@
     }
     // Ensure affinity object exists
     if (!hoh.affinity) hoh.affinity = {};
+    
+    // Check if we're awaiting human HOH nominations - if so, buffer instead of applying
+    if(global.__awaitingHumanNominations && hoh && hoh.human){
+      console.log('[noms] Buffering nominations while awaiting human HOH selection');
+      g.nominees.forEach(id=>{
+        if(!global.__provisionalNominations) global.__provisionalNominations = [];
+        if(!global.__provisionalNominations.includes(id)){
+          global.__provisionalNominations.push(id);
+          console.info(`[noms] ✓ Buffered provisional nomination: Player ${id} while awaiting human HOH`);
+        }
+      });
+      return; // Don't apply side effects yet
+    }
     
     g.nominees.forEach(id=>{
       const p=global.getP(id); p.nominated=true;
@@ -494,7 +522,33 @@
     
     if(!g.__nomsCommitInProgress) g.__nomsCommitInProgress = true;
 
+    // Clear awaiting flag - we're now committing nominations
+    if(global.__awaitingHumanNominations){
+      console.log('[noms] Clearing __awaitingHumanNominations flag - finalizing nominations');
+      global.__awaitingHumanNominations = false;
+    }
+
     g.nominees=ensureValidDistinct(); 
+    
+    // Apply any buffered provisional nominations (avoid duplicates)
+    if(Array.isArray(global.__provisionalNominations) && global.__provisionalNominations.length > 0){
+      console.log('[noms] Applying buffered provisional nominations:', global.__provisionalNominations);
+      const currentNominees = new Set(g.nominees);
+      global.__provisionalNominations.forEach(id => {
+        if(!currentNominees.has(id) && id !== g.hohId){
+          // Only add if not already nominated and not the HOH
+          const pool = eligibleNomIds();
+          if(pool.includes(id)){
+            g.nominees.push(id);
+            currentNominees.add(id);
+            console.info(`[noms] ✓ Applied buffered nomination: Player ${id}`);
+          }
+        }
+      });
+      // Clear the buffer
+      global.__provisionalNominations = [];
+    }
+    
     g.nomsLocked=true; 
     g.__nomsCommitted = true;
     applyNominationSideEffects();
