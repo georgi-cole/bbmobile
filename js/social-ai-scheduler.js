@@ -66,6 +66,10 @@
   // ============================================================================
   // DEBUG LOGGING (gated by config flag)
   // ============================================================================
+  /**
+   * Debug-level logging - verbose/detailed output
+   * Only logs when debugSocialAI flag is enabled
+   */
   function debugLog(message, ...args) {
     const config = getConfig();
     const debugEnabled = config.verbose || global.game?.cfg?.debugSocialAI;
@@ -74,9 +78,34 @@
     }
   }
   
+  /**
+   * Info-level logging - important lifecycle events
+   * Only logs when debugSocialAI flag is enabled
+   */
   function infoLog(message, reason = '') {
+    const debugEnabled = global.game?.cfg?.debugSocialAI;
+    if (!debugEnabled) return;
+    
     const reasonStr = reason ? ` (reason: ${reason})` : '';
     console.info(`[ai-scheduler] ${message}${reasonStr}`);
+  }
+  
+  /**
+   * Warning-level logging - potential issues
+   * Only logs when debugSocialAI flag is enabled
+   */
+  function warnLog(message, ...args) {
+    const debugEnabled = global.game?.cfg?.debugSocialAI;
+    if (!debugEnabled) return;
+    
+    console.warn(`[ai-scheduler] ${message}`, ...args);
+  }
+  
+  /**
+   * Error-level logging - always logs (critical errors should always be visible)
+   */
+  function errorLog(message, ...args) {
+    console.error(`[ai-scheduler] ${message}`, ...args);
   }
 
   function getPairingKey(actorId, targetIds) {
@@ -203,7 +232,7 @@
       // Use unified cost calculator
       const costCalc = SM.computeActionCost?.(action.id, targetIds);
       if (!costCalc) {
-        console.warn('[ai-scheduler] computeActionCost not available');
+        warnLog('computeActionCost not available');
         return null;
       }
 
@@ -220,14 +249,14 @@
       
       // Defensive: handle missing result or failed execution
       if (!result) {
-        console.warn('[ai-scheduler] executeAction returned null/undefined');
+        warnLog('executeAction returned null/undefined');
         return null;
       }
       
       // If action failed (e.g., insufficient resources), return early
       // Note: Failed actions are not counted toward rate limiting since they consume no resources
       if (!result.success) {
-        console.debug(`[ai-scheduler] Action failed: ${result.reason || 'unknown'}`);
+        debugLog(`Action failed: ${result.reason || 'unknown'}`);
         return result;
       }
 
@@ -273,17 +302,14 @@
       });
 
       // Log verbose output for debugging (behind config flag)
-      const config = getConfig();
-      if (config.verbose || global.game?.cfg?.aiSocialVerbose) {
-        console.log('[ai-scheduler] Normalized outcome:', {
-          actionId: action.id,
-          actorId,
-          targetIds,
-          deltas,
-          pairwise,
-          rawOutcome: outcome
-        });
-      }
+      debugLog('Normalized outcome:', {
+        actionId: action.id,
+        actorId,
+        targetIds,
+        deltas,
+        pairwise,
+        rawOutcome: outcome
+      });
 
       // Emit event for UI refresh and highlights
       emitAIInteractionEvent({
@@ -298,7 +324,7 @@
 
       return result;
     } catch (e) {
-      console.error('[ai-scheduler] executeAIAction failed:', e);
+      errorLog('executeAIAction failed:', e);
       return null;
     }
   }
@@ -308,7 +334,7 @@
       const event = new CustomEvent('sm-ai-interaction', { detail: data });
       window.dispatchEvent(event);
     } catch (e) {
-      console.error('[ai-scheduler] Failed to emit event:', e);
+      errorLog('Failed to emit event:', e);
     }
   }
 
@@ -340,7 +366,7 @@
       
       // Safety check: max ticks per phase
       if (tickCount >= config.maxTicksPerPhase) {
-        console.warn(`[ai-scheduler] ⚠️ MAX_TICKS_PER_PHASE (${config.maxTicksPerPhase}) reached - terminating phase`);
+        warnLog(`⚠️ MAX_TICKS_PER_PHASE (${config.maxTicksPerPhase}) reached - terminating phase`);
         endSocialPhase();
         return;
       }
@@ -382,7 +408,7 @@
     watchdogTimer = setTimeout(() => {
       const timeSinceLastTick = Date.now() - lastTickTime;
       if (timeSinceLastTick > 2500 && isRunning && !isPaused) {
-        console.warn('[ai-scheduler:watchdog] ⚠️ No tick for >2.5s - restarting loop');
+        warnLog('⚠️ Watchdog: No tick for >2.5s - restarting loop');
         infoLog('Watchdog restarting stalled loop', 'no_tick_detected');
         
         // Restart the tick loop
@@ -413,11 +439,11 @@
     
     if (aiPlayers.length < 2) {
       // Need at least 2 AI players for interactions
-      console.debug('[ai-scheduler] Not enough AI players for interactions (need 2+)');
+      debugLog('Not enough AI players for interactions (need 2+)');
       idlePassCount++;
       // If multiple consecutive idle passes, end phase
       if (idlePassCount >= 5) {
-        console.warn('[ai-scheduler] Too many idle passes (not enough AI players) - ending phase');
+        warnLog('Too many idle passes (not enough AI players) - ending phase');
         endSocialPhase();
       }
       return;
@@ -436,11 +462,11 @@
     // Track idle passes (no actions executed)
     if (actionsExecuted === 0) {
       idlePassCount++;
-      console.debug(`[ai-scheduler] Idle pass ${idlePassCount} (no actions executed)`);
+      debugLog(`Idle pass ${idlePassCount} (no actions executed)`);
       
       // Safety: if no actions executed in multiple consecutive passes, end phase
       if (idlePassCount >= 10) {
-        console.warn('[ai-scheduler] ⚠️ Too many consecutive idle passes - no actors can execute actions - terminating phase');
+        warnLog('⚠️ Too many consecutive idle passes - no actors can execute actions - terminating phase');
         endSocialPhase();
       }
     } else {
@@ -495,16 +521,12 @@
       
       // Use safe navigation for outcome type (already normalized in executeAIAction)
       const outcomeType = result.outcome?.type || 'unknown';
-      console.info(
-        `[ai-scheduler] ${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`
-      );
+      infoLog(`${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`);
       return true; // Action executed successfully
     } else if (result && !result.success) {
       // Action failed (e.g., insufficient resources) - log at debug level
       const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
-      console.debug(
-        `[ai-scheduler] ${actorName} → ${action.label}: failed (${result.reason || 'unknown'})`
-      );
+      debugLog(`${actorName} → ${action.label}: failed (${result.reason || 'unknown'})`);
       return false; // Action failed
     }
     
@@ -521,7 +543,7 @@
   function endSocialPhase() {
     if (!isRunning) return;
     
-    console.info('[ai-scheduler] 🛑 Ending social phase - no more actions can be executed');
+    infoLog('🛑 Ending social phase - no more actions can be executed');
     
     // Set idle state
     isActive = false;
@@ -533,9 +555,9 @@
       schedulerTimer = null;
     }
     
-    // Log summary
+    // Log summary (gated by debugSocialAI flag)
     const totalActions = Array.from(actionCounts.values()).reduce((a, b) => a + b, 0);
-    console.info('[ai-scheduler] Phase summary:', {
+    infoLog('Phase summary:', {
       totalTicks: tickCount,
       totalInteractions: totalActions,
       perPlayer: Object.fromEntries(actionCounts)
@@ -551,18 +573,18 @@
         }
       });
       window.dispatchEvent(event);
-      console.info('[ai-scheduler] ✓ Emitted social:ai-phase-complete event');
+      infoLog('✓ Emitted social:ai-phase-complete event');
     } catch (e) {
-      console.error('[ai-scheduler] Failed to emit completion event:', e);
+      errorLog('Failed to emit completion event:', e);
     }
     
     // Call onSocialPhaseEnd if available to ensure phase transitions
     if (typeof global.SocialManeuvers?.onSocialPhaseEnd === 'function') {
       try {
         // Don't call directly - let the phase timer handle it
-        console.info('[ai-scheduler] Phase timer will handle phase end callback');
+        infoLog('Phase timer will handle phase end callback');
       } catch (e) {
-        console.error('[ai-scheduler] Error during phase end:', e);
+        errorLog('Error during phase end:', e);
       }
     }
   }
@@ -570,6 +592,21 @@
   // ============================================================================
   // PUBLIC API: START/STOP/PAUSE/RESUME
   // ============================================================================
+  /**
+   * Start the AI social phase scheduler
+   * 
+   * Initializes the scheduler and begins the tick loop. The scheduler will
+   * execute AI social interactions at regular intervals until stopped or
+   * until the phase naturally ends.
+   * 
+   * @param {Object} context - Phase context (optional)
+   * @param {string} reason - Reason for starting (for logging)
+   * 
+   * Debug Logs (when debugSocialAI is true):
+   * - Start event with context and reason
+   * - Tick progress and action execution
+   * - Watchdog restarts if loop stalls
+   */
   function startAiSocialPhase(context = {}, reason = '') {
     // Guard: Block social AI start while game is paused
     if(global.PauseController && global.PauseController.isPaused && global.PauseController.isPaused()){
@@ -585,7 +622,7 @@
     }
 
     if (isRunning) {
-      console.warn('[ai-scheduler] Already running');
+      warnLog('Already running');
       return;
     }
 
@@ -611,6 +648,19 @@
     startWatchdog();
   }
 
+  /**
+   * Stop the AI social phase scheduler
+   * 
+   * Completely shuts down the scheduler and tears down all timers and state.
+   * This is a full shutdown - use pause() if you want to temporarily suspend
+   * work while keeping the loop alive.
+   * 
+   * @param {string} reason - Reason for stopping (for logging)
+   * 
+   * Debug Logs (when debugSocialAI is true):
+   * - Stop event with reason
+   * - Phase summary (total ticks, actions, per-player breakdown)
+   */
   function stopAiSocialPhase(reason = '') {
     if (!isRunning) {
       debugLog('stop() called but already stopped', { reason });
@@ -642,9 +692,9 @@
       watchdogTimer = null;
     }
 
-    // Log summary
+    // Log summary (gated by debugSocialAI flag)
     const totalActions = Array.from(actionCounts.values()).reduce((a, b) => a + b, 0);
-    console.info('[ai-scheduler] Phase summary:', {
+    infoLog('Phase summary:', {
       totalTicks: tickCount,
       totalInteractions: totalActions,
       perPlayer: Object.fromEntries(actionCounts)
@@ -653,7 +703,18 @@
   
   /**
    * Pause the scheduler (suspend work without tearing down loop)
-   * Loop continues to run but performTick skips work
+   * 
+   * Suspends AI social interactions while keeping the tick loop and timers
+   * running. This is useful for temporarily halting work (e.g., when a modal
+   * is open) without losing state or requiring full restart.
+   * 
+   * The tick loop continues to run, but performTick() will skip all work
+   * while paused. Call resume() to continue work.
+   * 
+   * @param {string} reason - Reason for pausing (for logging)
+   * 
+   * Debug Logs (when debugSocialAI is true):
+   * - Pause event with reason and current tick count
    */
   function pauseAiSocialPhase(reason = '') {
     if (!isRunning) {
@@ -675,6 +736,15 @@
   
   /**
    * Resume the scheduler after pause
+   * 
+   * Resumes AI social interactions after a pause. The tick loop will continue
+   * from where it left off, and the watchdog timer is reset to prevent false
+   * positives.
+   * 
+   * @param {string} reason - Reason for resuming (for logging)
+   * 
+   * Debug Logs (when debugSocialAI is true):
+   * - Resume event with reason and current tick count
    */
   function resumeAiSocialPhase(reason = '') {
     if (!isRunning) {
@@ -703,14 +773,14 @@
     
     if (!config.enabled) return;
 
-    console.info('[ai-scheduler] Running empty-energy burst');
+    infoLog('Running empty-energy burst');
 
     let count = 0;
     const maxCount = config.emptyEnergyBurstCount;
 
     function runNext() {
       if (count >= maxCount) {
-        console.info(`[ai-scheduler] Burst complete: ${count} interactions`);
+        infoLog(`Burst complete: ${count} interactions`);
         return;
       }
 
@@ -728,11 +798,33 @@
   // ============================================================================
   // EXPORTS
   // ============================================================================
+  /**
+   * Social AI Scheduler Public API
+   * 
+   * Main lifecycle methods:
+   * - startAiSocialPhase(context, reason): Start the scheduler
+   * - stopAiSocialPhase(reason): Stop the scheduler completely
+   * - pauseAiSocialPhase(reason): Pause work (keeps loop alive)
+   * - resumeAiSocialPhase(reason): Resume work after pause
+   * - isRunning(): Check if scheduler is active
+   * 
+   * Additional methods:
+   * - runEmptyEnergyBurst(): Execute burst interactions during energy skip
+   * - getConfig(): Get current scheduler configuration
+   * 
+   * Debug methods (internal use):
+   * - _performSingleInteraction(): Execute one AI interaction
+   * - _getEligibleAIPlayers(): Get list of eligible AI players
+   * 
+   * Diagnostics (window.__smDebug):
+   * - getState(): Get current scheduler state
+   * - runAiTickOnce(): Manually run a single tick
+   */
   global.SocialAIScheduler = {
     startAiSocialPhase,
     stopAiSocialPhase,
-    pauseAiSocialPhase,    // NEW: pause API
-    resumeAiSocialPhase,   // NEW: resume API
+    pauseAiSocialPhase,
+    resumeAiSocialPhase,
     isRunning: isSchedulerRunning,
     runEmptyEnergyBurst,
     getConfig,
@@ -748,7 +840,24 @@
     global.__smDebug = {};
   }
   
-  // Enhanced diagnostics API
+  /**
+   * Enhanced diagnostics API: Get current scheduler state
+   * 
+   * Returns detailed state for debugging and monitoring:
+   * - isRunning: Is scheduler active?
+   * - isPaused: Is scheduler paused?
+   * - isActive: Is scheduler executing work?
+   * - tickCount: Number of ticks this phase
+   * - lastTickTime: Timestamp of last tick
+   * - timeSinceLastTick: Milliseconds since last tick
+   * - idlePassCount: Consecutive ticks with no actions
+   * - actionCounts: Actions executed per player
+   * - totalActions: Total actions this phase
+   * - recentPairings: Recently paired actors/targets
+   * - config: Current scheduler configuration
+   * 
+   * Usage: window.__smDebug.getState()
+   */
   global.__smDebug.getState = function() {
     return {
       isRunning,
@@ -765,7 +874,10 @@
     };
   };
   
-  // Add AI scheduler debug helper
+  /**
+   * Debug helper: Run a single AI tick manually
+   * Useful for testing and diagnostics
+   */
   global.__smDebug.runAiTickOnce = function() {
     console.group('[__smDebug] Running single AI tick');
     
@@ -782,23 +894,25 @@
       return;
     }
     
-    // Perform a single interaction with verbose logging
-    const oldVerbose = global.game?.cfg?.aiSocialVerbose;
+    // Perform a single interaction with debug logging enabled
+    const oldDebug = global.game?.cfg?.debugSocialAI;
     if (global.game && global.game.cfg) {
-      global.game.cfg.aiSocialVerbose = true;
+      global.game.cfg.debugSocialAI = true;
     }
     
     performSingleInteraction();
     
     if (global.game && global.game.cfg) {
-      global.game.cfg.aiSocialVerbose = oldVerbose;
+      global.game.cfg.debugSocialAI = oldDebug;
     }
     
     console.log('Action counts:', Object.fromEntries(actionCounts));
     console.groupEnd();
   };
 
+  // Module initialization logs (always visible)
   console.info('[social-ai-scheduler] ✓ Module loaded');
+  console.info('[social-ai-scheduler] ✓ Diagnostics: window.__smDebug.getState()');
   console.info('[social-ai-scheduler] ✓ Dev helper: window.__smDebug.runAiTickOnce()');
 
 })(window);

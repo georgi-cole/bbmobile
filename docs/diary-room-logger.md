@@ -520,6 +520,259 @@ window.SocialActionExecutor.init({
 });
 ```
 
+## Scheduler Lifecycle Instrumentation & Debug Guide
+
+### Overview
+
+The Social AI Scheduler has been instrumented with comprehensive debug logging and diagnostics to help troubleshoot issues and understand scheduler behavior during social phases.
+
+### Debug Configuration
+
+Enable debug logging via the configuration flag:
+
+```javascript
+// Enable debug logging for scheduler
+window.game.cfg.debugSocialAI = true;
+```
+
+When `debugSocialAI` is `true`, the scheduler will output detailed logs including:
+- Start/pause/resume/stop lifecycle events
+- Tick progress and timing
+- AI action execution (actor → action → target)
+- Phase summaries (total ticks, actions, per-player breakdown)
+- Watchdog restarts (if loop stalls)
+
+When `debugSocialAI` is `false` (default), only critical errors are logged.
+
+### Lifecycle API
+
+The scheduler exposes a robust lifecycle API:
+
+#### Start
+```javascript
+SocialAIScheduler.startAiSocialPhase(context, reason);
+```
+Starts the scheduler and begins the tick loop. Initializes phase state and starts the heartbeat loop with optional RAF pump.
+
+#### Stop
+```javascript
+SocialAIScheduler.stopAiSocialPhase(reason);
+```
+Completely shuts down the scheduler. Tears down all timers and logs phase summary. Use this for final cleanup.
+
+#### Pause
+```javascript
+SocialAIScheduler.pauseAiSocialPhase(reason);
+```
+Suspends work without tearing down the loop. The tick loop continues but `performTick()` skips all work. Useful for modal interactions or temporary halts.
+
+#### Resume
+```javascript
+SocialAIScheduler.resumeAiSocialPhase(reason);
+```
+Resumes work after pause. Resets the watchdog timer to prevent false positives.
+
+### Diagnostics API
+
+The scheduler exposes diagnostics via `window.__smDebug`:
+
+#### Get State
+```javascript
+const state = window.__smDebug.getState();
+console.log(state);
+```
+
+Returns:
+```javascript
+{
+  isRunning: boolean,        // Is scheduler active?
+  isPaused: boolean,         // Is scheduler paused?
+  isActive: boolean,         // Is scheduler executing work?
+  tickCount: number,         // Number of ticks this phase
+  lastTickTime: timestamp,   // Timestamp of last tick
+  timeSinceLastTick: number, // Milliseconds since last tick
+  idlePassCount: number,     // Consecutive ticks with no actions
+  actionCounts: Object,      // Actions per player
+  totalActions: number,      // Total actions this phase
+  recentPairings: Array,     // Recently paired actors/targets
+  config: Object             // Current configuration
+}
+```
+
+#### Run Single Tick
+```javascript
+window.__smDebug.runAiTickOnce();
+```
+
+Manually executes a single tick with debug logging enabled. Useful for testing action selection and execution logic.
+
+### Heartbeat Loop & RAF Pump
+
+The scheduler uses a robust dual-loop system:
+
+1. **setInterval heartbeat**: Primary tick loop with configurable interval (default 800ms)
+2. **requestAnimationFrame pump**: Optional responsiveness layer (runs independently)
+
+Both loops check the `isPaused` flag and skip work when paused, but continue running to maintain timing.
+
+### Watchdog Timer
+
+The watchdog timer monitors tick health and restarts the loop if it stalls:
+
+```javascript
+// Watchdog only runs when debugSocialAI is enabled
+if (window.game.cfg.debugSocialAI) {
+  // Monitor for ticks >2.5s apart
+  // Auto-restart loop if stalled
+}
+```
+
+**Configuration:**
+- Check interval: 3 seconds
+- Stall threshold: 2.5 seconds without tick
+- Action: Restart tick loop and log warning
+
+The watchdog is **gated by `debugSocialAI`** - it only runs when debug mode is enabled.
+
+### Debug Log Categories
+
+All logs are gated by the `debugSocialAI` flag:
+
+1. **debugLog()**: Verbose/detailed output (tick timing, state changes, etc.)
+2. **infoLog()**: Lifecycle events (start, stop, pause, resume, actions)
+3. **warnLog()**: Potential issues (stalls, idle passes, max ticks)
+4. **errorLog()**: Critical errors (always logged, regardless of flag)
+
+### Troubleshooting Scenarios
+
+#### Scenario 1: Scheduler not starting
+```javascript
+// Check if scheduler is running
+console.log(SocialAIScheduler.isRunning()); // false
+
+// Check configuration
+console.log(window.game.cfg.aiSocialEnabled); // Should be true
+
+// Enable debug logging
+window.game.cfg.debugSocialAI = true;
+
+// Try starting
+SocialAIScheduler.startAiSocialPhase({}, 'manual_test');
+// Look for debug logs in console
+```
+
+#### Scenario 2: No AI actions executing
+```javascript
+// Enable debug mode
+window.game.cfg.debugSocialAI = true;
+
+// Check state
+const state = window.__smDebug.getState();
+console.log('Tick count:', state.tickCount);
+console.log('Idle passes:', state.idlePassCount);
+console.log('Total actions:', state.totalActions);
+
+// Run a single tick manually
+window.__smDebug.runAiTickOnce();
+// Check console for action execution or failure reasons
+```
+
+#### Scenario 3: Scheduler stalling
+```javascript
+// Enable debug mode (enables watchdog)
+window.game.cfg.debugSocialAI = true;
+
+// Check time since last tick
+const state = window.__smDebug.getState();
+console.log('Time since last tick:', state.timeSinceLastTick, 'ms');
+
+// If >2500ms, watchdog should restart loop automatically
+// Check console for "[ai-scheduler:watchdog] ⚠️ No tick for >2.5s"
+```
+
+#### Scenario 4: Understanding pause/resume behavior
+```javascript
+// Enable debug mode
+window.game.cfg.debugSocialAI = true;
+
+// Start scheduler
+SocialAIScheduler.startAiSocialPhase({}, 'test');
+// Look for: "[ai-scheduler] ▶️ Starting AI social phase (reason: test)"
+
+// Pause scheduler
+SocialAIScheduler.pauseAiSocialPhase('modal_open');
+// Look for: "[ai-scheduler] ⏸️ Pausing AI social phase (reason: modal_open)"
+
+// Check state - loop still running but work suspended
+window.__smDebug.getState(); // isPaused: true, isRunning: true
+
+// Resume scheduler
+SocialAIScheduler.resumeAiSocialPhase('modal_close');
+// Look for: "[ai-scheduler] ▶️ Resuming AI social phase (reason: modal_close)"
+```
+
+### Phase Summary Logs
+
+When the scheduler stops or a phase ends, it logs a summary:
+
+```
+[ai-scheduler] Phase summary: {
+  totalTicks: 42,
+  totalInteractions: 18,
+  perPlayer: {
+    player1: 5,
+    player2: 4,
+    player3: 3,
+    player4: 6
+  }
+}
+```
+
+This summary is **gated by `debugSocialAI`** - it only appears when debug mode is enabled.
+
+### Reverting Instrumentation
+
+If the debug instrumentation needs to be disabled or removed:
+
+1. **Disable debug logging globally:**
+   ```javascript
+   window.game.cfg.debugSocialAI = false;
+   ```
+
+2. **Remove debug flag from config:**
+   Edit `js/config/defaults.js` and remove or comment out the `debugSocialAI` flag.
+
+3. **Remove instrumentation code:**
+   The instrumentation is isolated in:
+   - `debugLog()`, `infoLog()`, `warnLog()` functions (lines 67-110)
+   - Gated logging calls throughout the file
+   - `__smDebug` diagnostics (lines 747-832)
+
+All logging is gated, so simply removing the flag will silence all output.
+
+### Testing Instrumentation
+
+Test files for scheduler:
+- `test_ai_scheduler_fix.html` - Basic scheduler functionality
+- `test_ai_scheduler_exhaustion.html` - Resource exhaustion scenarios
+- `test_social_ai_enhanced.mjs` - Node.js integration tests
+
+To test pause/resume:
+```javascript
+// In browser console
+window.game.cfg.debugSocialAI = true;
+
+SocialAIScheduler.startAiSocialPhase({}, 'test');
+// Wait 5 seconds
+SocialAIScheduler.pauseAiSocialPhase('test_pause');
+// Wait 3 seconds
+SocialAIScheduler.resumeAiSocialPhase('test_resume');
+// Wait 5 seconds
+SocialAIScheduler.stopAiSocialPhase('test_stop');
+
+// Review console logs for lifecycle events
+```
+
 ## License
 
 Part of the BBMobile game codebase. See main project license.

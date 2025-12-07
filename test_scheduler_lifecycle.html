@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheduler Lifecycle Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0a1628;
+      color: #c8d5e6;
+    }
+    h1 { color: #78b4f0; }
+    h2 { color: #6ca0d8; margin-top: 30px; }
+    .test-section {
+      background: #1c2b3e;
+      border: 1px solid #284061;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .control-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+    button {
+      background: #284061;
+      border: 1px solid #3a5a81;
+      color: #c8d5e6;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    button:hover { background: #3a5a81; }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+    .pass { background: #2d5f3f; color: #7fd996; }
+    .fail { background: #5f2d2d; color: #ff7c7c; }
+    .info { background: #2d3d5f; color: #78b4f0; }
+    .warn { background: #5f4f2d; color: #f0c878; }
+    #console-output {
+      background: #0f1f2d;
+      border: 1px solid #1d3042;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    .log-entry {
+      margin: 3px 0;
+      padding: 3px 0;
+      border-bottom: 1px solid #1d3042;
+    }
+    .log-debug { color: #78b4f0; }
+    .log-info { color: #7fd996; }
+    .log-warn { color: #f0c878; }
+    .log-error { color: #ff7c7c; }
+    .state-display {
+      background: #0f1f2d;
+      border: 1px solid #1d3042;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+    }
+    .state-display pre {
+      margin: 0;
+      color: #c8d5e6;
+      font-size: 0.85rem;
+    }
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .toggle input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Scheduler Lifecycle Instrumentation Test</h1>
+  <p>Test the polished Social AI Scheduler with debug flag gating</p>
+
+  <div class="test-section">
+    <h2>Configuration</h2>
+    <div class="toggle">
+      <input type="checkbox" id="debugToggle" onchange="toggleDebugMode()">
+      <label for="debugToggle">
+        <strong>Enable debugSocialAI flag</strong> - When enabled, scheduler logs all lifecycle events, tick progress, and phase summaries
+      </label>
+    </div>
+    <div id="config-status" class="status info"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Lifecycle Controls</h2>
+    <div class="control-panel">
+      <button onclick="startScheduler()">▶️ Start</button>
+      <button onclick="pauseScheduler()">⏸️ Pause</button>
+      <button onclick="resumeScheduler()">▶️ Resume</button>
+      <button onclick="stopScheduler()">◼️ Stop</button>
+    </div>
+    <div id="lifecycle-status" class="status info"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Diagnostics</h2>
+    <div class="control-panel">
+      <button onclick="getState()">📊 Get State</button>
+      <button onclick="runTickOnce()">⚡ Run Tick Once</button>
+      <button onclick="clearConsole()">🗑️ Clear Console</button>
+    </div>
+    <div id="state-display" class="state-display"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Output</h2>
+    <div id="console-output"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/config/defaults.js"></script>
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-ai-scheduler.js"></script>
+
+  <script>
+    // Intercept console methods to display in UI
+    const consoleOutput = document.getElementById('console-output');
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function addLogEntry(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = message;
+      consoleOutput.appendChild(entry);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ');
+      if (msg.includes('[ai-scheduler:debug]')) {
+        addLogEntry(msg, 'debug');
+      } else if (msg.includes('[ai-scheduler]')) {
+        addLogEntry(msg, 'info');
+      }
+    };
+
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ');
+      if (msg.includes('[ai-scheduler]')) {
+        addLogEntry(msg, 'info');
+      }
+    };
+
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ');
+      if (msg.includes('[ai-scheduler]')) {
+        addLogEntry(msg, 'warn');
+      }
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ');
+      if (msg.includes('[ai-scheduler]')) {
+        addLogEntry(msg, 'error');
+      }
+    };
+
+    // Setup mock game environment
+    function setupMockGame() {
+      if (!window.game) {
+        window.game = {
+          cfg: window.cfg || {},
+          humanId: 1,
+          players: []
+        };
+      }
+
+      // Create mock players
+      const mockPlayers = [];
+      for (let i = 1; i <= 8; i++) {
+        mockPlayers.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false
+        });
+      }
+      window.game.players = mockPlayers;
+
+      // Mock alivePlayers function
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted);
+      };
+
+      // Mock safeName function
+      window.safeName = function(id) {
+        const player = window.game.players.find(p => p.id === id);
+        return player ? player.name : `Player ${id}`;
+      };
+
+      // Mock Social Maneuvers (minimal)
+      if (!window.SocialManeuvers) {
+        window.SocialManeuvers = {
+          SOCIAL_ACTIONS: [
+            { id: 'compliment', label: 'Compliment', category: 'friendly', multiTarget: false },
+            { id: 'strategize', label: 'Strategize', category: 'strategic', multiTarget: false },
+            { id: 'group_hangout', label: 'Group Hangout', category: 'friendly', multiTarget: true, minTargets: 2 }
+          ],
+          getAvailableActions: function(actorId, targetId) {
+            return this.SOCIAL_ACTIONS;
+          },
+          computeActionCost: function(actionId, targetIds) {
+            return { total: 10 };
+          },
+          executeAction: function(actorId, targetId, actionId, extraTargets) {
+            return {
+              success: true,
+              action: { id: actionId, label: actionId },
+              outcome: {
+                type: 'success',
+                message: 'Action succeeded',
+                affinityChange: 0.05
+              }
+            };
+          },
+          SocialResources: {
+            canAfford: function(playerId, cost) {
+              return true; // Always afford for testing
+            }
+          }
+        };
+      }
+
+      updateConfigStatus();
+    }
+
+    function toggleDebugMode() {
+      const checkbox = document.getElementById('debugToggle');
+      window.game.cfg.debugSocialAI = checkbox.checked;
+      updateConfigStatus();
+      addLogEntry(`Debug mode ${checkbox.checked ? 'ENABLED' : 'DISABLED'}`, 'info');
+    }
+
+    function updateConfigStatus() {
+      const status = document.getElementById('config-status');
+      const debugEnabled = window.game?.cfg?.debugSocialAI;
+      status.textContent = debugEnabled 
+        ? '✅ Debug logging ENABLED - All scheduler logs will appear'
+        : '⚠️ Debug logging DISABLED - Only critical errors will log';
+      status.className = debugEnabled ? 'status pass' : 'status warn';
+      
+      document.getElementById('debugToggle').checked = debugEnabled;
+    }
+
+    function startScheduler() {
+      if (!window.SocialAIScheduler) {
+        updateLifecycleStatus('❌ Scheduler not loaded', 'fail');
+        return;
+      }
+      
+      SocialAIScheduler.startAiSocialPhase({ testMode: true }, 'manual_test');
+      updateLifecycleStatus('▶️ Scheduler started', 'pass');
+      setTimeout(getState, 100);
+    }
+
+    function pauseScheduler() {
+      if (!window.SocialAIScheduler) {
+        updateLifecycleStatus('❌ Scheduler not loaded', 'fail');
+        return;
+      }
+      
+      SocialAIScheduler.pauseAiSocialPhase('manual_test');
+      updateLifecycleStatus('⏸️ Scheduler paused', 'info');
+      setTimeout(getState, 100);
+    }
+
+    function resumeScheduler() {
+      if (!window.SocialAIScheduler) {
+        updateLifecycleStatus('❌ Scheduler not loaded', 'fail');
+        return;
+      }
+      
+      SocialAIScheduler.resumeAiSocialPhase('manual_test');
+      updateLifecycleStatus('▶️ Scheduler resumed', 'pass');
+      setTimeout(getState, 100);
+    }
+
+    function stopScheduler() {
+      if (!window.SocialAIScheduler) {
+        updateLifecycleStatus('❌ Scheduler not loaded', 'fail');
+        return;
+      }
+      
+      SocialAIScheduler.stopAiSocialPhase('manual_test');
+      updateLifecycleStatus('◼️ Scheduler stopped', 'info');
+      setTimeout(getState, 100);
+    }
+
+    function getState() {
+      if (!window.__smDebug) {
+        updateStateDisplay('❌ Diagnostics not available');
+        return;
+      }
+      
+      const state = window.__smDebug.getState();
+      updateStateDisplay(JSON.stringify(state, null, 2));
+    }
+
+    function runTickOnce() {
+      if (!window.__smDebug) {
+        updateLifecycleStatus('❌ Diagnostics not available', 'fail');
+        return;
+      }
+      
+      addLogEntry('=== Running single tick ===', 'info');
+      window.__smDebug.runAiTickOnce();
+      setTimeout(getState, 500);
+    }
+
+    function clearConsole() {
+      consoleOutput.innerHTML = '';
+      addLogEntry('Console cleared', 'info');
+    }
+
+    function updateLifecycleStatus(message, type) {
+      const status = document.getElementById('lifecycle-status');
+      status.textContent = message;
+      status.className = `status ${type}`;
+    }
+
+    function updateStateDisplay(content) {
+      const display = document.getElementById('state-display');
+      display.innerHTML = `<pre>${content}</pre>`;
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setupMockGame();
+      addLogEntry('✅ Test harness initialized', 'info');
+      addLogEntry('ℹ️ Toggle debug flag and test lifecycle methods', 'info');
+    });
+  </script>
+</body>
+</html>
