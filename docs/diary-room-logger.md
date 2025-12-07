@@ -390,6 +390,136 @@ Potential additions to the system:
 - Animations use CSS transforms (GPU-accelerated)
 - No memory leaks (proper cleanup on unmount)
 
+## Troubleshooting: Social AI Interactions
+
+### Problem: Insufficient AI interactions during social phases
+
+If you notice that NPCs are not generating enough social interactions during social phases (resulting in sparse Diary Room entries), this may be due to the AI scheduler being stopped prematurely or stalling during modal interactions.
+
+### Solution: Enhanced Social AI Scheduler (v2.0)
+
+**What changed:**
+- Added **pause/resume** semantics: The scheduler now pauses (instead of stopping) when modals open, keeping the tick loop alive
+- Implemented **robust tick loop**: setInterval-based heartbeat + RAF pump for responsiveness
+- Added **watchdog timer**: Automatically restarts stalled loops (debug-gated)
+- Created **SocialActionExecutor**: Background executor that queues and runs lightweight AI interactions
+
+### Configuration
+
+Enable debug logging to diagnose scheduler behavior:
+
+```javascript
+// In browser console or config
+window.game.cfg.debugSocialAI = true;
+```
+
+Enable the fallback executor (optional, for testing):
+
+```javascript
+window.FORCE_SOCIAL_FALLBACK = true;
+```
+
+### Diagnostics
+
+Check scheduler state:
+
+```javascript
+// Get current scheduler state
+window.__smDebug.getState()
+
+// Output includes:
+// - isRunning: Is scheduler active?
+// - isPaused: Is scheduler paused?
+// - tickCount: Number of ticks this phase
+// - totalActions: Total AI actions executed
+// - timeSinceLastTick: Milliseconds since last tick
+```
+
+Check executor state:
+
+```javascript
+// Get executor state
+window.__smDebug.executor.getState()
+
+// Output includes:
+// - isActive: Is executor running?
+// - queueLength: Queued actions waiting to flush
+// - totalActions: Actions executed this phase
+```
+
+### Manual Testing
+
+Run a single AI tick manually:
+
+```javascript
+window.__smDebug.runAiTickOnce()
+```
+
+Test pause/resume behavior:
+
+```javascript
+// Pause scheduler
+window.SocialAIScheduler.pauseAiSocialPhase('test');
+
+// Resume scheduler
+window.SocialAIScheduler.resumeAiSocialPhase('test');
+```
+
+### Debug Harness
+
+Use the standalone test harness to debug scheduler behavior:
+
+```
+devtools/social-ai-debug.html
+```
+
+This provides a visual interface to:
+- Start/stop/pause/resume the scheduler
+- Simulate modal open/close events
+- Queue and flush executor actions
+- Monitor state in real-time
+- View event logs
+
+### Reverting Changes
+
+If the enhanced scheduler causes issues, you can revert to legacy behavior:
+
+1. **Disable debug logging:**
+   ```javascript
+   window.game.cfg.debugSocialAI = false;
+   ```
+
+2. **Disable executor:**
+   ```javascript
+   window.FORCE_SOCIAL_FALLBACK = false;
+   ```
+
+3. **Use legacy stop() instead of pause():**
+   The system falls back to `stop()` if `pause()` is not available, maintaining backward compatibility.
+
+### Tuning Configuration
+
+Adjust scheduler behavior via config:
+
+```javascript
+// Conservative: Fewer, slower interactions
+window.game.cfg.aiSocialMaxPerPhase = 3;
+
+// Aggressive: More frequent interactions
+window.game.cfg.aiSocialMaxPerPhase = 7;
+```
+
+Adjust executor behavior:
+
+```javascript
+window.SocialActionExecutor.init({
+  maxFillActionsPerPhase: 3,    // Max fill actions per NPC
+  backgroundRate: 0.15,          // Probability of background action
+  allowTargetHuman: true,        // Allow NPCs to target human player
+  enabled: false                 // Enable fallback executor
+});
+```
+
 ## License
 
 Part of the BBMobile game codebase. See main project license.

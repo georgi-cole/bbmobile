@@ -409,7 +409,6 @@
     tickCount++;
     debugLog(`Tick #${tickCount}, lastTickTime: ${lastTickTime}`);
     
-    const config = getConfig();
     const aiPlayers = getEligibleAIPlayers();
     
     if (aiPlayers.length < 2) {

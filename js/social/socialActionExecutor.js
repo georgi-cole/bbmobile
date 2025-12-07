@@ -27,8 +27,8 @@
   let actionQueue = [];              // Queued heavy actions
   let backgroundTimer = null;        // Background tick timer
   let isActive = false;              // Executor active flag
-  let phaseActionCounts = new Map(); // Actions executed this phase per NPC
-  let ephemeralBonds = new Map();    // Temporary bond changes for phase
+  const phaseActionCounts = new Map(); // Actions executed this phase per NPC
+  const ephemeralBonds = new Map();    // Temporary bond changes for phase
 
   // ============================================================================
   // INITIALIZATION
@@ -162,7 +162,7 @@
   // ACTION EXECUTION
   // ============================================================================
   function executeAction(payload) {
-    const { actorId, targetId, actionId, success, magnitude, energyCost } = payload;
+    const { actorId, targetId, actionId, success, magnitude } = payload;
 
     // Update ephemeral bonds
     const bondKey = `${actorId}-${targetId}`;
