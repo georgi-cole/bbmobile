@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Executor Integration Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e0e0e0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #4da6ff;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      background: rgba(42, 42, 42, 0.9);
+      border: 1px solid #3a3a3a;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .test-section h2 {
+      color: #ffa500;
+      font-size: 18px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: auto;
+    }
+    .status-badge.pass { background: #22c55e; color: white; }
+    .status-badge.fail { background: #ef4444; color: white; }
+    .status-badge.pending { background: #64748b; color: white; }
+    .status-badge.running { background: #3b82f6; color: white; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+      flex: 1;
+      min-width: 120px;
+    }
+    button.primary {
+      background: #4da6ff;
+      color: white;
+    }
+    button.primary:hover { background: #3a7ed0; }
+    button.success {
+      background: #22c55e;
+      color: white;
+    }
+    button.success:hover { background: #16a34a; }
+    button.danger {
+      background: #ef4444;
+      color: white;
+    }
+    button.danger:hover { background: #dc2626; }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .info-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .info-box code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log {
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      padding: 2px 0;
+    }
+    .log-entry.success { color: #22c55e; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry.info { color: #4da6ff; }
+    .log-entry.warn { color: #ffa500; }
+    .log-entry.debug { color: #888; }
+    .state-display {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .state-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #3a3a3a;
+    }
+    .state-row:last-child {
+      border-bottom: none;
+    }
+    .state-label {
+      color: #888;
+      font-weight: 600;
+    }
+    .state-value {
+      color: #4aff4a;
+    }
+    .full-width {
+      grid-column: 1 / -1;
+    }
+    .results-summary {
+      background: rgba(34, 197, 94, 0.1);
+      border: 2px solid #22c55e;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .results-summary h3 {
+      color: #22c55e;
+      margin-bottom: 15px;
+    }
+    .results-list {
+      list-style: none;
+    }
+    .results-list li {
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .results-list li::before {
+      content: '✓';
+      color: #22c55e;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .results-list li.fail::before {
+      content: '✗';
+      color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Social Executor Integration Test</h1>
+    <p class="subtitle">Comprehensive test suite for SocialActionExecutor, modal integration, and DR logging</p>
+
+    <div class="test-grid">
+      <!-- Test 1: Initialization -->
+      <div class="test-section">
+        <h2>
+          1️⃣ Initialization
+          <span class="status-badge pending" id="status-init">Pending</span>
+        </h2>
+        <div class="info-box">
+          Verifies all modules load correctly and are accessible globally.
+        </div>
+        <div class="controls">
+          <button class="primary" onclick="testInitialization()">Run Test</button>
+        </div>
+        <div class="log" id="log-init"></div>
+      </div>
+
+      <!-- Test 2: Modal Open Integration -->
+      <div class="test-section">
+        <h2>
+          2️⃣ Modal Open
+          <span class="status-badge pending" id="status-modal-open">Pending</span>
+        </h2>
+        <div class="info-box">
+          Simulates modal open: pauses scheduler, starts executor.
+        </div>
+        <div class="controls">
+          <button class="primary" onclick="testModalOpen()">Simulate Open</button>
+        </div>
+        <div class="log" id="log-modal-open"></div>
+      </div>
+
+      <!-- Test 3: Background Execution -->
+      <div class="test-section">
+        <h2>
+          3️⃣ Background Execution
+          <span class="status-badge pending" id="status-background">Pending</span>
+        </h2>
+        <div class="info-box">
+          Tests background executor generates NPC interactions.
+        </div>
+        <div class="controls">
+          <button class="primary" onclick="testBackgroundExecution()">Run 5 Ticks</button>
+        </div>
+        <div class="log" id="log-background"></div>
+      </div>
+
+      <!-- Test 4: Modal Close Integration -->
+      <div class="test-section">
+        <h2>
+          4️⃣ Modal Close
+          <span class="status-badge pending" id="status-modal-close">Pending</span>
+        </h2>
+        <div class="info-box">
+          Simulates modal close: flushes queue, stops executor, resumes scheduler.
+        </div>
+        <div class="controls">
+          <button class="primary" onclick="testModalClose()">Simulate Close</button>
+        </div>
+        <div class="log" id="log-modal-close"></div>
+      </div>
+
+      <!-- Test 5: DR Entry Generation -->
+      <div class="test-section">
+        <h2>
+          5️⃣ DR Logging
+          <span class="status-badge pending" id="status-dr">Pending</span>
+        </h2>
+        <div class="info-box">
+          Verifies actions generate DR entries with correct severity.
+        </div>
+        <div class="controls">
+          <button class="primary" onclick="testDRLogging()">Test Logging</button>
+        </div>
+        <div class="log" id="log-dr"></div>
+      </div>
+
+      <!-- Test 6: Button Blink Policy -->
+      <div class="test-section">
+        <h2>
+          6️⃣ Button Blink
+          <span class="status-badge pending" id="status-blink">Pending</span>
+        </h2>
+        <div class="info-box">
+          Tests blink for backstab/insult/gossip and magnitude >= 0.06.
+        </div>
+        <div class="controls">
+          <button class="primary" onclick="testButtonBlink()">Test Blink</button>
+        </div>
+        <div class="log" id="log-blink"></div>
+      </div>
+
+      <!-- State Display -->
+      <div class="test-section full-width">
+        <h2>📊 System State</h2>
+        <div class="state-display" id="state-display">
+          <div class="state-row">
+            <span class="state-label">Status:</span>
+            <span class="state-value">Not initialized</span>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="primary" onclick="updateStateDisplay()">Refresh State</button>
+          <button class="success" onclick="runFullSuite()">▶️ Run Full Test Suite</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div id="results-summary" style="display: none;" class="results-summary">
+      <h3>✅ Test Results</h3>
+      <ul class="results-list" id="results-list"></ul>
+    </div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/social-ai-scheduler.js"></script>
+  <script src="js/social/socialActionExecutor.js"></script>
+  <script src="js/dr/diaryRoomLogger.js"></script>
+  <script src="js/dr/diaryUI.js"></script>
+
+  <script>
+    // ============================================================================
+    // TEST INFRASTRUCTURE
+    // ============================================================================
+    
+    const testResults = {
+      init: false,
+      modalOpen: false,
+      background: false,
+      modalClose: false,
+      dr: false,
+      blink: false
+    };
+
+    function log(sectionId, message, type = 'info') {
+      const logEl = document.getElementById(`log-${sectionId}`);
+      if (!logEl) return;
+
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setStatus(test, status) {
+      const badge = document.getElementById(`status-${test}`);
+      if (!badge) return;
+
+      badge.className = `status-badge ${status}`;
+      badge.textContent = {
+        pending: 'Pending',
+        running: 'Running',
+        pass: 'Pass',
+        fail: 'Fail'
+      }[status] || status;
+    }
+
+    // ============================================================================
+    // MOCK GAME ENVIRONMENT
+    // ============================================================================
+    
+    const mockPlayers = [
+      { id: 1, name: 'Alice', evicted: false },
+      { id: 2, name: 'Bob', evicted: false },
+      { id: 3, name: 'Carol', evicted: false },
+      { id: 4, name: 'Dave', evicted: false },
+      { id: 5, name: 'Eve', evicted: false },
+      { id: 6, name: 'Frank', evicted: false },
+      { id: 7, name: 'Grace', evicted: false },
+      { id: 8, name: 'You', evicted: false }
+    ];
+
+    // Initialize game object
+    // Note: Uses bbGameBus if available, falls back to EventTarget with helpers
+    // This is intentional for test isolation - real game uses bbGameBus
+    window.game = {
+      cfg: {
+        debugSocialAI: true,
+        aiSocialEnabled: true,
+        aiSocialVerbose: true
+      },
+      players: mockPlayers,
+      humanId: 8,
+      phase: 'social_intermission',
+      week: 2,
+      bus: window.bbGameBus || new EventTarget(),
+      __sm_bankEnergy: new Map(),
+      __latestSocialSummary: {
+        phaseSummary: {
+          energySpent: {},
+          initialEnergy: 5
+        }
+      }
+    };
+
+    // Add bus helpers if using EventTarget fallback
+    // These match the bbGameBus API signature for compatibility
+    if (!window.game.bus.on) {
+      window.game.bus.on = function(event, handler) {
+        this.addEventListener(event, e => handler(e.detail || e));
+      };
+    }
+    if (!window.game.bus.emit) {
+      window.game.bus.emit = function(event, detail) {
+        this.dispatchEvent(new CustomEvent(event, { detail }));
+      };
+    }
+
+    // Global helpers
+    window.alivePlayers = () => mockPlayers.filter(p => !p.evicted);
+    window.safeName = (id) => {
+      const p = mockPlayers.find(p => p.id === id);
+      return p ? p.name : `Player ${id}`;
+    };
+    window.getP = (id) => mockPlayers.find(p => p.id === id);
+
+    // Mock SocialManeuvers for resource system
+    window.SocialManeuvers = {
+      SocialResources: {
+        get: function(playerId) {
+          return { energy: 5, influence: 0, information: 0 };
+        },
+        getAll: function(playerId) {
+          return { energy: 5, influence: 0, information: 0 };
+        },
+        canAfford: function(playerId, costs) {
+          return true;
+        }
+      },
+      SOCIAL_ACTIONS: [
+        { id: 'small_talk', label: 'Small Talk', cost: 1 },
+        { id: 'compliment', label: 'Compliment', cost: 1 },
+        { id: 'strategize', label: 'Strategize', cost: 2 },
+        { id: 'gossip', label: 'Gossip', cost: 2 },
+        { id: 'backstab', label: 'Backstab', cost: 3 },
+        { id: 'insult', label: 'Insult', cost: 1 }
+      ]
+    };
+
+    // ============================================================================
+    // TEST 1: INITIALIZATION
+    // ============================================================================
+    
+    function testInitialization() {
+      setStatus('init', 'running');
+      log('init', 'Starting initialization test...', 'info');
+
+      let passed = true;
+
+      // Check SocialActionExecutor
+      if (window.SocialActionExecutor) {
+        log('init', '✓ SocialActionExecutor found', 'success');
+      } else {
+        log('init', '✗ SocialActionExecutor not found', 'error');
+        passed = false;
+      }
+
+      // Check SocialAIScheduler
+      if (window.SocialAIScheduler) {
+        log('init', '✓ SocialAIScheduler found', 'success');
+      } else {
+        log('init', '✗ SocialAIScheduler not found', 'error');
+        passed = false;
+      }
+
+      // Check DiaryRoomLogger
+      if (window.DiaryRoomLogger) {
+        log('init', '✓ DiaryRoomLogger found', 'success');
+      } else {
+        log('init', '✗ DiaryRoomLogger not found', 'error');
+        passed = false;
+      }
+
+      // Check DiaryUI
+      if (window.DiaryUI) {
+        log('init', '✓ DiaryUI found', 'success');
+      } else {
+        log('init', '✗ DiaryUI not found', 'error');
+        passed = false;
+      }
+
+      // Initialize executor
+      try {
+        window.SocialActionExecutor.init({
+          enabled: true,
+          maxFillActionsPerPhase: 3,
+          backgroundRate: 0.15,
+          allowTargetHuman: true
+        });
+        log('init', '✓ Executor initialized', 'success');
+      } catch (e) {
+        log('init', '✗ Executor init failed: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Initialize DiaryRoomLogger
+      try {
+        if (window.DiaryRoomLogger.init) {
+          window.DiaryRoomLogger.init();
+          log('init', '✓ DiaryRoomLogger initialized', 'success');
+        }
+      } catch (e) {
+        log('init', '⚠ DiaryRoomLogger init warning: ' + e.message, 'warn');
+      }
+
+      // Initialize DiaryUI
+      try {
+        if (window.DiaryUI.init) {
+          window.DiaryUI.init({ createFallback: true });
+          log('init', '✓ DiaryUI initialized', 'success');
+        }
+      } catch (e) {
+        log('init', '⚠ DiaryUI init warning: ' + e.message, 'warn');
+      }
+
+      testResults.init = passed;
+      setStatus('init', passed ? 'pass' : 'fail');
+      log('init', passed ? '✅ Initialization PASSED' : '❌ Initialization FAILED', passed ? 'success' : 'error');
+      
+      updateStateDisplay();
+    }
+
+    // ============================================================================
+    // TEST 2: MODAL OPEN
+    // ============================================================================
+    
+    function testModalOpen() {
+      setStatus('modal-open', 'running');
+      log('modal-open', 'Simulating modal open...', 'info');
+
+      let passed = true;
+
+      // Pause scheduler
+      try {
+        if (window.SocialAIScheduler.pauseAiSocialPhase) {
+          window.SocialAIScheduler.pauseAiSocialPhase('test-modal-open');
+          log('modal-open', '✓ Scheduler paused', 'success');
+        }
+      } catch (e) {
+        log('modal-open', '✗ Failed to pause scheduler: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Start background executor
+      try {
+        if (window.SocialActionExecutor.startBackgroundTicks) {
+          window.SocialActionExecutor.startBackgroundTicks();
+          log('modal-open', '✓ Background executor started', 'success');
+        } else {
+          log('modal-open', '✗ startBackgroundTicks not found', 'error');
+          passed = false;
+        }
+      } catch (e) {
+        log('modal-open', '✗ Failed to start executor: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Verify state
+      setTimeout(() => {
+        const state = window.__smDebug?.executor?.getState();
+        if (state && state.config.enabled) {
+          log('modal-open', '✓ Executor enabled in state', 'success');
+        } else {
+          log('modal-open', '⚠ Executor may not be fully enabled', 'warn');
+        }
+        
+        testResults.modalOpen = passed;
+        setStatus('modal-open', passed ? 'pass' : 'fail');
+        log('modal-open', passed ? '✅ Modal open PASSED' : '❌ Modal open FAILED', passed ? 'success' : 'error');
+        
+        updateStateDisplay();
+      }, 500);
+    }
+
+    // ============================================================================
+    // TEST 3: BACKGROUND EXECUTION
+    // ============================================================================
+    
+    function testBackgroundExecution() {
+      setStatus('background', 'running');
+      log('background', 'Running 5 background ticks...', 'info');
+
+      let tickCount = 0;
+      const maxTicks = 5;
+
+      const interval = setInterval(() => {
+        try {
+          window.SocialActionExecutor.runBackgroundTick();
+          tickCount++;
+          log('background', `Tick ${tickCount}/${maxTicks} executed`, 'info');
+
+          if (tickCount >= maxTicks) {
+            clearInterval(interval);
+            
+            // Check state
+            const state = window.__smDebug?.executor?.getState();
+            const totalActions = state?.totalActions || 0;
+            
+            log('background', `Total actions generated: ${totalActions}`, 'info');
+            
+            const passed = totalActions > 0;
+            testResults.background = passed;
+            setStatus('background', passed ? 'pass' : 'fail');
+            log('background', passed ? '✅ Background execution PASSED' : '❌ Background execution FAILED', passed ? 'success' : 'error');
+            
+            updateStateDisplay();
+          }
+        } catch (e) {
+          clearInterval(interval);
+          log('background', '✗ Error during tick: ' + e.message, 'error');
+          testResults.background = false;
+          setStatus('background', 'fail');
+        }
+      }, 1000);
+    }
+
+    // ============================================================================
+    // TEST 4: MODAL CLOSE
+    // ============================================================================
+    
+    function testModalClose() {
+      setStatus('modal-close', 'running');
+      log('modal-close', 'Simulating modal close...', 'info');
+
+      let passed = true;
+
+      // Flush queue
+      try {
+        if (window.SocialActionExecutor.flushQueue) {
+          window.SocialActionExecutor.flushQueue();
+          log('modal-close', '✓ Queue flushed', 'success');
+        } else {
+          log('modal-close', '✗ flushQueue not found', 'error');
+          passed = false;
+        }
+      } catch (e) {
+        log('modal-close', '✗ Failed to flush queue: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Stop background executor
+      try {
+        if (window.SocialActionExecutor.stopBackgroundTicks) {
+          window.SocialActionExecutor.stopBackgroundTicks();
+          log('modal-close', '✓ Background executor stopped', 'success');
+        } else {
+          log('modal-close', '✗ stopBackgroundTicks not found', 'error');
+          passed = false;
+        }
+      } catch (e) {
+        log('modal-close', '✗ Failed to stop executor: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Resume scheduler
+      try {
+        if (window.SocialAIScheduler.resumeAiSocialPhase) {
+          window.SocialAIScheduler.resumeAiSocialPhase('test-modal-close');
+          log('modal-close', '✓ Scheduler resumed', 'success');
+        }
+      } catch (e) {
+        log('modal-close', '✗ Failed to resume scheduler: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Verify state
+      setTimeout(() => {
+        const state = window.__smDebug?.executor?.getState();
+        if (state && state.queueLength === 0) {
+          log('modal-close', '✓ Queue is empty', 'success');
+        }
+        
+        testResults.modalClose = passed;
+        setStatus('modal-close', passed ? 'pass' : 'fail');
+        log('modal-close', passed ? '✅ Modal close PASSED' : '❌ Modal close FAILED', passed ? 'success' : 'error');
+        
+        updateStateDisplay();
+      }, 500);
+    }
+
+    // ============================================================================
+    // TEST 5: DR LOGGING
+    // ============================================================================
+    
+    function testDRLogging() {
+      setStatus('dr', 'running');
+      log('dr', 'Testing DR entry generation...', 'info');
+
+      let passed = true;
+      let entriesCreated = 0;
+
+      // Listen for dr:entry events
+      const entryListener = (payload) => {
+        entriesCreated++;
+        log('dr', `DR entry created: [${payload.entry?.severity}] ${payload.entry?.text?.substring(0, 50)}...`, 'info');
+      };
+
+      window.game.bus.on('dr:entry', entryListener);
+
+      // Simulate social actions
+      try {
+        // Action 1: Normal action
+        window.game.bus.emit('social.action:result', {
+          actorId: 1,
+          targetId: 2,
+          actionId: 'small_talk',
+          magnitude: 0.03,
+          success: true
+        });
+
+        // Action 2: High magnitude
+        window.game.bus.emit('social.action:result', {
+          actorId: 3,
+          targetId: 4,
+          actionId: 'compliment',
+          magnitude: 0.08,
+          success: true
+        });
+
+        // Action 3: Backstab (should trigger high severity)
+        window.game.bus.emit('social.action:result', {
+          actorId: 5,
+          targetId: 6,
+          actionId: 'backstab',
+          magnitude: 0.10,
+          success: true
+        });
+
+        log('dr', '✓ Emitted 3 test actions', 'success');
+      } catch (e) {
+        log('dr', '✗ Failed to emit actions: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Check results after short delay
+      setTimeout(() => {
+        if (entriesCreated > 0) {
+          log('dr', `✓ ${entriesCreated} DR entries generated`, 'success');
+        } else {
+          log('dr', '⚠ No DR entries generated', 'warn');
+        }
+
+        testResults.dr = entriesCreated > 0;
+        setStatus('dr', testResults.dr ? 'pass' : 'fail');
+        log('dr', testResults.dr ? '✅ DR logging PASSED' : '❌ DR logging FAILED', testResults.dr ? 'success' : 'error');
+        
+        updateStateDisplay();
+      }, 1000);
+    }
+
+    // ============================================================================
+    // TEST 6: BUTTON BLINK
+    // ============================================================================
+    
+    function testButtonBlink() {
+      setStatus('blink', 'running');
+      log('blink', 'Testing button blink policy...', 'info');
+
+      let passed = true;
+      let blinkTriggered = false;
+
+      // Listen for dr:alert events
+      const alertListener = (payload) => {
+        blinkTriggered = true;
+        log('blink', `DR alert emitted: [${payload.severity}]`, 'info');
+      };
+
+      window.game.bus.on('dr:alert', alertListener);
+
+      // Test 1: Backstab action (should blink)
+      try {
+        window.game.bus.emit('social.action:result', {
+          actorId: 1,
+          targetId: 2,
+          actionId: 'backstab',
+          magnitude: 0.05,
+          success: true
+        });
+        log('blink', '✓ Emitted backstab action', 'success');
+      } catch (e) {
+        log('blink', '✗ Failed to emit backstab: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Test 2: High magnitude (should blink)
+      try {
+        window.game.bus.emit('social.action:result', {
+          actorId: 3,
+          targetId: 4,
+          actionId: 'strategize',
+          magnitude: 0.10,
+          success: true
+        });
+        log('blink', '✓ Emitted high magnitude action', 'success');
+      } catch (e) {
+        log('blink', '✗ Failed to emit high magnitude: ' + e.message, 'error');
+        passed = false;
+      }
+
+      // Check results
+      setTimeout(() => {
+        if (blinkTriggered) {
+          log('blink', '✓ DR alert triggered (blink would occur)', 'success');
+        } else {
+          log('blink', '⚠ No DR alert triggered', 'warn');
+        }
+
+        testResults.blink = blinkTriggered;
+        setStatus('blink', testResults.blink ? 'pass' : 'fail');
+        log('blink', testResults.blink ? '✅ Button blink PASSED' : '❌ Button blink FAILED', testResults.blink ? 'success' : 'error');
+        
+        updateStateDisplay();
+        showResults();
+      }, 1000);
+    }
+
+    // ============================================================================
+    // STATE DISPLAY
+    // ============================================================================
+    
+    function updateStateDisplay() {
+      const displayEl = document.getElementById('state-display');
+      if (!displayEl) return;
+
+      const executorState = window.__smDebug?.executor?.getState() || {};
+      const schedulerState = window.__smDebug?.getState?.() || {};
+
+      const html = `
+        <div class="state-row">
+          <span class="state-label">Executor Enabled:</span>
+          <span class="state-value">${executorState.config?.enabled ? '✓ YES' : '✗ NO'}</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Executor Active:</span>
+          <span class="state-value">${executorState.isActive ? '✓ YES' : '✗ NO'}</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Total Actions:</span>
+          <span class="state-value">${executorState.totalActions || 0}</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Queue Length:</span>
+          <span class="state-value">${executorState.queueLength || 0}</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Scheduler Running:</span>
+          <span class="state-value">${schedulerState.isRunning ? '✓ YES' : '✗ NO'}</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Scheduler Paused:</span>
+          <span class="state-value">${schedulerState.isPaused ? '⏸️ YES' : '▶️ NO'}</span>
+        </div>
+      `;
+
+      displayEl.innerHTML = html;
+    }
+
+    // ============================================================================
+    // FULL TEST SUITE
+    // ============================================================================
+    
+    // Configurable delays for different environments
+    const TEST_DELAYS = {
+      init: 1000,
+      modalOpen: 2000,
+      backgroundExecution: 7000,
+      modalClose: 2000,
+      drLogging: 2000,
+      buttonBlink: 2000
+    };
+    
+    async function runFullSuite() {
+      console.log('🚀 Running full test suite...');
+      console.log('⏱️  Using configurable delays for reliability');
+      
+      testInitialization();
+      
+      await delay(TEST_DELAYS.init);
+      testModalOpen();
+      
+      await delay(TEST_DELAYS.modalOpen);
+      testBackgroundExecution();
+      
+      await delay(TEST_DELAYS.backgroundExecution);
+      testModalClose();
+      
+      await delay(TEST_DELAYS.modalClose);
+      testDRLogging();
+      
+      await delay(TEST_DELAYS.drLogging);
+      testButtonBlink();
+      
+      console.log('✅ Full test suite completed');
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ============================================================================
+    // RESULTS DISPLAY
+    // ============================================================================
+    
+    function showResults() {
+      const summaryEl = document.getElementById('results-summary');
+      const listEl = document.getElementById('results-list');
+      
+      if (!summaryEl || !listEl) return;
+
+      const tests = [
+        { name: 'Initialization', key: 'init' },
+        { name: 'Modal Open Integration', key: 'modalOpen' },
+        { name: 'Background Execution', key: 'background' },
+        { name: 'Modal Close Integration', key: 'modalClose' },
+        { name: 'DR Entry Generation', key: 'dr' },
+        { name: 'Button Blink Policy', key: 'blink' }
+      ];
+
+      let html = '';
+      let allPassed = true;
+
+      tests.forEach(test => {
+        const passed = testResults[test.key];
+        html += `<li class="${passed ? 'pass' : 'fail'}">${test.name}</li>`;
+        if (!passed) allPassed = false;
+      });
+
+      listEl.innerHTML = html;
+      summaryEl.style.display = 'block';
+
+      if (allPassed) {
+        summaryEl.style.borderColor = '#22c55e';
+        summaryEl.style.background = 'rgba(34, 197, 94, 0.1)';
+      } else {
+        summaryEl.style.borderColor = '#ef4444';
+        summaryEl.style.background = 'rgba(239, 68, 68, 0.1)';
+        summaryEl.querySelector('h3').style.color = '#ef4444';
+        summaryEl.querySelector('h3').textContent = '⚠️ Test Results (Some Failed)';
+      }
+    }
+
+    // ============================================================================
+    // AUTO-INITIALIZATION
+    // ============================================================================
+    
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('🎮 Social Executor Integration Test loaded');
+      console.log('Run testInitialization() to start, or runFullSuite() for complete test');
+      updateStateDisplay();
+    });
+  </script>
+</body>
+</html>

@@ -177,11 +177,11 @@
     }
 
     // Heuristics for social actions
-    const actionType = payload?.actionType || payload?.action || '';
+    const actionType = payload?.actionType || payload?.action || payload?.actionId || '';
     const outcome = payload?.outcome || payload?.success;
 
-    // High severity actions
-    const highSeverityActions = ['backstab', 'lie', 'insult', 'betray'];
+    // High severity actions (backstab, insult, gossip per spec)
+    const highSeverityActions = ['backstab', 'insult', 'gossip', 'lie', 'betray'];
     if (highSeverityActions.some(a => actionType.toLowerCase().includes(a))) {
       return 'high';
     }
@@ -191,9 +191,9 @@
       return 'dramatic';
     }
 
-    // Bond shifts
-    const bondDelta = payload?.bondDelta || payload?.delta;
-    if (bondDelta !== null && bondDelta !== undefined && Math.abs(bondDelta) > 0.15) {
+    // Bond shifts or magnitude changes (>= 0.06 per spec)
+    const bondDelta = payload?.bondDelta || payload?.delta || payload?.magnitude;
+    if (bondDelta !== null && bondDelta !== undefined && Math.abs(bondDelta) >= 0.06) {
       return 'high';
     }
 

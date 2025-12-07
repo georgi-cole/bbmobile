@@ -363,6 +363,8 @@
     queueAction,
     runBackgroundTick,
     flushQueue,
+    startBackgroundTicks,
+    stopBackgroundTicks,
     getState() {
       return {
         config,
