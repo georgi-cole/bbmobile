@@ -292,6 +292,7 @@
   };
 
   // Export
+  /* global module */
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = SocialInfluence;
   }

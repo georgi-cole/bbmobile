@@ -9,7 +9,7 @@
   // STATE
   // ============================================================================
   let phaseActive = false;
-  let playerBudgets = new Map(); // playerId -> { budget, spent, actions }
+  const playerBudgets = new Map(); // playerId -> { budget, spent, actions }
   let phaseStartTime = null;
   let phaseContext = null;
 
@@ -44,9 +44,9 @@
   
   /**
    * Handle social phase start
-   * @param {Object} data - Event data
+   * @param {Object} _data - Event data (unused)
    */
-  async function handlePhaseStart(data) {
+  async function handlePhaseStart(_data) {
     if (phaseActive) {
       console.warn('[social-engine] Phase already active, ignoring duplicate start');
       return;
@@ -77,9 +77,9 @@
 
   /**
    * Handle social phase end
-   * @param {Object} data - Event data
+   * @param {Object} _data - Event data (unused)
    */
-  function handlePhaseEnd(data) {
+  function handlePhaseEnd(_data) {
     if (!phaseActive) {
       return;
     }
@@ -549,6 +549,7 @@
   };
 
   // Export
+  /* global module */
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = SocialEngine;
   }
