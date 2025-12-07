@@ -10,6 +10,13 @@
   function aliveIds(){ return global.alivePlayers().map(p=>p.id); }
   function eligibleNomIds(){ const g=global.game; return aliveIds().filter(id=>id!==g.hohId); }
   function requiredSlots(){ return Math.max(2, Math.min(4, global.game?.__twistNomSlots || 2)); }
+  
+  // Helper to ensure provisional nominations buffer is initialized
+  function ensureProvisionalBuffer(){
+    if(!Array.isArray(global.__provisionalNominations)) {
+      global.__provisionalNominations = [];
+    }
+  }
 
   function aiPickNominees(count=2){
     const g=global.game; const hoh=global.getP(g.hohId);
@@ -83,9 +90,7 @@
       // Set guard flag to prevent premature nomination badge display
       // Any programmatic nominations (from twists/social-maneuvers) will be buffered
       global.__awaitingHumanNominations = true;
-      if(!Array.isArray(global.__provisionalNominations)) {
-        global.__provisionalNominations = [];
-      }
+      ensureProvisionalBuffer();
       console.log('[noms] ✓ Set __awaitingHumanNominations flag - nominations will be buffered');
       
       // Pre-flight: Ensure #tvOverlay exists before attempting to use any helpers
@@ -329,8 +334,8 @@
     // Check if we're awaiting human HOH nominations - if so, buffer instead of applying
     if(global.__awaitingHumanNominations && hoh && hoh.human){
       console.log('[noms] Buffering nominations while awaiting human HOH selection');
+      ensureProvisionalBuffer();
       g.nominees.forEach(id=>{
-        if(!global.__provisionalNominations) global.__provisionalNominations = [];
         if(!global.__provisionalNominations.includes(id)){
           global.__provisionalNominations.push(id);
           console.info(`[noms] ✓ Buffered provisional nomination: Player ${id} while awaiting human HOH`);
@@ -535,11 +540,11 @@
     if(Array.isArray(global.__provisionalNominations) && global.__provisionalNominations.length > 0){
       console.log('[noms] Applying buffered provisional nominations:', global.__provisionalNominations);
       const currentNominees = new Set(g.nominees);
-      const pool = eligibleNomIds(); // Call once before loop
+      const poolSet = new Set(eligibleNomIds()); // Use Set for O(1) lookups
       global.__provisionalNominations.forEach(id => {
         if(!currentNominees.has(id) && id !== g.hohId){
           // Only add if not already nominated and not the HOH
-          if(pool.includes(id)){
+          if(poolSet.has(id)){
             g.nominees.push(id);
             currentNominees.add(id);
             console.info(`[noms] ✓ Applied buffered nomination: Player ${id}`);
