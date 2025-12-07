@@ -337,6 +337,26 @@
         console.error('[socialize-mobile] Failed to pause timer:', e);
       }
     }
+    
+    // Pause AI scheduler and start background executor
+    if (global.SocialAIScheduler?.pauseAiSocialPhase) {
+      try {
+        global.SocialAIScheduler.pauseAiSocialPhase('modal-opened');
+        console.info('[socialize-mobile] ⏸️ AI scheduler paused (modal opened)');
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to pause AI scheduler:', e);
+      }
+    }
+    
+    // Start background executor for lightweight NPC interactions
+    if (global.SocialActionExecutor?.startBackgroundTicks) {
+      try {
+        global.SocialActionExecutor.startBackgroundTicks();
+        console.info('[socialize-mobile] ▶️ Background executor started (modal opened)');
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to start background executor:', e);
+      }
+    }
 
     // Disable background scrolling
     document.body.style.overflow = 'hidden';
@@ -426,6 +446,36 @@
     const modal = $('#socializeModal');
     if (!modal) return;
 
+    // Flush queued heavy actions from background executor
+    if (global.SocialActionExecutor?.flushQueue) {
+      try {
+        global.SocialActionExecutor.flushQueue();
+        console.info('[socialize-mobile] 💨 Background executor queue flushed (modal closed)');
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to flush executor queue:', e);
+      }
+    }
+    
+    // Stop background executor
+    if (global.SocialActionExecutor?.stopBackgroundTicks) {
+      try {
+        global.SocialActionExecutor.stopBackgroundTicks();
+        console.info('[socialize-mobile] ⏹️ Background executor stopped (modal closed)');
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to stop background executor:', e);
+      }
+    }
+    
+    // Resume AI scheduler
+    if (global.SocialAIScheduler?.resumeAiSocialPhase) {
+      try {
+        global.SocialAIScheduler.resumeAiSocialPhase('modal-closed');
+        console.info('[socialize-mobile] ▶️ AI scheduler resumed (modal closed)');
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to resume AI scheduler:', e);
+      }
+    }
+    
     // Resume phase timer when modal closes
     if (global.SocialManeuvers?.resumePhaseTimer) {
       try{
