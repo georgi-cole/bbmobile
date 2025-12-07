@@ -68,6 +68,10 @@
       bus.on(eventName, handleSocialPhaseEnd);
     });
 
+    // Listen for actual phase changes via window event (bb:phase:changed)
+    // This catches phase transitions that may not emit bus events
+    window.addEventListener('bb:phase:changed', handlePhaseChanged);
+
     console.info('[social-ai-autostart] ✓ Initialized and listening for social phase events');
   }
 
@@ -107,6 +111,56 @@
 
     console.info('[social-ai-autostart] ⏹️ Social phase ended - stopping AI auto-driver');
     stop();
+  }
+
+  /**
+   * Helper function to check if a phase name is a social phase
+   */
+  function isSocialPhaseName(phaseName) {
+    return phaseName === 'social_intermission' || phaseName === 'intermission';
+  }
+
+  /**
+   * Handle phase change from bb:phase:changed window event
+   * This catches transitions to 'intermission' or 'social_intermission'
+   */
+  function handlePhaseChanged(event) {
+    const nextPhase = event?.detail?.phase || window.game?.phase;
+    const previousPhase = event?.detail?.previousPhase;
+    
+    if (isSocialPhaseName(nextPhase)) {
+      // Entering social phase
+      const config = getConfig();
+      if (!config.enabled) {
+        return;
+      }
+
+      if (isRunning) {
+        console.warn('[social-ai-autostart] Already running - ignoring duplicate start');
+        return;
+      }
+
+      if (window.game?.cfg?.debugSocialAI) {
+        console.info('[social-ai-autostart] Detected social intermission (autostart) - starting scheduler/autodriver');
+        console.info('[social-ai-autostart] Phase transition:', previousPhase, '->', nextPhase);
+      }
+
+      // Start the scheduler
+      window.SocialAIScheduler?.startAiSocialPhase?.({}, 'autostart');
+      
+      // Also start the autodriver explicitly (if not already started)
+      if (window.__smAutoDriver?.start && !isRunning) {
+        start();
+      }
+    } else if (isSocialPhaseName(previousPhase) && !isSocialPhaseName(nextPhase)) {
+      // Leaving social phase
+      if (isRunning) {
+        if (window.game?.cfg?.debugSocialAI) {
+          console.info('[social-ai-autostart] Leaving social phase - stopping auto-driver');
+        }
+        stop();
+      }
+    }
   }
 
   // ============================================================================
