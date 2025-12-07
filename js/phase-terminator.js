@@ -8,6 +8,7 @@
   // Configuration constants
   const SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS = 600;
   const SOCIAL_INTERMISSION_DELAYED_STOP_MAX_MS = 700;
+  const SOCIAL_INTERMISSION_DELAYED_STOP_RANGE = SOCIAL_INTERMISSION_DELAYED_STOP_MAX_MS - SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS;
   
   /**
    * Debug logging helper - gated by debugSocialAI flag
@@ -77,8 +78,7 @@
      * Uses randomized delay between min/max to allow scheduler ticks
      */
     _scheduleDelayedStop() {
-      const delayRange = SOCIAL_INTERMISSION_DELAYED_STOP_MAX_MS - SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS;
-      const delay = SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS + Math.floor(Math.random() * delayRange);
+      const delay = SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS + Math.floor(Math.random() * SOCIAL_INTERMISSION_DELAYED_STOP_RANGE);
       debugLog(`Scheduling delayed stop in ${delay}ms`);
       setTimeout(() => {
         if (typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function') {
