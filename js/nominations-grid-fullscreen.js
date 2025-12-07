@@ -1138,6 +1138,15 @@
         // Manual commit (fallback)
         console.log(LOG_PREFIX, 'Performing manual commit');
         
+        // Clear awaiting flag if set (safety measure for manual commit path)
+        if(global.__awaitingHumanNominations){
+          console.log(LOG_PREFIX, 'Clearing __awaitingHumanNominations flag in manual commit');
+          global.__awaitingHumanNominations = false;
+          if(Array.isArray(global.__provisionalNominations)) {
+            global.__provisionalNominations = [];
+          }
+        }
+        
         g.nominees = selections.slice();
         g.nomsLocked = true;
         g.__nomsCommitted = true;
