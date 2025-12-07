@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juror Overlay Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2.2rem;
+      color: #00e0cc;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .info-section {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .info-section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      color: #00e0cc;
+    }
+    
+    .info-section p {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    
+    .info-section ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .info-section li {
+      padding: 6px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+    
+    .info-section li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00e0cc;
+      font-weight: bold;
+    }
+    
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    
+    button.secondary {
+      background: linear-gradient(135deg, #3a5d7c 0%, #2a4d6c 100%);
+      color: #e8f4ff;
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff3366 0%, #cc0033 100%);
+      color: #fff;
+    }
+    
+    .demo-panel {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .demo-panel h3 {
+      font-size: 1.1rem;
+      color: #00e0cc;
+      margin-bottom: 16px;
+    }
+    
+    .player-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    
+    .player-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    
+    .player-card img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      margin-bottom: 8px;
+      object-fit: cover;
+    }
+    
+    .player-card .name {
+      font-weight: 600;
+      color: #e8f4ff;
+    }
+    
+    #panel {
+      min-height: 50px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+    }
+    
+    .minigame-host {
+      background: rgba(0, 224, 204, 0.15);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    .minigame-host h3 {
+      color: #00e0cc;
+      margin-bottom: 12px;
+    }
+    
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn.ok {
+      background: #00e0cc;
+      color: #001a18;
+    }
+    
+    .btn.danger {
+      background: #ff3366;
+      color: #fff;
+    }
+    
+    .tiny {
+      font-size: 0.85rem;
+    }
+    
+    .muted {
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      .controls {
+        flex-direction: column;
+      }
+      
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+  
+  <!-- Load juror overlay CSS -->
+  <link rel="stylesheet" href="css/juror-overlay.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎭 Juror Overlay Test Page</h1>
+    
+    <div class="info-section">
+      <h2>Test Instructions</h2>
+      <p>This page demonstrates the enhanced juror voting overlay with animated audience messages and quick-vote functionality.</p>
+      <ul>
+        <li>Click "Show Overlay" to open the fullscreen voting experience</li>
+        <li>Watch SMS-like audience messages and floating emojis animate in the background</li>
+        <li>Use the Quick Vote input to type a player name and send a visual vote</li>
+        <li>Valid names: Alex, Jordan, Taylor, Morgan (case-insensitive)</li>
+        <li>Valid votes trigger avatar flash effects and add custom messages</li>
+        <li>Invalid names show inline error messages with suggestions</li>
+        <li>Close overlay with the × button, Escape key, or "Hide Overlay" button</li>
+        <li>Test keyboard navigation and screen reader accessibility</li>
+      </ul>
+    </div>
+    
+    <div class="info-section">
+      <h2>Features Demonstrated</h2>
+      <ul>
+        <li>Fullscreen modal overlay with dimmed background and backdrop blur</li>
+        <li>Animated SMS-style audience messages flowing vertically</li>
+        <li>Floating emoji sprites with gentle drift animations</li>
+        <li>Quick-vote input with player name validation</li>
+        <li>Visual feedback: avatar flash and pulse effects on valid votes</li>
+        <li>Custom audience messages when you vote</li>
+        <li>Accessible keyboard navigation (Tab, Shift+Tab, Escape)</li>
+        <li>ARIA attributes for screen readers</li>
+        <li>Mobile-responsive layout</li>
+        <li>Reduced motion support for accessibility preferences</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button id="showOverlay">🎬 Show Overlay</button>
+      <button id="hideOverlay" class="secondary">🚪 Hide Overlay</button>
+      <button id="addJuryPanel" class="secondary">➕ Add Mock Jury Panel</button>
+      <button id="removeJuryPanel" class="danger">➖ Remove Jury Panel</button>
+      <button id="checkStatus" class="secondary">ℹ️ Check Status</button>
+    </div>
+    
+    <div class="demo-panel">
+      <h3>Current Players (Mock Data)</h3>
+      <div class="player-list" id="playerList"></div>
+    </div>
+    
+    <!-- Panel where jury UI normally appears -->
+    <div id="panel"></div>
+  </div>
+  
+  <!-- Load juror overlay module -->
+  <script type="module">
+    import { JurorOverlay } from './js/ui/juror-overlay.js';
+    
+    // Mock game data for testing
+    window.game = {
+      players: [
+        { 
+          id: 1, 
+          name: 'Alex', 
+          evicted: false,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex'
+        },
+        { 
+          id: 2, 
+          name: 'Jordan', 
+          evicted: false,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jordan'
+        },
+        { 
+          id: 3, 
+          name: 'Taylor', 
+          evicted: false,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Taylor'
+        },
+        { 
+          id: 4, 
+          name: 'Morgan', 
+          evicted: false,
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Morgan'
+        }
+      ],
+      humanId: 1,
+      finalTwo: [1, 2]
+    };
+    
+    // Helper function to get safe player name
+    window.safeName = (id) => {
+      const player = window.game.players.find(p => p.id === id);
+      return player ? player.name : String(id);
+    };
+    
+    // Render player list
+    function renderPlayerList() {
+      const container = document.getElementById('playerList');
+      container.innerHTML = '';
+      
+      window.game.players.forEach(player => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        card.innerHTML = `
+          <img src="${player.avatar}" alt="${player.name}">
+          <div class="name">${player.name}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+    
+    // Add mock jury voting panel
+    function addMockJuryPanel() {
+      const panel = document.getElementById('panel');
+      
+      // Remove existing if present
+      const existing = panel.querySelector('#humanJuryVote');
+      if (existing) {
+        existing.remove();
+      }
+      
+      const box = document.createElement('div');
+      box.className = 'minigame-host';
+      box.id = 'humanJuryVote';
+      box.innerHTML = `
+        <h3>Your Jury Vote</h3>
+        <div class="row" style="gap:8px; margin-top:8px">
+          <button class="btn ok" id="btnVoteA">Vote ${window.safeName(1)}</button>
+          <button class="btn danger" id="btnVoteB">Vote ${window.safeName(2)}</button>
+        </div>
+        <div class="tiny muted" style="margin-top:6px">Cast your vote for the winner.</div>
+      `;
+      
+      panel.appendChild(box);
+      
+      // Add event listeners
+      box.querySelector('#btnVoteA').addEventListener('click', () => {
+        alert(`You voted for ${window.safeName(1)}!`);
+      });
+      
+      box.querySelector('#btnVoteB').addEventListener('click', () => {
+        alert(`You voted for ${window.safeName(2)}!`);
+      });
+      
+      console.log('[Test] Mock jury panel added');
+    }
+    
+    // Remove jury panel
+    function removeJuryPanel() {
+      const panel = document.getElementById('panel');
+      const existing = panel.querySelector('#humanJuryVote');
+      if (existing) {
+        existing.remove();
+        console.log('[Test] Jury panel removed');
+      } else {
+        console.log('[Test] No jury panel to remove');
+      }
+    }
+    
+    // Button event listeners
+    document.getElementById('showOverlay').addEventListener('click', () => {
+      console.log('[Test] Showing overlay...');
+      JurorOverlay.show();
+    });
+    
+    document.getElementById('hideOverlay').addEventListener('click', () => {
+      console.log('[Test] Hiding overlay...');
+      JurorOverlay.hide();
+    });
+    
+    document.getElementById('addJuryPanel').addEventListener('click', () => {
+      addMockJuryPanel();
+    });
+    
+    document.getElementById('removeJuryPanel').addEventListener('click', () => {
+      removeJuryPanel();
+    });
+    
+    document.getElementById('checkStatus').addEventListener('click', () => {
+      const status = JurorOverlay.isShowing() ? 'SHOWN' : 'HIDDEN';
+      alert(`Overlay status: ${status}`);
+      console.log('[Test] Overlay status:', status);
+    });
+    
+    // Initialize
+    renderPlayerList();
+    
+    // Auto-add jury panel on load for easier testing
+    setTimeout(() => {
+      addMockJuryPanel();
+      console.log('[Test] Page initialized with mock data');
+    }, 100);
+    
+    // Log window.game for debugging
+    console.log('[Test] Mock window.game:', window.game);
+    console.log('[Test] JurorOverlay module loaded:', typeof JurorOverlay);
+    
+    // Make JurorOverlay globally available for console testing
+    window.JurorOverlay = JurorOverlay;
+  </script>
+</body>
+</html>
