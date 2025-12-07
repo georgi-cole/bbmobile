@@ -373,6 +373,8 @@
     ];
 
     // Initialize game object
+    // Note: Uses bbGameBus if available, falls back to EventTarget with helpers
+    // This is intentional for test isolation - real game uses bbGameBus
     window.game = {
       cfg: {
         debugSocialAI: true,
@@ -393,7 +395,8 @@
       }
     };
 
-    // Add bus helpers if using EventTarget
+    // Add bus helpers if using EventTarget fallback
+    // These match the bbGameBus API signature for compatibility
     if (!window.game.bus.on) {
       window.game.bus.on = function(event, handler) {
         this.addEventListener(event, e => handler(e.detail || e));
@@ -858,25 +861,38 @@
     // FULL TEST SUITE
     // ============================================================================
     
+    // Configurable delays for different environments
+    const TEST_DELAYS = {
+      init: 1000,
+      modalOpen: 2000,
+      backgroundExecution: 7000,
+      modalClose: 2000,
+      drLogging: 2000,
+      buttonBlink: 2000
+    };
+    
     async function runFullSuite() {
       console.log('🚀 Running full test suite...');
+      console.log('⏱️  Using configurable delays for reliability');
       
       testInitialization();
       
-      await delay(1000);
+      await delay(TEST_DELAYS.init);
       testModalOpen();
       
-      await delay(2000);
+      await delay(TEST_DELAYS.modalOpen);
       testBackgroundExecution();
       
-      await delay(7000);
+      await delay(TEST_DELAYS.backgroundExecution);
       testModalClose();
       
-      await delay(2000);
+      await delay(TEST_DELAYS.modalClose);
       testDRLogging();
       
-      await delay(2000);
+      await delay(TEST_DELAYS.drLogging);
       testButtonBlink();
+      
+      console.log('✅ Full test suite completed');
     }
 
     function delay(ms) {
