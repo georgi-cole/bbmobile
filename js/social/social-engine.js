@@ -554,6 +554,48 @@
   }
   global.SocialEngine = SocialEngine;
 
+  // Debug API for manual testing
+  if (!global.__socialSim) {
+    global.__socialSim = {
+      startPhaseDebug: () => {
+        console.info('[__socialSim] Starting phase debug...');
+        return handlePhaseStart({});
+      },
+      endPhaseDebug: () => {
+        console.info('[__socialSim] Ending phase debug...');
+        return handlePhaseEnd({});
+      },
+      dumpLastPhase: () => {
+        const report = global.game?.__lastSocialEngineReport;
+        if (report) {
+          console.log('[__socialSim] Last Phase Report:');
+          console.table(report.players);
+          console.log('Summary:', report.summary);
+        } else {
+          console.warn('[__socialSim] No phase report available');
+        }
+      },
+      getBudgets: () => {
+        const budgets = Array.from(playerBudgets.entries()).map(([id, budget]) => ({
+          playerId: id,
+          playerName: getPlayerName(id),
+          ...budget,
+          spendPct: ((budget.spent / budget.budget) * 100).toFixed(1) + '%'
+        }));
+        console.table(budgets);
+        return budgets;
+      },
+      getStatus: () => {
+        return {
+          phaseActive,
+          playerCount: playerBudgets.size,
+          budgets: Array.from(playerBudgets.entries()).map(([id, b]) => ({ id, ...b }))
+        };
+      }
+    };
+    console.info('[social-engine] ✓ Debug API: window.__socialSim');
+  }
+
   // Auto-initialize
   if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
