@@ -42,19 +42,41 @@
   // STATE & TRACKING
   // ============================================================================
   let schedulerTimer = null;
+  let rafHandle = null;          // RequestAnimationFrame handle for pump
   let isRunning = false;
+  let isPaused = false;          // New: pause state (suspends work, keeps loop)
   let isActive = false;          // Guard flag to prevent re-entry
   let phaseContext = null;       // eslint-disable-line no-unused-vars
   const actionCounts = new Map(); // Track actions per AI this phase
   const recentPairings = new Set(); // Avoid duplicate pairings in short succession
   let tickCount = 0;            // Track total ticks per phase
   let idlePassCount = 0;        // Track consecutive passes with no actions
+  let lastTickTime = 0;         // Last tick timestamp for watchdog
+  let watchdogTimer = null;      // Watchdog timer to restart stalled loop
 
   function initPhaseState() {
     actionCounts.clear();
     recentPairings.clear();
     tickCount = 0;
     idlePassCount = 0;
+    lastTickTime = Date.now();
+    isPaused = false;
+  }
+  
+  // ============================================================================
+  // DEBUG LOGGING (gated by config flag)
+  // ============================================================================
+  function debugLog(message, ...args) {
+    const config = getConfig();
+    const debugEnabled = config.verbose || global.game?.cfg?.debugSocialAI;
+    if (debugEnabled) {
+      console.log(`[ai-scheduler:debug] ${message}`, ...args);
+    }
+  }
+  
+  function infoLog(message, reason = '') {
+    const reasonStr = reason ? ` (reason: ${reason})` : '';
+    console.info(`[ai-scheduler] ${message}${reasonStr}`);
   }
 
   function getPairingKey(actorId, targetIds) {
@@ -291,11 +313,16 @@
   }
 
   // ============================================================================
-  // SCHEDULER LOGIC
+  // SCHEDULER LOGIC - ROBUST TICK LOOP
   // ============================================================================
+  // Use setInterval as primary heartbeat + RAF pump for responsiveness
+  
   function scheduleNextTick() {
-    // Guard: prevent re-entry and check if still active
-    if (!isRunning || !isActive) return;
+    // Guard: prevent re-entry and check if still running
+    if (!isRunning) {
+      debugLog('scheduleNextTick: not running, skip');
+      return;
+    }
 
     // Check for fast-forward mode and compress interval
     const game = global.game || {};
@@ -306,9 +333,9 @@
       // Use compressed interval from config, default to 200ms
       const ffInterval = game.cfg?.fastForwardSocialActionInterval || 200;
       delay = ffInterval;
-      console.debug(`[ai-scheduler] Fast-forward active - using compressed interval: ${delay}ms`);
+      debugLog(`Fast-forward active - using compressed interval: ${delay}ms`);
     } else {
-      // Normal random interval - get config for interval values
+      // Normal interval - configurable ~800ms default
       const config = getConfig();
       
       // Safety check: max ticks per phase
@@ -318,8 +345,8 @@
         return;
       }
       
-      delay = config.tickIntervalMin + 
-              Math.random() * (config.tickIntervalMax - config.tickIntervalMin);
+      // Use a fixed interval for robust heartbeat (800ms)
+      delay = 800;
     }
 
     schedulerTimer = setTimeout(() => {
@@ -327,13 +354,61 @@
       scheduleNextTick();
     }, delay);
   }
+  
+  // RAF pump for optional responsiveness (called independently)
+  function rafPump() {
+    if (!isRunning) return;
+    
+    // Only perform work if not paused
+    if (!isPaused && isActive) {
+      // RAF pump just ensures the scheduler is responsive
+      // Actual tick work happens in setInterval heartbeat
+      debugLog('RAF pump alive');
+    }
+    
+    // Continue pumping
+    rafHandle = requestAnimationFrame(rafPump);
+  }
+  
+  // Watchdog: restart loop if no tick occurs for >2.5s (debug-gated)
+  function startWatchdog() {
+    const debugEnabled = global.game?.cfg?.debugSocialAI;
+    if (!debugEnabled) return;
+    
+    if (watchdogTimer) {
+      clearTimeout(watchdogTimer);
+    }
+    
+    watchdogTimer = setTimeout(() => {
+      const timeSinceLastTick = Date.now() - lastTickTime;
+      if (timeSinceLastTick > 2500 && isRunning && !isPaused) {
+        console.warn('[ai-scheduler:watchdog] ⚠️ No tick for >2.5s - restarting loop');
+        infoLog('Watchdog restarting stalled loop', 'no_tick_detected');
+        
+        // Restart the tick loop
+        if (schedulerTimer) {
+          clearTimeout(schedulerTimer);
+          schedulerTimer = null;
+        }
+        scheduleNextTick();
+        startWatchdog(); // Restart watchdog
+      }
+    }, 3000); // Check every 3s
+  }
 
   function performTick() {
     if (!isRunning || !isActive) return;
-
-    tickCount++;
     
-    const config = getConfig();
+    // Skip work if paused (but keep loop running)
+    if (isPaused) {
+      debugLog('performTick: paused, skipping work');
+      return;
+    }
+
+    lastTickTime = Date.now(); // Update watchdog timestamp
+    tickCount++;
+    debugLog(`Tick #${tickCount}, lastTickTime: ${lastTickTime}`);
+    
     const aiPlayers = getEligibleAIPlayers();
     
     if (aiPlayers.length < 2) {
@@ -493,19 +568,19 @@
   }
 
   // ============================================================================
-  // PUBLIC API: START/STOP
+  // PUBLIC API: START/STOP/PAUSE/RESUME
   // ============================================================================
-  function startAiSocialPhase(context = {}) {
+  function startAiSocialPhase(context = {}, reason = '') {
     // Guard: Block social AI start while game is paused
     if(global.PauseController && global.PauseController.isPaused && global.PauseController.isPaused()){
-      console.info('[ai-scheduler] startAiSocialPhase blocked: game is paused');
+      infoLog('startAiSocialPhase blocked: game is paused');
       return;
     }
     
     const config = getConfig();
     
     if (!config.enabled) {
-      console.info('[ai-scheduler] AI social interactions disabled');
+      infoLog('AI social interactions disabled');
       return;
     }
 
@@ -514,31 +589,57 @@
       return;
     }
 
-    console.info('[ai-scheduler] ▶️ Starting AI social phase');
+    infoLog('▶️ Starting AI social phase', reason);
+    debugLog('start() called', { context, reason, tickCount: 0 });
     
     isRunning = true;
     isActive = true;
+    isPaused = false;
     phaseContext = context;
     initPhaseState();
     
+    // Start robust tick loop
     scheduleNextTick();
+    
+    // Start RAF pump for responsiveness
+    if (rafHandle) {
+      cancelAnimationFrame(rafHandle);
+    }
+    rafPump();
+    
+    // Start watchdog (debug-gated)
+    startWatchdog();
   }
 
-  function stopAiSocialPhase() {
+  function stopAiSocialPhase(reason = '') {
     if (!isRunning) {
-      console.debug('[ai-scheduler] Already stopped, skipping');
+      debugLog('stop() called but already stopped', { reason });
       return;
     }
 
-    console.info('[ai-scheduler] ◼️ Stopping AI social phase');
+    infoLog('◼️ Stopping AI social phase', reason);
+    debugLog('stop() called', { reason, tickCount, totalActions: Array.from(actionCounts.values()).reduce((a, b) => a + b, 0) });
     
+    // Final shutdown - tear down everything
     isRunning = false;
     isActive = false;
+    isPaused = false;
     phaseContext = null;
     
+    // Clear timers
     if (schedulerTimer) {
       clearTimeout(schedulerTimer);
       schedulerTimer = null;
+    }
+    
+    if (rafHandle) {
+      cancelAnimationFrame(rafHandle);
+      rafHandle = null;
+    }
+    
+    if (watchdogTimer) {
+      clearTimeout(watchdogTimer);
+      watchdogTimer = null;
     }
 
     // Log summary
@@ -548,6 +649,49 @@
       totalInteractions: totalActions,
       perPlayer: Object.fromEntries(actionCounts)
     });
+  }
+  
+  /**
+   * Pause the scheduler (suspend work without tearing down loop)
+   * Loop continues to run but performTick skips work
+   */
+  function pauseAiSocialPhase(reason = '') {
+    if (!isRunning) {
+      debugLog('pause() called but not running', { reason });
+      return;
+    }
+    
+    if (isPaused) {
+      debugLog('pause() called but already paused', { reason });
+      return;
+    }
+    
+    infoLog('⏸️ Pausing AI social phase', reason);
+    debugLog('pause() called', { reason, tickCount, isPaused: false });
+    
+    isPaused = true;
+    // Loop keeps running, performTick will skip work
+  }
+  
+  /**
+   * Resume the scheduler after pause
+   */
+  function resumeAiSocialPhase(reason = '') {
+    if (!isRunning) {
+      debugLog('resume() called but not running', { reason });
+      return;
+    }
+    
+    if (!isPaused) {
+      debugLog('resume() called but not paused', { reason });
+      return;
+    }
+    
+    infoLog('▶️ Resuming AI social phase', reason);
+    debugLog('resume() called', { reason, tickCount, isPaused: true });
+    
+    isPaused = false;
+    lastTickTime = Date.now(); // Reset watchdog
   }
   
   function isSchedulerRunning() {
@@ -587,6 +731,8 @@
   global.SocialAIScheduler = {
     startAiSocialPhase,
     stopAiSocialPhase,
+    pauseAiSocialPhase,    // NEW: pause API
+    resumeAiSocialPhase,   // NEW: resume API
     isRunning: isSchedulerRunning,
     runEmptyEnergyBurst,
     getConfig,
@@ -596,11 +742,28 @@
   };
 
   // ============================================================================
-  // DEV HELPERS
+  // DEV HELPERS & DIAGNOSTICS
   // ============================================================================
   if (!global.__smDebug) {
     global.__smDebug = {};
   }
+  
+  // Enhanced diagnostics API
+  global.__smDebug.getState = function() {
+    return {
+      isRunning,
+      isPaused,
+      isActive,
+      tickCount,
+      lastTickTime,
+      timeSinceLastTick: Date.now() - lastTickTime,
+      idlePassCount,
+      actionCounts: Object.fromEntries(actionCounts),
+      totalActions: Array.from(actionCounts.values()).reduce((a, b) => a + b, 0),
+      recentPairings: Array.from(recentPairings),
+      config: getConfig()
+    };
+  };
   
   // Add AI scheduler debug helper
   global.__smDebug.runAiTickOnce = function() {
@@ -608,6 +771,7 @@
     
     const config = getConfig();
     console.log('Config:', config);
+    console.log('State:', global.__smDebug.getState());
     
     const eligible = getEligibleAIPlayers();
     console.log('Eligible AI players:', eligible.length, eligible.map(p => p.name || p.id));

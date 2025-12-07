@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social AI Scheduler Debug Harness</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 { color: #4a9eff; }
+    h2 { color: #ffa500; margin-top: 30px; }
+    .section {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #3a3a3a;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button.primary {
+      background: #4a9eff;
+      color: white;
+    }
+    button.primary:hover { background: #3a7ed0; }
+    button.secondary {
+      background: #666;
+      color: white;
+    }
+    button.secondary:hover { background: #555; }
+    button.danger {
+      background: #ff4a4a;
+      color: white;
+    }
+    button.danger:hover { background: #d03a3a; }
+    button.success {
+      background: #4aff4a;
+      color: #1a1a1a;
+    }
+    button.success:hover { background: #3ad03a; }
+    .status {
+      background: #333;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .status-label {
+      color: #888;
+    }
+    .status-value {
+      color: #4aff4a;
+      font-weight: 600;
+    }
+    .log {
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 3px;
+    }
+    .log-entry.info { color: #4a9eff; }
+    .log-entry.success { color: #4aff4a; }
+    .log-entry.warning { color: #ffa500; }
+    .log-entry.error { color: #ff4a4a; }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #888;
+      font-size: 14px;
+    }
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    .config-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .config-item {
+      background: #333;
+      padding: 12px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Social AI Scheduler Debug Harness</h1>
+  <p>Test and debug the enhanced Social AI Scheduler with pause/resume semantics and background executor.</p>
+
+  <div class="section">
+    <h2>📊 Scheduler Status</h2>
+    <div id="status" class="status">
+      <div class="status-item">
+        <span class="status-label">Loading...</span>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="primary" onclick="refreshStatus()">🔄 Refresh Status</button>
+      <button class="secondary" onclick="clearLogs()">🗑️ Clear Logs</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>⚙️ Configuration</h2>
+    <div class="config-section">
+      <div class="config-item">
+        <label>
+          <input type="checkbox" id="cfgDebug" onchange="updateConfig()">
+          Enable Debug Logging
+        </label>
+      </div>
+      <div class="config-item">
+        <label>
+          <input type="checkbox" id="cfgExecutor" onchange="updateConfig()">
+          Enable SocialActionExecutor
+        </label>
+      </div>
+      <div class="config-item">
+        <label>
+          <input type="checkbox" id="cfgWatchdog" onchange="updateConfig()">
+          Enable Watchdog (requires debug)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🎮 Scheduler Controls</h2>
+    <div class="controls">
+      <button class="success" onclick="startScheduler()">▶️ Start Scheduler</button>
+      <button class="danger" onclick="stopScheduler()">⏹️ Stop Scheduler</button>
+      <button class="secondary" onclick="pauseScheduler()">⏸️ Pause Scheduler</button>
+      <button class="primary" onclick="resumeScheduler()">▶️ Resume Scheduler</button>
+    </div>
+    <div class="controls">
+      <button class="primary" onclick="runSingleTick()">🔄 Run Single Tick</button>
+      <button class="secondary" onclick="simulateModalOpen()">🪟 Simulate Modal Open</button>
+      <button class="secondary" onclick="simulateModalClose()">✖️ Simulate Modal Close</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🔧 Executor Controls</h2>
+    <div class="controls">
+      <button class="primary" onclick="queueAction()">➕ Queue Action</button>
+      <button class="success" onclick="flushQueue()">💨 Flush Queue</button>
+      <button class="secondary" onclick="runBackgroundTick()">🔄 Run Background Tick</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📝 Event Log</h2>
+    <div id="log" class="log"></div>
+  </div>
+
+  <!-- Load modules -->
+  <script src="../js/social-ai-scheduler.js"></script>
+  <script src="../js/social/socialActionExecutor.js"></script>
+
+  <script>
+    // ============================================================================
+    // MOCK GAME ENVIRONMENT
+    // ============================================================================
+    const mockPlayers = [
+      { id: 1, name: 'Alice', evicted: false },
+      { id: 2, name: 'Bob', evicted: false },
+      { id: 3, name: 'Carol', evicted: false },
+      { id: 4, name: 'Dave', evicted: false },
+      { id: 5, name: 'Eve', evicted: false },
+      { id: 6, name: 'Frank', evicted: false },
+      { id: 7, name: 'Grace', evicted: false },
+      { id: 8, name: 'Human', evicted: false }
+    ];
+
+    // Setup mock game object
+    window.game = {
+      cfg: {
+        debugSocialAI: false,
+        aiSocialEnabled: true,
+        aiSocialVerbose: false
+      },
+      players: mockPlayers,
+      humanId: 8,
+      phase: 'social',
+      week: 2,
+      bus: new EventTarget()
+    };
+
+    // Add bus.on helper for EventTarget
+    window.game.bus.on = function(event, handler) {
+      this.addEventListener(event, e => handler(e.detail));
+    };
+
+    window.game.bus.emit = function(event, detail) {
+      this.dispatchEvent(new CustomEvent(event, { detail }));
+    };
+
+    // Setup mock SocialManeuvers
+    window.SocialManeuvers = {
+      SOCIAL_ACTIONS: [
+        { id: 'small_talk', label: 'Small Talk', category: 'friendly', cost: 1 },
+        { id: 'compliment', label: 'Compliment', category: 'friendly', cost: 1 },
+        { id: 'strategize', label: 'Strategize', category: 'strategic', cost: 2 },
+        { id: 'observe', label: 'Observe', category: 'neutral', cost: 1 }
+      ],
+      getAvailableActions: function(actorId, targetId) {
+        return this.SOCIAL_ACTIONS;
+      },
+      computeActionCost: function(actionId, targetIds) {
+        const action = this.SOCIAL_ACTIONS.find(a => a.id === actionId);
+        return { total: action?.cost || 1 };
+      },
+      SocialResources: {
+        get: function(playerId) {
+          return { energy: 5, influence: 0, information: 0 };
+        },
+        canAfford: function(playerId, costs) {
+          return costs.energy <= 5;
+        },
+        adjustInfluence: function(actorId, targetId, delta) {
+          log(`Influence adjusted: ${actorId} → ${targetId} by ${delta}`, 'info');
+        }
+      },
+      executeAction: function(actorId, targetId, actionId, extraTargets = []) {
+        const action = this.SOCIAL_ACTIONS.find(a => a.id === actionId);
+        const success = Math.random() > 0.3;
+        const affinityChange = success ? (0.5 + Math.random()) : (-0.3);
+        
+        return {
+          success: true,
+          action,
+          outcome: {
+            type: success ? 'success' : 'neutral',
+            message: `${action.label} with player ${targetId}`,
+            affinityChange,
+            succeeded: success
+          }
+        };
+      }
+    };
+
+    // Helper functions
+    window.alivePlayers = () => mockPlayers.filter(p => !p.evicted);
+    window.safeName = (id) => {
+      const p = mockPlayers.find(p => p.id === id);
+      return p ? p.name : `Player ${id}`;
+    };
+
+    // Initialize executor
+    window.SocialActionExecutor.init({
+      maxFillActionsPerPhase: 3,
+      backgroundRate: 0.15,
+      allowTargetHuman: true,
+      enabled: false
+    });
+
+    // ============================================================================
+    // LOGGING
+    // ============================================================================
+    const logEntries = [];
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = { timestamp, message, type };
+      logEntries.push(entry);
+      
+      const logEl = document.getElementById('log');
+      const entryEl = document.createElement('div');
+      entryEl.className = `log-entry ${type}`;
+      entryEl.textContent = `[${timestamp}] ${message}`;
+      logEl.appendChild(entryEl);
+      logEl.scrollTop = logEl.scrollHeight;
+      
+      // Keep last 100 entries
+      if (logEntries.length > 100) {
+        logEntries.shift();
+        logEl.removeChild(logEl.firstChild);
+      }
+    }
+
+    function clearLogs() {
+      logEntries.length = 0;
+      document.getElementById('log').innerHTML = '';
+      log('Logs cleared', 'info');
+    }
+
+    // Intercept console logs
+    const originalConsoleInfo = console.info;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+
+    console.info = function(...args) {
+      originalConsoleInfo.apply(console, args);
+      const message = args.join(' ');
+      if (message.includes('[ai-scheduler]') || message.includes('[socialActionExecutor]')) {
+        log(message, 'info');
+      }
+    };
+
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      const message = args.join(' ');
+      if (message.includes('[ai-scheduler]') || message.includes('[socialActionExecutor]')) {
+        log(message, 'warning');
+      }
+    };
+
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      const message = args.join(' ');
+      if (message.includes('[ai-scheduler]') || message.includes('[socialActionExecutor]')) {
+        log(message, 'error');
+      }
+    };
+
+    // ============================================================================
+    // STATUS DISPLAY
+    // ============================================================================
+    function refreshStatus() {
+      const schedulerState = window.__smDebug?.getState?.() || {};
+      const executorState = window.__smDebug?.executor?.getState?.() || {};
+      
+      const statusHTML = `
+        <div class="status-item">
+          <span class="status-label">Scheduler Running:</span>
+          <span class="status-value">${schedulerState.isRunning ? '✅ YES' : '❌ NO'}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Scheduler Paused:</span>
+          <span class="status-value">${schedulerState.isPaused ? '⏸️ YES' : '▶️ NO'}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Tick Count:</span>
+          <span class="status-value">${schedulerState.tickCount || 0}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Total Actions:</span>
+          <span class="status-value">${schedulerState.totalActions || 0}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Time Since Last Tick:</span>
+          <span class="status-value">${schedulerState.timeSinceLastTick || 0}ms</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Executor Active:</span>
+          <span class="status-value">${executorState.isActive ? '✅ YES' : '❌ NO'}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Queue Length:</span>
+          <span class="status-value">${executorState.queueLength || 0}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Executor Actions:</span>
+          <span class="status-value">${executorState.totalActions || 0}</span>
+        </div>
+      `;
+      
+      document.getElementById('status').innerHTML = statusHTML;
+    }
+
+    // Auto-refresh status every 1s
+    setInterval(refreshStatus, 1000);
+
+    // ============================================================================
+    // CONFIG CONTROLS
+    // ============================================================================
+    function updateConfig() {
+      const debugEnabled = document.getElementById('cfgDebug').checked;
+      const executorEnabled = document.getElementById('cfgExecutor').checked;
+      const watchdogEnabled = document.getElementById('cfgWatchdog').checked;
+      
+      window.game.cfg.debugSocialAI = debugEnabled;
+      window.game.cfg.aiSocialVerbose = debugEnabled;
+      
+      // Update executor config
+      if (window.SocialActionExecutor) {
+        window.SocialActionExecutor.init({
+          maxFillActionsPerPhase: 3,
+          backgroundRate: 0.15,
+          allowTargetHuman: true,
+          enabled: executorEnabled
+        });
+      }
+      
+      log(`Config updated: debug=${debugEnabled}, executor=${executorEnabled}, watchdog=${watchdogEnabled}`, 'success');
+    }
+
+    // ============================================================================
+    // SCHEDULER CONTROLS
+    // ============================================================================
+    function startScheduler() {
+      if (window.SocialAIScheduler) {
+        window.SocialAIScheduler.startAiSocialPhase({}, 'debug-harness-start');
+        log('Scheduler started', 'success');
+      } else {
+        log('SocialAIScheduler not available', 'error');
+      }
+    }
+
+    function stopScheduler() {
+      if (window.SocialAIScheduler) {
+        window.SocialAIScheduler.stopAiSocialPhase('debug-harness-stop');
+        log('Scheduler stopped', 'warning');
+      } else {
+        log('SocialAIScheduler not available', 'error');
+      }
+    }
+
+    function pauseScheduler() {
+      if (window.SocialAIScheduler && window.SocialAIScheduler.pauseAiSocialPhase) {
+        window.SocialAIScheduler.pauseAiSocialPhase('debug-harness-pause');
+        log('Scheduler paused', 'warning');
+      } else {
+        log('Pause API not available', 'error');
+      }
+    }
+
+    function resumeScheduler() {
+      if (window.SocialAIScheduler && window.SocialAIScheduler.resumeAiSocialPhase) {
+        window.SocialAIScheduler.resumeAiSocialPhase('debug-harness-resume');
+        log('Scheduler resumed', 'success');
+      } else {
+        log('Resume API not available', 'error');
+      }
+    }
+
+    function runSingleTick() {
+      if (window.__smDebug && window.__smDebug.runAiTickOnce) {
+        window.__smDebug.runAiTickOnce();
+        log('Single tick executed', 'success');
+      } else {
+        log('Debug API not available', 'error');
+      }
+    }
+
+    function simulateModalOpen() {
+      if (window.SocialAIScheduler && window.SocialAIScheduler.pauseAiSocialPhase) {
+        window.SocialAIScheduler.pauseAiSocialPhase('modal-open');
+        log('Simulated modal open (scheduler paused)', 'info');
+      }
+    }
+
+    function simulateModalClose() {
+      if (window.SocialAIScheduler && window.SocialAIScheduler.resumeAiSocialPhase) {
+        window.SocialAIScheduler.resumeAiSocialPhase('modal-closed');
+        log('Simulated modal close (scheduler resumed)', 'info');
+      }
+      if (window.SocialActionExecutor && window.SocialActionExecutor.flushQueue) {
+        window.SocialActionExecutor.flushQueue();
+        log('Flushed executor queue', 'info');
+      }
+    }
+
+    // ============================================================================
+    // EXECUTOR CONTROLS
+    // ============================================================================
+    function queueAction() {
+      if (window.SocialActionExecutor) {
+        const actor = mockPlayers[Math.floor(Math.random() * (mockPlayers.length - 1))];
+        const target = mockPlayers.find(p => p.id !== actor.id && p.id !== 8);
+        
+        const payload = {
+          actorId: actor.id,
+          targetId: target.id,
+          actionId: 'strategize',
+          actionLabel: 'Strategize',
+          success: true,
+          magnitude: 1.2,
+          energyCost: 2,
+          timestamp: Date.now()
+        };
+        
+        window.SocialActionExecutor.queueAction(payload);
+        log(`Queued action: ${actor.name} → Strategize → ${target.name}`, 'success');
+      } else {
+        log('SocialActionExecutor not available', 'error');
+      }
+    }
+
+    function flushQueue() {
+      if (window.SocialActionExecutor) {
+        window.SocialActionExecutor.flushQueue();
+        log('Flushed executor queue', 'success');
+      } else {
+        log('SocialActionExecutor not available', 'error');
+      }
+    }
+
+    function runBackgroundTick() {
+      if (window.SocialActionExecutor) {
+        window.SocialActionExecutor.runBackgroundTick();
+        log('Background tick executed', 'success');
+      } else {
+        log('SocialActionExecutor not available', 'error');
+      }
+    }
+
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
+    log('🎮 Social AI Debug Harness loaded', 'success');
+    log('Use controls above to test scheduler behavior', 'info');
+    refreshStatus();
+  </script>
+</body>
+</html>

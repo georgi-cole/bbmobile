@@ -278,9 +278,14 @@
    */
   function pauseSocialAI() {
     // Check if social AI scheduler is available and running
-    if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stop === 'function') {
+    // Use pause() instead of stop() to keep loop running
+    if (global.SocialAIScheduler && typeof global.SocialAIScheduler.pauseAiSocialPhase === 'function') {
       console.info('[PauseController] Pausing social AI scheduler');
-      global.SocialAIScheduler.stop();
+      global.SocialAIScheduler.pauseAiSocialPhase('pause-controller');
+    } else if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stop === 'function') {
+      // Fallback to stop if pause not available
+      console.info('[PauseController] Pausing social AI scheduler (fallback to stop)');
+      global.SocialAIScheduler.stop('pause-controller');
     }
   }
 
@@ -292,8 +297,13 @@
     
     // Check if we should resume social AI (only if in social phase)
     if (game && game.phase === 'social') {
-      if (global.SocialAIScheduler && typeof global.SocialAIScheduler.start === 'function') {
+      // Use resume() instead of start() to resume from pause
+      if (global.SocialAIScheduler && typeof global.SocialAIScheduler.resumeAiSocialPhase === 'function') {
         console.info('[PauseController] Resuming social AI scheduler');
+        global.SocialAIScheduler.resumeAiSocialPhase('pause-controller-resume');
+      } else if (global.SocialAIScheduler && typeof global.SocialAIScheduler.start === 'function') {
+        // Fallback to start if resume not available
+        console.info('[PauseController] Resuming social AI scheduler (fallback to start)');
         global.SocialAIScheduler.start('social');
       }
     }
