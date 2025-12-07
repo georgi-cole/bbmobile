@@ -254,7 +254,38 @@
       }
     });
 
-    console.info('[diary-room-bridge] ✓ Initialized diary room bridge');
+    // Listen for dr:alert events (interactive alerts)
+    bus.on('dr:alert', (payload) => {
+      if (!payload || !payload.alert) return;
+      
+      const DRL = global.DiaryRoomLogger;
+      if (DRL && DRL._entries) {
+        // Convert alert to diary entry format
+        const alertEntry = {
+          id: `dr-alert-${payload.alert.type}-${payload.alert.timestamp || Date.now()}`,
+          timestamp: payload.alert.timestamp || Date.now(),
+          type: payload.alert.type,
+          category: 'social_alert',
+          title: payload.alert.title || payload.alert.text,
+          text: payload.alert.text,
+          severity: payload.alert.severity || 'medium',
+          interactive: true,
+          data: payload.alert
+        };
+        
+        // Check if alert already exists (avoid duplicates)
+        const exists = DRL._entries.some(e => e.id === alertEntry.id);
+        if (!exists) {
+          DRL._entries.push(alertEntry);
+          
+          if (config.verbose) {
+            console.log('[diary-room-bridge] Captured dr:alert:', alertEntry.id);
+          }
+        }
+      }
+    });
+
+    console.info('[diary-room-bridge] ✓ Initialized diary room bridge (with alert support)');
   }
 
   // ============================================================================

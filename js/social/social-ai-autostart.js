@@ -152,7 +152,7 @@
   }
 
   /**
-   * Execute a single tick - calls the AI scheduler
+   * Execute a single tick - calls the AI scheduler or social engine
    */
   function tick() {
     if (!isRunning) {
@@ -169,8 +169,25 @@
     // Try multiple ways to call the AI scheduler (defensive)
     let tickExecuted = false;
 
-    // Method 1: Use __smDebug.runAiTickOnce (preferred for testing)
-    if (global.__smDebug?.runAiTickOnce) {
+    // Method 1: Use SocialEngine (new budget-aware system)
+    if (global.SocialEngine?.isPhaseActive()) {
+      try {
+        // Execute interactions for eligible AI players with budget
+        const budgets = global.SocialEngine.getAllBudgets();
+        for (const [playerId, budget] of budgets) {
+          // Check if player can still act
+          if (budget.actions < budget.targetActions && budget.spent < budget.budget) {
+            global.SocialEngine.executeAIInteraction(playerId);
+            tickExecuted = true;
+          }
+        }
+      } catch (e) {
+        console.warn('[social-ai-autostart] Failed to use SocialEngine:', e);
+      }
+    }
+
+    // Method 2: Use __smDebug.runAiTickOnce (preferred for testing)
+    if (!tickExecuted && global.__smDebug?.runAiTickOnce) {
       try {
         global.__smDebug.runAiTickOnce();
         tickExecuted = true;
@@ -179,7 +196,7 @@
       }
     }
 
-    // Method 2: Use SocialAIScheduler directly
+    // Method 3: Use SocialAIScheduler directly
     if (!tickExecuted && global.SocialAIScheduler?.runAiTick) {
       try {
         global.SocialAIScheduler.runAiTick();
@@ -189,7 +206,7 @@
       }
     }
 
-    // Method 3: Check for other potential tick methods
+    // Method 4: Check for other potential tick methods
     if (!tickExecuted && global.SocialAIScheduler?.tick) {
       try {
         global.SocialAIScheduler.tick();
@@ -203,10 +220,40 @@
       console.warn('[social-ai-autostart] ⚠️ No AI scheduler tick method found - AI may not run');
     }
 
+    // Check stop conditions (budget-aware)
+    if (shouldStopTicking()) {
+      console.info('[social-ai-autostart] ✓ All AI players have reached their budgets - stopping');
+      stop();
+      return;
+    }
+
     // Schedule next tick
     if (isRunning) {
       autoDriverTimer = setTimeout(tick, config.tickInterval);
     }
+  }
+
+  /**
+   * Check if we should stop ticking (all budgets reached)
+   */
+  function shouldStopTicking() {
+    if (!global.SocialEngine?.isPhaseActive()) {
+      return false;
+    }
+
+    const budgets = global.SocialEngine.getAllBudgets();
+    if (budgets.length === 0) {
+      return false;
+    }
+
+    // Stop if all players have reached their targets
+    for (const [playerId, budget] of budgets) {
+      if (budget.actions < budget.targetActions && budget.spent < budget.budget) {
+        return false; // At least one player can still act
+      }
+    }
+
+    return true; // All players done
   }
 
   // ============================================================================

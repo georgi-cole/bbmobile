@@ -1,0 +1,145 @@
+{
+  "description": "Social Phase Simulation Configuration",
+  "version": "1.0.0",
+  
+  "energySpending": {
+    "targetSpendPctRange": [0.6, 0.9],
+    "minActionsPerPlayer": 3,
+    "maxActionsPerPlayer": 8,
+    "allowOverspend": false
+  },
+  
+  "actionWeights": {
+    "friendly": {
+      "smalltalk": 30,
+      "compliment": 25,
+      "group_hangout": 15
+    },
+    "strategic": {
+      "observe": 20,
+      "strategize": 18,
+      "confide": 12
+    },
+    "aggressive": {
+      "spread_rumor": 8,
+      "expose_secret": 5,
+      "confront": 7,
+      "interrogate": 10
+    },
+    "alliance": {
+      "form_alliance": 10,
+      "mediate": 8
+    }
+  },
+  
+  "targetSelection": {
+    "affinityBias": {
+      "friendly": {
+        "preferNeutral": true,
+        "neutralRange": [-0.15, 0.15]
+      },
+      "aggressive": {
+        "preferEnemies": true,
+        "enemyThreshold": -0.2
+      },
+      "alliance": {
+        "preferPositive": true,
+        "positiveThreshold": 0.1
+      }
+    },
+    "roleContextWeights": {
+      "currentHOH": 1.3,
+      "nominees": 1.5,
+      "vetoHolder": 1.2
+    },
+    "traitEffects": {
+      "strategic": 1.2,
+      "social": 1.3,
+      "competitive": 0.9
+    }
+  },
+  
+  "weeklyBiases": {
+    "aggressionByWeek": {
+      "1-3": 0.3,
+      "4-6": 0.5,
+      "7-9": 0.7,
+      "10+": 0.8
+    },
+    "allianceFormationRate": {
+      "1-3": 0.8,
+      "4-6": 0.5,
+      "7-9": 0.3,
+      "10+": 0.2
+    },
+    "betrayalRiskRate": {
+      "1-3": 0.1,
+      "4-6": 0.2,
+      "7-9": 0.4,
+      "10+": 0.5
+    }
+  },
+  
+  "relationshipThresholds": {
+    "alliance": {
+      "level1": 0.2,
+      "level2": 0.4,
+      "level3": 0.6
+    },
+    "enemy": {
+      "level1": -0.2,
+      "level2": -0.4,
+      "level3": -0.6
+    },
+    "betrayal": -0.06,
+    "fight": -0.08,
+    "romance": 0.5,
+    "bromance": 0.4
+  },
+  
+  "influenceBounds": {
+    "nominationBias": {
+      "min": -0.15,
+      "max": 0.15,
+      "perAllyLevel": 0.05,
+      "perEnemyLevel": -0.05
+    },
+    "vetoSaveBias": {
+      "min": -0.1,
+      "max": 0.2,
+      "perAllyLevel": 0.07
+    }
+  },
+  
+  "alertTriggers": {
+    "bigAlliance": {
+      "minLevel": 2,
+      "enabled": true
+    },
+    "majorBetrayal": {
+      "affinityDrop": -0.06,
+      "enabled": true
+    },
+    "fight": {
+      "affinityDrop": -0.08,
+      "enabled": true
+    },
+    "romance": {
+      "affinityThreshold": 0.5,
+      "enabled": true
+    }
+  },
+  
+  "simulator": {
+    "fallbackEnabled": true,
+    "minInteractionsWhenHumanEvicted": 5,
+    "randomnessSeed": null
+  },
+  
+  "debug": {
+    "verbose": false,
+    "logActions": true,
+    "logRelationships": true,
+    "logInfluence": false
+  }
+}
