@@ -41,22 +41,18 @@
     state.nominees = [];
     if (config.leftName && config.leftId !== null && config.leftId !== undefined) {
       const leftPlayer = global.getP ? global.getP(config.leftId) : null;
-      // Sanitize name for URL to prevent injection
-      const safeName = String(config.leftName).replace(/[^\w\s-]/g, '').substring(0, 50);
       state.nominees.push({
         id: config.leftId,
         name: config.leftName,
-        photo: leftPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName)}`
+        photo: leftPlayer?.avatar || getDicebearUrl(config.leftName)
       });
     }
     if (config.rightName && config.rightId !== null && config.rightId !== undefined) {
       const rightPlayer = global.getP ? global.getP(config.rightId) : null;
-      // Sanitize name for URL to prevent injection
-      const safeName = String(config.rightName).replace(/[^\w\s-]/g, '').substring(0, 50);
       state.nominees.push({
         id: config.rightId,
         name: config.rightName,
-        photo: rightPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName)}`
+        photo: rightPlayer?.avatar || getDicebearUrl(config.rightName)
       });
     }
 
