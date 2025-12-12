@@ -7,7 +7,7 @@
   'use strict';
 
   // State for tracking active UI
-  let state = {
+  const state = {
     container: null,
     nominees: [],
     onVoteCallback: null,
@@ -26,7 +26,7 @@
 
     // Build nominees array from config
     state.nominees = [];
-    if (config.leftName && config.leftId != null) {
+    if (config.leftName && config.leftId !== null && config.leftId !== undefined) {
       const leftPlayer = global.getP ? global.getP(config.leftId) : null;
       state.nominees.push({
         id: config.leftId,
@@ -34,7 +34,7 @@
         photo: leftPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(config.leftName)}`
       });
     }
-    if (config.rightName && config.rightId != null) {
+    if (config.rightName && config.rightId !== null && config.rightId !== undefined) {
       const rightPlayer = global.getP ? global.getP(config.rightId) : null;
       state.nominees.push({
         id: config.rightId,
