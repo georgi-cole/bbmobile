@@ -130,9 +130,6 @@
       logConsole('=== Starting Two-Nominee Test ===', 'info');
       cleanup();
 
-      // Mock container override for this test
-      const originalFindContainer = window.lv2.init;
-      
       // Initialize lv2 with two nominees
       window.lv2.init({
         leftName: 'Alice',

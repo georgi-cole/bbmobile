@@ -15,6 +15,19 @@
   };
 
   /**
+   * Helper to get Dicebear avatar URL (safe fallback for external service)
+   */
+  function getDicebearUrl(seed) {
+    try {
+      const safeSeed = String(seed || 'player').replace(/[^\w\s-]/g, '').substring(0, 50);
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeSeed)}`;
+    } catch (e) {
+      // Fallback to data URI if external service fails
+      return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ccc" width="100" height="100"/%3E%3C/svg%3E';
+    }
+  }
+
+  /**
    * Initialize lv2 with nominees
    * @param {Object} config - Configuration object with leftName, rightName, leftId, rightId
    */
@@ -217,15 +230,19 @@
   /**
    * Create CTA bar for voting
    * Routes to EvictionCarousel if available; otherwise shows fallback UI
+   * @param {Object} config - Optional configuration object with onVote callback
    */
   function createCtaBar(config) {
+    // Backward compatibility: handle being called without config
+    config = config || {};
+    
     if (!state.nominees.length) {
       console.warn('[lv2-shim] No nominees available for createCtaBar');
       return;
     }
 
     // Store callback from config if provided
-    if (config && config.onVote) {
+    if (config.onVote) {
       state.onVoteCallback = config.onVote;
     }
 
@@ -357,14 +374,6 @@
 
     console.debug('[lv2-shim] Rendered fallback UI');
   }
-  
-  /**
-   * Helper to get Dicebear avatar URL
-   */
-  function getDicebearUrl(seed) {
-    const safeSeed = String(seed).replace(/[^\w\s-]/g, '').substring(0, 50);
-    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeSeed)}`;
-  }
 
   /**
    * Set whether it's the user's turn to vote
@@ -442,7 +451,10 @@
     cleanup();
   }
   function endResultCardPhase() { console.debug('[lv2-shim] endResultCardPhase (stub)'); }
-  function showEvicteeFinal() { console.debug('[lv2-shim] showEvicteeFinal (stub)'); }
+  function showEvicteeFinal() { 
+    console.debug('[lv2-shim] showEvicteeFinal (stub)'); 
+    return Promise.resolve();
+  }
   function supportsInlineCard() { return false; }
   function showInlineCard() { 
     console.debug('[lv2-shim] showInlineCard (stub)');
