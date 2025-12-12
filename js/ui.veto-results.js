@@ -29,11 +29,19 @@
     const tile = document.createElement('div');
     tile.className = 'comp-player-tile' + (isFirst ? ' first-place' : '');
     tile.setAttribute('role','group');
-    tile.setAttribute('aria-label', `${rank}. ${player.name} — ${player.score}`);
+    
+    // Round score to 1 decimal place
+    const roundedScore = (typeof player.score === 'number') ? player.score.toFixed(1) : player.score;
+    tile.setAttribute('aria-label', `${rank}. ${player.name} — ${roundedScore}`);
 
-    const avatarHtml = player.avatarHtml || (player.avatarUrl ? `<img src="${player.avatarUrl}" alt="${player.name}">` : '<div class="avatar-fallback"></div>');
+    // Avatar with onerror fallback
+    const avatarContent = player.avatarHtml 
+      ? player.avatarHtml 
+      : (player.avatarUrl 
+          ? `<img src="${player.avatarUrl}" alt="${player.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="avatar-fallback" style="display:none;"></div>`
+          : '<div class="avatar-fallback" style="display:flex;"></div>');
 
-    tile.innerHTML = `\n      <div class="comp-rank">${rank}</div>\n      <div class="comp-avatar">${avatarHtml}</div>\n      <div class="comp-meta">\n        <div class="comp-name">${player.name}</div>\n        <div class="comp-score">${player.score}</div>\n      </div>\n      ${isFirst ? '<div class="comp-badge" aria-hidden="true">👑</div>' : ''}\n    `;
+    tile.innerHTML = `\n      <div class="comp-rank">${rank}</div>\n      <div class="comp-avatar">${avatarContent}</div>\n      <div class="comp-meta">\n        <div class="comp-name">${player.name}</div>\n        <div class="comp-score">${roundedScore}</div>\n      </div>\n      ${isFirst ? '<div class="comp-badge" aria-hidden="true">👑</div>' : ''}\n    `;
     return tile;
   }
 
