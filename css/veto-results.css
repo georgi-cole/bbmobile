@@ -9,10 +9,14 @@
 .comp-player-tile { flex: 1 1 0; min-width: 0; display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); transition: transform 160ms ease, box-shadow 160ms ease; }
 .comp-player-tile.first-place { flex: 1.6 1 0; background: linear-gradient(90deg, rgba(255,215,120,0.12), rgba(255,195,40,0.06)); border: 1px solid rgba(255,195,40,0.18); box-shadow: 0 8px 24px rgba(255,180,60,0.06); padding: 16px; }
 .comp-rank { font-weight: 700; font-size: 18px; width: 36px; text-align: center; color: rgba(255,255,255,0.85); }
+.comp-avatar { position: relative; }
 .comp-avatar img { width: 48px; height: 48px; border-radius: 50%; display: block; object-fit: cover; border: 2px solid rgba(255,255,255,0.06); }
+.comp-avatar .avatar-fallback { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, rgba(100,120,140,0.4), rgba(60,80,100,0.4)); border: 2px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 24px; color: rgba(255,255,255,0.4); }
+.comp-avatar .avatar-fallback::before { content: '👤'; }
 .comp-player-tile.first-place .comp-avatar img { width: 64px; height: 64px; border: 3px solid rgba(255,230,150,0.15); }
+.comp-player-tile.first-place .comp-avatar .avatar-fallback { width: 64px; height: 64px; border: 3px solid rgba(255,230,150,0.15); font-size: 32px; }
 .comp-meta { display:flex; flex-direction:column; min-width:0; }
 .comp-name { font-size: 15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .comp-score { font-size:13px; color: rgba(255,255,255,0.75); margin-top:4px; }
 .comp-badge { margin-left: auto; font-size: 20px; }
-@media (max-width: 640px){ .veto-comp-results.comp-results { width: calc(100% - 32px); top: 80px; padding: 12px; } .veto-comp-results .comp-results-list { flex-direction: column; gap: 10px; } .comp-player-tile.first-place { flex: 1 1 auto; } .comp-avatar img { width: 44px; height:44px; } .comp-player-tile.first-place .comp-avatar img { width:56px; height:56px; } }
+@media (max-width: 640px){ .veto-comp-results.comp-results { width: calc(100% - 32px); top: 80px; padding: 12px; } .veto-comp-results .comp-results-list { flex-direction: column; gap: 10px; } .comp-player-tile.first-place { flex: 1 1 auto; } .comp-avatar img { width: 44px; height:44px; } .comp-avatar .avatar-fallback { width: 44px; height: 44px; font-size: 20px; } .comp-player-tile.first-place .comp-avatar img { width:56px; height:56px; } .comp-player-tile.first-place .comp-avatar .avatar-fallback { width: 56px; height: 56px; font-size: 28px; } }

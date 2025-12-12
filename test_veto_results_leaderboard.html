@@ -89,6 +89,7 @@
         <button onclick="testTop3Render()">Test Top-3 Display</button>
         <button onclick="testAutoDismiss()">Test Auto-Dismiss (5s)</button>
         <button onclick="testLargeGroup()">Test Large Group (shows top 3 only)</button>
+        <button onclick="testAvatarFallback()">Test Avatar Fallback</button>
         <button class="btn-ffwd" onclick="triggerFFWD()">⏭️ Test FFWD Close</button>
         <button onclick="clearResults()">Clear</button>
       </div>
@@ -160,13 +161,14 @@
     // Test functions
     function testTop3Render() {
       log('Testing top-3 display with 5 players (only top 3 should show)...');
+      log('Testing score rounding to 1 decimal place...');
       
       const scores = {
-        1: 75.2,
-        2: 88.9,
-        3: 92.5,
-        4: 81.0,
-        5: 70.3
+        1: 75.233847,
+        2: 88.956789,
+        3: 92.499999,
+        4: 81.012345,
+        5: 70.387654
       };
       
       const participants = [1, 2, 3, 4, 5];
@@ -178,7 +180,10 @@
         });
         if (result) {
           log('✓ Top-3 render successful', 'success');
-          log('Expected: Charlie (1st, 92.5), Bob (2nd, 88.9), Diana (3rd, 81.0)');
+          log('Expected scores rounded to 1 decimal:');
+          log('  Charlie (1st, 92.5 from 92.499999)');
+          log('  Bob (2nd, 89.0 from 88.956789)');
+          log('  Diana (3rd, 81.0 from 81.012345)');
           log('Panel will auto-dismiss in 5 seconds');
         } else {
           log('✗ Render returned null', 'error');
@@ -280,11 +285,66 @@
       }
     }
 
+    function testAvatarFallback() {
+      log('Testing avatar fallback with broken URLs...');
+      
+      // Override getP to return broken avatar URLs
+      window.getP = function(id) {
+        const mockPlayers = {
+          1: { id: 1, name: 'Alice', avatar: 'https://invalid-url-that-will-fail.test/avatar1.jpg' },
+          2: { id: 2, name: 'Bob', avatar: 'https://invalid-url-that-will-fail.test/avatar2.jpg' },
+          3: { id: 3, name: 'Charlie', avatar: 'https://invalid-url-that-will-fail.test/avatar3.jpg' }
+        };
+        return mockPlayers[id] || null;
+      };
+      
+      const scores = {
+        1: 85.5,
+        2: 92.3,
+        3: 78.0
+      };
+      
+      const participants = [1, 2, 3];
+      
+      try {
+        const result = window.VetoResultsUI.renderVetoCompResults(scores, participants, {
+          maxResults: 3,
+          autoDismissMs: 10000 // Give 10s to see fallback
+        });
+        if (result) {
+          log('✓ Panel displayed with broken avatar URLs', 'success');
+          log('Check if fallback avatars (👤) appear after images fail to load');
+          log('Panel will auto-dismiss in 10 seconds');
+        } else {
+          log('✗ Render returned null', 'error');
+        }
+      } catch (e) {
+        log('✗ Error: ' + e.message, 'error');
+      }
+    }
+
     function clearResults() {
       const container = document.getElementById('tvOverlay');
       container.innerHTML = '';
       document.getElementById('testLog').innerHTML = '';
       log('Results cleared');
+      
+      // Restore getP to working state
+      window.getP = function(id) {
+        const mockPlayers = {
+          1: { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+          2: { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+          3: { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+          4: { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+          5: { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' },
+          6: { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Frank' },
+          7: { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Grace' },
+          8: { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Henry' },
+          9: { id: 9, name: 'Ivy', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Ivy' },
+          10: { id: 10, name: 'Jack', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jack' }
+        };
+        return mockPlayers[id] || null;
+      };
     }
 
     // Run initial test on load
