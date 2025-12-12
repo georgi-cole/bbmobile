@@ -240,6 +240,31 @@
     logXP('CLEAN_WEEK', playerId);
   }
 
+  /**
+   * Hook: Jurors return twist (America's Vote)
+   * Shows the juror return overlay for the twist moment
+   */
+  function onJurorsReturn(payload = {}) {
+    // Guard: check if JurorReturnOverlay module is loaded
+    if (!global.JurorReturnOverlay) {
+      console.warn('[Progression Events] JurorReturnOverlay not available');
+      return;
+    }
+
+    // Guard: check if show method exists
+    if (typeof global.JurorReturnOverlay.show !== 'function') {
+      console.warn('[Progression Events] JurorReturnOverlay.show not a function');
+      return;
+    }
+
+    try {
+      console.log('[Progression Events] Triggering jurors-return overlay');
+      global.JurorReturnOverlay.show();
+    } catch (error) {
+      console.error('[Progression Events] Failed to show jurors-return overlay:', error);
+    }
+  }
+
   // Expose hooks on global
   global.ProgressionEvents = {
     onHOHWin,
@@ -254,6 +279,7 @@
     onJuryVote,
     onFinalWinner,
     onPublicFavorite,
+    onJurorsReturn,
     onPOVUsed,
     onSurviveNomination,
     onSurviveTie,
