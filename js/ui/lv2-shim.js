@@ -15,6 +15,19 @@
   };
 
   /**
+   * Helper to get Dicebear avatar URL (safe fallback for external service)
+   */
+  function getDicebearUrl(seed) {
+    try {
+      const safeSeed = String(seed || 'player').replace(/[^\w\s-]/g, '').substring(0, 50);
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeSeed)}`;
+    } catch (e) {
+      // Fallback to data URI if external service fails
+      return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ccc" width="100" height="100"/%3E%3C/svg%3E';
+    }
+  }
+
+  /**
    * Initialize lv2 with nominees
    * @param {Object} config - Configuration object with leftName, rightName, leftId, rightId
    */
@@ -28,22 +41,18 @@
     state.nominees = [];
     if (config.leftName && config.leftId !== null && config.leftId !== undefined) {
       const leftPlayer = global.getP ? global.getP(config.leftId) : null;
-      // Sanitize name for URL to prevent injection
-      const safeName = String(config.leftName).replace(/[^\w\s-]/g, '').substring(0, 50);
       state.nominees.push({
         id: config.leftId,
         name: config.leftName,
-        photo: leftPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName)}`
+        photo: leftPlayer?.avatar || getDicebearUrl(config.leftName)
       });
     }
     if (config.rightName && config.rightId !== null && config.rightId !== undefined) {
       const rightPlayer = global.getP ? global.getP(config.rightId) : null;
-      // Sanitize name for URL to prevent injection
-      const safeName = String(config.rightName).replace(/[^\w\s-]/g, '').substring(0, 50);
       state.nominees.push({
         id: config.rightId,
         name: config.rightName,
-        photo: rightPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName)}`
+        photo: rightPlayer?.avatar || getDicebearUrl(config.rightName)
       });
     }
 
@@ -51,13 +60,186 @@
   }
 
   /**
+   * Initialize triple nominee UI (3-up view)
+   * @param {Object} config - Configuration with nominees array and onVote callback
+   */
+  function initTriple(config) {
+    if (!config || !Array.isArray(config.nominees) || config.nominees.length !== 3) {
+      console.warn('[lv2-shim] Invalid initTriple config', config);
+      return;
+    }
+
+    // Store nominees and callback
+    state.nominees = config.nominees.map(n => ({
+      id: n.id,
+      name: n.name || 'Unknown',
+      photo: n.photo || getDicebearUrl(n.name || n.id)
+    }));
+    state.onVoteCallback = config.onVote;
+
+    // Find container
+    const container = findContainer();
+    if (!container) {
+      console.warn('[lv2-shim] No container found for initTriple');
+      return;
+    }
+
+    state.container = container;
+
+    // Render triple nominee UI
+    renderTripleUI(container);
+    
+    console.debug('[lv2-shim] Initialized triple UI with nominees:', state.nominees);
+  }
+
+  /**
+   * Render triple nominee UI (3-up view)
+   */
+  function renderTripleUI(container) {
+    cleanup(); // Clear any existing UI
+
+    const tripleRoot = document.createElement('div');
+    tripleRoot.className = 'lv2-shim-triple';
+    tripleRoot.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      gap: 16px;
+      min-height: 300px;
+      position: relative;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.8);
+    `;
+
+    const title = document.createElement('div');
+    title.textContent = 'Vote to Evict';
+    title.style.cssText = `
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 8px;
+      text-align: center;
+    `;
+    tripleRoot.appendChild(title);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 800px;
+    `;
+
+    state.nominees.forEach(nominee => {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-width: 150px;
+        flex: 1;
+        max-width: 200px;
+      `;
+      
+      card.addEventListener('mouseenter', () => {
+        card.style.background = 'rgba(255, 255, 255, 0.2)';
+        card.style.borderColor = '#d9534f';
+      });
+      
+      card.addEventListener('mouseleave', () => {
+        card.style.background = 'rgba(255, 255, 255, 0.1)';
+        card.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+      });
+
+      const nameEl = document.createElement('div');
+      nameEl.textContent = nominee.name;
+      nameEl.style.cssText = `
+        font-size: 18px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 12px;
+        text-align: center;
+      `;
+      card.appendChild(nameEl);
+
+      const btn = document.createElement('button');
+      btn.textContent = 'Evict';
+      btn.style.cssText = `
+        padding: 10px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        border: 2px solid #d9534f;
+        background: #d9534f;
+        color: white;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+      `;
+      
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = '#c9302c';
+        btn.style.borderColor = '#c9302c';
+      });
+      
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = '#d9534f';
+        btn.style.borderColor = '#d9534f';
+      });
+      
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+        console.debug('[lv2-shim] Triple vote:', nominee.id);
+        if (state.onVoteCallback) {
+          await state.onVoteCallback(nominee.id);
+        }
+      });
+      
+      card.addEventListener('click', () => {
+        btn.click();
+      });
+      
+      card.appendChild(btn);
+      buttonContainer.appendChild(card);
+    });
+
+    tripleRoot.appendChild(buttonContainer);
+    container.appendChild(tripleRoot);
+    state.container = tripleRoot;
+    state.isActive = true;
+
+    console.debug('[lv2-shim] Rendered triple UI');
+  }
+
+  /**
    * Create CTA bar for voting
    * Routes to EvictionCarousel if available; otherwise shows fallback UI
+   * @param {Object} config - Optional configuration object with onVote callback
    */
-  function createCtaBar() {
+  function createCtaBar(config) {
+    // Backward compatibility: handle being called without config
+    config = config || {};
+    
     if (!state.nominees.length) {
       console.warn('[lv2-shim] No nominees available for createCtaBar');
       return;
+    }
+
+    // Store callback from config if provided
+    if (config.onVote) {
+      state.onVoteCallback = config.onVote;
     }
 
     // Find container (TV or panel)
@@ -112,23 +294,67 @@
 
     const fallbackRoot = document.createElement('div');
     fallbackRoot.className = 'lv2-shim-fallback';
-    fallbackRoot.style.cssText = 'padding: 20px; text-align: center;';
+    fallbackRoot.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      min-height: 200px;
+      position: relative;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.8);
+    `;
 
     const title = document.createElement('div');
     title.textContent = 'Vote to Evict';
-    title.style.cssText = 'font-size: 18px; font-weight: bold; margin-bottom: 16px;';
+    title.style.cssText = `
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 16px;
+      text-align: center;
+    `;
     fallbackRoot.appendChild(title);
 
     const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = 'display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;';
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    `;
 
     state.nominees.forEach(nominee => {
       const btn = document.createElement('button');
       btn.textContent = `Evict ${nominee.name}`;
-      btn.style.cssText = 'padding: 10px 20px; font-size: 16px; cursor: pointer; border: 2px solid #d9534f; background: white; color: #d9534f; border-radius: 8px;';
+      btn.style.cssText = `
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        border: 2px solid #d9534f;
+        background: #d9534f;
+        color: white;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        pointer-events: auto;
+      `;
+      
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = '#c9302c';
+        btn.style.borderColor = '#c9302c';
+      });
+      
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = '#d9534f';
+        btn.style.borderColor = '#d9534f';
+      });
+      
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
         console.debug('[lv2-shim] Fallback vote:', nominee.id);
         if (state.onVoteCallback) {
           await state.onVoteCallback(nominee.id);
@@ -206,20 +432,37 @@
 
   // Stub methods for backward compatibility (do nothing in shim)
   function updateCtaBar() { console.debug('[lv2-shim] updateCtaBar (stub)'); }
-  function hideCtaBar() { console.debug('[lv2-shim] hideCtaBar (stub)'); }
+  function hideCtaBar() { 
+    console.debug('[lv2-shim] hideCtaBar'); 
+    cleanup();
+  }
+  function hideCtasTriple() {
+    console.debug('[lv2-shim] hideCtasTriple');
+    cleanup();
+  }
   function showTurnIndicator() { setTurn(true); }
   function hideTurnIndicator() { setTurn(false); }
-  function beginResultCardPhase() { console.debug('[lv2-shim] beginResultCardPhase (stub)'); }
+  function beginResultCardPhase() { 
+    console.debug('[lv2-shim] beginResultCardPhase'); 
+    cleanup();
+  }
   function endResultCardPhase() { console.debug('[lv2-shim] endResultCardPhase (stub)'); }
-  function showEvicteeFinal() { console.debug('[lv2-shim] showEvicteeFinal (stub)'); }
+  function showEvicteeFinal() { 
+    console.debug('[lv2-shim] showEvicteeFinal (stub)'); 
+    return Promise.resolve();
+  }
   function supportsInlineCard() { return false; }
-  function showInlineCard() { console.debug('[lv2-shim] showInlineCard (stub)'); }
+  function showInlineCard() { 
+    console.debug('[lv2-shim] showInlineCard (stub)');
+    return Promise.resolve();
+  }
   function enterExternalOverlayMode() { console.debug('[lv2-shim] enterExternalOverlayMode (stub)'); }
   function exitExternalOverlayMode() { console.debug('[lv2-shim] exitExternalOverlayMode (stub)'); }
 
   // Public API compatible with window.lv2
   const lv2 = {
     init: init,
+    initTriple: initTriple,
     createCtaBar: createCtaBar,
     setTurn: setTurn,
     pushVote: pushVote,
@@ -227,6 +470,7 @@
     cleanup: cleanup,
     updateCtaBar: updateCtaBar,
     hideCtaBar: hideCtaBar,
+    hideCtasTriple: hideCtasTriple,
     showTurnIndicator: showTurnIndicator,
     hideTurnIndicator: hideTurnIndicator,
     beginResultCardPhase: beginResultCardPhase,

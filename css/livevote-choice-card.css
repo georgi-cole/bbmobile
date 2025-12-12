@@ -1,0 +1,25 @@
+/* livevote-choice-card.css (minimal stub) */
+/* Provides minimal styles for livevote choice cards */
+/* Full implementation available in archive/ui-archive/css/livevote-choice-card.css */
+
+.livevote-choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.livevote-choice-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #d9534f;
+}
+
+.livevote-choice-card--selected {
+  border-color: #5cb85c;
+  background: rgba(92, 184, 92, 0.2);
+}
