@@ -259,7 +259,9 @@
 
     try {
       console.log('[Progression Events] Triggering jurors-return overlay');
-      global.JurorReturnOverlay.show();
+      // Pass players array if provided in payload
+      const players = payload && payload.players ? payload.players : undefined;
+      global.JurorReturnOverlay.show(players);
     } catch (error) {
       console.error('[Progression Events] Failed to show jurors-return overlay:', error);
     }
