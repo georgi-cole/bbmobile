@@ -1040,14 +1040,41 @@
         handlePostVetoReveal();
       }, 600);
     } else {
-      // Full reveal sequence
-      showVetoRevealSequence(top3).then(function(){
-        // Check for Final 4 — skip veto ceremony and go direct to eviction
-        handlePostVetoReveal();
-      }).catch(function(e){
-        console.warn('[veto] reveal error, proceeding', e);
-        handlePostVetoReveal();
-      });
+      // Full reveal sequence - use new leaderboard renderer if available
+      if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
+        try{
+          // Normalize scores to plain object for renderer
+          var scoresObj = {};
+          g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
+          
+          // Render full leaderboard with all participants
+          console.info('[veto] Rendering full competition leaderboard');
+          window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds);
+          
+          // Continue to ceremony after displaying results
+          setTimeout(function(){
+            handlePostVetoReveal();
+          }, 5000); // Show results for 5 seconds
+        }catch(e){
+          console.warn('[veto] VetoResultsUI error, using fallback reveal', e);
+          // Fallback to legacy reveal
+          showVetoRevealSequence(top3).then(function(){
+            handlePostVetoReveal();
+          }).catch(function(err){
+            console.warn('[veto] fallback reveal error, proceeding', err);
+            handlePostVetoReveal();
+          });
+        }
+      } else {
+        // Fallback: Use legacy tri-slot reveal if new renderer not available
+        console.info('[veto] VetoResultsUI not available, using legacy reveal');
+        showVetoRevealSequence(top3).then(function(){
+          handlePostVetoReveal();
+        }).catch(function(e){
+          console.warn('[veto] reveal error, proceeding', e);
+          handlePostVetoReveal();
+        });
+      }
     }
   }
 
