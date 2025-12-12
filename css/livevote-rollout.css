@@ -1,0 +1,41 @@
+/* livevote-rollout.css (minimal stub) */
+/* Provides minimal styles for livevote rollout display */
+/* Full implementation available in archive/ui-archive/css/livevote-rollout.css */
+
+.livevote-rollout {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.livevote-rollout__title {
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.livevote-rollout__votes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.livevote-rollout__vote {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  color: white;
+  text-align: center;
+}

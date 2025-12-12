@@ -1,0 +1,48 @@
+/* livevote-voteoverlay.css (minimal stub) */
+/* Provides minimal styles for livevote overlay */
+/* Full implementation available in archive/ui-archive/css/livevote-voteoverlay.css */
+
+.livevote-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.livevote-overlay__title {
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.livevote-overlay__nominees {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 900px;
+}
+
+.livevote-overlay__close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 8px;
+  line-height: 1;
+}
