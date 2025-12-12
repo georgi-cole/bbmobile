@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LV2 Shim Test - Live Voting</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: white;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    .test-container {
+      min-height: 400px;
+      background: #0d151f;
+      border: 2px solid #444;
+      border-radius: 8px;
+      margin: 10px 0;
+      position: relative;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      background: #333;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success { color: #5cb85c; }
+    .error { color: #d9534f; }
+    .info { color: #5bc0de; }
+  </style>
+</head>
+<body>
+  <h1>LV2 Shim Test - Live Voting</h1>
+  <p>This page tests the lv2-shim fallback UI for live voting when real livevote modules are missing.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Two-Nominee Vote (Standard Eviction)</h2>
+    <button onclick="testTwoNominee()">Start Two-Nominee Vote</button>
+    <button onclick="cleanup()">Cleanup</button>
+    <div id="twoNomineeContainer" class="test-container"></div>
+    <div id="twoNomineeStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Triple Eviction (Three Nominees)</h2>
+    <button onclick="testTripleNominee()">Start Triple Eviction Vote</button>
+    <button onclick="cleanup()">Cleanup</button>
+    <div id="tripleNomineeContainer" class="test-container"></div>
+    <div id="tripleNomineeStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: LV2 API Method Checks</h2>
+    <button onclick="testAPIAvailability()">Check API Methods</button>
+    <div id="apiStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Log</h2>
+    <div id="consoleLog" class="status" style="max-height: 200px; overflow-y: auto;"></div>
+  </div>
+
+  <!-- Load lv2-shim -->
+  <script src="js/ui/lv2-shim.js"></script>
+
+  <!-- Mock global helpers for testing -->
+  <script>
+    // Mock window.game and helper functions
+    window.game = window.game || {};
+    window.game.bus = {
+      emit: function(event, data) {
+        logConsole('Event emitted: ' + event, 'info');
+      }
+    };
+
+    window.getP = function(id) {
+      const players = {
+        1: { name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice' },
+        2: { name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob' },
+        3: { name: 'Carol', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=carol' }
+      };
+      return players[id];
+    };
+
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : 'Unknown';
+    };
+
+    function logConsole(msg, type = 'info') {
+      const log = document.getElementById('consoleLog');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = new Date().toLocaleTimeString() + ': ' + msg;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function updateStatus(containerId, message, type = 'info') {
+      const statusEl = document.getElementById(containerId);
+      statusEl.innerHTML = `<span class="${type}">${message}</span>`;
+    }
+
+    function cleanup() {
+      if (window.lv2 && window.lv2.cleanup) {
+        window.lv2.cleanup();
+        logConsole('Cleanup called', 'info');
+      }
+      // Also clear containers
+      document.getElementById('twoNomineeContainer').innerHTML = '';
+      document.getElementById('tripleNomineeContainer').innerHTML = '';
+    }
+
+    function testTwoNominee() {
+      logConsole('=== Starting Two-Nominee Test ===', 'info');
+      cleanup();
+
+      // Mock container override for this test
+      const originalFindContainer = window.lv2.init;
+      
+      // Initialize lv2 with two nominees
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2
+      });
+
+      logConsole('lv2.init called with Alice and Bob', 'success');
+
+      // Create CTA bar
+      window.lv2.createCtaBar({
+        enabled: true,
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2,
+        onVote: function(nomineeId) {
+          const name = window.safeName(nomineeId);
+          logConsole('VOTE CAST for nominee ID: ' + nomineeId + ' (' + name + ')', 'success');
+          updateStatus('twoNomineeStatus', 'Vote successfully cast for ' + name + '!', 'success');
+          setTimeout(() => {
+            window.lv2.finish();
+            logConsole('lv2.finish called', 'info');
+          }, 1000);
+        }
+      });
+
+      updateStatus('twoNomineeStatus', 'Two-nominee vote UI rendered. Click a button to vote.', 'info');
+    }
+
+    function testTripleNominee() {
+      logConsole('=== Starting Triple Nominee Test ===', 'info');
+      cleanup();
+
+      // Initialize triple nominee UI
+      window.lv2.initTriple({
+        nominees: [
+          { id: 1, name: 'Alice' },
+          { id: 2, name: 'Bob' },
+          { id: 3, name: 'Carol' }
+        ],
+        onVote: function(nomineeId) {
+          const name = window.safeName(nomineeId);
+          logConsole('TRIPLE VOTE CAST for nominee ID: ' + nomineeId + ' (' + name + ')', 'success');
+          updateStatus('tripleNomineeStatus', 'Vote successfully cast for ' + name + '!', 'success');
+          setTimeout(() => {
+            window.lv2.finish();
+            logConsole('lv2.finish called', 'info');
+          }, 1000);
+        }
+      });
+
+      updateStatus('tripleNomineeStatus', 'Triple nominee vote UI rendered. Click a card to vote.', 'info');
+    }
+
+    function testAPIAvailability() {
+      logConsole('=== Checking LV2 API Methods ===', 'info');
+      
+      const requiredMethods = [
+        'init',
+        'initTriple',
+        'createCtaBar',
+        'setTurn',
+        'pushVote',
+        'finish',
+        'cleanup',
+        'updateCtaBar',
+        'hideCtaBar',
+        'hideCtasTriple',
+        'beginResultCardPhase',
+        'showInlineCard',
+        'enterExternalOverlayMode'
+      ];
+
+      let allPresent = true;
+      let results = '<h3>API Method Check Results:</h3><ul>';
+
+      requiredMethods.forEach(method => {
+        const exists = window.lv2 && typeof window.lv2[method] !== 'undefined';
+        const status = exists ? '✓' : '✗';
+        const className = exists ? 'success' : 'error';
+        results += `<li class="${className}">${status} lv2.${method}${exists ? '' : ' (MISSING)'}</li>`;
+        if (!exists) allPresent = false;
+        logConsole(`${status} lv2.${method}`, exists ? 'success' : 'error');
+      });
+
+      results += '</ul>';
+      
+      if (allPresent) {
+        results += '<p class="success"><strong>✓ All required methods are present!</strong></p>';
+        logConsole('All required API methods are present', 'success');
+      } else {
+        results += '<p class="error"><strong>✗ Some methods are missing!</strong></p>';
+        logConsole('Some API methods are missing', 'error');
+      }
+
+      document.getElementById('apiStatus').innerHTML = results;
+    }
+
+    // Auto-run API check on load
+    window.addEventListener('load', () => {
+      logConsole('Page loaded, lv2-shim initialized', 'success');
+      if (window.lv2) {
+        logConsole('window.lv2 is available', 'success');
+        logConsole('window.lv2.enabled = ' + window.lv2.enabled, 'info');
+      } else {
+        logConsole('window.lv2 is NOT available!', 'error');
+      }
+    });
+  </script>
+</body>
+</html>
