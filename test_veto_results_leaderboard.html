@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test: Veto Results Leaderboard</title>
+  <title>Test: Veto Results Top-3 Display</title>
   <link rel="stylesheet" href="css/veto-results.css">
   <style>
     body {
@@ -48,6 +48,12 @@
       background: linear-gradient(135deg, rgba(45, 68, 90, 0.9) 0%, rgba(30, 48, 65, 0.9) 100%);
       border-color: rgba(120, 180, 240, 0.8);
     }
+    .btn-ffwd {
+      background: linear-gradient(135deg, rgba(80, 40, 80, 0.8) 0%, rgba(55, 25, 55, 0.8) 100%);
+    }
+    .btn-ffwd:hover {
+      background: linear-gradient(135deg, rgba(90, 45, 90, 0.9) 0%, rgba(65, 30, 65, 0.9) 100%);
+    }
     .test-tv {
       position: relative;
       width: 100%;
@@ -55,7 +61,7 @@
       background: #1a2937;
       border: 2px solid rgba(120, 180, 240, 0.3);
       border-radius: 12px;
-      overflow: hidden;
+      overflow: visible;
     }
     .test-results {
       margin-top: 20px;
@@ -77,12 +83,13 @@
 <body>
   <div class="test-container">
     <div class="test-header">
-      <h1>🛡️ Veto Results Leaderboard Test</h1>
-      <p>This test validates the new full veto competition results display.</p>
+      <h1>🛡️ Veto Results Top-3 Display Test</h1>
+      <p>This test validates the top-3 veto competition results with auto-dismiss (5s) and FFWD close behavior.</p>
       <div class="test-controls">
-        <button onclick="testBasicRender()">Test Basic Render</button>
-        <button onclick="testWithMockPlayers()">Test with Mock Players</button>
-        <button onclick="testLargeGroup()">Test Large Group (10 players)</button>
+        <button onclick="testTop3Render()">Test Top-3 Display</button>
+        <button onclick="testAutoDismiss()">Test Auto-Dismiss (5s)</button>
+        <button onclick="testLargeGroup()">Test Large Group (shows top 3 only)</button>
+        <button class="btn-ffwd" onclick="triggerFFWD()">⏭️ Test FFWD Close</button>
         <button onclick="clearResults()">Clear</button>
       </div>
     </div>
@@ -151,32 +158,8 @@
 
   <script>
     // Test functions
-    function testBasicRender() {
-      log('Testing basic render with 3 players...');
-      
-      const scores = {
-        1: 85.5,
-        2: 92.3,
-        3: 78.0
-      };
-      
-      const participants = [1, 2, 3];
-      
-      try {
-        const result = window.VetoResultsUI.renderVetoCompResults(scores, participants);
-        if (result) {
-          log('✓ Basic render successful', 'success');
-          log('Winner: Bob (92.3), 2nd: Alice (85.5), 3rd: Charlie (78.0)');
-        } else {
-          log('✗ Render returned null', 'error');
-        }
-      } catch (e) {
-        log('✗ Error: ' + e.message, 'error');
-      }
-    }
-
-    function testWithMockPlayers() {
-      log('Testing with 5 mock players...');
+    function testTop3Render() {
+      log('Testing top-3 display with 5 players (only top 3 should show)...');
       
       const scores = {
         1: 75.2,
@@ -189,10 +172,51 @@
       const participants = [1, 2, 3, 4, 5];
       
       try {
-        const result = window.VetoResultsUI.renderVetoCompResults(scores, participants);
+        const result = window.VetoResultsUI.renderVetoCompResults(scores, participants, {
+          maxResults: 3,
+          autoDismissMs: 5000
+        });
         if (result) {
-          log('✓ Mock players render successful', 'success');
-          log('Winner: Charlie (92.5), Last: Eve (70.3)');
+          log('✓ Top-3 render successful', 'success');
+          log('Expected: Charlie (1st, 92.5), Bob (2nd, 88.9), Diana (3rd, 81.0)');
+          log('Panel will auto-dismiss in 5 seconds');
+        } else {
+          log('✗ Render returned null', 'error');
+        }
+      } catch (e) {
+        log('✗ Error: ' + e.message, 'error');
+      }
+    }
+
+    function testAutoDismiss() {
+      log('Testing auto-dismiss behavior...');
+      
+      const scores = {
+        1: 85.5,
+        2: 92.3,
+        3: 78.0
+      };
+      
+      const participants = [1, 2, 3];
+      
+      try {
+        const result = window.VetoResultsUI.renderVetoCompResults(scores, participants, {
+          maxResults: 3,
+          autoDismissMs: 5000
+        });
+        if (result) {
+          log('✓ Panel displayed', 'success');
+          log('⏱️ Panel will auto-dismiss in 5 seconds...');
+          
+          // Check if panel still exists after 5.5 seconds
+          setTimeout(function() {
+            const panel = document.querySelector('.veto-comp-results');
+            if (!panel) {
+              log('✓ Auto-dismiss successful - panel removed', 'success');
+            } else {
+              log('✗ Auto-dismiss failed - panel still present', 'error');
+            }
+          }, 5500);
         } else {
           log('✗ Render returned null', 'error');
         }
@@ -202,7 +226,7 @@
     }
 
     function testLargeGroup() {
-      log('Testing with 10 players (large group)...');
+      log('Testing with 10 players (should only show top 3)...');
       
       const scores = {};
       const participants = [];
@@ -213,15 +237,46 @@
       }
       
       try {
-        const result = window.VetoResultsUI.renderVetoCompResults(scores, participants);
+        const result = window.VetoResultsUI.renderVetoCompResults(scores, participants, {
+          maxResults: 3,
+          autoDismissMs: 5000
+        });
         if (result) {
           log('✓ Large group render successful', 'success');
-          log('10 players displayed with scrollable list');
+          log('Top 3 of 10 players displayed');
+          const tiles = result.querySelectorAll('.comp-player-tile');
+          log('Tiles rendered: ' + tiles.length + ' (should be 3)');
+          if (tiles.length === 3) {
+            log('✓ Correct number of tiles displayed', 'success');
+          } else {
+            log('✗ Expected 3 tiles, got ' + tiles.length, 'error');
+          }
         } else {
           log('✗ Render returned null', 'error');
         }
       } catch (e) {
         log('✗ Error: ' + e.message, 'error');
+      }
+    }
+
+    function triggerFFWD() {
+      log('Testing FFWD close behavior...');
+      const panel = document.querySelector('.veto-comp-results');
+      if (panel) {
+        log('Panel found, dispatching fastForwardPressed event...');
+        window.dispatchEvent(new Event('fastForwardPressed'));
+        
+        // Check if panel was removed after a short delay
+        setTimeout(function() {
+          const stillExists = document.querySelector('.veto-comp-results');
+          if (!stillExists) {
+            log('✓ FFWD close successful - panel removed', 'success');
+          } else {
+            log('✗ FFWD close failed - panel still present', 'error');
+          }
+        }, 400);
+      } else {
+        log('⚠ No panel to close. Run a test first.', 'error');
       }
     }
 
@@ -238,6 +293,7 @@
       if (window.VetoResultsUI) {
         log('renderVetoCompResults available: ' + (typeof window.VetoResultsUI.renderVetoCompResults === 'function' ? 'YES' : 'NO'));
       }
+      log('Test ready. Click a button to test behavior.');
     });
   </script>
 </body>
