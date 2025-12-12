@@ -6,6 +6,14 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const screenshotDir = path.join(__dirname, 'screenshots');
+
+// Helper function to ensure screenshot directory exists
+function ensureScreenshotDir() {
+  if (!fs.existsSync(screenshotDir)) {
+    fs.mkdirSync(screenshotDir, { recursive: true });
+  }
+}
 
 /**
  * Eviction Carousel Tests
@@ -29,8 +37,8 @@ test.describe('Eviction Carousel', () => {
     // Wait for page to load
     await page.waitForLoadState('domcontentloaded');
     
-    // Wait for carousel module to load
-    await page.waitForFunction(() => window.EvictionCarousel && typeof window.EvictionCarousel.render === 'function', { timeout: 10000 });
+    // Wait for carousel module to load (5s timeout is reasonable for local files)
+    await page.waitForFunction(() => window.EvictionCarousel && typeof window.EvictionCarousel.render === 'function', { timeout: 5000 });
   });
 
   test('should render carousel with 4 nominees', async ({ page }) => {
@@ -55,10 +63,7 @@ test.describe('Eviction Carousel', () => {
     }
 
     // Take screenshot
-    const screenshotDir = path.join(__dirname, 'screenshots');
-    if (!fs.existsSync(screenshotDir)) {
-      fs.mkdirSync(screenshotDir, { recursive: true });
-    }
+    ensureScreenshotDir();
     await page.screenshot({ 
       path: path.join(screenshotDir, 'eviction-carousel-4-nominees.png'),
       fullPage: false
@@ -80,10 +85,7 @@ test.describe('Eviction Carousel', () => {
     await expect(items).toHaveCount(8);
 
     // Take screenshot
-    const screenshotDir = path.join(__dirname, 'screenshots');
-    if (!fs.existsSync(screenshotDir)) {
-      fs.mkdirSync(screenshotDir, { recursive: true });
-    }
+    ensureScreenshotDir();
     await page.screenshot({ 
       path: path.join(screenshotDir, 'eviction-carousel-8-nominees.png'),
       fullPage: false
@@ -112,10 +114,7 @@ test.describe('Eviction Carousel', () => {
     await expect(evictButton).toBeVisible();
 
     // Take screenshot of selected state
-    const screenshotDir = path.join(__dirname, 'screenshots');
-    if (!fs.existsSync(screenshotDir)) {
-      fs.mkdirSync(screenshotDir, { recursive: true });
-    }
+    ensureScreenshotDir();
     await page.screenshot({ 
       path: path.join(screenshotDir, 'eviction-carousel-selected.png'),
       fullPage: false
@@ -237,10 +236,7 @@ test.describe('Eviction Carousel', () => {
     await expect(evictButton).toBeVisible();
 
     // Take mobile screenshot
-    const screenshotDir = path.join(__dirname, 'screenshots');
-    if (!fs.existsSync(screenshotDir)) {
-      fs.mkdirSync(screenshotDir, { recursive: true });
-    }
+    ensureScreenshotDir();
     await page.screenshot({ 
       path: path.join(screenshotDir, 'eviction-carousel-mobile.png'),
       fullPage: false
@@ -366,10 +362,7 @@ test.describe('lv2-shim Integration', () => {
     await expect(items).toHaveCount(2);
 
     // Take screenshot
-    const screenshotDir = path.join(__dirname, 'screenshots');
-    if (!fs.existsSync(screenshotDir)) {
-      fs.mkdirSync(screenshotDir, { recursive: true });
-    }
+    ensureScreenshotDir();
     await page.screenshot({ 
       path: path.join(screenshotDir, 'lv2-shim-carousel.png'),
       fullPage: false

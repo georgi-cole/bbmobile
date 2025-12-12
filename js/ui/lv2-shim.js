@@ -28,18 +28,22 @@
     state.nominees = [];
     if (config.leftName && config.leftId !== null && config.leftId !== undefined) {
       const leftPlayer = global.getP ? global.getP(config.leftId) : null;
+      // Sanitize name for URL to prevent injection
+      const safeName = String(config.leftName).replace(/[^\w\s-]/g, '').substring(0, 50);
       state.nominees.push({
         id: config.leftId,
         name: config.leftName,
-        photo: leftPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(config.leftName)}`
+        photo: leftPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName)}`
       });
     }
     if (config.rightName && config.rightId !== null && config.rightId !== undefined) {
       const rightPlayer = global.getP ? global.getP(config.rightId) : null;
+      // Sanitize name for URL to prevent injection
+      const safeName = String(config.rightName).replace(/[^\w\s-]/g, '').substring(0, 50);
       state.nominees.push({
         id: config.rightId,
         name: config.rightName,
-        photo: rightPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(config.rightName)}`
+        photo: rightPlayer?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName)}`
       });
     }
 
@@ -189,7 +193,7 @@
 
     if (state.container && state.container.parentNode) {
       try {
-        state.container.parentNode.removeChild(state.container);
+        state.container.remove();
       } catch (e) {
         console.debug('[lv2-shim] Could not remove container:', e);
       }
