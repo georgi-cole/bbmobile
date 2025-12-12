@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juror Return Overlay - Defensive Mount Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2.2rem;
+      color: #00e0cc;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .info-section {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .info-section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      color: #00e0cc;
+    }
+    
+    .info-section p {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    
+    .info-section ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .info-section li {
+      padding: 6px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+    
+    .info-section li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00e0cc;
+      font-weight: bold;
+    }
+    
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    
+    button.secondary {
+      background: linear-gradient(135deg, #3a5d7c 0%, #2a4d6c 100%);
+      color: #e8f4ff;
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff3366 0%, #cc0033 100%);
+      color: #fff;
+    }
+    
+    .demo-panel {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .demo-panel h3 {
+      font-size: 1.1rem;
+      color: #00e0cc;
+      margin-bottom: 16px;
+    }
+    
+    .status-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+    
+    .status-log .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .status-log .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .status-log .success { color: #00e0cc; }
+    .status-log .error { color: #ff6b8a; }
+    .status-log .info { color: #8fb4d4; }
+    
+    #panel {
+      min-height: 50px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+    }
+    
+    .minigame-host {
+      background: rgba(0, 224, 204, 0.15);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    .minigame-host h3 {
+      color: #00e0cc;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗳️ Juror Return Overlay - Defensive Mount Test</h1>
+    
+    <div class="info-section">
+      <h2>Test Purpose</h2>
+      <p>This test verifies the <strong>defensive mounting behavior</strong> of the Juror Return overlay:</p>
+      <ul>
+        <li>Tests clone-first behavior (original panel stays intact)</li>
+        <li>Verifies defensive API mounting (tries IntermissionCard, livevoteHelpers, CardManager)</li>
+        <li>Falls back to Fans' Favorite host selectors gracefully</li>
+        <li>Tests debug hook: ?juror_debug=1 auto-shows overlay</li>
+        <li>Verifies local-only quick-vote (no network calls)</li>
+        <li>Confirms safe cleanup on hide</li>
+      </ul>
+    </div>
+    
+    <div class="info-section">
+      <h2>Test Instructions</h2>
+      <ol style="padding-left: 20px; list-style: decimal;">
+        <li>Click "Add Mock Juror Panel" to create a test panel</li>
+        <li>Click "Show Overlay" - watch console for mount method used</li>
+        <li>Verify the overlay appears with cloned content</li>
+        <li>Try Quick Vote with juror names (Juror 1-4)</li>
+        <li>Close overlay and verify original panel still exists</li>
+        <li>Try "Test Debug Hook" to simulate ?juror_debug=1</li>
+        <li>Check Status Log for mount method and behavior verification</li>
+      </ol>
+    </div>
+    
+    <div class="controls">
+      <button id="showOverlay">🎬 Show Overlay</button>
+      <button id="hideOverlay" class="secondary">🚪 Hide Overlay</button>
+      <button id="addJuryPanel" class="secondary">➕ Add Mock Juror Panel</button>
+      <button id="removeJuryPanel" class="danger">➖ Remove Juror Panel</button>
+      <button id="testDebugHook" class="secondary">🐛 Test Debug Hook</button>
+      <button id="testProgressionEvent" class="secondary">📡 Test Progression Event</button>
+      <button id="clearLog" class="danger">🗑️ Clear Log</button>
+    </div>
+    
+    <div class="demo-panel">
+      <h3>Status Log (Mount Method & Behavior Verification)</h3>
+      <div class="status-log" id="statusLog"></div>
+    </div>
+    
+    <!-- Panel where juror UI normally appears -->
+    <div id="panel"></div>
+  </div>
+  
+  <!-- Load juror return overlay module -->
+  <script src="js/ui/juror-return-overlay.js"></script>
+  
+  <!-- Load progression-events module -->
+  <script src="js/progression-events.js"></script>
+  
+  <script>
+    // Mock game data
+    window.game = {
+      juryHouse: [1, 2, 3, 4],
+      players: [
+        { id: 1, name: 'Juror 1', evicted: true },
+        { id: 2, name: 'Juror 2', evicted: true },
+        { id: 3, name: 'Juror 3', evicted: true },
+        { id: 4, name: 'Juror 4', evicted: true },
+        { id: 5, name: 'Player 5', evicted: false },
+        { id: 6, name: 'Player 6', evicted: false }
+      ],
+      humanId: 5
+    };
+    
+    // Helper functions
+    window.getP = (id) => {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.safeName = (id) => {
+      const player = window.getP(id);
+      return player ? player.name : `Player ${id}`;
+    };
+    
+    // Status log utility
+    const statusLog = document.getElementById('statusLog');
+    
+    function addLogEntry(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      statusLog.appendChild(entry);
+      statusLog.scrollTop = statusLog.scrollHeight;
+    }
+    
+    // Intercept console.log to capture mount method
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+      originalConsoleLog.apply(console, args);
+      const message = args.join(' ');
+      if (message.includes('[JurorReturnOverlay]')) {
+        const type = message.includes('✓') ? 'success' : 
+                    message.includes('Error') || message.includes('failed') ? 'error' : 'info';
+        addLogEntry(message, type);
+      }
+    };
+    
+    const originalConsoleWarn = console.warn;
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      const message = args.join(' ');
+      if (message.includes('[JurorReturnOverlay]')) {
+        addLogEntry(message, 'error');
+      }
+    };
+    
+    const originalConsoleInfo = console.info;
+    console.info = function(...args) {
+      originalConsoleInfo.apply(console, args);
+      const message = args.join(' ');
+      if (message.includes('[JurorReturnOverlay]')) {
+        addLogEntry(message, 'success');
+      }
+    };
+    
+    // Add mock juror panel (America's Vote)
+    function addMockJurorPanel() {
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      
+      const container = document.createElement('div');
+      container.style.cssText = `
+        background: linear-gradient(135deg, rgba(13,27,42,0.95), rgba(27,38,59,0.95));
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        max-width: 900px;
+        margin: 0 auto;
+      `;
+      
+      container.innerHTML = `
+        <div style="text-align:center;margin-bottom:28px;">
+          <h2 style="font-size:2rem;font-weight:700;margin:0 0 8px 0;color:#00e0cc;">🗳️ America's Vote</h2>
+          <div style="font-size:1.1rem;color:#8fb4d4;font-weight:500;">Which juror deserves a second chance?</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;">
+          ${window.game.juryHouse.map(id => {
+            const player = window.getP(id);
+            return `
+              <div data-j-id="${id}" style="
+                background:rgba(20,35,55,0.8);
+                border-radius:16px;
+                padding:20px;
+                display:flex;
+                flex-direction:column;
+                align-items:center;
+                gap:12px;
+                border:1px solid rgba(143,211,255,0.2);
+              ">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=${player.name}" 
+                     alt="${player.name}" 
+                     style="width:120px;height:120px;border-radius:50%;border:3px solid #00e0cc;">
+                <div style="font-size:1.1rem;font-weight:700;color:#e8f4ff;">${player.name}</div>
+                <div style="font-size:1.5rem;font-weight:700;color:#00e0cc;">${Math.floor(Math.random() * 30)}%</div>
+                <div style="font-size:0.85rem;color:#8fb4d4;">of votes</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+      
+      panel.appendChild(container);
+      addLogEntry('Mock juror panel created in #panel', 'success');
+    }
+    
+    function removeJurorPanel() {
+      document.getElementById('panel').innerHTML = '';
+      addLogEntry('Juror panel removed', 'info');
+    }
+    
+    // Button event listeners
+    document.getElementById('showOverlay').addEventListener('click', () => {
+      addLogEntry('Calling JurorReturnOverlay.show()...', 'info');
+      window.JurorReturnOverlay.show();
+    });
+    
+    document.getElementById('hideOverlay').addEventListener('click', () => {
+      addLogEntry('Calling JurorReturnOverlay.hide()...', 'info');
+      window.JurorReturnOverlay.hide();
+    });
+    
+    document.getElementById('addJuryPanel').addEventListener('click', () => {
+      addMockJurorPanel();
+    });
+    
+    document.getElementById('removeJuryPanel').addEventListener('click', () => {
+      removeJurorPanel();
+    });
+    
+    document.getElementById('testDebugHook').addEventListener('click', () => {
+      addLogEntry('Calling JurorReturnOverlay.debugShow()...', 'info');
+      window.JurorReturnOverlay.debugShow();
+    });
+    
+    document.getElementById('testProgressionEvent').addEventListener('click', () => {
+      addLogEntry('Calling ProgressionEvents.onJurorsReturn()...', 'info');
+      if (window.ProgressionEvents && window.ProgressionEvents.onJurorsReturn) {
+        window.ProgressionEvents.onJurorsReturn({ test: true });
+      } else {
+        addLogEntry('ProgressionEvents.onJurorsReturn not available', 'error');
+      }
+    });
+    
+    document.getElementById('clearLog').addEventListener('click', () => {
+      statusLog.innerHTML = '';
+      addLogEntry('Log cleared', 'info');
+    });
+    
+    // Initialize
+    addLogEntry('Test page loaded', 'success');
+    addLogEntry('JurorReturnOverlay available: ' + (typeof window.JurorReturnOverlay !== 'undefined'), 
+                typeof window.JurorReturnOverlay !== 'undefined' ? 'success' : 'error');
+    addLogEntry('ProgressionEvents available: ' + (typeof window.ProgressionEvents !== 'undefined'), 
+                typeof window.ProgressionEvents !== 'undefined' ? 'success' : 'error');
+    
+    // Auto-add panel for easier testing
+    setTimeout(() => {
+      addMockJurorPanel();
+    }, 100);
+  </script>
+</body>
+</html>
