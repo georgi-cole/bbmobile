@@ -179,14 +179,14 @@
 
 /* Settings button specific styling */
 .compact-hud-chip.settings-button {
-  /* Hide on desktop - only show on mobile */
-  display: none;
+  /* Show on desktop (≥900px), handled by media query below */
+  display: inline-flex;
 }
 
 /* Sound button specific styling */
 .compact-hud-chip.sound-button {
-  /* Hide on desktop - only show on mobile */
-  display: none;
+  /* Show on desktop (≥900px), handled by media query below */
+  display: inline-flex;
 }
 
 /* Sound button when muted (aria-pressed="true") */
@@ -315,6 +315,23 @@
 @media (prefers-contrast: high) {
   .compact-hud-chip {
     border: 2px solid currentColor;
+  }
+}
+
+/* Desktop/Laptop: Show Settings and Sound buttons next to DR button (≥900px) */
+@media (min-width: 900px) {
+  .compact-hud-chip.settings-button,
+  .compact-hud-chip.sound-button {
+    display: inline-flex;
+  }
+}
+
+/* Mobile/Tablet: Hide Settings and Sound buttons from compact HUD (<900px) */
+/* On mobile, these controls are managed by mobileControlsLayout.js */
+@media (max-width: 899px) {
+  .compact-hud-chip.settings-button,
+  .compact-hud-chip.sound-button {
+    display: none;
   }
 }
 
