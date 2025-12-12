@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Eviction Carousel UI</title>
+  <link rel="stylesheet" href="css/eviction.css">
+  <style>
+    body { 
+      font-family: system-ui, -apple-system, sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+      background: #f5f5f5;
+    }
+    #tv { 
+      background: white; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+      min-height: 400px;
+      margin-bottom: 20px;
+    }
+    .controls { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+      margin-bottom: 20px;
+    }
+    .controls button { 
+      padding: 10px 20px; 
+      margin: 5px; 
+      cursor: pointer; 
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+    }
+    .controls button:hover { background: #f0f0f0; }
+    #log { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry { 
+      padding: 4px 0; 
+      border-bottom: 1px solid #eee; 
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-time { color: #666; margin-right: 8px; }
+    .log-event { color: #0066cc; font-weight: bold; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Eviction Carousel UI Test</h1>
+  
+  <div class="controls">
+    <button onclick="testRender()">Render Carousel (4 nominees)</button>
+    <button onclick="testRenderMany()">Render Carousel (8 nominees)</button>
+    <button onclick="testTeardown()">Teardown</button>
+    <button onclick="clearLog()">Clear Log</button>
+  </div>
+
+  <div id="tv" data-faux-tv></div>
+
+  <h2>Event Log</h2>
+  <div id="log"></div>
+
+  <script src="js/ui/evictionCarousel.js"></script>
+  <script>
+    // Create minimal game bus for event logging
+    window.game = {
+      bus: {
+        emit: function(eventName, data) {
+          logEvent(eventName, data);
+        }
+      }
+    };
+
+    // Create closeAllVoteUI stub
+    window.closeAllVoteUI = function() {
+      logEvent('closeAllVoteUI', { called: true });
+    };
+
+    function logEvent(eventName, data) {
+      const log = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="log-time">${time}</span><span class="log-event">${eventName}</span>${JSON.stringify(data)}`;
+      
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function testRender() {
+      const nominees = [
+        { id: 1, name: 'Alice', photo: 'https://via.placeholder.com/72/FF6B6B/FFFFFF?text=A' },
+        { id: 2, name: 'Bob', photo: 'https://via.placeholder.com/72/4ECDC4/FFFFFF?text=B' },
+        { id: 3, name: 'Charlie', photo: 'https://via.placeholder.com/72/45B7D1/FFFFFF?text=C' },
+        { id: 4, name: 'Diana', photo: 'https://via.placeholder.com/72/96CEB4/FFFFFF?text=D' }
+      ];
+
+      const container = document.getElementById('tv');
+      
+      EvictionCarousel.render(container, nominees, {
+        onVote: async (nomineeId) => {
+          logEvent('onVote callback', { nomineeId });
+          await new Promise(resolve => setTimeout(resolve, 500));
+          logEvent('Vote completed', { nomineeId });
+          EvictionCarousel.teardown();
+        }
+      });
+      
+      logEvent('Render complete', { nominees: nominees.length });
+    }
+
+    function testRenderMany() {
+      const nominees = [
+        { id: 1, name: 'Alice', photo: 'https://via.placeholder.com/72/FF6B6B/FFFFFF?text=A' },
+        { id: 2, name: 'Bob', photo: 'https://via.placeholder.com/72/4ECDC4/FFFFFF?text=B' },
+        { id: 3, name: 'Charlie', photo: 'https://via.placeholder.com/72/45B7D1/FFFFFF?text=C' },
+        { id: 4, name: 'Diana', photo: 'https://via.placeholder.com/72/96CEB4/FFFFFF?text=D' },
+        { id: 5, name: 'Eve', photo: 'https://via.placeholder.com/72/FFEAA7/333333?text=E' },
+        { id: 6, name: 'Frank', photo: 'https://via.placeholder.com/72/DFE6E9/333333?text=F' },
+        { id: 7, name: 'Grace', photo: 'https://via.placeholder.com/72/74B9FF/FFFFFF?text=G' },
+        { id: 8, name: 'Henry', photo: 'https://via.placeholder.com/72/A29BFE/FFFFFF?text=H' }
+      ];
+
+      const container = document.getElementById('tv');
+      
+      EvictionCarousel.render(container, nominees, {
+        onVote: async (nomineeId) => {
+          logEvent('onVote callback', { nomineeId });
+          await new Promise(resolve => setTimeout(resolve, 500));
+          logEvent('Vote completed', { nomineeId });
+          EvictionCarousel.teardown();
+        }
+      });
+      
+      logEvent('Render complete', { nominees: nominees.length });
+    }
+
+    function testTeardown() {
+      EvictionCarousel.teardown();
+      logEvent('Manual teardown', { success: true });
+    }
+
+    // Log page load
+    logEvent('Page loaded', { ready: true });
+  </script>
+</body>
+</html>
