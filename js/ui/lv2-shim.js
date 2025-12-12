@@ -10,6 +10,7 @@
   const state = {
     container: null,
     nominees: [],
+    nomineeMap: new Map(), // Fast ID-to-nominee lookup
     onVoteCallback: null,
     isActive: false,
     voteFeed: [], // Track incoming votes for display
@@ -39,23 +40,29 @@
       return;
     }
 
-    // Build nominees array from config
+    // Build nominees array and map from config
     state.nominees = [];
+    state.nomineeMap.clear();
+    
     if (config.leftName && config.leftId !== null && config.leftId !== undefined) {
       const leftPlayer = global.getP ? global.getP(config.leftId) : null;
-      state.nominees.push({
+      const leftNominee = {
         id: config.leftId,
         name: config.leftName,
         photo: leftPlayer?.avatar || getDicebearUrl(config.leftName)
-      });
+      };
+      state.nominees.push(leftNominee);
+      state.nomineeMap.set(config.leftId, leftNominee);
     }
     if (config.rightName && config.rightId !== null && config.rightId !== undefined) {
       const rightPlayer = global.getP ? global.getP(config.rightId) : null;
-      state.nominees.push({
+      const rightNominee = {
         id: config.rightId,
         name: config.rightName,
         photo: rightPlayer?.avatar || getDicebearUrl(config.rightName)
-      });
+      };
+      state.nominees.push(rightNominee);
+      state.nomineeMap.set(config.rightId, rightNominee);
     }
 
     console.debug('[lv2-shim] Initialized with nominees:', state.nominees);
@@ -71,12 +78,14 @@
       return;
     }
 
-    // Store nominees and callback
+    // Store nominees, callback, and build map for fast lookups
     state.nominees = config.nominees.map(n => ({
       id: n.id,
       name: n.name || 'Unknown',
       photo: n.photo || getDicebearUrl(n.name || n.id)
     }));
+    state.nomineeMap.clear();
+    state.nominees.forEach(n => state.nomineeMap.set(n.id, n));
     state.onVoteCallback = config.onVote;
 
     // Find container
@@ -635,7 +644,7 @@
         
         const voterName = vote.voterName || 'Unknown';
         const targetName = vote.pick != null 
-          ? (state.nominees.find(n => n.id === vote.pick)?.name || 'Unknown')
+          ? (state.nomineeMap.get(vote.pick)?.name || 'Unknown')
           : 'Unknown';
         
         voteItem.textContent = `${voterName} voted to evict ${targetName}`;
@@ -696,6 +705,7 @@
     state.isActive = false;
     state.voteFeed = [];
     state.userCanVote = true;
+    state.nomineeMap.clear();
     console.debug('[lv2-shim] Cleanup complete');
   }
 
