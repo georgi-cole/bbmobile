@@ -96,6 +96,32 @@ NO CEREMONY - Skip directly to Final 4 eviction (unchanged)
 - ⏳ Manual QA pending
 - ⏳ Live game testing pending
 
+## Veto Competition Results Display
+
+### New Full Leaderboard Renderer
+
+The veto competition now displays a full leaderboard of all participants with their scores, matching the HOH competition results style.
+
+**Module:** `js/ui.veto-results.js`
+
+**Usage:**
+```javascript
+// Call with scores object/Map and participant IDs
+window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds);
+```
+
+**Features:**
+- Sorted leaderboard by score (descending)
+- Player avatars with rank badges
+- Winner highlighted with crown badge
+- Renders into TV overlay (#tvOverlay, #tv, or fallback to body)
+- Mobile-responsive design
+- Accessibility support (ARIA labels, focus management)
+
+**Styling:** `css/veto-results.css`
+
+**Fallback:** If `VetoResultsUI` is not loaded, the system falls back to the legacy tri-slot reveal (top 3 only).
+
 ## Next Steps
 
 1. **Manual QA Testing**
