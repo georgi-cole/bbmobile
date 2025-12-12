@@ -1047,14 +1047,17 @@
           var scoresObj = {};
           g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
           
-          // Render full leaderboard with all participants
-          console.info('[veto] Rendering full competition leaderboard');
-          window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds);
+          // Render top-3 leaderboard with auto-dismiss and FFWD support
+          console.info('[veto] Rendering top-3 competition leaderboard');
+          window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
+            maxResults: 3, 
+            autoDismissMs: 5000 
+          });
           
-          // Continue to ceremony after displaying results
+          // Continue to ceremony after auto-dismiss (5s + buffer)
           setTimeout(function(){
             handlePostVetoReveal();
-          }, 5000); // Show results for 5 seconds
+          }, 5200); // Buffer to account for auto-dismiss
         }catch(e){
           console.warn('[veto] VetoResultsUI error, using fallback reveal', e);
           // Fallback to legacy reveal

@@ -1,238 +1,144 @@
-// MODULE: ui.veto-results.js
-// Renders a full leaderboard-style results panel for veto competition results
-// Matches the HOH competition results display pattern with avatars, scores, and winner badge
-
+// js/ui.veto-results.js
 (function(global){
   'use strict';
 
-  // Helper to get player by ID (with defensive fallback)
-  function getPlayer(id){
+  function toId(x){ return +x; }
+
+  function getPlayerInfo(id){
     try{
-      if(global.getP && typeof global.getP === 'function'){
-        return global.getP(id);
+      var p = null;
+      if(global.getPlayerById && typeof global.getPlayerById === 'function'){
+        p = global.getPlayerById(+id);
+      } else if(global.getP && typeof global.getP === 'function'){
+        p = global.getP(+id);
       }
-      // Fallback: search in game.players
-      if(global.game && Array.isArray(global.game.players)){
-        return global.game.players.find(function(p){ return p.id === +id; });
-      }
-    }catch(e){
-      console.warn('[VetoResultsUI] getPlayer error:', e);
-    }
-    return null;
-  }
-
-  // Helper to get player name safely
-  function safeName(id){
-    try{
-      if(global.safeName && typeof global.safeName === 'function'){
-        return global.safeName(id);
-      }
-      const player = getPlayer(id);
-      return player ? (player.name || String(id)) : String(id);
-    }catch(e){
-      return String(id);
-    }
-  }
-
-  // Helper to resolve avatar URL
-  function resolveAvatarUrl(player, playerId){
-    try{
-      const resolveAvatar = (global.Game || global).resolveAvatar;
-      const getDicebearUrl = global.getDicebearUrl || function(seed){
-        return 'https://api.dicebear.com/6.x/bottts/svg?seed=' + encodeURIComponent(seed || 'player');
-      };
-
-      if(resolveAvatar && typeof resolveAvatar === 'function'){
-        return resolveAvatar(player || playerId);
-      }
-
-      if(player){
-        return player.avatar || player.img || player.photo || getDicebearUrl(player.name || String(playerId));
-      }
-
-      return getDicebearUrl(String(playerId));
-    }catch(e){
-      console.warn('[VetoResultsUI] resolveAvatarUrl error:', e);
-      return '';
-    }
-  }
-
-  /**
-   * Render veto competition results as a leaderboard
-   * @param {Object|Map} scoresObj - Scores map or object {playerId: score}
-   * @param {Array<number>} participantIds - Optional array of participant IDs (inferred from scores if not provided)
-   * @returns {HTMLElement|null} The created container element, or null if rendering fails or no participants
-   */
-  function renderVetoCompResults(scoresObj, participantIds){
-    try{
-      console.info('[VetoResultsUI] Rendering veto competition results');
-
-      // Normalize scores to plain object if Map
-      const scoresPlain = {};
-      if(scoresObj && typeof scoresObj.forEach === 'function'){
-        scoresObj.forEach(function(value, key){
-          scoresPlain[+key] = +value;
-        });
-      } else if(scoresObj && typeof scoresObj === 'object'){
-        Object.keys(scoresObj).forEach(function(key){
-          scoresPlain[+key] = +scoresObj[key];
-        });
-      }
-
-      // Determine participants (from provided list or infer from scores)
-      let participants = [];
-      if(Array.isArray(participantIds) && participantIds.length > 0){
-        participants = participantIds.map(function(id){ return +id; });
-      } else {
-        participants = Object.keys(scoresPlain).map(function(k){ return +k; });
-      }
-
-      if(participants.length === 0){
-        console.warn('[VetoResultsUI] No participants to display');
-        return null;
-      }
-
-      // Build sorted array of [id, score] pairs
-      const resultsArray = participants.map(function(id){
-        const score = scoresPlain[id] || 0;
-        return { id: +id, score: +score };
-      }).sort(function(a, b){
-        return b.score - a.score; // Sort descending by score
-      });
-
-      // Find target container (TV overlay or fallback to body)
-      let container = document.getElementById('tvOverlay');
-      if(!container || container.style.display === 'none'){
-        container = document.getElementById('tv');
-      }
-      if(!container){
-        container = document.body;
-      }
-
-      // Remove any existing veto comp results
-      const existing = container.querySelectorAll('.veto-comp-results');
-      for(let i = 0; i < existing.length; i++){
-        existing[i].remove();
-      }
-
-      // Create results container
-      const resultsContainer = document.createElement('div');
-      resultsContainer.className = 'comp-results veto-comp-results';
-      resultsContainer.setAttribute('role', 'region');
-      resultsContainer.setAttribute('aria-label', 'Veto Competition Results');
-
-      // Header
-      const header = document.createElement('div');
-      header.className = 'comp-results-header';
       
-      const title = document.createElement('h2');
-      title.textContent = 'Veto Competition Results 🛡️';
-      header.appendChild(title);
-      
-      resultsContainer.appendChild(header);
-
-      // Results list
-      const list = document.createElement('div');
-      list.className = 'comp-results-list';
-      list.setAttribute('role', 'list');
-
-      // Render each player tile
-      resultsArray.forEach(function(result, index){
-        const playerId = result.id;
-        const score = result.score;
-        const player = getPlayer(playerId);
-        const playerName = safeName(playerId);
-        const avatarUrl = resolveAvatarUrl(player, playerId);
-        const isWinner = (index === 0);
-
-        // Player tile
-        const tile = document.createElement('div');
-        tile.className = 'comp-player-tile' + (isWinner ? ' winner' : '');
-        tile.setAttribute('role', 'listitem');
-        tile.setAttribute('data-player-id', playerId);
-        if(isWinner){
-          tile.setAttribute('tabindex', '0');
-          tile.setAttribute('aria-label', playerName + ' - Winner - Score: ' + score.toFixed(1));
-        } else {
-          tile.setAttribute('aria-label', playerName + ' - Rank ' + (index + 1) + ' - Score: ' + score.toFixed(1));
-        }
-
-        // Rank badge
-        const rankBadge = document.createElement('div');
-        rankBadge.className = 'comp-rank';
-        rankBadge.textContent = String(index + 1);
-        rankBadge.setAttribute('aria-hidden', 'true');
-        tile.appendChild(rankBadge);
-
-        // Avatar
-        const avatar = document.createElement('img');
-        avatar.className = 'comp-avatar';
-        avatar.src = avatarUrl;
-        avatar.alt = playerName;
-        avatar.onerror = function(){
-          // Fallback to dicebear if avatar fails to load
-          if(global.getDicebearUrl){
-            this.src = global.getDicebearUrl(playerName);
-          }
+      if(p){
+        return {
+          id: +id,
+          name: p.name || ('Player ' + id),
+          avatarUrl: (p.avatar && p.avatar.url) || p.avatarUrl || p.avatar || null,
+          avatarHtml: (global.buildSmallAvatar ? global.buildSmallAvatar(+id) : null)
         };
-        tile.appendChild(avatar);
+      }
+    }catch(e){}
+    return { id: +id, name: ('Player ' + id), avatarUrl: null, avatarHtml: null };
+  }
 
-        // Meta section (name + score)
-        const meta = document.createElement('div');
-        meta.className = 'comp-meta';
+  function createPlayerTile(player, rank, isFirst){
+    const tile = document.createElement('div');
+    tile.className = 'comp-player-tile' + (isFirst ? ' first-place' : '');
+    tile.setAttribute('role','group');
+    tile.setAttribute('aria-label', `${rank}. ${player.name} — ${player.score}`);
 
-        const name = document.createElement('div');
-        name.className = 'comp-name';
-        name.textContent = playerName;
-        meta.appendChild(name);
+    const avatarHtml = player.avatarHtml || (player.avatarUrl ? `<img src="${player.avatarUrl}" alt="${player.name}">` : '<div class="avatar-fallback"></div>');
 
-        const scoreEl = document.createElement('div');
-        scoreEl.className = 'comp-score';
-        scoreEl.textContent = score.toFixed(1);
-        meta.appendChild(scoreEl);
+    tile.innerHTML = `\n      <div class="comp-rank">${rank}</div>\n      <div class="comp-avatar">${avatarHtml}</div>\n      <div class="comp-meta">\n        <div class="comp-name">${player.name}</div>\n        <div class="comp-score">${player.score}</div>\n      </div>\n      ${isFirst ? '<div class="comp-badge" aria-hidden="true">👑</div>' : ''}\n    `;
+    return tile;
+  }
 
-        tile.appendChild(meta);
+  function defaultFFwdSelectors(){
+    return [
+      '.btn-ffwd',
+      '.ffwd',
+      '.ffwd-btn',
+      '#ffwd',
+      '.player-ffwd',
+      '.tv-ffwd',
+      'button.ffwd'
+    ];
+  }
 
-        // Winner badge
-        if(isWinner){
-          const badge = document.createElement('div');
-          badge.className = 'comp-badge winner';
-          badge.textContent = '👑';
-          badge.setAttribute('aria-label', 'Winner');
-          tile.appendChild(badge);
-        }
+  function removePanel(panel){
+    if(!panel) return;
+    try{
+      const tid = panel.__vetoAutoDismissTimer;
+      if(tid) clearTimeout(tid);
+    }catch(e){}
+    try{
+      if(typeof panel.__ffwdCleanup === 'function') panel.__ffwdCleanup();
+    }catch(e){}
+    panel.classList.add('veto-results-hide');
+    panel.addEventListener('animationend', function onEnd(){
+      panel.removeEventListener('animationend', onEnd);
+      if(panel.parentNode) panel.parentNode.removeChild(panel);
+    });
+  }
 
-        list.appendChild(tile);
-      });
+  function attachFastForwardClose(panel, selectors){
+    selectors = selectors && selectors.length ? selectors : defaultFFwdSelectors();
+    var nodes = [];
+    try{ nodes = Array.from(document.querySelectorAll(selectors.join(','))); }catch(e){ nodes = []; }
+    const onClick = function(){ removePanel(panel); };
+    nodes.forEach(function(n){ try{ n.addEventListener('click', onClick); }catch(e){} });
 
-      resultsContainer.appendChild(list);
+    const onCustom = function(){ removePanel(panel); };
+    window.addEventListener('fastForwardPressed', onCustom);
+    window.addEventListener('ffwdPressed', onCustom);
 
-      // Append to container
-      container.appendChild(resultsContainer);
+    panel.__ffwdCleanup = function(){
+      nodes.forEach(function(n){ try{ n.removeEventListener('click', onClick); }catch(e){} });
+      try{ window.removeEventListener('fastForwardPressed', onCustom); }catch(e){}
+      try{ window.removeEventListener('ffwdPressed', onCustom); }catch(e){}
+      panel.__ffwdCleanup = null;
+    };
+  }
 
-      // Focus the winner tile for accessibility
-      setTimeout(function(){
-        const winnerTile = resultsContainer.querySelector('.comp-player-tile.winner');
-        if(winnerTile){
-          winnerTile.focus();
-        }
-      }, 100);
+  function renderVetoCompResults(scoresMap, participantIds, options){
+    options = options || {};
+    var maxResults = typeof options.maxResults === 'number' ? options.maxResults : 3;
+    var autoDismissMs = typeof options.autoDismissMs === 'number' ? options.autoDismissMs : 5000;
+    var ffwdSelectors = options.ffwdSelectors || null;
 
-      console.info('[VetoResultsUI] Results rendered successfully -', resultsArray.length, 'participants');
-      return resultsContainer;
-
-    }catch(e){
-      console.error('[VetoResultsUI] renderVetoCompResults error:', e);
-      return null;
+    var scoresObj = {};
+    if(scoresMap instanceof Map){
+      scoresMap.forEach(function(v,k){ scoresObj[+k] = v; });
+    } else if(scoresMap && typeof scoresMap === 'object'){
+      for(const k in scoresMap){ if(Object.prototype.hasOwnProperty.call(scoresMap,k)){ scoresObj[+k] = scoresMap[k]; } }
     }
+
+    var participants = Array.isArray(participantIds) ? participantIds.map(toId) : [];
+    if(participants.length === 0){ participants = Object.keys(scoresObj).map(function(k){ return +k; }); }
+
+    var arr = participants.map(function(id){ return { id: +id, score: Number(scoresObj[+id] != null ? scoresObj[+id] : (scoresObj[String(id)] || 0)) }; });
+    if(arr.length === 0){ console.warn('[veto-results] no participants/scores to show'); return null; }
+
+    arr.sort(function(a,b){ return b.score - a.score; });
+    var top = arr.slice(0, maxResults);
+
+    try{ var old = document.querySelectorAll('.veto-comp-results'); old && old.forEach(function(n){ try{ if(n.__vetoAutoDismissTimer) clearTimeout(n.__vetoAutoDismissTimer); }catch(e){} if(n.parentNode) n.parentNode.removeChild(n); }); }catch(e){}
+
+    const container = document.createElement('div');
+    container.className = 'veto-comp-results comp-results';
+    container.setAttribute('role','region');
+    container.setAttribute('aria-label','Veto competition results');
+
+    const header = document.createElement('div');
+    header.className = 'comp-results-header';
+    header.innerHTML = `<h3>Veto Competition</h3>`;
+    container.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'comp-results-list';
+    top.forEach(function(entry, idx){
+      const info = getPlayerInfo(entry.id);
+      const player = { id: entry.id, name: info.name, score: entry.score, avatarUrl: info.avatarUrl, avatarHtml: info.avatarHtml };
+      const tile = createPlayerTile(player, idx+1, idx===0);
+      list.appendChild(tile);
+    });
+    container.appendChild(list);
+
+    const tvContainer = document.getElementById('tvOverlay') || document.querySelector('#tvOverlay') || document.getElementById('tv') || document.body;
+    tvContainer.appendChild(container);
+
+    attachFastForwardClose(container, ffwdSelectors);
+
+    try{ const tid = setTimeout(function(){ removePanel(container); }, autoDismissMs); container.__vetoAutoDismissTimer = tid; }catch(e){}
+
+    return container;
   }
 
-  // Export to global namespace
-  if(!global.VetoResultsUI){
-    global.VetoResultsUI = {};
-  }
+  global.VetoResultsUI = global.VetoResultsUI || {};
   global.VetoResultsUI.renderVetoCompResults = renderVetoCompResults;
-
-  console.info('[VetoResultsUI] Module loaded');
 
 })(window);
