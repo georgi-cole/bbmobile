@@ -60,9 +60,8 @@
   /**
    * Render veto competition results as a leaderboard
    * @param {Object|Map} scoresObj - Scores map or object {playerId: score}
-   * @param {Array<number>} participantIds - Optional array of participant IDs
-   * @param {Object} options - Optional configuration
-   * @returns {HTMLElement|null} The created container element
+   * @param {Array<number>} participantIds - Optional array of participant IDs (inferred from scores if not provided)
+   * @returns {HTMLElement|null} The created container element, or null if rendering fails or no participants
    */
   function renderVetoCompResults(scoresObj, participantIds){
     try{
