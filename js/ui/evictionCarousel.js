@@ -68,7 +68,7 @@
     _opts: {},
 
     render(container, nominees, options) {
-      try { if (global.closeAllVoteUI) global.closeAllVoteUI(); } catch (e) { }
+      try { if (global.closeAllVoteUI) global.closeAllVoteUI(); } catch (e) { /* closeAllVoteUI may not exist */ }
 
       this.teardown();
       const root = ensureContainer(container || findTvRoot() || document.getElementById('panel') || document.body);
@@ -101,7 +101,7 @@
 
       try {
         global.game && global.game.bus && global.game.bus.emit && global.game.bus.emit('eviction:opened', { nominees: this._nominees });
-      } catch (e) { }
+      } catch (e) { /* game.bus may not exist */ }
     },
 
     selectNominee(id) {
@@ -119,13 +119,13 @@
       found.classList.add('selected');
       const avatar = found.querySelector('.' + AVATAR_CLASS);
       if (avatar) avatar.focus();
-      try { found.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch (e) { }
+      try { found.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch (e) { /* scrollIntoView options may not be supported */ }
 
       this._showEvictButton(found, id);
 
       try {
         global.game && global.game.bus && global.game.bus.emit && global.game.bus.emit('eviction:selected', { nomineeId: id });
-      } catch (e) { }
+      } catch (e) { /* game.bus may not exist */ }
 
       announce(this._root, `${found.querySelector('.' + NAME_CLASS).textContent} selected`);
     },
@@ -142,13 +142,13 @@
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
-          try { global.game && global.game.bus && global.game.bus.emit && global.game.bus.emit('eviction:vote', { nomineeId: id }); } catch (e) { }
+          try { global.game && global.game.bus && global.game.bus.emit && global.game.bus.emit('eviction:vote', { nomineeId: id }); } catch (e) { /* game.bus may not exist */ }
 
           if (typeof this._opts.onVote === 'function') {
             await this._opts.onVote(id);
           }
 
-          try { global.game && global.game.bus && global.game.bus.emit && global.game.bus.emit('eviction:closed', { nomineeId: id }); } catch (e) { }
+          try { global.game && global.game.bus && global.game.bus.emit && global.game.bus.emit('eviction:closed', { nomineeId: id }); } catch (e) { /* game.bus may not exist */ }
 
         } catch (err) {
           console.error('[EvictionCarousel] vote handler error', err);
@@ -175,7 +175,7 @@
     hide() { this.teardown(); },
 
     teardown() {
-      try { if (this._list && this._list.parentNode) this._list.parentNode.removeChild(this._list); } catch (e) { }
+      try { if (this._list && this._list.parentNode) this._list.parentNode.removeChild(this._list); } catch (e) { /* element may already be removed */ }
       if (this._root) { delete this._root.dataset.evictionCarousel; }
       this._root = null;
       this._list = null;
@@ -185,6 +185,6 @@
     }
   };
 
-  try { global.EvictionCarousel = EvictionCarousel; } catch (e) { }
+  try { global.EvictionCarousel = EvictionCarousel; } catch (e) { /* window may be read-only */ }
 
 })(window);
