@@ -64,14 +64,12 @@
    * @param {Object} options - Optional configuration
    * @returns {HTMLElement|null} The created container element
    */
-  function renderVetoCompResults(scoresObj, participantIds, options){
-    options = options || {};
-    
+  function renderVetoCompResults(scoresObj, participantIds){
     try{
       console.info('[VetoResultsUI] Rendering veto competition results');
 
       // Normalize scores to plain object if Map
-      let scoresPlain = {};
+      const scoresPlain = {};
       if(scoresObj && typeof scoresObj.forEach === 'function'){
         scoresObj.forEach(function(value, key){
           scoresPlain[+key] = +value;
