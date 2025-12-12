@@ -1,0 +1,25 @@
+/* Styles for buttons moved next to DR on desktop */
+.dr-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Small visual treatment for moved buttons so they match the DR button group */
+.dr-action-group .btn,
+.dr-action-group button,
+.dr-action-group .icon-btn,
+.moved-to-dr {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 999px; /* pill buttons like in UI */
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Add a tiny left margin to separate from DR if needed */
+.dr-action-group .moved-to-dr + .moved-to-dr {
+  margin-left: 6px;
+}
