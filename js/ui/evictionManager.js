@@ -7,7 +7,7 @@
   'use strict';
 
   // State
-  let state = {
+  const state = {
     rootElement: null,
     nominees: [],
     evictCount: 0,
@@ -204,7 +204,7 @@
 
     switch (e.key) {
       case 'ArrowLeft':
-      case 'ArrowUp':
+      case 'ArrowUp': {
         e.preventDefault();
         if (currentIndex > 0) {
           items[currentIndex]?.classList.remove('focused');
@@ -212,9 +212,10 @@
           items[currentIndex - 1]?.focus();
         }
         break;
+      }
 
       case 'ArrowRight':
-      case 'ArrowDown':
+      case 'ArrowDown': {
         e.preventDefault();
         if (currentIndex < items.length - 1) {
           items[currentIndex]?.classList.remove('focused');
@@ -225,9 +226,10 @@
           items[0]?.focus();
         }
         break;
+      }
 
       case 'Enter':
-      case ' ':
+      case ' ': {
         e.preventDefault();
         const focusedItem = items[currentIndex];
         if (focusedItem) {
@@ -241,11 +243,13 @@
           }
         }
         break;
+      }
 
-      case 'Escape':
+      case 'Escape': {
         e.preventDefault();
         hide();
         break;
+      }
     }
   }
 
