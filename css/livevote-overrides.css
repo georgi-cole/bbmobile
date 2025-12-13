@@ -1,6 +1,14 @@
 /* Live Vote V2 - Override Styles to Prevent Legacy Panel Overlap */
 /* Hides legacy live vote/summary panel elements while lv2 is active */
 
+/* Ensure TV containers support absolute positioning for overlays */
+#tv,
+.tvViewport,
+[data-faux-tv],
+[data-sm-faux-tv] {
+  position: relative !important;
+}
+
 /* Hide legacy live-vote summary panel while lv2 is active */
 body.lv-active-livevote #panel .live-vote,
 body.lv-active-livevote #panel .liveVote,
