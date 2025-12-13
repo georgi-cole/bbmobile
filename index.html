@@ -110,9 +110,6 @@
   })();
 </script>
 
-<!-- LV2 Shim: Load early to provide window.lv2 API before eviction.js -->
-<script src="./js/ui/lv2-shim.js"></script>
-
 <!-- GSAP Animation Library (for intro show) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
@@ -519,7 +516,8 @@
 <script defer src="js/livevote-rollout.js"></script>
 <script defer src="js/livevote-ui.js"></script>
 <script defer src="js/livevote-v2-triple.js"></script>
-<!-- LV2 Shim now loaded early in <head> before other scripts -->
+<!-- LV2 Shim: Provides fallback window.lv2 API when livevote modules are missing -->
+<script defer src="js/ui/lv2-shim.js"></script>
 <script defer src="js/eviction.js"></script>
 <script defer src="js/jury.js"></script>
 <script defer src="js/jury-viz.js?v=2"></script>

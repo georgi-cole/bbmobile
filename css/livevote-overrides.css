@@ -2,14 +2,11 @@
 /* Provides minimal override styles for livevote components */
 /* Full implementation available in archive/ui-archive/css/livevote-overrides.css */
 
-/* Ensure lv2-shim fallback UI is visible and clickable with fixed positioning */
+/* Ensure lv2-shim fallback UI is visible and clickable */
 .lv2-shim-fallback,
 .lv2-shim-triple {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 9999 !important;
+  position: relative;
+  z-index: 100;
   pointer-events: auto;
 }
 
@@ -24,22 +21,6 @@
   display: none !important;
 }
 
-/* Animation for vote feed items */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.lv2-vote-item {
-  animation: slideIn 0.3s ease-out;
-}
-
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .livevote-overlay__nominees {
@@ -50,15 +31,5 @@
   .livevote-choice-card {
     width: 100%;
     max-width: 300px;
-  }
-  
-  .lv2-shim-fallback,
-  .lv2-shim-triple {
-    max-height: 70vh;
-    padding: 16px;
-  }
-  
-  .lv2-nominee-card {
-    min-width: 120px;
   }
 }
