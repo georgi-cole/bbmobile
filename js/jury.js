@@ -1687,4 +1687,37 @@
     return runPublicFavouritePostWinner(winner);
   };
 
+  /**
+   * Animate avatar revive effect (reverse eviction animation)
+   * Adds CSS class and returns Promise that resolves on animation end
+   * @param {HTMLElement} el - Avatar element to animate
+   * @returns {Promise<void>} Resolves when animation completes
+   */
+  g.animateReviveAvatar = function(el) {
+    return new Promise((resolve) => {
+      if (!el || !(el instanceof HTMLElement)) {
+        console.warn('[animateReviveAvatar] Invalid element provided');
+        resolve();
+        return;
+      }
+      
+      // Timeout fallback in case animationend doesn't fire
+      const timeout = setTimeout(() => {
+        el.removeEventListener('animationend', handleAnimationEnd);
+        el.classList.remove('revive-avatar');
+        resolve();
+      }, 1200);
+      
+      const handleAnimationEnd = () => {
+        clearTimeout(timeout);
+        el.removeEventListener('animationend', handleAnimationEnd);
+        el.classList.remove('revive-avatar');
+        resolve();
+      };
+      
+      el.addEventListener('animationend', handleAnimationEnd);
+      el.classList.add('revive-avatar');
+    });
+  };
+
 })(window);
