@@ -377,13 +377,11 @@
         `Expected ${evictCount + 1} nominees for ${evictCount} eviction(s).`
       );
       
-      // Show inline error in UI within the container
-      const targetContainer = findContainer(container);
+      // Show inline error in UI
       const errorMsg = document.createElement('div');
       errorMsg.className = 'eviction-manager-error';
       errorMsg.textContent = `Configuration error: Expected ${evictCount + 1} nominees for ${evictCount} eviction(s), got ${nominees.length}.`;
-      errorMsg.style.position = 'absolute';
-      targetContainer.appendChild(errorMsg);
+      document.body.appendChild(errorMsg);
       setTimeout(() => errorMsg.remove(), 5000);
       
       return null;
