@@ -75,18 +75,16 @@
     // Must not have already run
     if(hasJurorReturnRun(g)) return false;
     
-    // Must have at least 5 alive players
+    // Check alive player count against configurable thresholds
     const aliveCount = ap().length;
-    if(aliveCount < 5) return false;
+    const aliveMin = parseInt(g.cfg?.jurorReturnAliveMin, 10) || 6;
+    const aliveMax = parseInt(g.cfg?.jurorReturnAliveMax, 10) || 6;
+    if(aliveCount < aliveMin || aliveCount > aliveMax) return false;
     
-    // Must have sufficient jurors
+    // Must have sufficient jurors (configurable minimum)
     const jurorCount = Array.isArray(g.juryHouse) ? g.juryHouse.length : 0;
-    const initialPlayers = getInitialPlayersCount(g);
-    const requiredJurors = getJurorReturnRequiredJurors(initialPlayers);
-    if(jurorCount < requiredJurors) return false;
-    
-    // Must have at least one juror
-    if(jurorCount < 1) return false;
+    const minJurors = parseInt(g.cfg?.jurorReturnMinJurors, 10) || 2;
+    if(jurorCount < minJurors) return false;
     
     return true;
   }
@@ -292,7 +290,7 @@
       counts: new Map(jurors.map(id=>[id,0])),
       weights: new Map(jurors.map(id=>[id, 0.7 + rand()*1.1])),
       started: Date.now(),
-      durationMs: 10000,
+      durationMs: Number(g.cfg?.tJurorReturnVoteMs || 6500),
       finished:false,
       lastLeader:null,
       _tick:null,
