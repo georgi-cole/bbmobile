@@ -369,7 +369,6 @@
       const errorMsg = document.createElement('div');
       errorMsg.className = 'eviction-manager-error';
       errorMsg.textContent = `Configuration error: Expected ${evictCount + 1} nominees for ${evictCount} eviction(s), got ${nominees.length}.`;
-      errorMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--error-bg, #dc3545); color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; max-width: 90%; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
       document.body.appendChild(errorMsg);
       setTimeout(() => errorMsg.remove(), 5000);
       
@@ -460,7 +459,7 @@
 
   // Export to global scope
   global.EvictionManager = EvictionManager;
-  global.LiveVoteOverlay = EvictionManager; // Backwards compatibility
+  // Note: LiveVoteOverlay backwards compatibility is handled by livevote-adapter.js
 
   console.info('[EvictionManager] Module initialized');
 

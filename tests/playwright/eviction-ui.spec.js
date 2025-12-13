@@ -28,7 +28,6 @@ test.describe('EvictionManager UI', () => {
     // Construct absolute file:// path to test page
     const repoRoot = path.resolve(__dirname, '..', '..');
     testPagePath = `file://${repoRoot}/test_eviction.html`;
-    console.log('Test page path:', testPagePath);
   });
 
   test.beforeEach(async ({ page }) => {
@@ -42,8 +41,6 @@ test.describe('EvictionManager UI', () => {
     await page.waitForFunction(() => {
       return window.EvictionManager && typeof window.EvictionManager.show === 'function';
     }, { timeout: 10000 });
-
-    console.log('Page loaded, EvictionManager available');
   });
 
   test('Single Eviction Flow (2 nominees)', async ({ page }) => {
@@ -76,11 +73,14 @@ test.describe('EvictionManager UI', () => {
     await expect(items).toHaveCount(2);
 
     // Screenshot 1: Before selection
+    const screenshotDir = path.join(__dirname, '..', 'screenshots');
+    if (!fs.existsSync(screenshotDir)) {
+      fs.mkdirSync(screenshotDir, { recursive: true });
+    }
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_single_before.png'),
+      path: path.join(screenshotDir, 'eviction_single_before.png'),
       fullPage: false
     });
-    console.log('Screenshot 1: Before selection captured');
 
     // Click first avatar (Alice)
     const firstItem = items.first();
@@ -96,10 +96,9 @@ test.describe('EvictionManager UI', () => {
 
     // Screenshot 2: After selection (Evict button visible)
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_single_selected.png'),
+      path: path.join(screenshotDir, 'eviction_single_selected.png'),
       fullPage: false
     });
-    console.log('Screenshot 2: After selection captured');
 
     // Click Evict button
     await evictBtn.click();
@@ -113,17 +112,12 @@ test.describe('EvictionManager UI', () => {
 
     // Screenshot 3: After vote (UI hidden)
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_single_after_vote.png'),
+      path: path.join(screenshotDir, 'eviction_single_after_vote.png'),
       fullPage: false
     });
-    console.log('Screenshot 3: After vote captured');
-
-    console.log('Single eviction test completed');
   });
 
   test('Double Eviction Flow (3 nominees)', async ({ page }) => {
-    console.log('Starting double eviction test...');
-
     // Trigger double eviction
     await page.evaluate(() => {
       window.EvictionManager.show({
@@ -132,7 +126,6 @@ test.describe('EvictionManager UI', () => {
         container: document.getElementById('tvMock'),
         onVote: async (nomineeId) => {
           await new Promise(resolve => setTimeout(resolve, 700));
-          console.log('Vote completed:', nomineeId);
         }
       });
     });
@@ -149,11 +142,11 @@ test.describe('EvictionManager UI', () => {
     await expect(items).toHaveCount(3);
 
     // Screenshot 1: Before selection
+    const screenshotDir = path.join(__dirname, '..', 'screenshots');
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_double_before.png'),
+      path: path.join(screenshotDir, 'eviction_double_before.png'),
       fullPage: false
     });
-    console.log('Screenshot 1: Before selection captured');
 
     // Click second avatar (Bob)
     const secondItem = items.nth(1);
@@ -168,10 +161,9 @@ test.describe('EvictionManager UI', () => {
 
     // Screenshot 2: After selection
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_double_selected.png'),
+      path: path.join(screenshotDir, 'eviction_double_selected.png'),
       fullPage: false
     });
-    console.log('Screenshot 2: After selection captured');
 
     // Click Evict button
     await evictBtn.click();
@@ -181,17 +173,12 @@ test.describe('EvictionManager UI', () => {
 
     // Screenshot 3: After vote
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_double_after_vote.png'),
+      path: path.join(screenshotDir, 'eviction_double_after_vote.png'),
       fullPage: false
     });
-    console.log('Screenshot 3: After vote captured');
-
-    console.log('Double eviction test completed');
   });
 
   test('Triple Eviction Flow (4 nominees)', async ({ page }) => {
-    console.log('Starting triple eviction test...');
-
     // Trigger triple eviction
     await page.evaluate(() => {
       window.EvictionManager.show({
@@ -200,7 +187,6 @@ test.describe('EvictionManager UI', () => {
         container: document.getElementById('tvMock'),
         onVote: async (nomineeId) => {
           await new Promise(resolve => setTimeout(resolve, 700));
-          console.log('Vote completed:', nomineeId);
         }
       });
     });
@@ -217,11 +203,11 @@ test.describe('EvictionManager UI', () => {
     await expect(items).toHaveCount(4);
 
     // Screenshot 1: Before selection
+    const screenshotDir = path.join(__dirname, '..', 'screenshots');
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_triple_before.png'),
+      path: path.join(screenshotDir, 'eviction_triple_before.png'),
       fullPage: false
     });
-    console.log('Screenshot 1: Before selection captured');
 
     // Click third avatar (Charlie)
     const thirdItem = items.nth(2);
@@ -236,10 +222,9 @@ test.describe('EvictionManager UI', () => {
 
     // Screenshot 2: After selection
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_triple_selected.png'),
+      path: path.join(screenshotDir, 'eviction_triple_selected.png'),
       fullPage: false
     });
-    console.log('Screenshot 2: After selection captured');
 
     // Click Evict button
     await evictBtn.click();
@@ -249,26 +234,19 @@ test.describe('EvictionManager UI', () => {
 
     // Screenshot 3: After vote
     await page.screenshot({ 
-      path: path.join(__dirname, '..', '..', 'eviction_triple_after_vote.png'),
+      path: path.join(screenshotDir, 'eviction_triple_after_vote.png'),
       fullPage: false
     });
-    console.log('Screenshot 3: After vote captured');
-
-    console.log('Triple eviction test completed');
   });
 
   test('Validation Error Handling', async ({ page }) => {
-    console.log('Starting validation error test...');
-
     // Attempt to show UI with invalid configuration
     const result = await page.evaluate(() => {
       return window.EvictionManager.show({
         nominees: ['Alice', 'Bob', 'Charlie'],
         evictCount: 1, // Invalid: should be 2 for 3 nominees
         container: document.getElementById('tvMock'),
-        onVote: async (nomineeId) => {
-          console.log('Vote:', nomineeId);
-        }
+        onVote: async (nomineeId) => {}
       });
     });
 
@@ -283,13 +261,9 @@ test.describe('EvictionManager UI', () => {
 
     // Error should disappear after 5 seconds
     await expect(errorMsg).not.toBeVisible({ timeout: 6000 });
-
-    console.log('Validation error test completed');
   });
 
   test('Keyboard Navigation', async ({ page }) => {
-    console.log('Starting keyboard navigation test...');
-
     // Trigger single eviction
     await page.evaluate(() => {
       window.EvictionManager.show({
@@ -329,13 +303,9 @@ test.describe('EvictionManager UI', () => {
     // Press Escape to close
     await page.keyboard.press('Escape');
     await expect(root).not.toBeVisible({ timeout: 1000 });
-
-    console.log('Keyboard navigation test completed');
   });
 
   test('Prevents Double Voting', async ({ page }) => {
-    console.log('Starting double voting prevention test...');
-
     // Trigger single eviction
     await page.evaluate(() => {
       window.EvictionManager.show({
@@ -375,7 +345,5 @@ test.describe('EvictionManager UI', () => {
 
     // Wait for vote to complete
     await expect(root).not.toBeVisible({ timeout: 3000 });
-
-    console.log('Double voting prevention test completed');
   });
 });
