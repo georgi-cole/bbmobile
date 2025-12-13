@@ -16,6 +16,8 @@
     '.lv2-3up',
     '[data-livevote-overlay]'
   ];
+  const OVERLAY_SELECTOR_STRING = OVERLAY_SELECTORS.join(', ');
+  
   const ITEM_SELECTORS = [
     '.lv2-contestant',
     '.lv-choice-card__nominee',
@@ -24,6 +26,8 @@
     '[data-nominee-id]',
     '[data-player-id]'
   ];
+  const ITEM_SELECTOR_STRING = ITEM_SELECTORS.join(', ');
+  
   const CTA_SELECTORS = '.lv-cta-btn, .lv2-cta-btn, .lv-vote-btn, .eviction-manager-evict-btn:not([data-fallback])';
 
   const STATE = {
@@ -133,11 +137,15 @@
           global.game.bus.emit('eviction:vote', { nomineeId });
         }
         
-        // Call onVote callback if available
-        if (global.EvictionManager?.state?.onVote) {
-          await global.EvictionManager.state.onVote(nomineeId);
+        // Use public API instead of accessing private state
+        if (global.EvictionManager?.vote) {
+          // Use EvictionManager's public vote method
+          await global.EvictionManager.vote(nomineeId);
         } else if (global.LiveVoteOverlay?.onVote) {
           await global.LiveVoteOverlay.onVote(nomineeId);
+        } else {
+          // Fallback: just emit event if no handler available
+          console.warn('[livevote-compact-fix] No vote handler available, emitting event only');
         }
         
         // Close UI on success
@@ -219,7 +227,7 @@
     });
 
     // Try to find and move global CTA
-    const overlay = item.closest(OVERLAY_SELECTORS.join(', '));
+    const overlay = item.closest(OVERLAY_SELECTOR_STRING);
     if (overlay) {
       // Look for global CTA
       const globalCTA = overlay.querySelector(CTA_SELECTORS);
@@ -254,8 +262,8 @@
     // Mark as processed
     overlay.dataset.compactProcessed = 'true';
 
-    // Compact all nominee items using combined selector for efficiency
-    const allItems = overlay.querySelectorAll(ITEM_SELECTORS.join(', '));
+    // Compact all nominee items using cached combined selector for efficiency
+    const allItems = overlay.querySelectorAll(ITEM_SELECTOR_STRING);
     allItems.forEach(item => {
       compactNomineeItem(item);
       
@@ -310,14 +318,12 @@
         mutation.addedNodes.forEach(node => {
           if (node.nodeType !== Node.ELEMENT_NODE) return;
 
-          // Check if added node is a livevote overlay (using combined selector)
-          const combinedSelector = OVERLAY_SELECTORS.join(', ');
-          
-          if (node.matches && node.matches(combinedSelector)) {
+          // Check if added node is a livevote overlay (using cached selector)
+          if (node.matches && node.matches(OVERLAY_SELECTOR_STRING)) {
             processOverlay(node);
           } else {
             // Also check children
-            const overlays = node.querySelectorAll && node.querySelectorAll(combinedSelector);
+            const overlays = node.querySelectorAll && node.querySelectorAll(OVERLAY_SELECTOR_STRING);
             if (overlays) {
               overlays.forEach(overlay => processOverlay(overlay));
             }
@@ -331,8 +337,8 @@
       subtree: true
     });
 
-    // Process any existing overlays (using combined selector)
-    const existingOverlays = document.querySelectorAll(OVERLAY_SELECTORS.join(', '));
+    // Process any existing overlays (using cached selector)
+    const existingOverlays = document.querySelectorAll(OVERLAY_SELECTOR_STRING);
     existingOverlays.forEach(overlay => processOverlay(overlay));
   }
 
