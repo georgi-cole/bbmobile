@@ -16,13 +16,15 @@
   z-index: 100000;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 24px;
+  gap: 24px;
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
   /* Allow pointer events on interactive controls */
   pointer-events: auto;
+  overflow-y: auto;
 }
 
 .carousel-picker-overlay.carousel-picker-visible {
@@ -50,11 +52,21 @@
   .carousel-picker-title {
     font-size: 1.5rem;
   }
+  
+  .carousel-picker-overlay {
+    gap: 20px;
+    padding: 20px;
+  }
 }
 
 @media (max-width: 480px) {
   .carousel-picker-title {
     font-size: 1.25rem;
+  }
+  
+  .carousel-picker-overlay {
+    gap: 16px;
+    padding: 16px;
   }
 }
 
@@ -66,7 +78,6 @@
   gap: 32px;
   width: 100%;
   max-width: 900px;
-  flex: 1;
 }
 
 /* Reduce gap on mobile */
