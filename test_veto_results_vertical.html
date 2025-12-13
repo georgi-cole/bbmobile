@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Results Vertical Layout Test</title>
+  <link rel="stylesheet" href="css/veto-results.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #f7d67a;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .info {
+      padding: 10px;
+      background: rgba(100, 150, 200, 0.1);
+      border-left: 3px solid #667eea;
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    #tvOverlay {
+      position: relative;
+      min-height: 400px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    .viewport-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px;
+      background: rgba(0,0,0,0.8);
+      border-radius: 6px;
+      font-size: 12px;
+      z-index: 100000;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-info">
+    Viewport: <span id="viewportSize"></span>
+  </div>
+  
+  <div class="test-container">
+    <h1>🏆 Veto Results - Vertical Layout Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <button onclick="testNormalResults()">Test Normal Results (3 players)</button>
+      <button onclick="testTwoPlayers()">Test 2 Players Only</button>
+      <button onclick="testCloseWinners()">Test Close Scores</button>
+      <button onclick="testFFWD()">Test FFWD Close</button>
+      <button onclick="clearResults()">Clear Results</button>
+      <div class="info">
+        <strong>Instructions:</strong>
+        <ul>
+          <li>Click buttons above to test different scenarios</li>
+          <li>Resize window to test responsive behavior</li>
+          <li>On mobile (<480px & <700px height), split-card mode activates automatically</li>
+          <li>Results auto-dismiss after 5 seconds</li>
+          <li>FFWD button or events immediately close results</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Layout Verification</h2>
+      <div class="info">
+        <strong>Expected Behavior:</strong>
+        <ul>
+          <li>✅ <strong>Vertical layout</strong> at all viewport sizes (never horizontal)</li>
+          <li>✅ <strong>First place emphasized:</strong> Larger avatar (64px), gold border, crown badge 👑</li>
+          <li>✅ <strong>Rounded scores:</strong> One decimal place (e.g., 9.4, 12.8)</li>
+          <li>✅ <strong>Avatars:</strong> Resolved from avatars folder via buildSmallAvatar()</li>
+          <li>✅ <strong>Auto-dismiss:</strong> Closes after 5 seconds</li>
+          <li>✅ <strong>FFWD close:</strong> Immediately closes on FFWD button/event</li>
+          <li>✅ <strong>Mobile compact:</strong> Smaller sizes at <640px</li>
+          <li>✅ <strong>Extra compact:</strong> Even smaller at <480px & <700px height</li>
+          <li>✅ <strong>Split-card:</strong> Winner first, then runners-up on very small viewports</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="tvOverlay"></div>
+
+  <!-- Mock buildSmallAvatar function -->
+  <script>
+    // Mock global functions
+    window.getPlayerById = function(id) {
+      const players = {
+        1: { id: 1, name: 'Aria', avatar: './avatars/Aria.png' },
+        2: { id: 2, name: 'Kai', avatar: './avatars/Kai.png' },
+        3: { id: 3, name: 'Lia', avatar: './avatars/Lia.png' },
+        4: { id: 4, name: 'Dex', avatar: './avatars/Dex.png' },
+        5: { id: 5, name: 'Echo', avatar: './avatars/Echo.png' }
+      };
+      return players[id] || { id: id, name: 'Player ' + id, avatar: null };
+    };
+
+    window.getP = window.getPlayerById;
+
+    window.buildSmallAvatar = function(id) {
+      const p = window.getPlayerById(id);
+      if (!p || !p.avatar) return null;
+      return `<img src="${p.avatar}" alt="${p.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    };
+
+    // Update viewport size display
+    function updateViewportInfo() {
+      const info = document.getElementById('viewportSize');
+      if (info) {
+        info.textContent = window.innerWidth + 'x' + window.innerHeight + 'px';
+      }
+    }
+    updateViewportInfo();
+    window.addEventListener('resize', updateViewportInfo);
+  </script>
+
+  <!-- Load veto results module -->
+  <script src="js/ui.veto-results.js"></script>
+
+  <!-- Test functions -->
+  <script>
+    function testNormalResults() {
+      console.log('Testing normal results with 3 players');
+      const scores = {
+        1: 12.847,  // Aria - winner
+        2: 9.423,   // Kai - 2nd
+        3: 7.156    // Lia - 3rd
+      };
+      window.VetoResultsUI.renderVetoCompResults(scores, [1, 2, 3], {
+        maxResults: 3,
+        autoDismissMs: 5000
+      });
+    }
+
+    function testTwoPlayers() {
+      console.log('Testing with only 2 players');
+      const scores = {
+        4: 15.2,  // Dex - winner
+        5: 11.8   // Echo - 2nd
+      };
+      window.VetoResultsUI.renderVetoCompResults(scores, [4, 5], {
+        maxResults: 3,
+        autoDismissMs: 5000
+      });
+    }
+
+    function testCloseWinners() {
+      console.log('Testing close scores');
+      const scores = {
+        1: 10.9,  // Aria
+        2: 10.7,  // Kai
+        3: 10.5   // Lia
+      };
+      window.VetoResultsUI.renderVetoCompResults(scores, [1, 2, 3], {
+        maxResults: 3,
+        autoDismissMs: 5000
+      });
+    }
+
+    function testFFWD() {
+      console.log('Testing FFWD - results should close immediately when you press the FFWD button below');
+      const scores = {
+        1: 14.3,
+        2: 11.2,
+        3: 8.9
+      };
+      
+      // Show results
+      window.VetoResultsUI.renderVetoCompResults(scores, [1, 2, 3], {
+        maxResults: 3,
+        autoDismissMs: 10000  // Longer timeout to test FFWD
+      });
+      
+      // Add a FFWD button for testing
+      setTimeout(function() {
+        const ffwdBtn = document.createElement('button');
+        ffwdBtn.textContent = 'Press to FFWD (Close Immediately)';
+        ffwdBtn.className = 'btn-ffwd';
+        ffwdBtn.style.position = 'fixed';
+        ffwdBtn.style.bottom = '20px';
+        ffwdBtn.style.left = '50%';
+        ffwdBtn.style.transform = 'translateX(-50%)';
+        ffwdBtn.style.zIndex = '100001';
+        document.body.appendChild(ffwdBtn);
+        
+        // Remove after clicking
+        ffwdBtn.addEventListener('click', function() {
+          setTimeout(function() {
+            if (ffwdBtn.parentNode) ffwdBtn.parentNode.removeChild(ffwdBtn);
+          }, 500);
+        });
+      }, 100);
+    }
+
+    function clearResults() {
+      console.log('Clearing all results');
+      const results = document.querySelectorAll('.veto-comp-results');
+      results.forEach(function(el) {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
+    }
+
+    // Auto-run normal test on load
+    setTimeout(function() {
+      console.log('=== Veto Results Vertical Layout Test ===');
+      console.log('Auto-running normal test...');
+      testNormalResults();
+    }, 500);
+  </script>
+</body>
+</html>
