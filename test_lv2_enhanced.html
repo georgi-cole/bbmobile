@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LV2 Shim Enhanced Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: white;
+      min-height: 100vh;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      margin-bottom: 100px; /* Space for fixed voting UI */
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #5cb85c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #4cae4c;
+    }
+    button.danger {
+      background: #d9534f;
+    }
+    button.danger:hover {
+      background: #c9302c;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      background: #333;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .success { color: #5cb85c; }
+    .error { color: #d9534f; }
+    .info { color: #5bc0de; }
+    .warning { color: #f0ad4e; }
+  </style>
+  <!-- Load CSS for animations -->
+  <link rel="stylesheet" href="css/livevote-overrides.css">
+</head>
+<body>
+  <h1>LV2 Shim Enhanced Test</h1>
+  <p>Testing the enhanced lv2-shim with fixed positioning, vote feed, and showCtaBar method.</p>
+
+  <div class="test-section">
+    <h2>Setup</h2>
+    <div id="setupStatus" class="status">Initializing...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Two-Nominee Vote (Standard Eviction)</h2>
+    <button onclick="testTwoNominee()">Start Two-Nominee Vote</button>
+    <button onclick="testSetTurnFalse()" class="danger">Disable Voting (setTurn false)</button>
+    <button onclick="testSetTurnTrue()">Enable Voting (setTurn true)</button>
+    <button onclick="testShowCtaBar()">Show CTA Bar</button>
+    <button onclick="testHideCtaBar()" class="danger">Hide CTA Bar</button>
+    <button onclick="simulateAIVotes()">Simulate AI Votes</button>
+    <div id="twoNomineeStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Triple Eviction (Three Nominees)</h2>
+    <button onclick="testTripleNominee()">Start Triple Eviction Vote</button>
+    <button onclick="simulateAIVotesTriple()">Simulate AI Votes (3-way)</button>
+    <div id="tripleNomineeStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: API Method Checks</h2>
+    <button onclick="testAPIAvailability()">Check All API Methods</button>
+    <div id="apiStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Log</h2>
+    <button onclick="clearConsoleLog()">Clear Log</button>
+    <div id="consoleLog" class="status"></div>
+  </div>
+
+  <!-- Load lv2-shim -->
+  <script src="js/ui/lv2-shim.js"></script>
+
+  <!-- Mock global helpers for testing -->
+  <script>
+    // Intercept console.debug and console.log for display
+    const originalDebug = console.debug;
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function logToDisplay(message, type = 'info') {
+      const logDiv = document.getElementById('consoleLog');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.insertBefore(entry, logDiv.firstChild);
+      
+      // Limit log entries
+      while (logDiv.children.length > 50) {
+        logDiv.removeChild(logDiv.lastChild);
+      }
+    }
+
+    console.debug = function(...args) {
+      originalDebug.apply(console, args);
+      logToDisplay(args.join(' '), 'info');
+    };
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      logToDisplay(args.join(' '), 'info');
+    };
+
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      logToDisplay(args.join(' '), 'warning');
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      logToDisplay(args.join(' '), 'error');
+    };
+
+    // Mock window.game and helper functions
+    window.game = window.game || {};
+    window.game.bus = {
+      emit: function(event, data) {
+        logToDisplay('Event emitted: ' + event + ' - ' + JSON.stringify(data), 'success');
+      }
+    };
+
+    window.getP = function(id) {
+      const players = {
+        1: { name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice' },
+        2: { name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob' },
+        3: { name: 'Carol', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=carol' }
+      };
+      return players[id];
+    };
+
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : 'Unknown';
+    };
+
+    // Test setup
+    function initTest() {
+      const setupDiv = document.getElementById('setupStatus');
+      if (window.lv2) {
+        setupDiv.innerHTML = '<span class="success">✓ window.lv2 is available</span><br>';
+        setupDiv.innerHTML += '<span class="success">✓ lv2-shim loaded successfully</span><br>';
+        setupDiv.innerHTML += '<span class="info">Ready for testing</span>';
+      } else {
+        setupDiv.innerHTML = '<span class="error">✗ window.lv2 is NOT available</span>';
+      }
+    }
+
+    // Test functions
+    function testTwoNominee() {
+      logToDisplay('=== Starting Two-Nominee Vote Test ===', 'info');
+      const status = document.getElementById('twoNomineeStatus');
+      status.innerHTML = '<span class="info">Initializing two-nominee vote...</span>';
+
+      try {
+        // Initialize with two nominees
+        window.lv2.init({
+          leftName: 'Alice',
+          rightName: 'Bob',
+          leftId: 1,
+          rightId: 2
+        });
+
+        // Create CTA bar with vote callback
+        window.lv2.createCtaBar({
+          onVote: async (nomineeId) => {
+            logToDisplay(`User voted for nominee ID: ${nomineeId}`, 'success');
+            status.innerHTML += '<br><span class="success">✓ Vote submitted for ' + window.safeName(nomineeId) + '</span>';
+          }
+        });
+
+        // Enable voting
+        window.lv2.setTurn(true);
+
+        status.innerHTML += '<br><span class="success">✓ Two-nominee vote UI created</span>';
+        status.innerHTML += '<br><span class="info">Check bottom of screen for voting UI</span>';
+      } catch (e) {
+        status.innerHTML += '<br><span class="error">✗ Error: ' + e.message + '</span>';
+        logToDisplay('Error in testTwoNominee: ' + e.message, 'error');
+      }
+    }
+
+    function testTripleNominee() {
+      logToDisplay('=== Starting Triple-Nominee Vote Test ===', 'info');
+      const status = document.getElementById('tripleNomineeStatus');
+      status.innerHTML = '<span class="info">Initializing triple-nominee vote...</span>';
+
+      try {
+        // Initialize with three nominees
+        window.lv2.initTriple({
+          nominees: [
+            { id: 1, name: 'Alice', photo: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice' },
+            { id: 2, name: 'Bob', photo: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob' },
+            { id: 3, name: 'Carol', photo: 'https://api.dicebear.com/6.x/bottts/svg?seed=carol' }
+          ],
+          onVote: async (nomineeId) => {
+            logToDisplay(`User voted for nominee ID: ${nomineeId}`, 'success');
+            status.innerHTML += '<br><span class="success">✓ Vote submitted for ' + window.safeName(nomineeId) + '</span>';
+          }
+        });
+
+        status.innerHTML += '<br><span class="success">✓ Triple-nominee vote UI created</span>';
+        status.innerHTML += '<br><span class="info">Check bottom of screen for voting UI</span>';
+      } catch (e) {
+        status.innerHTML += '<br><span class="error">✗ Error: ' + e.message + '</span>';
+        logToDisplay('Error in testTripleNominee: ' + e.message, 'error');
+      }
+    }
+
+    function testSetTurnFalse() {
+      logToDisplay('Calling setTurn(false) - disabling voting', 'info');
+      window.lv2.setTurn(false);
+    }
+
+    function testSetTurnTrue() {
+      logToDisplay('Calling setTurn(true) - enabling voting', 'info');
+      window.lv2.setTurn(true);
+    }
+
+    function testShowCtaBar() {
+      logToDisplay('Calling showCtaBar()', 'info');
+      window.lv2.showCtaBar();
+    }
+
+    function testHideCtaBar() {
+      logToDisplay('Calling hideCtaBar()', 'info');
+      window.lv2.hideCtaBar();
+    }
+
+    function simulateAIVotes() {
+      logToDisplay('=== Simulating AI Votes ===', 'info');
+      
+      const votes = [
+        { voterId: 101, voterName: 'Player 1', pick: 1 },
+        { voterId: 102, voterName: 'Player 2', pick: 2 },
+        { voterId: 103, voterName: 'Player 3', pick: 1 },
+        { voterId: 104, voterName: 'Player 4', pick: 2 },
+        { voterId: 105, voterName: 'Player 5', pick: 1 }
+      ];
+
+      votes.forEach((vote, index) => {
+        setTimeout(() => {
+          window.lv2.pushVote(vote);
+          logToDisplay(`AI Vote: ${vote.voterName} voted to evict ${window.safeName(vote.pick)}`, 'success');
+        }, index * 500); // Stagger votes by 500ms
+      });
+    }
+
+    function simulateAIVotesTriple() {
+      logToDisplay('=== Simulating AI Votes (3-way) ===', 'info');
+      
+      const votes = [
+        { voterId: 101, voterName: 'Player 1', pick: 1 },
+        { voterId: 102, voterName: 'Player 2', pick: 2 },
+        { voterId: 103, voterName: 'Player 3', pick: 3 },
+        { voterId: 104, voterName: 'Player 4', pick: 1 },
+        { voterId: 105, voterName: 'Player 5', pick: 2 },
+        { voterId: 106, voterName: 'Player 6', pick: 3 }
+      ];
+
+      votes.forEach((vote, index) => {
+        setTimeout(() => {
+          window.lv2.pushVote(vote);
+          logToDisplay(`AI Vote: ${vote.voterName} voted to evict ${window.safeName(vote.pick)}`, 'success');
+        }, index * 500);
+      });
+    }
+
+    function testAPIAvailability() {
+      logToDisplay('=== Checking API Methods ===', 'info');
+      const status = document.getElementById('apiStatus');
+      status.innerHTML = '<h3>API Method Availability:</h3>';
+
+      const methods = [
+        'init', 'initTriple', 'createCtaBar', 'setTurn', 'pushVote',
+        'finish', 'cleanup', 'updateCtaBar', 'showCtaBar', 'hideCtaBar',
+        'hideCtasTriple', 'showTurnIndicator', 'hideTurnIndicator',
+        'beginResultCardPhase', 'endResultCardPhase', 'showEvicteeFinal',
+        'supportsInlineCard', 'showInlineCard', 'enterExternalOverlayMode',
+        'exitExternalOverlayMode', 'setOnVote'
+      ];
+
+      methods.forEach(method => {
+        const exists = typeof window.lv2[method] === 'function';
+        const className = exists ? 'success' : 'error';
+        const symbol = exists ? '✓' : '✗';
+        status.innerHTML += `<br><span class="${className}">${symbol} ${method}</span>`;
+        logToDisplay(`${symbol} ${method}: ${exists ? 'available' : 'MISSING'}`, exists ? 'success' : 'error');
+      });
+
+      // Check properties
+      const props = ['enabled', 'reducedMotion'];
+      status.innerHTML += '<br><br><h3>Properties:</h3>';
+      props.forEach(prop => {
+        const exists = window.lv2[prop] !== undefined;
+        const className = exists ? 'success' : 'error';
+        const symbol = exists ? '✓' : '✗';
+        const value = window.lv2[prop];
+        status.innerHTML += `<br><span class="${className}">${symbol} ${prop}: ${value}</span>`;
+        logToDisplay(`${symbol} ${prop}: ${value}`, exists ? 'success' : 'error');
+      });
+    }
+
+    function clearConsoleLog() {
+      document.getElementById('consoleLog').innerHTML = '';
+      logToDisplay('Console log cleared', 'info');
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', initTest);
+  </script>
+</body>
+</html>

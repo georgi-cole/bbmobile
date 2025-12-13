@@ -6,12 +6,19 @@
 (function(global) {
   'use strict';
 
+  // Constants
+  const MAX_VOTE_FEED_ITEMS = 10;
+  const FALLBACK_AVATAR_SVG = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ccc" width="100" height="100"/%3E%3C/svg%3E';
+
   // State for tracking active UI
   const state = {
     container: null,
     nominees: [],
+    nomineeMap: new Map(), // Fast ID-to-nominee lookup
     onVoteCallback: null,
-    isActive: false
+    isActive: false,
+    voteFeed: [], // Track incoming votes for display
+    userCanVote: true // Track if user's turn to vote
   };
 
   /**
@@ -23,7 +30,7 @@
       return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeSeed)}`;
     } catch (e) {
       // Fallback to data URI if external service fails
-      return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ccc" width="100" height="100"/%3E%3C/svg%3E';
+      return FALLBACK_AVATAR_SVG;
     }
   }
 
@@ -37,23 +44,29 @@
       return;
     }
 
-    // Build nominees array from config
+    // Build nominees array and map from config
     state.nominees = [];
+    state.nomineeMap.clear();
+    
     if (config.leftName && config.leftId !== null && config.leftId !== undefined) {
       const leftPlayer = global.getP ? global.getP(config.leftId) : null;
-      state.nominees.push({
+      const leftNominee = {
         id: config.leftId,
         name: config.leftName,
         photo: leftPlayer?.avatar || getDicebearUrl(config.leftName)
-      });
+      };
+      state.nominees.push(leftNominee);
+      state.nomineeMap.set(config.leftId, leftNominee);
     }
     if (config.rightName && config.rightId !== null && config.rightId !== undefined) {
       const rightPlayer = global.getP ? global.getP(config.rightId) : null;
-      state.nominees.push({
+      const rightNominee = {
         id: config.rightId,
         name: config.rightName,
         photo: rightPlayer?.avatar || getDicebearUrl(config.rightName)
-      });
+      };
+      state.nominees.push(rightNominee);
+      state.nomineeMap.set(config.rightId, rightNominee);
     }
 
     console.debug('[lv2-shim] Initialized with nominees:', state.nominees);
@@ -69,12 +82,14 @@
       return;
     }
 
-    // Store nominees and callback
+    // Store nominees, callback, and build map for fast lookups
     state.nominees = config.nominees.map(n => ({
       id: n.id,
       name: n.name || 'Unknown',
       photo: n.photo || getDicebearUrl(n.name || n.id)
     }));
+    state.nomineeMap.clear();
+    state.nominees.forEach(n => state.nomineeMap.set(n.id, n));
     state.onVoteCallback = config.onVote;
 
     // Find container
@@ -94,6 +109,7 @@
 
   /**
    * Render triple nominee UI (3-up view)
+   * Uses fixed positioning for visibility
    */
   function renderTripleUI(container) {
     cleanup(); // Clear any existing UI
@@ -101,16 +117,22 @@
     const tripleRoot = document.createElement('div');
     tripleRoot.className = 'lv2-shim-triple';
     tripleRoot.style.cssText = `
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       padding: 20px;
       gap: 16px;
-      min-height: 300px;
-      position: relative;
-      z-index: 100;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.95);
+      border-top: 3px solid #d9534f;
+      z-index: 9999;
+      pointer-events: auto;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+      max-height: 60vh;
+      overflow-y: auto;
     `;
 
     const title = document.createElement('div');
@@ -136,6 +158,7 @@
 
     state.nominees.forEach(nominee => {
       const card = document.createElement('div');
+      card.className = 'lv2-nominee-card';
       card.style.cssText = `
         display: flex;
         flex-direction: column;
@@ -144,7 +167,6 @@
         background: rgba(255, 255, 255, 0.1);
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 12px;
-        cursor: pointer;
         transition: all 0.3s ease;
         min-width: 150px;
         flex: 1;
@@ -152,8 +174,10 @@
       `;
       
       card.addEventListener('mouseenter', () => {
-        card.style.background = 'rgba(255, 255, 255, 0.2)';
-        card.style.borderColor = '#d9534f';
+        if (state.userCanVote) {
+          card.style.background = 'rgba(255, 255, 255, 0.2)';
+          card.style.borderColor = '#d9534f';
+        }
       });
       
       card.addEventListener('mouseleave', () => {
@@ -173,6 +197,8 @@
       card.appendChild(nameEl);
 
       const btn = document.createElement('button');
+      btn.className = 'lv2-vote-btn';
+      btn.dataset.nomineeId = nominee.id;
       btn.textContent = 'Evict';
       btn.style.cssText = `
         padding: 10px 24px;
@@ -184,31 +210,52 @@
         color: white;
         border-radius: 8px;
         transition: all 0.3s ease;
+        width: 100%;
       `;
       
+      if (!state.userCanVote) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+      }
+      
       btn.addEventListener('mouseenter', () => {
-        btn.style.background = '#c9302c';
-        btn.style.borderColor = '#c9302c';
+        if (!btn.disabled) {
+          btn.style.background = '#c9302c';
+          btn.style.borderColor = '#c9302c';
+        }
       });
       
       btn.addEventListener('mouseleave', () => {
-        btn.style.background = '#d9534f';
-        btn.style.borderColor = '#d9534f';
+        if (!btn.disabled) {
+          btn.style.background = '#d9534f';
+          btn.style.borderColor = '#d9534f';
+        }
       });
       
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        btn.disabled = true;
-        btn.style.opacity = '0.6';
-        btn.style.cursor = 'not-allowed';
+        if (!state.userCanVote) return;
+        
+        // Disable all buttons
+        tripleRoot.querySelectorAll('.lv2-vote-btn').forEach(b => {
+          b.disabled = true;
+          b.style.opacity = '0.5';
+          b.style.cursor = 'not-allowed';
+        });
+        
+        state.userCanVote = false;
         console.debug('[lv2-shim] Triple vote:', nominee.id);
+        
         if (state.onVoteCallback) {
           await state.onVoteCallback(nominee.id);
         }
       });
       
       card.addEventListener('click', () => {
-        btn.click();
+        if (!btn.disabled) {
+          btn.click();
+        }
       });
       
       card.appendChild(btn);
@@ -216,11 +263,49 @@
     });
 
     tripleRoot.appendChild(buttonContainer);
+
+    // Vote feed section
+    const voteFeedSection = document.createElement('div');
+    voteFeedSection.className = 'lv2-vote-feed';
+    voteFeedSection.style.cssText = `
+      width: 100%;
+      max-width: 800px;
+      margin-top: 8px;
+    `;
+
+    const feedTitle = document.createElement('div');
+    feedTitle.textContent = 'Live Votes';
+    feedTitle.style.cssText = `
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 8px;
+      text-align: center;
+    `;
+    voteFeedSection.appendChild(feedTitle);
+
+    const feedList = document.createElement('div');
+    feedList.className = 'lv2-vote-feed-list';
+    feedList.id = 'lv2VoteFeedList';
+    feedList.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 120px;
+      overflow-y: auto;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    `;
+    voteFeedSection.appendChild(feedList);
+
+    tripleRoot.appendChild(voteFeedSection);
+
     container.appendChild(tripleRoot);
     state.container = tripleRoot;
     state.isActive = true;
 
-    console.debug('[lv2-shim] Rendered triple UI');
+    console.debug('[lv2-shim] Rendered triple UI with vote feed');
   }
 
   /**
@@ -275,19 +360,16 @@
   }
 
   /**
-   * Find suitable container for UI (TV area or panel)
+   * Always render to document.body with fixed positioning
+   * This prevents the UI from being hidden/detached when panels change
    */
   function findContainer() {
-    const selectors = ['[data-faux-tv]', '[data-sm-faux-tv]', '.tvViewport', '#tv', '#panel'];
-    for (const sel of selectors) {
-      const el = document.querySelector(sel);
-      if (el) return el;
-    }
     return document.body;
   }
 
   /**
    * Render fallback UI when EvictionCarousel is not available
+   * Renders to document.body with fixed positioning at bottom for visibility
    */
   function renderFallbackUI(container) {
     cleanup(); // Clear any existing UI
@@ -295,21 +377,27 @@
     const fallbackRoot = document.createElement('div');
     fallbackRoot.className = 'lv2-shim-fallback';
     fallbackRoot.style.cssText = `
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       padding: 20px;
-      min-height: 200px;
-      position: relative;
-      z-index: 100;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.95);
+      border-top: 3px solid #d9534f;
+      z-index: 9999;
+      pointer-events: auto;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+      max-height: 50vh;
+      overflow-y: auto;
     `;
 
     const title = document.createElement('div');
     title.textContent = 'Vote to Evict';
     title.style.cssText = `
-      font-size: 20px;
+      font-size: 24px;
       font-weight: bold;
       color: white;
       margin-bottom: 16px;
@@ -317,19 +405,100 @@
     `;
     fallbackRoot.appendChild(title);
 
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = `
+    // Nominee cards container
+    const cardsContainer = document.createElement('div');
+    cardsContainer.className = 'lv2-nominee-cards';
+    cardsContainer.style.cssText = `
       display: flex;
-      gap: 12px;
+      gap: 16px;
       justify-content: center;
       flex-wrap: wrap;
+      margin-bottom: 16px;
+      width: 100%;
+      max-width: 600px;
     `;
 
     state.nominees.forEach(nominee => {
+      const card = document.createElement('div');
+      card.className = 'lv2-nominee-card';
+      card.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        min-width: 150px;
+        flex: 1;
+        max-width: 250px;
+        transition: all 0.3s ease;
+      `;
+      
+      card.addEventListener('mouseenter', () => {
+        if (state.userCanVote) {
+          card.style.background = 'rgba(255, 255, 255, 0.2)';
+          card.style.borderColor = '#d9534f';
+        }
+      });
+      
+      card.addEventListener('mouseleave', () => {
+        card.style.background = 'rgba(255, 255, 255, 0.1)';
+        card.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+      });
+
+      // Avatar image
+      const avatar = document.createElement('img');
+      avatar.src = nominee.photo;
+      avatar.alt = nominee.name;
+      avatar.style.cssText = `
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-bottom: 12px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+      `;
+      avatar.onerror = () => {
+        // Fallback to initials if image fails
+        avatar.style.display = 'none';
+        const initials = document.createElement('div');
+        initials.textContent = nominee.name.substring(0, 2).toUpperCase();
+        initials.style.cssText = `
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: #d9534f;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 32px;
+          font-weight: bold;
+          margin-bottom: 12px;
+        `;
+        card.insertBefore(initials, card.firstChild);
+      };
+      card.appendChild(avatar);
+
+      // Name
+      const nameEl = document.createElement('div');
+      nameEl.textContent = nominee.name;
+      nameEl.style.cssText = `
+        font-size: 18px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 12px;
+        text-align: center;
+      `;
+      card.appendChild(nameEl);
+
+      // Vote button
       const btn = document.createElement('button');
-      btn.textContent = `Evict ${nominee.name}`;
+      btn.className = 'lv2-vote-btn';
+      btn.dataset.nomineeId = nominee.id;
+      btn.textContent = 'Evict';
       btn.style.cssText = `
-        padding: 12px 24px;
+        padding: 10px 24px;
         font-size: 16px;
         font-weight: bold;
         cursor: pointer;
@@ -339,36 +508,97 @@
         border-radius: 8px;
         transition: all 0.3s ease;
         pointer-events: auto;
+        width: 100%;
       `;
       
+      if (!state.userCanVote) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+      }
+      
       btn.addEventListener('mouseenter', () => {
-        btn.style.background = '#c9302c';
-        btn.style.borderColor = '#c9302c';
+        if (!btn.disabled) {
+          btn.style.background = '#c9302c';
+          btn.style.borderColor = '#c9302c';
+          btn.style.transform = 'scale(1.05)';
+        }
       });
       
       btn.addEventListener('mouseleave', () => {
-        btn.style.background = '#d9534f';
-        btn.style.borderColor = '#d9534f';
+        if (!btn.disabled) {
+          btn.style.background = '#d9534f';
+          btn.style.borderColor = '#d9534f';
+          btn.style.transform = 'scale(1)';
+        }
       });
       
       btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        btn.style.opacity = '0.6';
-        btn.style.cursor = 'not-allowed';
+        if (!state.userCanVote) return;
+        
+        // Disable all vote buttons
+        fallbackRoot.querySelectorAll('.lv2-vote-btn').forEach(b => {
+          b.disabled = true;
+          b.style.opacity = '0.5';
+          b.style.cursor = 'not-allowed';
+        });
+        
+        state.userCanVote = false;
         console.debug('[lv2-shim] Fallback vote:', nominee.id);
+        
         if (state.onVoteCallback) {
           await state.onVoteCallback(nominee.id);
         }
       });
-      buttonContainer.appendChild(btn);
+      
+      card.appendChild(btn);
+      cardsContainer.appendChild(card);
     });
 
-    fallbackRoot.appendChild(buttonContainer);
+    fallbackRoot.appendChild(cardsContainer);
+
+    // Vote feed section
+    const voteFeedSection = document.createElement('div');
+    voteFeedSection.className = 'lv2-vote-feed';
+    voteFeedSection.style.cssText = `
+      width: 100%;
+      max-width: 600px;
+      margin-top: 8px;
+    `;
+
+    const feedTitle = document.createElement('div');
+    feedTitle.textContent = 'Live Votes';
+    feedTitle.style.cssText = `
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 8px;
+      text-align: center;
+    `;
+    voteFeedSection.appendChild(feedTitle);
+
+    const feedList = document.createElement('div');
+    feedList.className = 'lv2-vote-feed-list';
+    feedList.id = 'lv2VoteFeedList';
+    feedList.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    `;
+    voteFeedSection.appendChild(feedList);
+
+    fallbackRoot.appendChild(voteFeedSection);
+
     container.appendChild(fallbackRoot);
     state.container = fallbackRoot;
     state.isActive = true;
 
-    console.debug('[lv2-shim] Rendered fallback UI');
+    console.debug('[lv2-shim] Rendered fallback UI with vote feed');
   }
 
   /**
@@ -376,21 +606,69 @@
    * @param {boolean} isActive - Whether user can vote now
    */
   function setTurn(isActive) {
-    // In the shim, we don't need to do much here since EvictionCarousel
-    // handles its own state, and fallback UI is always ready
+    state.userCanVote = isActive;
     console.debug('[lv2-shim] setTurn:', isActive);
+    
+    // Update button states if UI is active
+    if (state.container) {
+      const buttons = state.container.querySelectorAll('.lv2-vote-btn');
+      buttons.forEach(btn => {
+        btn.disabled = !isActive;
+        btn.style.opacity = isActive ? '1' : '0.5';
+        btn.style.cursor = isActive ? 'pointer' : 'not-allowed';
+      });
+    }
   }
 
   /**
    * Push a vote (for AI/other players)
-   * @param {number} nomineeId - ID of the nominee receiving a vote
+   * @param {Object} vote - Vote data with voterId, voterName, pick
    */
-  function pushVote(nomineeId) {
-    console.debug('[lv2-shim] pushVote:', nomineeId);
-    // Shim doesn't animate vote cards, just logs
+  function pushVote(vote) {
+    console.debug('[lv2-shim] pushVote:', vote);
+    
+    // Store vote in feed
+    state.voteFeed.push(vote);
+    
+    // Update vote feed UI if container exists
+    if (state.container) {
+      const feedList = state.container.querySelector('#lv2VoteFeedList');
+      if (feedList) {
+        const voteItem = document.createElement('div');
+        voteItem.className = 'lv2-vote-item';
+        voteItem.style.cssText = `
+          padding: 6px 12px;
+          background: rgba(255, 255, 255, 0.05);
+          border-left: 3px solid #d9534f;
+          border-radius: 4px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.9);
+          animation: slideIn 0.3s ease-out;
+        `;
+        
+        const voterName = vote.voterName || 'Unknown';
+        const targetName = state.nomineeMap.get(vote.pick)?.name || 'Unknown';
+        
+        voteItem.textContent = `${voterName} voted to evict ${targetName}`;
+        
+        // Add to top of feed
+        feedList.insertBefore(voteItem, feedList.firstChild);
+        
+        // Limit feed to most recent votes
+        while (feedList.children.length > MAX_VOTE_FEED_ITEMS) {
+          feedList.removeChild(feedList.lastChild);
+        }
+      }
+    }
+    
+    // Emit event for compatibility
     try {
       if (global.game?.bus?.emit) {
-        global.game.bus.emit('eviction:vote', { nomineeId, isAI: true });
+        global.game.bus.emit('eviction:vote', { 
+          nomineeId: vote.pick, 
+          voterId: vote.voterId,
+          isAI: true 
+        });
       }
     } catch (e) {
       console.debug('[lv2-shim] Could not emit vote event:', e);
@@ -427,11 +705,20 @@
 
     state.container = null;
     state.isActive = false;
+    state.voteFeed = [];
+    state.userCanVote = true;
+    state.nomineeMap.clear();
     console.debug('[lv2-shim] Cleanup complete');
   }
 
   // Stub methods for backward compatibility (do nothing in shim)
   function updateCtaBar() { console.debug('[lv2-shim] updateCtaBar (stub)'); }
+  function showCtaBar() {
+    console.debug('[lv2-shim] showCtaBar');
+    if (state.container) {
+      state.container.style.display = 'flex';
+    }
+  }
   function hideCtaBar() { 
     console.debug('[lv2-shim] hideCtaBar'); 
     cleanup();
@@ -469,6 +756,7 @@
     finish: finish,
     cleanup: cleanup,
     updateCtaBar: updateCtaBar,
+    showCtaBar: showCtaBar,
     hideCtaBar: hideCtaBar,
     hideCtasTriple: hideCtasTriple,
     showTurnIndicator: showTurnIndicator,
