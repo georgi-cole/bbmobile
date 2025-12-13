@@ -1701,12 +1701,6 @@
         return;
       }
       
-      const handleAnimationEnd = () => {
-        el.removeEventListener('animationend', handleAnimationEnd);
-        el.classList.remove('revive-avatar');
-        resolve();
-      };
-      
       // Timeout fallback in case animationend doesn't fire
       const timeout = setTimeout(() => {
         el.removeEventListener('animationend', handleAnimationEnd);
@@ -1714,11 +1708,14 @@
         resolve();
       }, 1200);
       
-      el.addEventListener('animationend', () => {
+      const handleAnimationEnd = () => {
         clearTimeout(timeout);
-        handleAnimationEnd();
-      });
+        el.removeEventListener('animationend', handleAnimationEnd);
+        el.classList.remove('revive-avatar');
+        resolve();
+      };
       
+      el.addEventListener('animationend', handleAnimationEnd);
       el.classList.add('revive-avatar');
     });
   };

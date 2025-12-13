@@ -446,15 +446,23 @@
         console.warn('[showJurorReturnResult] showCard failed:', e);
       }
     } else {
-      // Fallback: simple DOM modal
-      const overlay = document.getElementById('overlay') || document.body;
+      // Fallback: simple DOM modal (create dedicated overlay container)
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,19,31,0.85);z-index:600;';
       const card = document.createElement('div');
       card.style.cssText = 'background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:24px;max-width:480px;text-align:center;';
       card.innerHTML = `<div style="font-size:1rem;font-weight:700;color:#6ea0dc;margin-bottom:12px;">AMERICA VOTES — RESULT</div><div style="font-size:0.95rem;color:#eaf4ff;">${message}</div>`;
       modal.appendChild(card);
-      overlay.appendChild(modal);
+      
+      // Get or create overlay container
+      let overlayContainer = document.getElementById('overlay');
+      if(!overlayContainer){
+        overlayContainer = document.createElement('div');
+        overlayContainer.id = 'overlay';
+        overlayContainer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:500;';
+        document.body.appendChild(overlayContainer);
+      }
+      overlayContainer.appendChild(modal);
       setTimeout(()=>modal.remove(), 3800);
     }
     
