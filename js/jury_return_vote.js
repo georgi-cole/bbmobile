@@ -103,33 +103,38 @@
     });
   }
 
-  // Jury panel with avatars and live percentages - MODERNIZED
+  // Jury panel with avatars and live percentages - COMPACT & CONSISTENT
   function showReturnVotePanel(jurors, voteSecs, onDone) {
     const panel = document.getElementById('panel');
     if (!panel) return;
     panel.innerHTML = '';
     
-    // Modern container with gradient background
+    // Check if mobile
+    const isMobile = window.innerWidth < 768;
+    
+    // Compact container (single cohesive element for all jurors)
     const container = document.createElement('div');
+    container.className = 'juror-vote-container';
     container.style.cssText = `
       background: linear-gradient(135deg, rgba(13,27,42,0.95) 0%, rgba(27,38,59,0.95) 100%);
-      border-radius: 24px;
-      padding: 32px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 1px rgba(255,255,255,0.1) inset;
+      border-radius: ${isMobile ? '16px' : '20px'};
+      padding: ${isMobile ? '20px' : '28px'};
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35), 0 0 1px rgba(255,255,255,0.08) inset;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.1);
-      max-width: 900px;
+      max-width: ${isMobile ? '100%' : '800px'};
       margin: 0 auto;
+      ${isMobile ? 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; width: calc(100% - 32px);' : ''}
     `;
     
-    // Modern header with better typography
+    // Compact header
     const header = document.createElement('div');
-    header.style.cssText = 'text-align:center;margin-bottom:28px;';
+    header.style.cssText = 'text-align:center;margin-bottom:20px;';
     header.innerHTML = `
       <h2 style="
-        font-size:2rem;
+        font-size:${isMobile ? '1.5rem' : '1.8rem'};
         font-weight:700;
-        margin:0 0 8px 0;
+        margin:0 0 6px 0;
         background:linear-gradient(135deg,#00d9ff 0%,#00e0cc 50%,#7effa3 100%);
         -webkit-background-clip:text;
         -webkit-text-fill-color:transparent;
@@ -137,20 +142,41 @@
         letter-spacing:-0.5px;
       ">🗳️ America's Vote</h2>
       <div style="
-        font-size:1.1rem;
+        font-size:${isMobile ? '0.9rem' : '1rem'};
         color:#8fb4d4;
         font-weight:500;
       ">Which juror deserves a second chance?</div>
     `;
     container.appendChild(header);
     
-    // Grid for juror cards
+    // Add mobile dimmed backdrop if needed
+    let backdrop = null;
+    if (isMobile) {
+      backdrop = document.createElement('div');
+      backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 9998;
+      `;
+      document.body.appendChild(backdrop);
+    }
+    
+    // Compact grid for juror tiles (single cohesive container)
     const grid = document.createElement('div');
+    grid.className = 'juror-tiles-grid';
     grid.style.cssText = `
       display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:20px;
-      margin-bottom:24px;
+      grid-template-columns:repeat(auto-fit,minmax(${isMobile ? '120px' : '140px'},1fr));
+      gap:${isMobile ? '12px' : '16px'};
+      margin-bottom:${isMobile ? '16px' : '20px'};
+      background:rgba(0,0,0,0.15);
+      border-radius:12px;
+      padding:${isMobile ? '12px' : '16px'};
+      border:1px solid rgba(255,255,255,0.05);
     `;
 
     // Each juror gets a modern card
@@ -162,48 +188,34 @@
       const jurorName = global.safeName?.(id) || String(id);
       const avatarUrl = getAvatar(id);
       
-      // Modern card design
+      // Compact card design (tile-like, no animated glow)
       const card = document.createElement('div');
+      card.className = 'juror-tile';
       card.style.cssText = `
-        background:linear-gradient(135deg,rgba(20,35,55,0.8) 0%,rgba(30,45,65,0.6) 100%);
-        border-radius:16px;
-        padding:20px;
+        background:linear-gradient(135deg,rgba(20,35,55,0.7) 0%,rgba(30,45,65,0.5) 100%);
+        border-radius:${isMobile ? '10px' : '12px'};
+        padding:${isMobile ? '12px' : '16px'};
         display:flex;
         flex-direction:column;
         align-items:center;
-        gap:12px;
-        border:1px solid rgba(143,211,255,0.2);
-        box-shadow:0 8px 24px rgba(0,0,0,0.3);
-        transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+        gap:${isMobile ? '8px' : '10px'};
+        border:1px solid rgba(143,211,255,0.15);
+        box-shadow:0 4px 12px rgba(0,0,0,0.2);
+        transition:border-color 0.2s ease;
         position:relative;
-        overflow:hidden;
       `;
       card.setAttribute('data-j-id', id);
       
-      // Animated glow effect
-      const glow = document.createElement('div');
-      glow.style.cssText = `
-        position:absolute;
-        top:-50%;
-        left:-50%;
-        width:200%;
-        height:200%;
-        background:radial-gradient(circle,rgba(143,211,255,0.1) 0%,transparent 70%);
-        animation:pulse 3s ease-in-out infinite;
-        pointer-events:none;
-      `;
-      card.appendChild(glow);
-      
-      // Avatar with modern styling
+      // Compact avatar
       const avatarWrap = document.createElement('div');
       avatarWrap.style.cssText = `
         position:relative;
-        width:120px;
-        height:120px;
+        width:${isMobile ? '70px' : '85px'};
+        height:${isMobile ? '70px' : '85px'};
         border-radius:50%;
-        padding:4px;
+        padding:3px;
         background:linear-gradient(135deg,#00d9ff,#00e0cc);
-        box-shadow:0 8px 24px rgba(0,224,204,0.4);
+        box-shadow:0 4px 16px rgba(0,224,204,0.3);
       `;
       
       const img = document.createElement('img');
@@ -215,7 +227,7 @@
         border-radius:50%;
         object-fit:cover;
         background:#1a2942;
-        border:3px solid #0d1b2a;
+        border:2px solid #0d1b2a;
       `;
       img.onerror = function() {
         console.info(`[jury_return_vote] avatar fallback used for juror=${id} url=${this.src}`);
@@ -225,74 +237,30 @@
       avatarWrap.appendChild(img);
       card.appendChild(avatarWrap);
       
-      // Name with modern typography
+      // Compact name
       const nameLabel = document.createElement('div');
       nameLabel.style.cssText = `
-        font-size:1.1rem;
+        font-size:${isMobile ? '0.9rem' : '1rem'};
         font-weight:700;
         color:#e8f4ff;
-        letter-spacing:-0.3px;
+        letter-spacing:-0.2px;
+        text-align:center;
+        max-width:100%;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
       `;
       nameLabel.textContent = jurorName;
       card.appendChild(nameLabel);
       
-      // Vote count and percentage
-      const voteInfo = document.createElement('div');
-      voteInfo.className = 'vote-info';
-      voteInfo.style.cssText = `
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        gap:6px;
-        width:100%;
-      `;
-      voteInfo.innerHTML = `
-        <div class="vote-count" style="
-          font-size:1.5rem;
-          font-weight:700;
-          color:#00e0cc;
-          text-shadow:0 2px 12px rgba(0,224,204,0.5);
-        ">0</div>
-        <div style="
-          font-size:0.85rem;
-          color:#8fb4d4;
-          font-weight:500;
-        ">votes</div>
-      `;
-      card.appendChild(voteInfo);
-      
-      // Modern progress bar
-      const barContainer = document.createElement('div');
-      barContainer.style.cssText = `
-        width:100%;
-        height:8px;
-        background:rgba(20,35,55,0.6);
-        border-radius:6px;
-        overflow:hidden;
-        box-shadow:0 2px 8px rgba(0,0,0,0.3) inset;
-      `;
-      
-      const bar = document.createElement('div');
-      bar.className = 'avBar';
-      bar.style.cssText = `
-        height:100%;
-        width:0%;
-        background:linear-gradient(90deg,#00d9ff,#00e0cc,#7effa3);
-        box-shadow:0 0 12px rgba(0,224,204,0.6);
-        transition:width 0.4s cubic-bezier(0.4,0,0.2,1);
-        border-radius:6px;
-      `;
-      barContainer.appendChild(bar);
-      card.appendChild(barContainer);
-      
-      // Percentage label
+      // Percentage only (no progress bar, no vote count - consistent with Fan Favorite)
       const pctLabel = document.createElement('div');
       pctLabel.className = 'avPct';
       pctLabel.style.cssText = `
-        font-size:1.2rem;
-        font-weight:700;
-        color:#8fd3ff;
-        text-shadow:0 2px 8px rgba(143,211,255,0.4);
+        font-size:${isMobile ? '1.5rem' : '1.8rem'};
+        font-weight:800;
+        color:#00e0cc;
+        text-shadow:0 2px 12px rgba(0,224,204,0.5);
       `;
       pctLabel.textContent = '0%';
       card.appendChild(pctLabel);
@@ -301,49 +269,38 @@
     });
     container.appendChild(grid);
 
-    // Modern countdown timer
+    // Compact countdown timer
     const timerWrap = document.createElement('div');
     timerWrap.style.cssText = `
       text-align:center;
-      padding:16px;
-      background:rgba(0,224,204,0.1);
-      border-radius:12px;
-      border:1px solid rgba(0,224,204,0.2);
+      padding:${isMobile ? '12px' : '14px'};
+      background:rgba(0,224,204,0.08);
+      border-radius:10px;
+      border:1px solid rgba(0,224,204,0.18);
     `;
     const timer = document.createElement('div');
     timer.style.cssText = `
-      font-size:1.3rem;
+      font-size:${isMobile ? '1.1rem' : '1.2rem'};
       font-weight:700;
       color:#00e0cc;
-      text-shadow:0 2px 12px rgba(0,224,204,0.5);
+      text-shadow:0 2px 10px rgba(0,224,204,0.4);
     `;
     timerWrap.appendChild(timer);
     container.appendChild(timerWrap);
     
     panel.appendChild(container);
 
-    // Add pulse animation only once
-    if (!document.getElementById('jury-return-vote-pulse-style')) {
-      const style = document.createElement('style');
-      style.id = 'jury-return-vote-pulse-style';
-      style.textContent = `
-        @keyframes pulse {
-          0%, 100% { opacity: 0.3; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(1.05); }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    // Animate bars for voteSecs seconds
+    // Animate percentages only (no progress bars) and highlight leader
     let running = true;
     const start = Date.now();
     const endAt = start + voteSecs*1000;
+    let leaderId = null;
+    
     function update() {
       if (!running) return;
       const now = Date.now();
       const rem = Math.max(0, Math.ceil((endAt-now)/1000));
-      timer.innerHTML = `⏱️ <span style="font-size:1.5rem">${rem}</span>s remaining`;
+      timer.innerHTML = `⏱️ <span style="font-size:${isMobile ? '1.3rem' : '1.5rem'}">${rem}</span>s remaining`;
       
       jurors.forEach((id) => {
         // Simulate voting
@@ -352,27 +309,58 @@
         state.total += inc;
       });
       
-      // Update bars, percentages, and vote counts
+      // Find leader
+      let maxCount = -1;
+      jurors.forEach((id) => {
+        const count = state.counts.get(id);
+        if (count > maxCount) {
+          maxCount = count;
+          leaderId = id;
+        }
+      });
+      
+      // Update percentages and highlight leader
       jurors.forEach((id) => {
         const card = grid.querySelector(`[data-j-id="${id}"]`);
         if(!card) return;
         
         const count = state.counts.get(id);
         const pct = Math.round((count/state.total)*100);
+        const isLeader = id === leaderId;
         
-        const bar = card.querySelector('.avBar');
         const pctLabel = card.querySelector('.avPct');
-        const voteCount = card.querySelector('.vote-count');
+        if(pctLabel) {
+          pctLabel.textContent = `${pct}%`;
+          // Highlight leader
+          if (isLeader) {
+            pctLabel.style.color = '#7effa3';
+            pctLabel.style.textShadow = '0 2px 16px rgba(126,255,163,0.6)';
+            pctLabel.style.fontSize = isMobile ? '1.7rem' : '2rem';
+          } else {
+            pctLabel.style.color = '#00e0cc';
+            pctLabel.style.textShadow = '0 2px 12px rgba(0,224,204,0.5)';
+            pctLabel.style.fontSize = isMobile ? '1.5rem' : '1.8rem';
+          }
+        }
         
-        if(bar) bar.style.width = `${pct}%`;
-        if(pctLabel) pctLabel.textContent = `${pct}%`;
-        if(voteCount) voteCount.textContent = count;
+        // Highlight leader card border
+        if (isLeader) {
+          card.style.borderColor = 'rgba(126,255,163,0.4)';
+          card.style.boxShadow = '0 6px 20px rgba(126,255,163,0.3)';
+        } else {
+          card.style.borderColor = 'rgba(143,211,255,0.15)';
+          card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        }
       });
       
       if(now < endAt) {
         setTimeout(update, 170);
       } else {
         running = false;
+        // Clean up mobile backdrop
+        if (backdrop && backdrop.parentNode) {
+          backdrop.remove();
+        }
         if(onDone) onDone(state);
       }
     }
