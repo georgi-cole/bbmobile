@@ -3,12 +3,16 @@
 /* Mobile-first responsive design with scroll-snap carousel */
 
 .eviction-manager-root {
-  position: absolute;
-  inset: 0;
-  z-index: 150;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9500;
   background: rgba(0, 0, 0, 0.95);
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 8px;
+  max-width: min(90vw, 800px);
+  max-height: calc(100vh - 96px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -154,11 +158,6 @@
   margin-top: 0;
 }
 
-/* Show button only on selected item */
-.eviction-manager-item.selected .eviction-manager-evict-btn {
-  display: block;
-}
-
 .eviction-manager-evict-btn:hover:not(:disabled) {
   background: var(--danger-hover, #c82333);
   transform: scale(1.05);
@@ -175,7 +174,7 @@
 }
 
 .eviction-manager-error {
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -183,7 +182,7 @@
   color: white;
   padding: 1rem 2rem;
   border-radius: 8px;
-  z-index: 200;
+  z-index: 10000;
   max-width: 90%;
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
