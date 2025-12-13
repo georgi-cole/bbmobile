@@ -152,6 +152,9 @@
     const voters = eligibleVoters();
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
+    const lv2Eligible = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
     
     // Detect if human is HOH and is a potential tie-breaker
     // This happens when: HOH is human, there are 2 nominees, and HOH is not in the regular voter list
@@ -163,7 +166,7 @@
     // COMMIT 2: If human is NOT a voter (observer), skip all vote UI
     // EXCEPTION: If human is HOH and potential tie-breaker, show status message
     // Observers (nominated or HOH without tie-break) only see the diary room sequence
-    if (!humanIsVoter && !humanIsTieBreaker) {
+    if (!humanIsVoter && !humanIsTieBreaker && !lv2Eligible) {
       console.info('[eviction] Human is observer (nominated or HOH), skipping all vote UI');
       // Use inline status instead of below-TV message
       if (global.TVInlineStatus?.set) {
@@ -175,7 +178,7 @@
     }
     
     // If human is HOH tie-breaker, show special status
-    if (humanIsTieBreaker) {
+    if (humanIsTieBreaker && !lv2Eligible) {
       console.info('[eviction] Human is HOH tie-breaker, showing status');
       if (global.TVInlineStatus?.set) {
         global.TVInlineStatus.set('You will break any tie as HOH.', 'info');
@@ -183,6 +186,14 @@
         panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny info">You will break any tie as HOH.</div></div>';
       }
       return;
+    }
+    
+    if (!humanIsVoter && !humanIsTieBreaker && lv2Eligible && global.TVInlineStatus?.set) {
+      global.TVInlineStatus.set('You are observing this vote.', 'muted');
+    }
+    
+    if (humanIsTieBreaker && lv2Eligible && global.TVInlineStatus?.set) {
+      global.TVInlineStatus.set('You will break any tie as HOH.', 'info');
     }
     
     // If human is eligible voter and hasn't voted yet, show voting overlay directly
@@ -315,9 +326,7 @@
     }
 
     // Check if we should use modern lv2 UI (for any two-nominee eviction, voter or observer)
-    const useLv2 = g.eviction.nominees.length === 2 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && global.lv2?.enabled !== false;
+    const useLv2 = lv2Eligible;
 
     if (useLv2) {
       // Clear any lingering TV overlay content before showing lv2 UI
