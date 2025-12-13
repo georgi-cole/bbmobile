@@ -6,6 +6,26 @@
 (function(global) {
   'use strict';
 
+  // Constants
+  const ERROR_DISPLAY_DURATION_MS = 3000;
+  const OVERLAY_SELECTORS = [
+    '.lv-overlay',
+    '.lv-root',
+    '.lv-choice-card',
+    '.eviction-manager-root',
+    '.lv2-3up',
+    '[data-livevote-overlay]'
+  ];
+  const ITEM_SELECTORS = [
+    '.lv2-contestant',
+    '.lv-choice-card__nominee',
+    '.eviction-manager-item',
+    '.lv-nominee-item',
+    '[data-nominee-id]',
+    '[data-player-id]'
+  ];
+  const CTA_SELECTORS = '.lv-cta-btn, .lv2-cta-btn, .lv-vote-btn, .eviction-manager-evict-btn:not([data-fallback])';
+
   const STATE = {
     observer: null,
     globalCTA: null,
@@ -170,12 +190,12 @@
     item.style.position = 'relative';
     item.appendChild(error);
     
-    // Auto-remove after 3 seconds
+    // Auto-remove after configured duration
     setTimeout(() => {
       if (error.parentElement) {
         error.remove();
       }
-    }, 3000);
+    }, ERROR_DISPLAY_DURATION_MS);
   }
 
   /**
@@ -199,10 +219,10 @@
     });
 
     // Try to find and move global CTA
-    const overlay = item.closest('.lv-overlay, .lv-root, .lv-choice-card');
+    const overlay = item.closest(OVERLAY_SELECTORS.join(', '));
     if (overlay) {
       // Look for global CTA
-      const globalCTA = overlay.querySelector('.lv-cta-btn, .lv2-cta-btn, .lv-vote-btn, .eviction-manager-evict-btn:not([data-fallback])');
+      const globalCTA = overlay.querySelector(CTA_SELECTORS);
       
       if (globalCTA && !globalCTA.dataset.fallback) {
         STATE.globalCTA = globalCTA;
@@ -234,34 +254,23 @@
     // Mark as processed
     overlay.dataset.compactProcessed = 'true';
 
-    // Compact all nominee items
-    const itemSelectors = [
-      '.lv2-contestant',
-      '.lv-choice-card__nominee',
-      '.eviction-manager-item',
-      '.lv-nominee-item',
-      '[data-nominee-id]',
-      '[data-player-id]'
-    ];
-
-    itemSelectors.forEach(selector => {
-      const items = overlay.querySelectorAll(selector);
-      items.forEach(item => {
-        compactNomineeItem(item);
-        
-        // Add selection listener
-        if (!item.dataset.selectionListener) {
-          item.addEventListener('click', () => {
-            // Mark all items as unselected
-            items.forEach(i => i.classList.remove('selected'));
-            // Mark this item as selected
-            item.classList.add('selected');
-            
-            handleItemSelection(item);
-          });
-          item.dataset.selectionListener = 'true';
-        }
-      });
+    // Compact all nominee items using combined selector for efficiency
+    const allItems = overlay.querySelectorAll(ITEM_SELECTORS.join(', '));
+    allItems.forEach(item => {
+      compactNomineeItem(item);
+      
+      // Add selection listener
+      if (!item.dataset.selectionListener) {
+        item.addEventListener('click', () => {
+          // Mark all items as unselected
+          allItems.forEach(i => i.classList.remove('selected'));
+          // Mark this item as selected
+          item.classList.add('selected');
+          
+          handleItemSelection(item);
+        });
+        item.dataset.selectionListener = 'true';
+      }
     });
 
     // Set up observer for selection changes
@@ -276,13 +285,11 @@
       });
     });
 
-    // Observe all nominee items for class changes
-    itemSelectors.forEach(selector => {
-      const items = overlay.querySelectorAll(selector);
-      items.forEach(item => {
-        selectionObserver.observe(item, { attributes: true, attributeFilter: ['class'] });
-      });
+    // Observe all nominee items for class changes (combined selector)
+    allItems.forEach(item => {
+      selectionObserver.observe(item, { attributes: true, attributeFilter: ['class'] });
     });
+
 
     console.debug('[livevote-compact-fix] Overlay processed with compact layout');
   }
@@ -303,24 +310,14 @@
         mutation.addedNodes.forEach(node => {
           if (node.nodeType !== Node.ELEMENT_NODE) return;
 
-          // Check if added node is a livevote overlay
-          const overlaySelectors = [
-            '.lv-overlay',
-            '.lv-root',
-            '.lv-choice-card',
-            '.eviction-manager-root',
-            '.lv2-3up',
-            '[data-livevote-overlay]'
-          ];
-
-          for (const selector of overlaySelectors) {
-            if (node.matches && node.matches(selector)) {
-              processOverlay(node);
-              break;
-            }
-            
+          // Check if added node is a livevote overlay (using combined selector)
+          const combinedSelector = OVERLAY_SELECTORS.join(', ');
+          
+          if (node.matches && node.matches(combinedSelector)) {
+            processOverlay(node);
+          } else {
             // Also check children
-            const overlays = node.querySelectorAll && node.querySelectorAll(selector);
+            const overlays = node.querySelectorAll && node.querySelectorAll(combinedSelector);
             if (overlays) {
               overlays.forEach(overlay => processOverlay(overlay));
             }
@@ -334,8 +331,8 @@
       subtree: true
     });
 
-    // Process any existing overlays
-    const existingOverlays = document.querySelectorAll('.lv-overlay, .lv-root, .lv-choice-card, .eviction-manager-root, .lv2-3up, [data-livevote-overlay]');
+    // Process any existing overlays (using combined selector)
+    const existingOverlays = document.querySelectorAll(OVERLAY_SELECTORS.join(', '));
     existingOverlays.forEach(overlay => processOverlay(overlay));
   }
 

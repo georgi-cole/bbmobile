@@ -304,7 +304,10 @@
 
     document.getElementById('btnTestMobile').addEventListener('click', () => {
       logEvent('INFO', { message: 'Resize browser window to test mobile responsiveness' });
-      alert('Resize your browser window to < 480px width to see mobile layout adjustments.\n\nKey mobile features:\n- Smaller avatars (48px at <480px)\n- Compact item size (72x100px)\n- Smaller button text (0.6rem)\n- Horizontal scrolling enabled');
+      logEvent('MOBILE_INFO', { 
+        message: 'Resize window to < 480px width for mobile layout',
+        features: ['Smaller avatars (48px)', 'Compact items (72x100px)', 'Smaller buttons (0.6rem)', 'Horizontal scrolling']
+      });
     });
 
     document.getElementById('btnCloseUI').addEventListener('click', () => {
