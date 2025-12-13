@@ -425,6 +425,56 @@
     }
   }
 
+  /**
+   * Show juror return result with animation
+   * @param {number} winnerId - ID of the returning juror
+   * @param {number} percent - Winning percentage
+   * @returns {Promise<void>} Resolves after animation completes
+   */
+  async function showJurorReturnResult(winnerId, percent){
+    if(!winnerId) return;
+    
+    const winnerName = global.safeName?.(winnerId) || 'Juror';
+    const pctDisplay = Math.round(percent);
+    const message = `With ${pctDisplay}% ${winnerName} is back to the game.`;
+    
+    // Show result card using global.showCard if available
+    if(typeof global.showCard === 'function'){
+      try{
+        global.showCard('America Votes — Result', [message], 'jury', 3800, true);
+      }catch(e){
+        console.warn('[showJurorReturnResult] showCard failed:', e);
+      }
+    } else {
+      // Fallback: simple DOM modal
+      const overlay = document.getElementById('overlay') || document.body;
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,19,31,0.85);z-index:600;';
+      const card = document.createElement('div');
+      card.style.cssText = 'background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:24px;max-width:480px;text-align:center;';
+      card.innerHTML = `<div style="font-size:1rem;font-weight:700;color:#6ea0dc;margin-bottom:12px;">AMERICA VOTES — RESULT</div><div style="font-size:0.95rem;color:#eaf4ff;">${message}</div>`;
+      modal.appendChild(card);
+      overlay.appendChild(modal);
+      setTimeout(()=>modal.remove(), 3800);
+    }
+    
+    // Trigger revive animation on winner's avatar
+    const st = global.game?.__returnTwist;
+    if(st && st._domCache && st._domCache[winnerId]){
+      const avatarEl = st._domCache[winnerId].slot?.querySelector('.jrAvatar');
+      if(avatarEl && typeof global.animateReviveAvatar === 'function'){
+        try{
+          await global.animateReviveAvatar(avatarEl);
+        }catch(e){
+          console.warn('[showJurorReturnResult] Animation failed:', e);
+        }
+      }
+    }
+    
+    // Small delay to let animation be visible
+    await new Promise(resolve => setTimeout(resolve, 400));
+  }
+
   async function finalizeAmericaReturnVote(){
     const g=global.game; const st=g.__returnTwist;
     
@@ -460,12 +510,18 @@
 
     if(winnerId!=null){
       const w=gp(winnerId);
+      const winnerPercent = (st.counts.get(winnerId) || 0) * 100;
+      
       if(w){ w.evicted=false; delete w.weekEvicted; }
       if(Array.isArray(g.juryHouse)) g.juryHouse=g.juryHouse.filter(id=>id!==winnerId);
 
       try{
         global.addJuryLog?.(`<b>${global.safeName(winnerId)}</b> wins America's Vote and returns!`,'ok');
         global.setMusic?.('victory',true);
+        
+        // Show result with animation before final card
+        await showJurorReturnResult(winnerId, winnerPercent);
+        
         global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
         await global.cardQueueWaitIdle?.();
         // Confetti removed per spec

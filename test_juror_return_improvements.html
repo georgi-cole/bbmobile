@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Juror Return UI Improvements</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0a131f;
+      color: #eaf4ff;
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+    }
+    .test-controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(14, 22, 34, 0.95);
+      border: 1px solid rgba(110, 160, 220, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      max-width: 300px;
+      z-index: 1000;
+    }
+    .test-controls h3 {
+      margin: 0 0 12px 0;
+      font-size: 0.9rem;
+      color: #6ea0dc;
+    }
+    .test-controls button {
+      width: 100%;
+      padding: 8px 12px;
+      margin: 4px 0;
+      background: linear-gradient(145deg, #1a2838, #0e1622);
+      border: 1px solid rgba(110, 160, 220, 0.4);
+      border-radius: 6px;
+      color: #b8d4f0;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+    .test-controls button:hover {
+      background: linear-gradient(145deg, #2a3848, #1a2838);
+      border-color: #6ea0dc;
+    }
+    .info {
+      background: rgba(110, 160, 220, 0.1);
+      border: 1px solid rgba(110, 160, 220, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    #panel {
+      min-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="test-controls">
+    <h3>Test Controls</h3>
+    <div class="info">
+      Test the new flexbox layout and revive animation for juror return UI
+    </div>
+    <button onclick="testWith2Candidates()">Test with 2 Candidates</button>
+    <button onclick="testWith3Candidates()">Test with 3 Candidates</button>
+    <button onclick="testWith4Candidates()">Test with 4 Candidates</button>
+    <button onclick="simulateResult()">Simulate Result</button>
+    <button onclick="clearPanel()">Clear Panel</button>
+  </div>
+
+  <div id="panel"></div>
+
+  <script>
+    // Mock global functions
+    window.game = {
+      phase: 'return_twist',
+      players: [],
+      juryHouse: [1, 2, 3, 4],
+      __returnTwist: null,
+      cfg: { enableJuryHouse: true }
+    };
+
+    window.safeName = function(id) {
+      const names = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      return names[id - 1] || 'Juror ' + id;
+    };
+
+    window.getP = function(id) {
+      return {
+        id: id,
+        name: window.safeName(id),
+        avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=juror${id}`
+      };
+    };
+
+    window.resolveAvatar = function(id) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=juror${id}`;
+    };
+
+    window.getAvatarFallback = function(name, src) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+    };
+
+    window.showCard = function(title, messages, type, duration, queue) {
+      console.log('[showCard]', title, messages);
+      alert(`${title}\n\n${messages.join('\n')}`);
+    };
+
+    window.animateReviveAvatar = function(el) {
+      return new Promise((resolve) => {
+        if (!el) {
+          resolve();
+          return;
+        }
+        
+        const handleAnimationEnd = () => {
+          el.removeEventListener('animationend', handleAnimationEnd);
+          el.classList.remove('revive-avatar');
+          resolve();
+        };
+        
+        const timeout = setTimeout(() => {
+          el.removeEventListener('animationend', handleAnimationEnd);
+          el.classList.remove('revive-avatar');
+          resolve();
+        }, 1200);
+        
+        el.addEventListener('animationend', () => {
+          clearTimeout(timeout);
+          handleAnimationEnd();
+        });
+        
+        el.classList.add('revive-avatar');
+      });
+    };
+
+    function renderTestPanel(jurorIds) {
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      
+      // Initialize twist state
+      window.game.__returnTwist = {
+        jurors: jurorIds,
+        counts: new Map(),
+        _domCache: {}
+      };
+      
+      // Initialize random counts
+      jurorIds.forEach(id => {
+        window.game.__returnTwist.counts.set(id, Math.random());
+      });
+      
+      // Build modal host
+      const modalHost = document.createElement('div');
+      modalHost.className = 'jrModalHost';
+      
+      const panelEl = document.createElement('div');
+      panelEl.className = 'jrPanel';
+      
+      const title = document.createElement('div');
+      title.className = 'jrTitle';
+      title.textContent = 'AMERICA\'S VOTE — JUROR RETURN';
+      panelEl.appendChild(title);
+      
+      const container = document.createElement('div');
+      container.className = 'jrVotePanel';
+      panelEl.appendChild(container);
+      
+      modalHost.appendChild(panelEl);
+      
+      // Create slots
+      jurorIds.forEach(id => {
+        const slot = document.createElement('div');
+        slot.className = 'jrSlot';
+        slot.dataset.id = String(id);
+        
+        const avatar = document.createElement('img');
+        avatar.className = 'jrAvatar';
+        avatar.src = window.resolveAvatar(id);
+        avatar.alt = window.safeName(id);
+        slot.appendChild(avatar);
+        
+        const nameLabel = document.createElement('div');
+        nameLabel.className = 'jrName';
+        nameLabel.textContent = window.safeName(id);
+        slot.appendChild(nameLabel);
+        
+        const pctLabel = document.createElement('div');
+        pctLabel.className = 'jrPct';
+        const pct = Math.round(window.game.__returnTwist.counts.get(id) * 100);
+        pctLabel.textContent = pct + '%';
+        slot.appendChild(pctLabel);
+        
+        container.appendChild(slot);
+        
+        window.game.__returnTwist._domCache[id] = {
+          slot: slot,
+          pct: pctLabel
+        };
+      });
+      
+      panel.appendChild(modalHost);
+      
+      console.log('[Test] Panel rendered with', jurorIds.length, 'candidates');
+      console.log('[Test] Layout should use flexbox with space-evenly on desktop');
+    }
+
+    function testWith2Candidates() {
+      console.log('[Test] Rendering with 2 candidates (should be centered with equal spacing)');
+      renderTestPanel([1, 2]);
+    }
+
+    function testWith3Candidates() {
+      console.log('[Test] Rendering with 3 candidates (should be evenly distributed)');
+      renderTestPanel([1, 2, 3]);
+    }
+
+    function testWith4Candidates() {
+      console.log('[Test] Rendering with 4 candidates');
+      renderTestPanel([1, 2, 3, 4]);
+    }
+
+    async function simulateResult() {
+      const st = window.game.__returnTwist;
+      if (!st) {
+        alert('Please render a panel first!');
+        return;
+      }
+      
+      // Pick winner (highest count)
+      const sorted = st.jurors.map(id => ({id, c: st.counts.get(id) || 0})).sort((a, b) => b.c - a.c);
+      const winnerId = sorted[0].id;
+      const winnerPercent = sorted[0].c * 100;
+      
+      console.log('[Test] Simulating result for winner:', window.safeName(winnerId), winnerPercent.toFixed(1) + '%');
+      
+      // Show result card
+      const winnerName = window.safeName(winnerId);
+      const pctDisplay = Math.round(winnerPercent);
+      const message = `With ${pctDisplay}% ${winnerName} is back to the game.`;
+      
+      // Create result modal
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,19,31,0.85);z-index:600;';
+      const card = document.createElement('div');
+      card.style.cssText = 'background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:24px;max-width:480px;text-align:center;';
+      card.innerHTML = `<div style="font-size:1rem;font-weight:700;color:#6ea0dc;margin-bottom:12px;">AMERICA VOTES — RESULT</div><div style="font-size:0.95rem;color:#eaf4ff;">${message}</div>`;
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+      
+      // Trigger revive animation
+      if (st._domCache && st._domCache[winnerId]) {
+        const avatarEl = st._domCache[winnerId].slot?.querySelector('.jrAvatar');
+        if (avatarEl) {
+          console.log('[Test] Triggering revive animation on winner avatar');
+          await window.animateReviveAvatar(avatarEl);
+          console.log('[Test] Revive animation complete');
+        }
+      }
+      
+      setTimeout(() => overlay.remove(), 3800);
+    }
+
+    function clearPanel() {
+      document.getElementById('panel').innerHTML = '';
+      window.game.__returnTwist = null;
+      console.log('[Test] Panel cleared');
+    }
+
+    // Auto-render with 3 candidates on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test] Auto-rendering with 3 candidates to demonstrate spacing');
+      setTimeout(() => testWith3Candidates(), 100);
+    });
+  </script>
+
+</body>
+</html>

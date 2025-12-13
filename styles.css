@@ -6245,27 +6245,31 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   text-shadow: 0 2px 8px rgba(110, 160, 220, .3);
 }
 
-/* Responsive grid container for candidate slots */
+/* Responsive flexbox container for candidate slots with even spacing */
 .jrVotePanel {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  align-items: flex-start;
   gap: 14px;
-  justify-items: center;
   margin-top: 10px;
 }
 
-/* Desktop: 4 columns in a single row (≥900px) */
+/* Desktop: flex items with max-width constraint (≥900px) */
 @media (min-width: 900px) {
-  .jrVotePanel {
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-  }
   .jrPanel {
     max-width: 800px;
   }
+  .jrSlot {
+    flex: 0 0 calc(20% - 1rem);
+    max-width: 240px;
+  }
 }
 
-/* Mid-size: 2x2 grid (640-899px) */
+/* Mid-size: 2x2 grid fallback (640-899px) */
 @media (min-width: 640px) and (max-width: 899px) {
   .jrVotePanel {
+    display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
   }
@@ -6274,6 +6278,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 /* Tablet: 2 columns (400-639px) */
 @media (max-width: 639px) {
   .jrVotePanel {
+    display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
@@ -6286,6 +6291,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 /* Very narrow: 1 column (<400px) */
 @media (max-width: 399px) {
   .jrVotePanel {
+    display: grid;
     grid-template-columns: 1fr;
     gap: 10px;
   }
@@ -6369,6 +6375,29 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 @media (prefers-reduced-motion: reduce) {
   .jrVotePanel, .jrSlot, .jrPct {
     transition: none !important;
+  }
+}
+
+/* Revive Animation - Reverse Eviction Effect */
+.revive-avatar {
+  animation: reviveEffect 900ms ease-out forwards;
+}
+
+@keyframes reviveEffect {
+  0% {
+    filter: grayscale(100%) contrast(1.05);
+    opacity: 0.9;
+    transform: scale(0.96);
+  }
+  50% {
+    filter: grayscale(50%) contrast(1.025);
+    opacity: 0.95;
+    transform: scale(0.98);
+  }
+  100% {
+    filter: none;
+    opacity: 1;
+    transform: translateY(-6px) scale(1);
   }
 }
 
