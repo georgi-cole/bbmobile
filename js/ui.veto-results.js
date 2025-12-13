@@ -59,13 +59,33 @@
 
   function removePanel(panel){
     if(!panel) return;
+    
+    // Clean up auto-dismiss timer
     try{
       const tid = panel.__vetoAutoDismissTimer;
       if(tid) clearTimeout(tid);
     }catch(e){}
+    
+    // Clean up split-card transition timeout
+    try{
+      const splitTid = panel.__splitCardTransitionTimeout;
+      if(splitTid) clearTimeout(splitTid);
+    }catch(e){}
+    
+    // Clean up associated runners-up card in split-card mode
+    try{
+      const runnersCard = panel.__splitCardRunnersRef;
+      if(runnersCard && runnersCard.parentNode){
+        removePanel(runnersCard);
+      }
+    }catch(e){}
+    
+    // Clean up FFWD event handlers
     try{
       if(typeof panel.__ffwdCleanup === 'function') panel.__ffwdCleanup();
     }catch(e){}
+    
+    // Animate out and remove
     panel.classList.add('veto-results-hide');
     panel.addEventListener('animationend', function onEnd(){
       panel.removeEventListener('animationend', onEnd);
@@ -92,6 +112,106 @@
     };
   }
 
+  // Split-card timing constants (milliseconds)
+  var SPLIT_CARD_WINNER_DURATION = 2500;
+  var SPLIT_CARD_RUNNERS_DURATION = 2500;
+  var SPLIT_CARD_TRANSITION_BUFFER = 100; // Buffer between cards
+
+  /**
+   * Check if viewport is very constrained (needs split-card mode)
+   * Matches CSS media query: (max-width: 480px) and (max-height: 700px)
+   * Split-card mode: show winner first, then runners-up
+   */
+  function shouldUseSplitCardMode(){
+    try{
+      return window.innerWidth < 480 && window.innerHeight < 700;
+    }catch(e){
+      return false;
+    }
+  }
+
+  /**
+   * Render split-card sequence: winner card, then runners-up card
+   * Total display time: ~5s (2.5s + 2.5s + buffers)
+   */
+  function renderSplitCardSequence(top, ffwdSelectors, tvContainer){
+    if(top.length < 2){
+      // Not enough results to split, render normally
+      return renderSingleCard(top, ffwdSelectors, tvContainer, 5000);
+    }
+
+    // Phase 1: Winner card
+    var winnerCard = renderSingleCard([top[0]], ffwdSelectors, tvContainer, SPLIT_CARD_WINNER_DURATION, 'split-card-winner');
+    
+    // Store timeout reference for cleanup
+    var transitionTimeout = null;
+    
+    // Phase 2: Runners-up card (shown after winner card dismisses)
+    transitionTimeout = setTimeout(function(){
+      if(winnerCard && winnerCard.parentNode){
+        // Winner card still visible, remove it first
+        removePanel(winnerCard);
+      }
+      var runnersUp = top.slice(1); // Get 2nd and 3rd place
+      var runnersCard = renderSingleCard(runnersUp, ffwdSelectors, tvContainer, SPLIT_CARD_RUNNERS_DURATION, 'split-card-runners');
+      
+      // Store reference for potential cleanup
+      if(winnerCard) winnerCard.__splitCardRunnersRef = runnersCard;
+    }, SPLIT_CARD_WINNER_DURATION + SPLIT_CARD_TRANSITION_BUFFER);
+    
+    // Store timeout reference on winner card for cleanup if FFWD pressed early
+    if(winnerCard) winnerCard.__splitCardTransitionTimeout = transitionTimeout;
+
+    return winnerCard;
+  }
+
+  /**
+   * Render a single card (either all results or subset for split-card mode)
+   */
+  function renderSingleCard(entries, ffwdSelectors, tvContainer, autoDismissMs, splitClass){
+    const container = document.createElement('div');
+    container.className = 'veto-comp-results comp-results' + (splitClass ? ' ' + splitClass : '');
+    container.setAttribute('role','region');
+    container.setAttribute('aria-label','Veto competition results');
+
+    const header = document.createElement('div');
+    header.className = 'comp-results-header';
+    header.innerHTML = `<h3>Veto Competition</h3>`;
+    container.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'comp-results-list';
+    
+    // For split-card runners, adjust ranking to show actual placement (2nd, 3rd)
+    var startRank = (splitClass === 'split-card-runners') ? 2 : 1;
+    
+    entries.forEach(function(entry, idx){
+      const info = getPlayerInfo(entry.id);
+      const player = { 
+        id: entry.id, 
+        name: info.name, 
+        score: entry.score, 
+        avatarUrl: info.avatarUrl, 
+        avatarHtml: info.avatarHtml 
+      };
+      const actualRank = startRank + idx;
+      const isFirst = (actualRank === 1);
+      const tile = createPlayerTile(player, actualRank, isFirst);
+      list.appendChild(tile);
+    });
+    container.appendChild(list);
+
+    tvContainer.appendChild(container);
+    attachFastForwardClose(container, ffwdSelectors);
+
+    try{ 
+      const tid = setTimeout(function(){ removePanel(container); }, autoDismissMs); 
+      container.__vetoAutoDismissTimer = tid; 
+    }catch(e){}
+
+    return container;
+  }
+
   function renderVetoCompResults(scoresMap, participantIds, options){
     options = options || {};
     var maxResults = typeof options.maxResults === 'number' ? options.maxResults : 3;
@@ -114,36 +234,27 @@
     arr.sort(function(a,b){ return b.score - a.score; });
     var top = arr.slice(0, maxResults);
 
-    try{ var old = document.querySelectorAll('.veto-comp-results'); old && old.forEach(function(n){ try{ if(n.__vetoAutoDismissTimer) clearTimeout(n.__vetoAutoDismissTimer); }catch(e){} if(n.parentNode) n.parentNode.removeChild(n); }); }catch(e){}
-
-    const container = document.createElement('div');
-    container.className = 'veto-comp-results comp-results';
-    container.setAttribute('role','region');
-    container.setAttribute('aria-label','Veto competition results');
-
-    const header = document.createElement('div');
-    header.className = 'comp-results-header';
-    header.innerHTML = `<h3>Veto Competition</h3>`;
-    container.appendChild(header);
-
-    const list = document.createElement('div');
-    list.className = 'comp-results-list';
-    top.forEach(function(entry, idx){
-      const info = getPlayerInfo(entry.id);
-      const player = { id: entry.id, name: info.name, score: entry.score, avatarUrl: info.avatarUrl, avatarHtml: info.avatarHtml };
-      const tile = createPlayerTile(player, idx+1, idx===0);
-      list.appendChild(tile);
-    });
-    container.appendChild(list);
+    // Clean up any existing results panels
+    try{ 
+      var old = document.querySelectorAll('.veto-comp-results'); 
+      old && old.forEach(function(n){ 
+        try{ 
+          if(n.__vetoAutoDismissTimer) clearTimeout(n.__vetoAutoDismissTimer); 
+        }catch(e){} 
+        if(n.parentNode) n.parentNode.removeChild(n); 
+      }); 
+    }catch(e){}
 
     const tvContainer = document.getElementById('tvOverlay') || document.querySelector('#tvOverlay') || document.getElementById('tv') || document.body;
-    tvContainer.appendChild(container);
 
-    attachFastForwardClose(container, ffwdSelectors);
+    // Determine if we need split-card mode for very small viewports
+    if(shouldUseSplitCardMode() && top.length >= 2){
+      console.info('[veto-results] Using split-card mode for constrained viewport');
+      return renderSplitCardSequence(top, ffwdSelectors, tvContainer);
+    }
 
-    try{ const tid = setTimeout(function(){ removePanel(container); }, autoDismissMs); container.__vetoAutoDismissTimer = tid; }catch(e){}
-
-    return container;
+    // Standard single-card render
+    return renderSingleCard(top, ffwdSelectors, tvContainer, autoDismissMs);
   }
 
   global.VetoResultsUI = global.VetoResultsUI || {};

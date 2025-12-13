@@ -98,9 +98,9 @@ NO CEREMONY - Skip directly to Final 4 eviction (unchanged)
 
 ## Veto Competition Results Display
 
-### Top-3 Compact Leaderboard with Auto-Dismiss
+### Vertical Top-3 Results with Rounded Scores, Avatars, and Mobile Fit Strategy
 
-The veto competition now displays a compact top-3 leaderboard in the TV overlay that matches the HOH competition visual style. The panel automatically dismisses after 5 seconds and can be closed immediately using the fast-forward (FFWD) button.
+The veto competition displays a vertical top-3 leaderboard with avatar resolution from the avatars folder (matching HOH logic), rounded scores, and intelligent mobile fit strategies. The panel auto-dismisses after 5 seconds and can be closed immediately using fast-forward (FFWD).
 
 **Module:** `js/ui.veto-results.js`
 
@@ -114,31 +114,49 @@ window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, {
 ```
 
 **Features:**
+- **Vertical Layout**: Always displays results vertically (never horizontal), optimized for readability
 - **Top-3 Only**: Displays only the top 3 finishers, sorted by score (descending)
-- **First Place Emphasis**: Winner gets larger avatar (64px), gold highlight, and crown badge 👑
+- **Rounded Scores**: All scores rounded to one decimal place (e.g., 9.4, 12.8)
+- **Avatar Resolution**: Uses same approach as HOH comp results via `buildSmallAvatar(id)` helper, resolving from `./avatars/` folder with proper fallbacks
+- **First Place Emphasis**: Winner gets:
+  - Larger avatar (64px vs 48px)
+  - Gold gradient background
+  - Gold border accent
+  - Crown badge 👑
 - **Auto-Dismiss**: Panel automatically closes after 5 seconds
-- **FFWD Dismissal**: Pressing any fast-forward button immediately closes the panel
-  - Listens for FFWD button clicks (`.btn-ffwd`, `.ffwd`, `.ffwd-btn`, etc.)
+- **FFWD Close**: Pressing any fast-forward button immediately closes the panel (no X button)
+  - Listens for FFWD button clicks: `.btn-ffwd`, `.ffwd`, `.ffwd-btn`, `#ffwd`, `.player-ffwd`, `.tv-ffwd`, `button.ffwd`
   - Listens for custom events: `fastForwardPressed` and `ffwdPressed`
-- **Compact Overlay**: Positioned at top center (110px from top) as an overlay, not fullscreen
+- **Mobile Fit Strategy**:
+  - **Standard mode** (>640px or >700px height): Normal vertical layout with all 3 results
+  - **Compact mode** (<640px): Reduced avatar sizes, padding, and spacing
+  - **Extra compact mode** (<480px width and <700px height): Further size reductions
+  - **Split-card mode** (<480px width and <700px height, if still too tight):
+    - Shows winner-only card first (2.5s)
+    - Then shows runners-up card (2nd and 3rd place, 2.5s)
+    - Total display time still ~5s with smooth transitions
 - **Smooth Animations**: Fade-in on show, fade-out on hide/dismiss
-- **Mobile-responsive design**
-- **Accessibility support** (ARIA labels, role attributes)
+- **Accessibility**: ARIA labels, role attributes, semantic HTML
 
 **Styling:** `css/veto-results.css`
 
 **Visual Design:**
-- Compact panel: 720px max-width (calc(100% - 48px) on mobile)
+- Compact panel: 420px width on desktop, calc(100% - 32px) on mobile
 - Dark gradient background with rounded corners
 - Gold accent for first place
-- Horizontal layout on desktop, vertical on mobile (<640px)
+- Always vertical layout (never horizontal)
+- Responsive sizing at 640px and 480px breakpoints
+- Height-aware compact mode for short viewports
 
 **Fallback:** If `VetoResultsUI` is not loaded, the system falls back to the legacy tri-slot reveal.
 
 **Screenshot:**
 
-![Veto Results Top-3 Display](screenshot-placeholder.png)
-*Top-3 leaderboard with first place emphasized, auto-dismisses after 5s, closes on FFWD*
+![Veto Results Top-3 Display](veto-results-mobile.png)
+*Vertical top-3 leaderboard with first place emphasized, auto-dismisses after 5s, FFWD closes immediately*
+
+![Veto Results Mobile Fallback](veto-results-mobile-fallback.png)
+*Split-card mode on very small viewports: winner first, then runners-up*
 
 ## Next Steps
 
