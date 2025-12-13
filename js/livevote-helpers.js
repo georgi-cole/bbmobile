@@ -231,8 +231,7 @@
       '.lv-choice-card',       // Live vote choice card (legacy)
       '.lv-overlay',           // Live vote overlay
       '.carousel-picker-overlay', // POV carousel picker
-      '.fullscreen-pov-selector',  // POV fullscreen selector
-      '.eviction-carousel-root'    // New eviction carousel UI
+      '.fullscreen-pov-selector'  // POV fullscreen selector
     ];
 
     overlaySelectors.forEach(selector => {
