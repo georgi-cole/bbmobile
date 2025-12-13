@@ -77,13 +77,13 @@
     
     // Check alive player count against configurable thresholds
     const aliveCount = ap().length;
-    const aliveMin = Number(g.cfg?.jurorReturnAliveMin || 6);
-    const aliveMax = Number(g.cfg?.jurorReturnAliveMax || 6);
+    const aliveMin = parseInt(g.cfg?.jurorReturnAliveMin, 10) || 6;
+    const aliveMax = parseInt(g.cfg?.jurorReturnAliveMax, 10) || 6;
     if(aliveCount < aliveMin || aliveCount > aliveMax) return false;
     
     // Must have sufficient jurors (configurable minimum)
     const jurorCount = Array.isArray(g.juryHouse) ? g.juryHouse.length : 0;
-    const minJurors = Number(g.cfg?.jurorReturnMinJurors || 2);
+    const minJurors = parseInt(g.cfg?.jurorReturnMinJurors, 10) || 2;
     if(jurorCount < minJurors) return false;
     
     return true;

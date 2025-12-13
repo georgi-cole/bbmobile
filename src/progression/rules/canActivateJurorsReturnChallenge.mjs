@@ -22,7 +22,8 @@ export function canActivateJurorsReturnChallenge({ initialPlayers, alivePlayers,
     throw new TypeError("All parameters must be finite numbers.");
   }
 
-  // Default thresholds (should match js/config/defaults.js)
+  // Default thresholds - MUST be kept in sync with js/config/defaults.js
+  // TODO: Consider importing these from a shared constant file
   const aliveMin = 6;
   const aliveMax = 6;
   const minJurors = 2;
@@ -58,7 +59,7 @@ export function requiredJurorsForActivation(initialPlayers) {
  * @returns {{ ok: true } | { ok: false, reason: string }}
  */
 export function canActivateJurorsReturnChallengeCheck({ initialPlayers, alivePlayers, jurorCount }) {
-  // Default thresholds (should match js/config/defaults.js)
+  // Default thresholds - MUST be kept in sync with js/config/defaults.js
   const aliveMin = 6;
   const aliveMax = 6;
   const minJurors = 2;

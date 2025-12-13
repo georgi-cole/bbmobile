@@ -24,8 +24,8 @@
     doubleChance: 18,   // %
     tripleChance: 7,    // %
     returnChance: 10,   // % chance a juror returns (mid-season)
-    jurorReturnAliveMin: 6,  // Min alive players for juror return eligibility
-    jurorReturnAliveMax: 6,  // Max alive players for juror return eligibility
+    jurorReturnAliveMin: 6,  // Min alive players for juror return eligibility (exact constraint: min=max=6 by spec)
+    jurorReturnAliveMax: 6,  // Max alive players for juror return eligibility (set to same value for exact constraint)
     jurorReturnMinJurors: 2, // Min jurors needed for return twist to trigger
     selfEvictChance: 1, // % tiny chance of auto self-eviction
     enablePublicFav: true, // Public's Favourite Player feature at finale (default ON)
