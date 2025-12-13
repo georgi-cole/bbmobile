@@ -1,22 +1,269 @@
 /* css/veto-results.css */
-.veto-comp-results.comp-results { position: absolute; left: 50%; transform: translateX(-50%); top: 110px; width: 720px; max-width: calc(100% - 48px); background: linear-gradient(180deg, rgba(20,28,36,0.95), rgba(10,14,18,0.95)); border-radius: 12px; padding: 18px 22px; box-shadow: 0 10px 40px rgba(3,8,12,0.7); color: #fff; z-index: 99999; animation: veto-results-show 260ms ease; overflow: hidden; }
-.veto-comp-results.veto-results-hide { animation: veto-results-hide 300ms ease forwards; }
-@keyframes veto-results-show { from { opacity:0; transform: translateX(-50%) translateY(10px) scale(.995) } to { opacity:1; transform: translateX(-50%) translateY(0) scale(1)} }
-@keyframes veto-results-hide { to { opacity:0; transform: translateX(-50%) translateY(-8px) scale(.995) } }
-.veto-comp-results .comp-results-header { text-align: center; margin-bottom: 12px; }
-.veto-comp-results .comp-results-header h3 { margin: 0; font-size: 20px; color: #f7d67a; letter-spacing: 0.6px; }
-.veto-comp-results .comp-results-list { display: flex; gap: 12px; justify-content: center; align-items: stretch; }
-.comp-player-tile { flex: 1 1 0; min-width: 0; display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); transition: transform 160ms ease, box-shadow 160ms ease; }
-.comp-player-tile.first-place { flex: 1.6 1 0; background: linear-gradient(90deg, rgba(255,215,120,0.12), rgba(255,195,40,0.06)); border: 1px solid rgba(255,195,40,0.18); box-shadow: 0 8px 24px rgba(255,180,60,0.06); padding: 16px; }
-.comp-rank { font-weight: 700; font-size: 18px; width: 36px; text-align: center; color: rgba(255,255,255,0.85); }
-.comp-avatar { position: relative; }
-.comp-avatar img { width: 48px; height: 48px; border-radius: 50%; display: block; object-fit: cover; border: 2px solid rgba(255,255,255,0.06); }
-.comp-avatar .avatar-fallback { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, rgba(100,120,140,0.4), rgba(60,80,100,0.4)); border: 2px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 24px; color: rgba(255,255,255,0.4); }
-.comp-avatar .avatar-fallback::before { content: '👤'; }
-.comp-player-tile.first-place .comp-avatar img { width: 64px; height: 64px; border: 3px solid rgba(255,230,150,0.15); }
-.comp-player-tile.first-place .comp-avatar .avatar-fallback { width: 64px; height: 64px; border: 3px solid rgba(255,230,150,0.15); font-size: 32px; }
-.comp-meta { display:flex; flex-direction:column; min-width:0; }
-.comp-name { font-size: 15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.comp-score { font-size:13px; color: rgba(255,255,255,0.75); margin-top:4px; }
-.comp-badge { margin-left: auto; font-size: 20px; }
-@media (max-width: 640px){ .veto-comp-results.comp-results { width: calc(100% - 32px); top: 80px; padding: 12px; } .veto-comp-results .comp-results-list { flex-direction: column; gap: 10px; } .comp-player-tile.first-place { flex: 1 1 auto; } .comp-avatar img { width: 44px; height:44px; } .comp-avatar .avatar-fallback { width: 44px; height: 44px; font-size: 20px; } .comp-player-tile.first-place .comp-avatar img { width:56px; height:56px; } .comp-player-tile.first-place .comp-avatar .avatar-fallback { width: 56px; height: 56px; font-size: 28px; } }
+/* Vertical top-3 veto competition results with mobile fit strategy */
+
+/* Main container */
+.veto-comp-results.comp-results {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 110px;
+  width: 420px;
+  max-width: calc(100% - 48px);
+  background: linear-gradient(180deg, rgba(20,28,36,0.95), rgba(10,14,18,0.95));
+  border-radius: 12px;
+  padding: 18px 22px;
+  box-shadow: 0 10px 40px rgba(3,8,12,0.7);
+  color: #fff;
+  z-index: 99999;
+  animation: veto-results-show 260ms ease;
+  overflow: hidden;
+}
+
+.veto-comp-results.veto-results-hide {
+  animation: veto-results-hide 300ms ease forwards;
+}
+
+@keyframes veto-results-show {
+  from { opacity:0; transform: translateX(-50%) translateY(10px) scale(.995); }
+  to { opacity:1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes veto-results-hide {
+  to { opacity:0; transform: translateX(-50%) translateY(-8px) scale(.995); }
+}
+
+/* Header */
+.veto-comp-results .comp-results-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.veto-comp-results .comp-results-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #f7d67a;
+  letter-spacing: 0.6px;
+}
+
+/* Vertical list - always vertical, never horizontal */
+.veto-comp-results .comp-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Player tile */
+.comp-player-tile {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+/* First place emphasis */
+.comp-player-tile.first-place {
+  background: linear-gradient(90deg, rgba(255,215,120,0.12), rgba(255,195,40,0.06));
+  border: 1px solid rgba(255,195,40,0.18);
+  box-shadow: 0 8px 24px rgba(255,180,60,0.06);
+  padding: 16px;
+}
+
+/* Rank number */
+.comp-rank {
+  font-weight: 700;
+  font-size: 18px;
+  width: 36px;
+  text-align: center;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Avatar */
+.comp-avatar {
+  position: relative;
+}
+
+.comp-avatar img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.06);
+}
+
+.comp-avatar .avatar-fallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(100,120,140,0.4), rgba(60,80,100,0.4));
+  border: 2px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: rgba(255,255,255,0.4);
+}
+
+.comp-avatar .avatar-fallback::before {
+  content: '👤';
+}
+
+/* First place larger avatar */
+.comp-player-tile.first-place .comp-avatar img {
+  width: 64px;
+  height: 64px;
+  border: 3px solid rgba(255,230,150,0.15);
+}
+
+.comp-player-tile.first-place .comp-avatar .avatar-fallback {
+  width: 64px;
+  height: 64px;
+  border: 3px solid rgba(255,230,150,0.15);
+  font-size: 32px;
+}
+
+/* Player metadata */
+.comp-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.comp-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comp-score {
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  margin-top: 4px;
+}
+
+/* Crown badge for winner */
+.comp-badge {
+  margin-left: auto;
+  font-size: 20px;
+}
+
+/* Mobile: Compact mode for small viewports */
+@media (max-width: 640px) {
+  .veto-comp-results.comp-results {
+    width: calc(100% - 32px);
+    top: 80px;
+    padding: 12px;
+  }
+  
+  .veto-comp-results .comp-results-list {
+    gap: 10px;
+  }
+  
+  .comp-avatar img {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .comp-avatar .avatar-fallback {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+  
+  .comp-player-tile.first-place .comp-avatar img {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .comp-player-tile.first-place .comp-avatar .avatar-fallback {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+}
+
+/* Extra compact mode for very small viewports */
+@media (max-width: 480px) and (max-height: 700px) {
+  .veto-comp-results.comp-results {
+    top: 60px;
+    padding: 10px 14px;
+  }
+  
+  .veto-comp-results .comp-results-header {
+    margin-bottom: 8px;
+  }
+  
+  .veto-comp-results .comp-results-header h3 {
+    font-size: 17px;
+  }
+  
+  .veto-comp-results .comp-results-list {
+    gap: 8px;
+  }
+  
+  .comp-player-tile {
+    padding: 10px;
+    gap: 8px;
+  }
+  
+  .comp-player-tile.first-place {
+    padding: 12px;
+  }
+  
+  .comp-rank {
+    font-size: 16px;
+    width: 30px;
+  }
+  
+  .comp-avatar img {
+    width: 38px;
+    height: 38px;
+  }
+  
+  .comp-avatar .avatar-fallback {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+  
+  .comp-player-tile.first-place .comp-avatar img {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .comp-player-tile.first-place .comp-avatar .avatar-fallback {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+  
+  .comp-name {
+    font-size: 14px;
+  }
+  
+  .comp-score {
+    font-size: 12px;
+  }
+  
+  .comp-badge {
+    font-size: 18px;
+  }
+}
+
+/* Split-card mode: Show winner only first, then runners-up */
+.veto-comp-results.split-card-winner .comp-results-list .comp-player-tile:not(.first-place),
+.veto-comp-results.split-card-runners .comp-results-list .comp-player-tile.first-place {
+  display: none;
+}
+
+.veto-comp-results.split-card-runners .comp-results-header h3::after {
+  content: ' — Runners-Up';
+}
