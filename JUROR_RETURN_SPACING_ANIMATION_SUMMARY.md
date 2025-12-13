@@ -29,7 +29,7 @@ This PR implements two small but impactful UI/UX improvements to the Juror Retur
 
 @media (min-width: 900px) {
   .jrSlot {
-    flex: 0 0 calc(20% - 1rem);
+    flex: 0 0 auto;
     max-width: 240px;
   }
 }
