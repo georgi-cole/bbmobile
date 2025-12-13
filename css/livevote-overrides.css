@@ -30,54 +30,6 @@ body.lv-dock-livevote #panel .legacy-live-vote {
   z-index: 1; /* below TV overlay */
 }
 
-/* Compact layout overrides for legacy vote overlays */
-.lv-root,
-.lv-overlay {
-  padding: 8px !important;
-  max-height: calc(100vh - 96px) !important;
-  overflow: hidden !important;
-}
-
-.lv-choice-card {
-  gap: 8px !important;
-  padding: 8px !important;
-}
-
-/* Compact overrides for legacy nominee display */
-.lv2-3up-grid,
-.lv-choice-card__nominees {
-  gap: 8px !important;
-  padding: 4px !important;
-}
-
-.lv2-contestant,
-.lv-choice-card__nominee {
-  position: relative !important;
-  height: 120px !important;
-  width: 88px !important;
-  padding: 6px !important;
-  gap: 4px !important;
-}
-
-.lv2-avatar,
-.lv-choice-card__avatar {
-  width: 64px !important;
-  height: 64px !important;
-  border-radius: 50% !important;
-  flex-shrink: 0 !important;
-}
-
-.lv-choice-card__vote-btn {
-  position: absolute !important;
-  bottom: 8px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  min-width: 60px !important;
-  padding: 4px 8px !important;
-  font-size: 0.7rem !important;
-  margin-top: 0 !important;
-}
-
 /* Styles for triple nominee layout */
 .lv2-3up {
   /* 3-up container uses grid with 2 rows: nominees grid + CTA row */
@@ -90,7 +42,7 @@ body.lv-dock-livevote #panel .legacy-live-vote {
   /* 3-column grid for nominees */
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(8px, 1.4vw, 12px);
+  gap: clamp(10px, 1.6vw, 18px);
   align-items: center;
   justify-items: center;
 }
@@ -100,14 +52,14 @@ body.lv-dock-livevote #panel .legacy-live-vote {
   display: grid;
   grid-template-rows: auto auto;
   justify-items: center;
-  gap: 4px;
+  gap: 8px;
   width: 100%;
 }
 
 .lv2-avatar {
   /* Avatar styling for triple layout */
-  width: clamp(64px, 10vw, 80px);
-  height: clamp(64px, 10vw, 80px);
+  width: clamp(72px, 12vw, 96px);
+  height: clamp(72px, 12vw, 96px);
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #1b2b44, #0f1a2d);
   box-shadow: 0 0 0 3px rgba(143, 211, 255, 0.4), 0 4px 18px rgba(0, 0, 0, 0.5);

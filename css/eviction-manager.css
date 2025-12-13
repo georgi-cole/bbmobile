@@ -10,13 +10,12 @@
   z-index: 9500;
   background: rgba(0, 0, 0, 0.95);
   border-radius: 16px;
-  padding: 8px;
+  padding: 1.5rem;
   max-width: min(90vw, 800px);
-  max-height: calc(100vh - 96px);
-  overflow: hidden;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 1rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -35,12 +34,12 @@
 
 .eviction-manager-list {
   display: flex;
-  gap: 8px;
+  gap: 1rem;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
-  padding: 8px 4px;
+  padding: 0.5rem 0;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -60,16 +59,14 @@
 }
 
 .eviction-manager-item {
-  position: relative;
   flex: 0 0 auto;
-  width: 88px;
-  height: 120px;
+  width: clamp(140px, 20vw, 180px);
   scroll-snap-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px;
+  gap: 0.75rem;
+  padding: 1rem;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid transparent;
@@ -99,13 +96,13 @@
 }
 
 .eviction-manager-avatar {
-  width: 64px;
-  height: 64px;
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
-  flex-shrink: 0;
+  position: relative;
 }
 
 .eviction-manager-item.selected .eviction-manager-avatar {
@@ -122,40 +119,28 @@
 }
 
 .eviction-manager-name {
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 600;
   text-align: center;
   color: white;
   word-break: break-word;
   max-width: 100%;
-  line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
 .eviction-manager-evict-btn {
   display: none;
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 12px);
-  min-width: 60px;
-  padding: 4px 8px;
+  width: 100%;
+  padding: 0.75rem 1rem;
   background: var(--danger-color, #dc3545);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 0.7rem;
+  border-radius: 8px;
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.05em;
-  margin-top: 0;
 }
 
 .eviction-manager-evict-btn:hover:not(:disabled) {
@@ -193,52 +178,35 @@
 @media (max-width: 768px) {
   .eviction-manager-root {
     max-width: 95vw;
-    padding: 6px;
+    padding: 1rem;
   }
 
   .eviction-manager-header {
-    font-size: 1rem;
+    font-size: 1.25rem;
   }
 
   .eviction-manager-item {
-    width: 80px;
-    height: 110px;
-  }
-
-  .eviction-manager-avatar {
-    width: 56px;
-    height: 56px;
+    width: clamp(120px, 30vw, 150px);
   }
 
   .eviction-manager-name {
-    font-size: 0.7rem;
+    font-size: 0.875rem;
   }
 
   .eviction-manager-evict-btn {
-    padding: 3px 6px;
-    font-size: 0.65rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
   }
 }
 
 /* Extra small screens */
 @media (max-width: 480px) {
   .eviction-manager-item {
-    width: 72px;
-    height: 100px;
-  }
-
-  .eviction-manager-avatar {
-    width: 48px;
-    height: 48px;
+    width: clamp(100px, 35vw, 130px);
   }
 
   .eviction-manager-name {
-    font-size: 0.65rem;
-  }
-
-  .eviction-manager-evict-btn {
-    font-size: 0.6rem;
-    padding: 2px 4px;
+    font-size: 0.75rem;
   }
 }
 

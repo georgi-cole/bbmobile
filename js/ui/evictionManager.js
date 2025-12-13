@@ -284,9 +284,6 @@
       item.setAttribute('role', 'option');
       item.setAttribute('tabindex', index === 0 ? '0' : '-1');
       item.setAttribute('aria-label', `Vote to evict ${getPlayerName(nomineeId)}`);
-      // Set compact layout with relative positioning
-      item.style.position = 'relative';
-      item.style.height = '120px';
 
       // Avatar
       const avatar = document.createElement('div');
@@ -302,16 +299,11 @@
       name.className = 'eviction-manager-name';
       name.textContent = getPlayerName(nomineeId);
 
-      // Evict button (hidden initially, absolutely positioned at bottom)
+      // Evict button (hidden initially)
       const btn = document.createElement('button');
       btn.className = 'eviction-manager-evict-btn';
       btn.textContent = 'Evict';
       btn.style.display = 'none';
-      btn.style.position = 'absolute';
-      btn.style.bottom = '8px';
-      btn.style.left = '50%';
-      btn.style.transform = 'translateX(-50%)';
-      btn.style.marginTop = '0';
       btn.setAttribute('aria-label', `Confirm eviction of ${getPlayerName(nomineeId)}`);
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
