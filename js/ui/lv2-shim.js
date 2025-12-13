@@ -6,6 +6,10 @@
 (function(global) {
   'use strict';
 
+  // Constants
+  const MAX_VOTE_FEED_ITEMS = 10;
+  const FALLBACK_AVATAR_SVG = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ccc" width="100" height="100"/%3E%3C/svg%3E';
+
   // State for tracking active UI
   const state = {
     container: null,
@@ -26,7 +30,7 @@
       return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeSeed)}`;
     } catch (e) {
       // Fallback to data URI if external service fails
-      return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ccc" width="100" height="100"/%3E%3C/svg%3E';
+      return FALLBACK_AVATAR_SVG;
     }
   }
 
@@ -643,17 +647,15 @@
         `;
         
         const voterName = vote.voterName || 'Unknown';
-        const targetName = vote.pick != null 
-          ? (state.nomineeMap.get(vote.pick)?.name || 'Unknown')
-          : 'Unknown';
+        const targetName = state.nomineeMap.get(vote.pick)?.name || 'Unknown';
         
         voteItem.textContent = `${voterName} voted to evict ${targetName}`;
         
         // Add to top of feed
         feedList.insertBefore(voteItem, feedList.firstChild);
         
-        // Limit feed to last 10 votes
-        while (feedList.children.length > 10) {
+        // Limit feed to most recent votes
+        while (feedList.children.length > MAX_VOTE_FEED_ITEMS) {
           feedList.removeChild(feedList.lastChild);
         }
       }
