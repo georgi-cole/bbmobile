@@ -1,19 +1,18 @@
 /**
  * Determines whether the Jurors Return Challenge can be activated.
  *
- * Rules:
- * - Activation is NEVER allowed if alivePlayers < 5.
- * - If initialPlayers >= 11 (i.e., more than 10), require at least 5 jurors.
- * - If initialPlayers <= 10 (i.e., 10 or fewer), require at least 4 jurors.
+ * NOTE: As of the latest refactor, juror return eligibility is now CONFIGURABLE
+ * via game config keys (jurorReturnAliveMin, jurorReturnAliveMax, jurorReturnMinJurors).
+ * This function provides a simplified eligibility check for the progression system.
  *
- * Definitions:
- * - initialPlayers: number of players at game start (not the current alive count).
+ * Default rules (configurable in js/config/defaults.js):
+ * - Alive players must be exactly 6 (or within jurorReturnAliveMin/Max range)
+ * - At least 2 jurors required (or jurorReturnMinJurors value)
  *
- * Edge case:
- * - Exactly 10 initial players is treated as "small" (requires >= 4 jurors).
+ * For the actual game logic, see js/twists.js::isJurorReturnEligible()
  *
  * @param {object} params
- * @param {number} params.initialPlayers - Players at game start.
+ * @param {number} params.initialPlayers - Players at game start (legacy, not used in new logic).
  * @param {number} params.alivePlayers - Current number of alive players.
  * @param {number} params.jurorCount - Current number of jurors.
  * @returns {boolean} True if the challenge can be activated, else false.
@@ -23,41 +22,55 @@ export function canActivateJurorsReturnChallenge({ initialPlayers, alivePlayers,
     throw new TypeError("All parameters must be finite numbers.");
   }
 
-  // Hard stop if fewer than 5 people are alive.
-  if (alivePlayers < 5) return false;
+  // Default thresholds (should match js/config/defaults.js)
+  const aliveMin = 6;
+  const aliveMax = 6;
+  const minJurors = 2;
 
-  // Large game threshold is based on initial player count.
-  const isLargeGame = initialPlayers >= 11; // "more than 10"
-  return isLargeGame ? jurorCount >= 5 : jurorCount >= 4;
+  // Check if alive players fall within the configured range
+  if (alivePlayers < aliveMin || alivePlayers > aliveMax) return false;
+
+  // Check if we have enough jurors
+  return jurorCount >= minJurors;
 }
 
 /**
- * Returns the juror count required to allow activation, based on initial players.
- * @param {number} initialPlayers
- * @returns {4|5}
+ * Returns the juror count required to allow activation.
+ * NOTE: This is now a fixed default value. The actual game uses configurable
+ * thresholds via game.cfg.jurorReturnMinJurors (default: 2).
+ * @param {number} initialPlayers - Legacy parameter, no longer used in new logic
+ * @returns {number} Required juror count (default: 2)
  */
 export function requiredJurorsForActivation(initialPlayers) {
   if (!Number.isFinite(initialPlayers)) {
     throw new TypeError("initialPlayers must be a finite number.");
   }
-  return initialPlayers >= 11 ? 5 : 4;
+  // Return the default minimum jurors (matches js/config/defaults.js)
+  return 2;
 }
 
 /**
  * Like canActivateJurorsReturnChallenge, but returns a structured result with reason for failure.
  * @param {object} params
- * @param {number} params.initialPlayers
+ * @param {number} params.initialPlayers - Legacy parameter
  * @param {number} params.alivePlayers
  * @param {number} params.jurorCount
  * @returns {{ ok: true } | { ok: false, reason: string }}
  */
 export function canActivateJurorsReturnChallengeCheck({ initialPlayers, alivePlayers, jurorCount }) {
-  if (alivePlayers < 5) {
-    return { ok: false, reason: "Not enough players alive (need at least 5)." };
+  // Default thresholds (should match js/config/defaults.js)
+  const aliveMin = 6;
+  const aliveMax = 6;
+  const minJurors = 2;
+
+  if (alivePlayers < aliveMin) {
+    return { ok: false, reason: `Not enough players alive (need at least ${aliveMin}).` };
   }
-  const required = requiredJurorsForActivation(initialPlayers);
-  if (jurorCount < required) {
-    return { ok: false, reason: `Not enough jurors (need at least ${required}).` };
+  if (alivePlayers > aliveMax) {
+    return { ok: false, reason: `Too many players alive (need at most ${aliveMax}).` };
+  }
+  if (jurorCount < minJurors) {
+    return { ok: false, reason: `Not enough jurors (need at least ${minJurors}).` };
   }
   return { ok: true };
 }

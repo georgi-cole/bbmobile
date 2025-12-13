@@ -8,15 +8,18 @@ The juror return twist now includes comprehensive eligibility checks to ensure i
 The twist will only activate if **ALL** of the following conditions are met:
 
 ### 1. Alive Players Threshold
-- **Requirement**: At least 5 players must be alive
+- **Requirement**: Alive player count must fall within the configured range
+- **Configuration keys**: 
+  - `jurorReturnAliveMin` (default: 6) - Minimum alive players
+  - `jurorReturnAliveMax` (default: 6) - Maximum alive players
 - **Reason**: Ensures the game has enough players to make the twist meaningful
+- **Adjustable**: Easy to change to different ranges (e.g., 5-8 players)
 
 ### 2. Juror Count Threshold
-The required number of jurors depends on the initial cast size:
-- **Large seasons (>10 initial players)**: Requires at least 5 jurors
-- **Small seasons (≤10 initial players)**: Requires at least 4 jurors
-
-This dynamic threshold ensures the twist is proportional to the game size.
+- **Requirement**: At least a minimum number of jurors in jury house
+- **Configuration key**: `jurorReturnMinJurors` (default: 2)
+- **Reason**: Ensures there are enough candidates for the return vote
+- **Adjustable**: Can be set to any value (e.g., 3, 4, or 5 jurors)
 
 ### 3. Twist Has Not Run
 - **Flags checked**: Both `__jurorReturnDone` and `__americaReturnDone`
@@ -69,8 +72,12 @@ Both implementations use identical logic to ensure consistency.
 ```javascript
 game.cfg = {
   enableJuryHouse: true,
-  returnChance: 10,  // 10% chance per eligible week
-  numPlayers: 12     // Initial cast size
+  returnChance: 10,           // 10% chance per eligible week
+  jurorReturnAliveMin: 6,     // Min alive players for eligibility
+  jurorReturnAliveMax: 6,     // Max alive players for eligibility
+  jurorReturnMinJurors: 2,    // Min jurors needed in jury house
+  tJurorReturnVoteMs: 6500,   // Duration (ms) for vote panel animation
+  numPlayers: 12              // Initial cast size
 };
 ```
 

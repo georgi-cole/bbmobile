@@ -1654,7 +1654,9 @@
     
     global.updateHud?.();
 
-    if(shouldRunAmericaReturn()){
+    // Use centralized juror return decision logic from twists.js
+    // This checks eligibility + RNG and is cached per week
+    if(typeof global.decideJurorReturnThisWeek === 'function' && global.decideJurorReturnThisWeek(g)){
       setTimeout(()=>{ try{ global.startAmericaReturnVote?.(); }catch(e){} },60);
       return;
     }
@@ -1664,14 +1666,5 @@
     global.updateHud?.();
   }
   global.proceedNextWeek=proceedNextWeek;
-
-  function shouldRunAmericaReturn(){
-    const g=global.game||{};
-    if(!g.cfg || g.cfg.enableJuryHouse===false) return false;
-    if(g.__americaReturnDone) return false;
-    const jurors=Array.isArray(g.juryHouse)?g.juryHouse.length:0;
-    if(jurors<4 || jurors>6) return false;
-    return Math.random()<0.5;
-  }
 
 })(window);
