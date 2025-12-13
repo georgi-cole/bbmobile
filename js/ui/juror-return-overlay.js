@@ -348,84 +348,10 @@
   }
 
   /**
-   * Create a player list panel from a provided players array
-   * Used when players array is explicitly provided (e.g., for debug mode)
-   */
-  function createPlayerListPanel(players) {
-    const container = document.createElement('div');
-    container.style.cssText = `
-      background: linear-gradient(135deg, rgba(13,27,42,0.95), rgba(27,38,59,0.95));
-      border-radius: 24px;
-      padding: 32px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-      border: 1px solid rgba(255,255,255,0.1);
-      max-width: 900px;
-      margin: 0 auto;
-    `;
-    
-    const header = document.createElement('div');
-    header.style.cssText = 'text-align:center;margin-bottom:28px;';
-    header.innerHTML = `
-      <h2 style="font-size:2rem;font-weight:700;margin:0 0 8px 0;color:#00e0cc;">🗳️ America's Vote</h2>
-      <div style="font-size:1.1rem;color:#8fb4d4;font-weight:500;">Which juror deserves a second chance?</div>
-    `;
-    container.appendChild(header);
-    
-    const grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;';
-    
-    players.forEach(player => {
-      const card = document.createElement('div');
-      card.setAttribute('data-j-id', player.id);
-      card.style.cssText = `
-        background:rgba(20,35,55,0.8);
-        border-radius:16px;
-        padding:20px;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        gap:12px;
-        border:1px solid rgba(143,211,255,0.2);
-        transition: all 0.2s ease;
-      `;
-      
-      // Add hover effect
-      card.addEventListener('mouseenter', () => {
-        card.style.transform = 'translateY(-4px)';
-        card.style.boxShadow = '0 8px 16px rgba(0,224,204,0.3)';
-        card.style.borderColor = 'rgba(0,224,204,0.5)';
-      });
-      card.addEventListener('mouseleave', () => {
-        card.style.transform = 'translateY(0)';
-        card.style.boxShadow = 'none';
-        card.style.borderColor = 'rgba(143,211,255,0.2)';
-      });
-      
-      card.innerHTML = `
-        <img src="${player.avatarUrl || getDicebearUrl(player.name)}" alt="${player.name}" style="
-          width:120px;
-          height:120px;
-          border-radius:50%;
-          border:3px solid #00e0cc;
-        ">
-        <div style="font-size:1.1rem;font-weight:700;color:#e8f4ff;text-align:center;">${player.name}</div>
-        <div style="font-size:1.5rem;font-weight:700;color:#00e0cc;">${Math.floor(Math.random() * 30)}%</div>
-        <div style="font-size:0.85rem;color:#8fb4d4;">of votes</div>
-      `;
-      
-      grid.appendChild(card);
-    });
-    
-    container.appendChild(grid);
-    return container;
-  }
-
-  /**
    * Show overlay
-   * @param {Array} players - Optional array of player objects {id, name, avatarUrl}
    * SAFETY: Always CLONES the juror panel, never moves it
    */
-  function show(players) {
+  function show() {
     if (isShowing) {
       console.warn('[JurorReturnOverlay] Already showing');
       return;
@@ -441,30 +367,19 @@
       attachEventListeners();
     }
 
-    const contentContainer = overlayElement.querySelector('#juror-return-content');
-    
-    // If players array provided, build UI from that (for debug mode)
-    if (players && Array.isArray(players) && players.length > 0) {
-      console.log('[JurorReturnOverlay] Building UI from provided players array');
-      const playerPanel = createPlayerListPanel(players);
-      if (contentContainer) {
-        clonedContent = playerPanel;
-        contentContainer.appendChild(clonedContent);
-      }
-    } else {
-      // Find existing juror panel (from jury_return_vote.js or similar)
-      const panel = document.getElementById('panel');
-      const existingJurorUI = panel ? panel.children[0] : null;
+    // Find existing juror panel (from jury_return_vote.js or similar)
+    const panel = document.getElementById('panel');
+    const existingJurorUI = panel ? panel.children[0] : null;
 
-      // CLONE the juror UI to overlay content (NEVER move it)
-      if (existingJurorUI && contentContainer) {
-        // Deep clone for display in overlay
-        clonedContent = existingJurorUI.cloneNode(true);
-        contentContainer.appendChild(clonedContent);
-        console.log('[JurorReturnOverlay] Cloned juror panel (original untouched)');
-      } else {
-        console.warn('[JurorReturnOverlay] No juror panel found to clone');
-      }
+    // CLONE the juror UI to overlay content (NEVER move it)
+    const contentContainer = overlayElement.querySelector('#juror-return-content');
+    if (existingJurorUI && contentContainer) {
+      // Deep clone for display in overlay
+      clonedContent = existingJurorUI.cloneNode(true);
+      contentContainer.appendChild(clonedContent);
+      console.log('[JurorReturnOverlay] Cloned juror panel (original untouched)');
+    } else {
+      console.warn('[JurorReturnOverlay] No juror panel found to clone');
     }
 
     // Show overlay
@@ -861,17 +776,9 @@
 
   /**
    * Debug helper: Force-show overlay for testing
-   * @param {Array} players - Optional array of player objects to display
    */
-  function debugShow(players) {
+  function debugShow() {
     console.log('[JurorReturnOverlay] Debug show triggered');
-    
-    // If players provided, use them directly
-    if (players && Array.isArray(players) && players.length > 0) {
-      console.log('[JurorReturnOverlay] Using provided players array:', players.length, 'players');
-      show(players);
-      return;
-    }
     
     // Create mock juror panel if none exists
     const panel = document.getElementById('panel');
