@@ -92,13 +92,19 @@
     };
   }
 
+  // Split-card timing constants (milliseconds)
+  var SPLIT_CARD_WINNER_DURATION = 2500;
+  var SPLIT_CARD_RUNNERS_DURATION = 2500;
+  var SPLIT_CARD_TRANSITION_BUFFER = 100; // Buffer between cards
+
   /**
    * Check if viewport is very constrained (needs split-card mode)
-   * Split-card mode: show winner first (2.5s), then runners-up (2.5s)
+   * Matches CSS media query: (max-width: 480px) and (max-height: 700px)
+   * Split-card mode: show winner first, then runners-up
    */
   function shouldUseSplitCardMode(){
     try{
-      return window.innerWidth <= 480 && window.innerHeight <= 700;
+      return window.innerWidth < 480 && window.innerHeight < 700;
     }catch(e){
       return false;
     }
@@ -106,6 +112,7 @@
 
   /**
    * Render split-card sequence: winner card, then runners-up card
+   * Total display time: ~5s (2.5s + 2.5s + buffers)
    */
   function renderSplitCardSequence(top, ffwdSelectors, tvContainer){
     if(top.length < 2){
@@ -113,18 +120,18 @@
       return renderSingleCard(top, ffwdSelectors, tvContainer, 5000);
     }
 
-    // Phase 1: Winner card (2.5s)
-    var winnerCard = renderSingleCard([top[0]], ffwdSelectors, tvContainer, 2500, 'split-card-winner');
+    // Phase 1: Winner card
+    var winnerCard = renderSingleCard([top[0]], ffwdSelectors, tvContainer, SPLIT_CARD_WINNER_DURATION, 'split-card-winner');
     
-    // Phase 2: Runners-up card (2.5s) - shown after winner card dismisses
+    // Phase 2: Runners-up card (shown after winner card dismisses)
     setTimeout(function(){
       if(winnerCard && winnerCard.parentNode){
         // Winner card still visible, remove it first
         removePanel(winnerCard);
       }
       var runnersUp = top.slice(1); // Get 2nd and 3rd place
-      renderSingleCard(runnersUp, ffwdSelectors, tvContainer, 2500, 'split-card-runners');
-    }, 2600); // Slight buffer after winner card auto-dismiss
+      renderSingleCard(runnersUp, ffwdSelectors, tvContainer, SPLIT_CARD_RUNNERS_DURATION, 'split-card-runners');
+    }, SPLIT_CARD_WINNER_DURATION + SPLIT_CARD_TRANSITION_BUFFER);
 
     return winnerCard;
   }

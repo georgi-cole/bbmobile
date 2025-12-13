@@ -259,11 +259,19 @@
 }
 
 /* Split-card mode: Show winner only first, then runners-up */
-.veto-comp-results.split-card-winner .comp-results-list .comp-player-tile:not(.first-place),
-.veto-comp-results.split-card-runners .comp-results-list .comp-player-tile.first-place {
+/* Used on very small viewports (<480px width & <700px height) */
+
+/* Winner-only card: hide non-first-place tiles */
+.veto-comp-results.split-card-winner .comp-player-tile:not(.first-place) {
   display: none;
 }
 
+/* Runners-up card: hide first-place tile */
+.veto-comp-results.split-card-runners .comp-player-tile.first-place {
+  display: none;
+}
+
+/* Add subtitle to runners-up card */
 .veto-comp-results.split-card-runners .comp-results-header h3::after {
   content: ' — Runners-Up';
 }
