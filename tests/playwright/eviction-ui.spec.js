@@ -44,8 +44,6 @@ test.describe('EvictionManager UI', () => {
   });
 
   test('Single Eviction Flow (2 nominees)', async ({ page }) => {
-    console.log('Starting single eviction test...');
-
     // Trigger single eviction
     await page.evaluate(() => {
       window.EvictionManager.show({
@@ -55,7 +53,6 @@ test.describe('EvictionManager UI', () => {
         onVote: async (nomineeId) => {
           // Simulate vote delay
           await new Promise(resolve => setTimeout(resolve, 700));
-          console.log('Vote completed:', nomineeId);
         }
       });
     });
