@@ -59,13 +59,33 @@
 
   function removePanel(panel){
     if(!panel) return;
+    
+    // Clean up auto-dismiss timer
     try{
       const tid = panel.__vetoAutoDismissTimer;
       if(tid) clearTimeout(tid);
     }catch(e){}
+    
+    // Clean up split-card transition timeout
+    try{
+      const splitTid = panel.__splitCardTransitionTimeout;
+      if(splitTid) clearTimeout(splitTid);
+    }catch(e){}
+    
+    // Clean up associated runners-up card in split-card mode
+    try{
+      const runnersCard = panel.__splitCardRunnersRef;
+      if(runnersCard && runnersCard.parentNode){
+        removePanel(runnersCard);
+      }
+    }catch(e){}
+    
+    // Clean up FFWD event handlers
     try{
       if(typeof panel.__ffwdCleanup === 'function') panel.__ffwdCleanup();
     }catch(e){}
+    
+    // Animate out and remove
     panel.classList.add('veto-results-hide');
     panel.addEventListener('animationend', function onEnd(){
       panel.removeEventListener('animationend', onEnd);
@@ -123,15 +143,24 @@
     // Phase 1: Winner card
     var winnerCard = renderSingleCard([top[0]], ffwdSelectors, tvContainer, SPLIT_CARD_WINNER_DURATION, 'split-card-winner');
     
+    // Store timeout reference for cleanup
+    var transitionTimeout = null;
+    
     // Phase 2: Runners-up card (shown after winner card dismisses)
-    setTimeout(function(){
+    transitionTimeout = setTimeout(function(){
       if(winnerCard && winnerCard.parentNode){
         // Winner card still visible, remove it first
         removePanel(winnerCard);
       }
       var runnersUp = top.slice(1); // Get 2nd and 3rd place
-      renderSingleCard(runnersUp, ffwdSelectors, tvContainer, SPLIT_CARD_RUNNERS_DURATION, 'split-card-runners');
+      var runnersCard = renderSingleCard(runnersUp, ffwdSelectors, tvContainer, SPLIT_CARD_RUNNERS_DURATION, 'split-card-runners');
+      
+      // Store reference for potential cleanup
+      if(winnerCard) winnerCard.__splitCardRunnersRef = runnersCard;
     }, SPLIT_CARD_WINNER_DURATION + SPLIT_CARD_TRANSITION_BUFFER);
+    
+    // Store timeout reference on winner card for cleanup if FFWD pressed early
+    if(winnerCard) winnerCard.__splitCardTransitionTimeout = transitionTimeout;
 
     return winnerCard;
   }
