@@ -236,6 +236,34 @@
   color: var(--ink);
 }
 
+/* Juror Return Vote Modal (matching Fan Favorite design) */
+.jrModalHost {
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+  backdrop-filter: blur(var(--popup-backdrop-blur));
+}
+
+.jrModalHost .jrPanel {
+  background: linear-gradient(145deg, var(--card), var(--card-2));
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--ink);
+}
+
+.jrModalHost .jrTitle {
+  color: color-mix(in srgb, var(--accent) 90%, var(--warn));
+}
+
+.jrModalHost .jrName {
+  color: var(--muted-2);
+}
+
+.jrSlot.jrLeading .jrName {
+  color: color-mix(in srgb, var(--accent) 95%, var(--warn));
+}
+
+.jrSlot.jrLeading .jrPct {
+  color: color-mix(in srgb, var(--accent) 100%, var(--info));
+}
+
 /* ============================================================================
    04. FINALE PANEL (cinDim)
    ============================================================================ */

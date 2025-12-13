@@ -368,29 +368,22 @@
       const isLead=(c===max && max>0);
       
       if(useCached && st._domCache[id]){
-        // Use cached references for performance
+        // Use cached references for performance (NO progress bars)
         const cache = st._domCache[id];
-        if(cache.bar) cache.bar.style.width=pct+'%';
         if(cache.pct) cache.pct.textContent=pct+'%';
-        if(cache.card){
-          cache.card.classList.toggle('leader',isLead);
-          const scale=0.96+Math.min(0.3,pct/320);
-          cache.card.style.setProperty('--rtScale',scale.toFixed(3));
+        if(cache.slot){
+          cache.slot.classList.toggle('jrLeading',isLead);
         }
         if(isLead && leader==null) leader=id;
       } else {
         // Fallback to querySelector (for compatibility)
-        const grid=document.querySelector('#panel #rtGrid'); if(!grid) return;
-        const card=grid.querySelector(`.rtCard[data-id="${id}"]`);
-        if(!card) return;
-        const bar=card.querySelector('.rtBarFill');
-        const pctSpan=card.querySelector('.rtPct');
-        if(bar) bar.style.width=pct+'%';
+        const panel=document.querySelector('#panel .jrVotePanel'); if(!panel) return;
+        const slot=panel.querySelector(`.jrSlot[data-id="${id}"]`);
+        if(!slot) return;
+        const pctSpan=slot.querySelector('.jrPct');
         if(pctSpan) pctSpan.textContent=pct+'%';
-        card.classList.toggle('leader',isLead);
+        slot.classList.toggle('jrLeading',isLead);
         if(isLead && leader==null) leader=id;
-        const scale=0.96+Math.min(0.3,pct/320);
-        card.style.setProperty('--rtScale',scale.toFixed(3));
       }
     });
 
@@ -527,58 +520,92 @@
       return;
     }
     panel.innerHTML='';
-    const host=document.createElement('div'); host.className='returnTwistHost';
-    host.innerHTML=`
-      <h3 class="rtHeader">America's Vote — Juror Return</h3>
-      <div class="tiny muted" id="rtCountdown" role="timer" aria-live="assertive" aria-atomic="true">Time: ${Math.ceil(st.durationMs/1000)}s</div>
-      <div class="rtGrid" id="rtGrid" role="list" aria-label="Juror vote standings"></div>
-      <div class="tiny muted rtNote">Leader highlighted • Live % updates • Use Skip to finish instantly.</div>
-      <div id="rtLiveRegion" role="status" aria-live="polite" aria-atomic="true" style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;"></div>
-    `;
-    panel.appendChild(host);
-    const grid=host.querySelector('#rtGrid');
+    
+    // Build modal host wrapper with flexbox centering (matching Fan Favorite)
+    const modalHost = document.createElement('div');
+    modalHost.className = 'jrModalHost';
+    modalHost.setAttribute('data-bb-card', 'true');
+    
+    // Build panel with compact single card design
+    const panelEl = document.createElement('div');
+    panelEl.className = 'jrPanel';
+    panelEl.setAttribute('role', 'dialog');
+    panelEl.setAttribute('aria-label', 'Juror Return voting simulation');
+    
+    const title = document.createElement('div');
+    title.className = 'jrTitle';
+    title.textContent = 'AMERICA\'S VOTE — JUROR RETURN';
+    panelEl.appendChild(title);
+    
+    // Live region for accessibility (NO timer line per requirements)
+    const liveRegion = document.createElement('div');
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.className = 'sr-only';
+    panelEl.appendChild(liveRegion);
+    liveRegion.textContent = 'Live juror return vote updating';
+    
+    const container = document.createElement('div');
+    container.className = 'jrVotePanel';
+    panelEl.appendChild(container);
+    
+    modalHost.appendChild(panelEl);
     
     // Cache DOM references for performance
     if(!st._domCache) st._domCache = {};
     
+    // Create slots for each juror (avatar + name + % only, NO progress bars)
     st.jurors.forEach(id=>{
       const p=gp(id);
       const jurorName = global.safeName?.(id) || 'Juror';
-      const card=document.createElement('div');
-      card.className='rtCard';
-      card.dataset.id=String(id);
-      card.setAttribute('role','listitem');
+      
+      const slot = document.createElement('div');
+      slot.className = 'jrSlot';
+      slot.dataset.id = String(id);
       
       // Use global avatar resolver
       const avatarUrl = (global.resolveAvatar?.(id)) || 
                        (p?.avatar) || (p?.img) || (p?.photo) || 
                        getDicebearUrl(p?.name||'juror');
       
-      card.innerHTML=`
-        <div class="rtAvatarWrap">
-          <img src="${avatarUrl}"
-               class="rtAvatar" alt="${jurorName}"
-               onerror="console.info('[twists] avatar fallback for juror=${id} url='+this.src); this.onerror=null; this.src=(window.Game||window).getAvatarFallback?.('${jurorName}', this.src) || '${getDicebearUrl(jurorName)}';"/>
-          <div class="rtAvatarRing"></div>
-        </div>
-        <div class="rtName tiny" title="${jurorName}">${jurorName}</div>
-        <div class="rtBarOuter"><div class="rtBarFill"></div></div>
-        <div class="rtPct tiny">0%</div>
-      `;
-      grid.appendChild(card);
+      // Avatar
+      const avatar = document.createElement('img');
+      avatar.className = 'jrAvatar';
+      avatar.src = avatarUrl;
+      avatar.alt = jurorName;
+      avatar.onerror = function() {
+        console.warn('[twists] avatar fallback for juror=' + id);
+        this.onerror = null;
+        this.src = (global.getAvatarFallback?.(jurorName, this.src)) || getDicebearUrl(jurorName);
+      };
+      slot.appendChild(avatar);
       
-      // Cache DOM references for this card
+      // Name label
+      const nameLabel = document.createElement('div');
+      nameLabel.className = 'jrName';
+      nameLabel.textContent = jurorName;
+      nameLabel.title = jurorName;
+      slot.appendChild(nameLabel);
+      
+      // Percentage label (NO progress bar)
+      const pctLabel = document.createElement('div');
+      pctLabel.className = 'jrPct';
+      pctLabel.textContent = '0%';
+      slot.appendChild(pctLabel);
+      
+      container.appendChild(slot);
+      
+      // Cache DOM references for this slot
       st._domCache[id] = {
-        card: card,
-        bar: card.querySelector('.rtBarFill'),
-        pct: card.querySelector('.rtPct')
+        slot: slot,
+        pct: pctLabel
       };
     });
     
-    // Cache countdown and live region
-    st._domCache.countdown = host.querySelector('#rtCountdown');
-    st._domCache.liveRegion = host.querySelector('#rtLiveRegion');
+    // Cache live region
+    st._domCache.liveRegion = liveRegion;
     
+    panel.appendChild(modalHost);
     updateReturnTwistCards();
   }
 

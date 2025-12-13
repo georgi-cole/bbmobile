@@ -6192,6 +6192,186 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   }
 }
 
+/* ============================================================================
+   JUROR RETURN VOTE UI (matching Fan Favorite design)
+   - Compact single card container
+   - Candidates shown inside with avatar + name + % only
+   - NO progress bars or timer line
+   - Leader highlighting
+   - Desktop: centered in faux TV
+   - Mobile: dimmed full-screen overlay
+   ============================================================================ */
+
+/* Modal host wrapper - fullscreen flexbox centering with dimmed background */
+.jrModalHost {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 19, 31, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  animation: fadeIn 0.4s ease;
+}
+
+/* Compact panel container */
+.jrPanel {
+  max-width: 640px;
+  width: 100%;
+  background: linear-gradient(145deg, #0e1622, #0a131f);
+  border: 2px solid rgba(110, 160, 220, .25);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .8), 
+              0 0 80px -20px rgba(110, 160, 220, .15);
+  animation: zoomIn 0.5s ease-out;
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Title styling */
+.jrTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-align: center;
+  color: #6ea0dc;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(110, 160, 220, .3);
+}
+
+/* Responsive grid container for candidate slots */
+.jrVotePanel {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  margin-top: 10px;
+}
+
+/* Desktop: 4 columns in a single row (≥900px) */
+@media (min-width: 900px) {
+  .jrVotePanel {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+  .jrPanel {
+    max-width: 800px;
+  }
+}
+
+/* Mid-size: 2x2 grid (640-899px) */
+@media (min-width: 640px) and (max-width: 899px) {
+  .jrVotePanel {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+}
+
+/* Tablet: 2 columns (400-639px) */
+@media (max-width: 639px) {
+  .jrVotePanel {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .jrPanel {
+    padding: 16px;
+  }
+}
+
+/* Very narrow: 1 column (<400px) */
+@media (max-width: 399px) {
+  .jrVotePanel {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Individual candidate slot */
+.jrSlot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Candidate name label */
+.jrName {
+  font-size: clamp(0.8rem, 2vw, 0.85rem);
+  font-weight: 700;
+  color: #b8d4f0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
+}
+
+/* Percentage label - prominent display */
+.jrPct {
+  font-size: clamp(1rem, 2.5vw, 1.1rem);
+  font-weight: 800;
+  color: #eaf4ff;
+  text-align: center;
+  /* Ensure contrast ratio ≥4.5:1 on dark background */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+/* Avatar styling */
+.jrAvatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  background: #1b2c3b;
+  border: 2px solid #3d5a72;
+  object-fit: cover;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .6);
+}
+
+/* Hover and leader state for avatars */
+.jrAvatar:hover,
+.jrSlot.jrLeading .jrAvatar {
+  transform: scale(1.05);
+  border-color: #6fd7ff;
+  box-shadow: 0 0 20px rgba(111, 215, 255, 0.5);
+}
+
+/* Mobile avatar size */
+@media (max-width: 639px) {
+  .jrAvatar {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* Leader highlighting */
+.jrSlot.jrLeading .jrName {
+  color: #ffdc8b;
+  text-shadow: 0 0 6px rgba(255, 220, 140, .6);
+}
+
+.jrSlot.jrLeading .jrPct {
+  color: #6fd7ff;
+  text-shadow: 0 0 12px rgba(111, 215, 255, .7);
+  transform: scale(1.05);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .jrVotePanel, .jrSlot, .jrPct {
+    transition: none !important;
+  }
+}
+
 /* Winner Card Styles */
 .pfWinnerCard {
   position: fixed;
