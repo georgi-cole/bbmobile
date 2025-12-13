@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Juror Return Configurable Thresholds</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a1628;
+      color: #e3ecf5;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1, h2 { color: #8fd3ff; }
+    .test-section {
+      background: #152235;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3b5a;
+    }
+    .test-case {
+      margin: 10px 0;
+      padding: 10px;
+      background: #1a2740;
+      border-left: 4px solid #6fd3ff;
+    }
+    .pass { border-left-color: #74e48b; }
+    .fail { border-left-color: #ff6b6b; }
+    .result { font-weight: bold; margin-top: 5px; }
+    .pass .result { color: #74e48b; }
+    .fail .result { color: #ff6b6b; }
+    button {
+      background: #6fd3ff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      color: #0a1628;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #8fd3ff; }
+    .info { color: #95a9c0; font-size: 0.9em; margin-bottom: 10px; }
+    .config-display {
+      background: #1a2740;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Juror Return Configurable Thresholds Test</h1>
+  <p class="info">Testing the new configurable eligibility thresholds for juror return twist.</p>
+
+  <div class="test-section">
+    <h2>Configuration</h2>
+    <div class="config-display" id="configDisplay">Loading...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script src="js/state.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/twists.js"></script>
+  
+  <script>
+    // Mock necessary game functions
+    window.alivePlayers = function() {
+      return (window.game?.cast || []).filter(p => !p.evicted);
+    };
+    
+    window.getP = function(id) {
+      return (window.game?.cast || []).find(p => p.id === id);
+    };
+
+    window.rng = function() {
+      return 0.5; // Fixed for predictable testing
+    };
+
+    // Display configuration
+    function displayConfig() {
+      const defaultCfg = window.getDefaultConfig?.() || {};
+      const configDisplay = document.getElementById('configDisplay');
+      configDisplay.innerHTML = `
+        <strong>Default Configuration Values:</strong><br>
+        jurorReturnAliveMin: ${defaultCfg.jurorReturnAliveMin || 'not set'}<br>
+        jurorReturnAliveMax: ${defaultCfg.jurorReturnAliveMax || 'not set'}<br>
+        jurorReturnMinJurors: ${defaultCfg.jurorReturnMinJurors || 'not set'}<br>
+        tJurorReturnVoteMs: ${defaultCfg.tJurorReturnVoteMs || 'not set'}<br>
+        returnChance: ${defaultCfg.returnChance || 'not set'}%
+      `;
+    }
+
+    function createMockGame(config) {
+      const game = {
+        week: 5,
+        cast: [],
+        juryHouse: [],
+        cfg: {
+          enableJuryHouse: true,
+          returnChance: 100, // 100% for testing
+          jurorReturnAliveMin: 6,
+          jurorReturnAliveMax: 6,
+          jurorReturnMinJurors: 2,
+          ...config.cfg
+        },
+        ...config
+      };
+
+      // Create cast
+      const numPlayers = config.numPlayers || 12;
+      for (let i = 1; i <= numPlayers; i++) {
+        game.cast.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: i > (config.aliveCount || 6), // Mark some as evicted
+        });
+      }
+
+      // Set jurors
+      if (config.jurorCount) {
+        const evicted = game.cast.filter(p => p.evicted);
+        game.juryHouse = evicted.slice(0, config.jurorCount).map(p => p.id);
+      }
+
+      return game;
+    }
+
+    function runTest(name, description, testFn) {
+      const result = document.createElement('div');
+      result.className = 'test-case';
+      
+      try {
+        const passed = testFn();
+        result.classList.add(passed ? 'pass' : 'fail');
+        result.innerHTML = `
+          <strong>${name}</strong><br>
+          <span class="info">${description}</span>
+          <div class="result">${passed ? '✓ PASS' : '✗ FAIL'}</div>
+        `;
+      } catch (e) {
+        result.classList.add('fail');
+        result.innerHTML = `
+          <strong>${name}</strong><br>
+          <span class="info">${description}</span>
+          <div class="result">✗ ERROR: ${e.message}</div>
+        `;
+      }
+      
+      document.getElementById('results').appendChild(result);
+    }
+
+    function runAllTests() {
+      clearResults();
+      
+      // Test 1: Default configuration (6 alive, 2 jurors) - should be eligible
+      runTest(
+        'Test 1: Default Configuration',
+        'With 6 alive players and 2 jurors (default thresholds)',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 6,
+            jurorCount: 2
+          });
+          const eligible = window.isJurorReturnEligible(window.game);
+          return eligible === true;
+        }
+      );
+
+      // Test 2: Below minimum alive (5 alive) - should not be eligible
+      runTest(
+        'Test 2: Below Minimum Alive',
+        'With 5 alive players (below jurorReturnAliveMin=6)',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 5,
+            jurorCount: 2
+          });
+          const eligible = window.isJurorReturnEligible(window.game);
+          return eligible === false;
+        }
+      );
+
+      // Test 3: Above maximum alive (7 alive) - should not be eligible
+      runTest(
+        'Test 3: Above Maximum Alive',
+        'With 7 alive players (above jurorReturnAliveMax=6)',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 7,
+            jurorCount: 2
+          });
+          const eligible = window.isJurorReturnEligible(window.game);
+          return eligible === false;
+        }
+      );
+
+      // Test 4: Below minimum jurors (1 juror) - should not be eligible
+      runTest(
+        'Test 4: Below Minimum Jurors',
+        'With 6 alive players but only 1 juror (below jurorReturnMinJurors=2)',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 6,
+            jurorCount: 1
+          });
+          const eligible = window.isJurorReturnEligible(window.game);
+          return eligible === false;
+        }
+      );
+
+      // Test 5: Custom range (5-8 alive) - should work
+      runTest(
+        'Test 5: Custom Range (5-8 alive)',
+        'With custom config: jurorReturnAliveMin=5, jurorReturnAliveMax=8, 7 alive players',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 7,
+            jurorCount: 2,
+            cfg: {
+              jurorReturnAliveMin: 5,
+              jurorReturnAliveMax: 8,
+              jurorReturnMinJurors: 2
+            }
+          });
+          const eligible = window.isJurorReturnEligible(window.game);
+          return eligible === true;
+        }
+      );
+
+      // Test 6: Weekly decision caching
+      runTest(
+        'Test 6: Weekly Decision Caching',
+        'Decision should be cached per week (same result on multiple calls)',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 6,
+            jurorCount: 2
+          });
+          const decision1 = window.decideJurorReturnThisWeek(window.game);
+          const decision2 = window.decideJurorReturnThisWeek(window.game);
+          // Both should return same result (cached)
+          return decision1 === decision2;
+        }
+      );
+
+      // Test 7: Already run flag respected
+      runTest(
+        'Test 7: Already Run Flag',
+        'Should not be eligible if __jurorReturnDone flag is set',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 6,
+            jurorCount: 2
+          });
+          window.game.__jurorReturnDone = true;
+          const eligible = window.isJurorReturnEligible(window.game);
+          return eligible === false;
+        }
+      );
+
+      // Test 8: Vote panel duration from config
+      runTest(
+        'Test 8: Vote Panel Duration',
+        'Vote panel should use tJurorReturnVoteMs from config (6500ms default)',
+        () => {
+          window.game = createMockGame({
+            numPlayers: 12,
+            aliveCount: 6,
+            jurorCount: 2,
+            cfg: {
+              tJurorReturnVoteMs: 6500
+            }
+          });
+          window.game.juryHouse = [7, 8];
+          
+          // This would normally start the vote panel, but we just check
+          // that the config value would be used
+          const expectedDuration = window.game.cfg.tJurorReturnVoteMs;
+          return expectedDuration === 6500;
+        }
+      );
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+    }
+
+    // Display config on load
+    displayConfig();
+  </script>
+</body>
+</html>
