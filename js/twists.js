@@ -426,6 +426,36 @@
   }
 
   /**
+   * Wait for the voting panel to disappear from DOM
+   * @param {number} maxWait - Maximum wait time in ms (default 3500)
+   * @returns {Promise<void>} Resolves when panel is gone or timeout
+   */
+  async function waitForPanelGone(maxWait = 3500) {
+    const startTime = Date.now();
+    
+    return new Promise((resolve) => {
+      const checkPanel = () => {
+        const panel = document.getElementById('panel');
+        const elapsed = Date.now() - startTime;
+        
+        // Panel is gone if it's empty or hidden
+        const isGone = !panel || 
+                      panel.innerHTML.trim() === '' || 
+                      panel.style.display === 'none' ||
+                      panel.classList.contains('hidden');
+        
+        if (isGone || elapsed >= maxWait) {
+          resolve();
+        } else {
+          setTimeout(checkPanel, 100);
+        }
+      };
+      
+      checkPanel();
+    });
+  }
+
+  /**
    * Show juror return result with animation
    * @param {number} winnerId - ID of the returning juror
    * @param {number} percent - Winning percentage
@@ -434,6 +464,9 @@
   async function showJurorReturnResult(winnerId, percent){
     if(!winnerId) return;
     
+    // Wait for panel to be gone before showing result
+    await waitForPanelGone(3500);
+    
     const winnerName = global.safeName?.(winnerId) || 'Juror';
     const pctDisplay = Math.round(percent);
     const message = `With ${pctDisplay}% ${winnerName} is back to the game.`;
@@ -441,46 +474,64 @@
     // Show result card using global.showCard if available
     if(typeof global.showCard === 'function'){
       try{
-        global.showCard('America Votes — Result', [message], 'jury', 3800, true);
+        global.showCard('Juror Return Result', [message], 'jury', 3200, true);
       }catch(e){
         console.warn('[showJurorReturnResult] showCard failed:', e);
       }
     } else {
-      // Fallback: simple DOM modal (create dedicated overlay container)
+      // Fallback: simple DOM modal
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,19,31,0.85);z-index:600;';
       const card = document.createElement('div');
       card.style.cssText = 'background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:24px;max-width:480px;text-align:center;';
-      card.innerHTML = `<div style="font-size:1rem;font-weight:700;color:#6ea0dc;margin-bottom:12px;">AMERICA VOTES — RESULT</div><div style="font-size:0.95rem;color:#eaf4ff;">${message}</div>`;
+      card.innerHTML = `<div style="font-size:1rem;font-weight:700;color:#6ea0dc;margin-bottom:12px;">JUROR RETURN RESULT</div><div style="font-size:0.95rem;color:#eaf4ff;">${message}</div>`;
       modal.appendChild(card);
-      
-      // Get or create overlay container
-      let overlayContainer = document.getElementById('overlay');
-      if(!overlayContainer){
-        overlayContainer = document.createElement('div');
-        overlayContainer.id = 'overlay';
-        overlayContainer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:500;';
-        document.body.appendChild(overlayContainer);
-      }
-      overlayContainer.appendChild(modal);
-      setTimeout(()=>modal.remove(), 3800);
+      document.body.appendChild(modal);
+      setTimeout(()=>modal.remove(), 3200);
     }
     
-    // Trigger revive animation on winner's avatar
-    const st = global.game?.__returnTwist;
-    if(st && st._domCache && st._domCache[winnerId]){
-      const avatarEl = st._domCache[winnerId].slot?.querySelector('.jrAvatar');
-      if(avatarEl && typeof global.animateReviveAvatar === 'function'){
-        try{
-          await global.animateReviveAvatar(avatarEl);
-        }catch(e){
-          console.warn('[showJurorReturnResult] Animation failed:', e);
-        }
+    // Find the returning juror's avatar in the MAIN UI using multiple selectors
+    const selectors = [
+      `#cast [data-id="${winnerId}"] img`,
+      `#cast [data-id="${winnerId}"] .avatar`,
+      `#castTbl [data-id="${winnerId}"] img`,
+      `.cast-member[data-id="${winnerId}"] img`,
+      `.player-avatar[data-id="${winnerId}"]`,
+      `img[alt*="${winnerName}"]`,
+      `.avatar-img[data-player-id="${winnerId}"]`
+    ];
+    
+    let avatarEl = null;
+    for (const selector of selectors) {
+      avatarEl = document.querySelector(selector);
+      if (avatarEl) {
+        console.log('[showJurorReturnResult] Found avatar with selector:', selector);
+        break;
+      }
+    }
+    
+    // Trigger revive animation if avatar found
+    if (avatarEl && typeof global.animateReviveAvatar === 'function') {
+      try {
+        await global.animateReviveAvatar(avatarEl, 1400);
+      } catch (e) {
+        console.warn('[showJurorReturnResult] Animation failed:', e);
+      }
+    } else {
+      // Fallback: add/remove class manually with timeout
+      if (avatarEl) {
+        avatarEl.classList.add('revive-avatar');
+        await new Promise(resolve => setTimeout(() => {
+          avatarEl.classList.remove('revive-avatar');
+          resolve();
+        }, 900));
+      } else {
+        console.warn('[showJurorReturnResult] Avatar not found for winnerId:', winnerId);
       }
     }
     
     // Small delay to let animation be visible
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   async function finalizeAmericaReturnVote(){
@@ -610,7 +661,8 @@
     liveRegion.textContent = 'Live juror return vote updating';
     
     const container = document.createElement('div');
-    container.className = 'jrVotePanel';
+    container.id = 'rtGrid';
+    container.className = 'rtGrid fan-fav-grid';
     panelEl.appendChild(container);
     
     modalHost.appendChild(panelEl);
@@ -624,7 +676,7 @@
       const jurorName = global.safeName?.(id) || 'Juror';
       
       const slot = document.createElement('div');
-      slot.className = 'jrSlot';
+      slot.className = 'rtCard fan-fav-card';
       slot.dataset.id = String(id);
       
       // Use global avatar resolver
@@ -676,6 +728,7 @@
   global.finishAmericaReturnVote=function(){ finalizeAmericaReturnVote(true); };
   global.startAmericaReturnVote=startAmericaReturnVote;
   global.renderReturnTwistPanel=renderReturnTwistPanel;
+  global.__showJurorReturnResult=showJurorReturnResult;
 
   function tryMaybeAutoSelfEvict(){
     const g=global.game; if(!g) return;
