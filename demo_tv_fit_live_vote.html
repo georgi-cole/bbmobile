@@ -6,6 +6,7 @@
   <title>TV Fit Contract - Live Vote Demo</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="css/livevote-lv2-only.css">
+  <link rel="stylesheet" href="css/livevote-nomination.css">
   <style>
     body {
       background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
@@ -226,11 +227,18 @@
   <div class="controls">
     <h2>Demo Controls</h2>
     <div class="button-group">
-      <button onclick="startLiveVote()">▶ Start Live Vote</button>
+      <button onclick="startLiveVote()">▶ Start Live Vote (LV2)</button>
       <button onclick="simulateVote('left')">Vote Alex (Left)</button>
       <button onclick="simulateVote('right')">Vote Jamie (Right)</button>
       <button onclick="showInlineResult()">Show Result Card</button>
       <button onclick="cleanup()" class="danger">Reset</button>
+    </div>
+    
+    <h2 style="margin-top: 24px;">Nomination-Style Overlay Demo</h2>
+    <div class="button-group">
+      <button onclick="showNominationOverlay(2)">🎯 Show 2-Nominee Overlay</button>
+      <button onclick="showNominationOverlay(3)">🎯 Show 3-Nominee Overlay (Triple)</button>
+      <button onclick="closeNominationOverlay()" class="danger">Close Overlay</button>
     </div>
   </div>
   
@@ -263,6 +271,7 @@
   <!-- Core dependencies -->
   <script src="js/tv-fit.js"></script>
   <script src="js/livevote-ui.js"></script>
+  <script src="js/livevote-nomination-ui.js"></script>
   
   <!-- Mock globals for demo -->
   <script>
@@ -427,6 +436,49 @@
       }
     }
     
+    // ========== Nomination-Style Overlay Demo ==========
+    
+    function showNominationOverlay(nomineeCount) {
+      if (!window.LiveVoteNominationUI) {
+        console.warn('[demo] LiveVoteNominationUI not loaded yet');
+        alert('⚠️ Nomination UI is still loading. Please wait a moment and try again.');
+        return;
+      }
+      
+      // Mock nominees
+      const mockNominees2 = [
+        { id: 1, name: 'Alex', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex' },
+        { id: 2, name: 'Jamie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jamie' }
+      ];
+      
+      const mockNominees3 = [
+        { id: 1, name: 'Alex', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex' },
+        { id: 2, name: 'Jamie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jamie' },
+        { id: 3, name: 'Morgan', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Morgan' }
+      ];
+      
+      const nominees = nomineeCount === 3 ? mockNominees3 : mockNominees2;
+      
+      window.LiveVoteNominationUI.show({
+        nominees: nominees,
+        timeoutSecs: 60, // 1 minute countdown
+        onVote: (selectedId) => {
+          const nominee = nominees.find(n => n.id === selectedId);
+          console.log('📊 Vote cast for:', nominee.name);
+          alert(`✅ You voted to evict ${nominee.name}`);
+        }
+      });
+      
+      console.log(`✅ ${nomineeCount}-nominee overlay shown`);
+    }
+    
+    function closeNominationOverlay() {
+      if (window.LiveVoteNominationUI) {
+        window.LiveVoteNominationUI.hide();
+        console.log('✅ Nomination overlay closed');
+      }
+    }
+    
     // Update status on load and resize
     updateStatus();
     window.addEventListener('resize', updateStatus);
@@ -435,7 +487,8 @@
     // Auto-start demo after a moment
     setTimeout(() => {
       console.log('🎬 TV Fit Contract Demo Ready');
-      console.log('💡 Click "Start Live Vote" to begin');
+      console.log('💡 Click "Start Live Vote" to begin LV2 demo');
+      console.log('🎯 Click "Show X-Nominee Overlay" to test nomination-style UI');
     }, 500);
   </script>
 </body>

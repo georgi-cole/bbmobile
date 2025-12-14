@@ -17,6 +17,19 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   };
 
+  // Helper: Get avatar URL for a player
+  function getAvatarUrl(playerId) {
+    if (global.resolveAvatar) {
+      const player = global.getP?.(playerId);
+      if (player) {
+        return global.resolveAvatar(player) || getDicebearUrl(player.name);
+      }
+    }
+    const player = global.getP?.(playerId);
+    if (player?.avatar) return player.avatar;
+    return getDicebearUrl(global.safeName?.(playerId) || 'player');
+  }
+
   function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
   // Eviction result phrase variants
@@ -211,7 +224,50 @@
       return;
     }
     
-    // If human is eligible voter and hasn't voted yet, show voting overlay directly
+    // If human is eligible voter and hasn't voted yet, use nomination-style overlay (NEW)
+    if (humanIsVoter && !hasVoted && global.LiveVoteNominationUI && g.cfg?.modernLiveVoteUI !== false) {
+      // Check if overlay is already open (prevents duplicate modals)
+      const overlayOpen = global.LiveVoteNominationUI?.isOpen?.() || false;
+      
+      if (overlayOpen) {
+        console.debug('[eviction] Skipping nomination overlay show: already open');
+        return;
+      }
+      
+      console.info('[eviction] Using nomination-style UI for vote casting');
+      
+      // Prepare nominees data
+      const nominees = g.eviction.nominees.map(id => ({
+        id: id,
+        name: global.safeName?.(id) || 'Unknown',
+        avatar: getAvatarUrl(id)
+      }));
+      
+      // Get timeout from config
+      const timeoutSecs = g.cfg?.tVote || null;
+      
+      // Show nomination-style overlay
+      global.LiveVoteNominationUI.show({
+        nominees: nominees,
+        timeoutSecs: timeoutSecs,
+        onVote: (selectedId) => {
+          console.log('[eviction] Vote cast via nomination UI:', selectedId);
+          
+          // Lock the vote
+          lockHumanVote(selectedId);
+          
+          // Use LV2 for observer animations if available
+          if (lv2Eligible || lv2TripleEligible) {
+            // Let LV2 handle the visual rollout
+            console.debug('[eviction] LV2 will handle vote animations');
+          }
+        }
+      });
+      
+      return;
+    }
+    
+    // FALLBACK: If human is eligible voter and hasn't voted yet, show voting overlay directly
     if (humanIsVoter && !hasVoted && global.LiveVoteOverlay) {
       // Check if overlay is already open (prevents duplicate modals)
       const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
