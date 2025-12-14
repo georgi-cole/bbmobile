@@ -97,57 +97,14 @@
     // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
     // Old cards removed: Stop the presses!, America's Vote, How it works
 
-    // Clamp vote duration to max 5 seconds (5000ms)
-    const g = global.game || {};
-    const voteDurationMs = getClampedVoteDuration(g);
-    
-    console.info(`[jury_return_vote] voteDurationMs=${voteDurationMs}`);
-
-    // Store duration in state for reference
-    if (g.__returnTwist) {
-      g.__returnTwist.durationMs = voteDurationMs;
-    }
-
     // Show panel (avatars + live bars, timer starts)
-    showReturnVotePanel(jurors, voteDurationMs, (state)=>{
+    showReturnVotePanel(jurors, Number(global.game?.cfg?.tJuryReturnVote||12), (state)=>{
       finalizeAmericaVote(state, jurors);
     });
   }
 
-  /**
-   * Get clamped vote duration from config with fallback chain
-   * Precedence: tJurorReturnVoteMs > tJurorVoteMs > tJuryReturnVote (deprecated, in seconds)
-   * @param {object} g - Game state object
-   * @returns {number} Clamped duration in milliseconds (1200-5000ms)
-   */
-  function getClampedVoteDuration(g) {
-    const cfg = g.cfg || {};
-    
-    // Try millisecond-based config keys first (preferred)
-    let cfgValue = cfg.tJurorReturnVoteMs || cfg.tJurorVoteMs;
-    
-    // Fall back to seconds-based config (deprecated, convert to ms)
-    if (!cfgValue && cfg.tJuryReturnVote) {
-      cfgValue = Number(cfg.tJuryReturnVote) * 1000;
-    }
-    
-    // Default to 6500ms if no config found
-    const cfgVoteMs = Number(cfgValue) || 6500;
-    
-    // Clamp to range [1200ms, 5000ms]
-    const VOTE_MIN_MS = 1200;
-    const VOTE_MAX_MS = 5000;
-    const clamped = Math.min(Math.max(VOTE_MIN_MS, cfgVoteMs), VOTE_MAX_MS);
-    
-    if (clamped !== cfgVoteMs) {
-      console.info(`[jury_return_vote] duration clamped: ${cfgVoteMs}ms → ${clamped}ms`);
-    }
-    
-    return clamped;
-  }
-
   // Jury panel with avatars and live percentages - COMPACT & CONSISTENT
-  function showReturnVotePanel(jurors, voteDurationMs, onDone) {
+  function showReturnVotePanel(jurors, voteSecs, onDone) {
     const panel = document.getElementById('panel');
     if (!panel) return;
     panel.innerHTML = '';
@@ -335,34 +292,15 @@
 
     // Animate percentages only (no progress bars) and highlight leader
     let running = true;
-    let updateInterval = null;
     const start = Date.now();
-    const endAt = start + voteDurationMs; // Use clamped duration in ms
-    const voteDurationSecs = voteDurationMs / 1000; // Derived from ms for display
+    const endAt = start + voteSecs*1000;
     let leaderId = null;
     
     function update() {
       if (!running) return;
       const now = Date.now();
-      const elapsed = now - start;
-      const rem = Math.max(0, Math.ceil((voteDurationMs - elapsed)/1000));
+      const rem = Math.max(0, Math.ceil((endAt-now)/1000));
       timer.innerHTML = `⏱️ <span style="font-size:${isMobile ? '1.3rem' : '1.5rem'}">${rem}</span>s remaining`;
-      
-      // Stop updates when time expires
-      if (elapsed >= voteDurationMs) {
-        running = false;
-        if (updateInterval) {
-          clearInterval(updateInterval);
-          updateInterval = null;
-        }
-        // Clean up mobile backdrop
-        if (backdrop && backdrop.parentNode) {
-          backdrop.remove();
-        }
-        console.info(`[jury_return_vote] voting stopped elapsed=${elapsed}ms`);
-        if(onDone) onDone(state);
-        return;
-      }
       
       jurors.forEach((id) => {
         // Simulate voting
@@ -414,29 +352,19 @@
           card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
         }
       });
-    }
-    
-    // Use setInterval for consistent updates
-    updateInterval = setInterval(update, 170);
-    update(); // Run immediately
-    
-    // Safety timeout to ensure finalization at max duration
-    const SAFETY_BUFFER_MS = 100; // Buffer to ensure interval clears before timeout
-    setTimeout(() => {
-      if (running) {
+      
+      if(now < endAt) {
+        setTimeout(update, 170);
+      } else {
         running = false;
-        if (updateInterval) {
-          clearInterval(updateInterval);
-          updateInterval = null;
-        }
         // Clean up mobile backdrop
         if (backdrop && backdrop.parentNode) {
           backdrop.remove();
         }
-        console.info(`[jury_return_vote] safety timeout triggered at ${voteDurationMs}ms`);
         if(onDone) onDone(state);
       }
-    }, voteDurationMs + SAFETY_BUFFER_MS);
+    }
+    update();
   }
 
   // Flash returning juror, update game state, show card
