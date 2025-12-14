@@ -1325,9 +1325,7 @@
     console.info(`[eviction] Multi-eviction cutoff tie: ${slotsRemaining} slots, ${tiedPlayers.length} tied players`);
     
     // Log XP for tiebreaker event
-    if(global.ProgressionEvents?.onTiebreakerWin){
-      global.ProgressionEvents.onTiebreakerWin(hoh.id);
-    }
+    global.ProgressionEvents?.onTiebreakerWin?.(hoh.id);
     
     const pickedFromTie = [];
     
