@@ -24,7 +24,6 @@
   // Constants
   const EMOJI_POOL = ['😊', '😢', '😡', '😱', '🤔', '😬', '🙏', '💔', '⭐', '🔥', '💯', '👀'];
   const EMOJI_COUNT = 12;
-  const EMOJI_DURATION = 4000; // 4 seconds per emoji
   const EMOJI_SPAWN_INTERVAL = 300; // Spawn new emoji every 300ms
 
   /**
@@ -106,10 +105,10 @@
    * Create the nominee card element
    * @param {Object} nominee - Nominee data { id, name, avatar }
    * @param {number} index - Nominee index (for keyboard shortcuts)
-   * @param {number} totalCount - Total number of nominees
+   * @param {number} _totalCount - Total number of nominees (unused but kept for API consistency)
    * @returns {HTMLElement} Nominee card element
    */
-  function createNomineeCard(nominee, index, totalCount) {
+  function createNomineeCard(nominee, index, _totalCount) {
     const card = document.createElement('div');
     card.className = 'lvnom-nominee-card';
     card.dataset.nomineeId = nominee.id;
