@@ -375,10 +375,6 @@
       if(v>best){ best=v; winnerId=id; }
     });
 
-    // Calculate winner percentage
-    const totalVotes = Array.from(state.counts.values()).reduce((sum, val) => sum + val, 0);
-    const winnerPercent = totalVotes > 0 ? ((state.counts.get(winnerId) || 0) / totalVotes) * 100 : 0;
-
     setTimeout(async ()=>{
       await global.showBigCard?.('America Has Voted!', [
         `The returning juror is…`,
@@ -408,10 +404,6 @@
         // Confetti removed per spec
       }
 
-      // Clean up panel (implicit via phase change)
-      const panel = document.getElementById('panel');
-      if (panel) panel.innerHTML = '';
-
       // Resume HOH, do NOT increment week
       setTimeout(()=>{
         global.setPhase?.('intermission', global.game.cfg?.tIntermission || 4, ()=>{
@@ -420,18 +412,6 @@
         global.updateHud?.();
         // Flags already set at eligibility check
       }, 1800);
-
-      // After cleanup and phase change, show result card with animation
-      // Schedule as async IIFE to run after panel is gone
-      (async () => {
-        try {
-          if (typeof window.__showJurorReturnResult === 'function' && winnerId != null) {
-            await window.__showJurorReturnResult(winnerId, winnerPercent);
-          }
-        } catch (e) {
-          console.warn('[jury_return_vote] Failed to show juror return result:', e);
-        }
-      })();
     }, 1100);
   }
 
