@@ -1236,8 +1236,36 @@
         const confirm = window.confirm('Are you sure you want to exit? Your score will not be submitted.');
         if(!confirm) return;
         hasCompleted = true; // Prevent double completion
+        
+        // Immediately trigger phase transition when user exits prematurely
+        // This prevents the game from waiting for the timer to expire
+        console.info('[CompetitionFlow] User exited prematurely - triggering immediate phase transition');
+        close(true); // Skip animation when manually closed
+        
+        // Call the fast-forward logic to immediately show results and move to next phase
+        if(global.CompetitionFlow?.showCompetitionResultsAndFastForward && typeof global.CompetitionFlow.showCompetitionResultsAndFastForward === 'function'){
+          // Use score of 0 for premature exit (no score submission)
+          setTimeout(() => {
+            console.info('[CompetitionFlow] Triggering fast-forward after premature exit');
+            global.CompetitionFlow.showCompetitionResultsAndFastForward(0);
+          }, 100); // Small delay to allow close() to complete
+        } else {
+          // Fallback: directly resolve the phase if fast-forward not available
+          console.warn('[CompetitionFlow] Fast-forward not available, using fallback phase resolution');
+          setTimeout(() => {
+            const phase = g.phase;
+            if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !g.__hohResolved){
+              console.info('[CompetitionFlow] Calling finishCompPhase() after premature exit');
+              global.finishCompPhase();
+            } else if(typeof global.defaultAdvance === 'function'){
+              console.info('[CompetitionFlow] Calling defaultAdvance() after premature exit');
+              global.defaultAdvance(phase);
+            }
+          }, 100);
+        }
+        return;
       }
-      close(true); // Skip animation when manually closed
+      close(true); // Skip animation when manually closed (already completed case)
     });
 
     // Dispatch telemetry event for fullscreen launch
