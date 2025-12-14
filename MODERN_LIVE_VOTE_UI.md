@@ -537,6 +537,56 @@ Tested on:
 - No memory leaks (cards removed after animation)
 - Minimal JavaScript overhead (~13KB unminified)
 
+## LV2 Enforcement & Fallback Behavior
+
+### Single Source of Truth
+As of the latest update, **LV2 is enforced as the single source of truth** for all voting and eviction flows when available. The system prioritizes LV2 and only falls back to legacy UI when LV2 is not present or explicitly disabled.
+
+### Enforcement Details
+1. **Always Prefer LV2**: The rendering logic checks for LV2 availability first, before considering any other UI options
+2. **Legacy Panel Suppression**: When LV2 is active, a `lv-active-livevote` body class is added, which hides all legacy #panel content via CSS
+3. **No Below-TV Content**: All legacy DOM writes to #panel are skipped when LV2 is active
+4. **Centered Layout**: New production CSS (`css/livevote-lv2-only.css`) ensures LV2 renders as a compact, centered card inside the TV
+
+### Safe Fallback
+If LV2 is not available (e.g., in older builds or if the module failed to load):
+- The system gracefully falls back to the legacy code path
+- All legacy functionality remains intact and working
+- No crashes or broken states occur
+
+### How to Disable LV2 (For Testing)
+If you need to test the legacy fallback behavior:
+
+```javascript
+// Disable via config
+window.game.cfg.modernLiveVoteUI = false;
+
+// Or disable the module directly
+window.lv2.enabled = false;
+```
+
+**Note**: In production, LV2 should remain enabled for the best user experience.
+
+### CSS Classes for Enforcement
+The new `css/livevote-lv2-only.css` stylesheet includes:
+- `.lv-active-livevote` body class handling to hide #panel
+- Centered, compact layout for LV2 containers
+- Mobile-optimized sizing with safe-area-inset support
+- CTA bar positioning in normal flow (not pinned to TV bottom)
+- Avatar and button sizing for readability
+
+### Demo Updates
+The `demo_tv_fit_live_vote.html` demo has been updated to:
+- Include `css/livevote-lv2-only.css` by default
+- Show LV2-only behavior
+- Demonstrate the centered card layout
+
+### Migration Notes
+- **No Breaking Changes**: All existing LV2 functionality continues to work
+- **Automatic Enforcement**: No code changes needed in calling code - enforcement happens in `renderLiveVotePanel()`
+- **Body Class Management**: The `lv-active-livevote` class is automatically added/removed as needed
+- **TV Centering**: The system now calls `centerTVInViewport()` before showing LV2 to ensure proper positioning
+
 ## Conclusion
 
-The Modern Live Vote UI (lv2) delivers a polished, cinematic experience for the eviction phase while maintaining full backward compatibility, accessibility, and graceful degradation. It enhances user engagement without compromising functionality or performance.
+The Modern Live Vote UI (lv2) delivers a polished, cinematic experience for the eviction phase while maintaining full backward compatibility, accessibility, and graceful degradation. With LV2 enforcement, it now serves as the single source of truth for voting UX, eliminating legacy UI leakage and providing a consistent, high-quality experience across all eviction flows. The system gracefully falls back to legacy behavior when LV2 is unavailable, ensuring no users are left without a working vote interface.
