@@ -1214,44 +1214,80 @@
         return;
       }
 
-      // Multi (double/triple) eviction
-      const selected=[];
-      const work=new Map(counts);
-      const hoh = global.getP(g.hohId);
-
-      while(selected.length<K && work.size){
-        let max=-Infinity;
-        work.forEach(v=>{ if(v>max) max=v; });
-        const tied=[...work.entries()].filter(([_,c])=>c===max).map(([id])=>id);
-        const remaining=K-selected.length;
-
-        if(tied.length<=remaining){
-          tied.forEach(id=>{ selected.push(id); work.delete(id); });
-        } else {
-          // Fill remaining slots via HOH tiebreak logic
-          if(hoh?.human){
-            const picks=[];
-            for(let i=0;i<remaining;i++){
-              const pick=await awaitHumanTieBreakPick(tied,`Tiebreak — Pick ${i+1} of ${remaining}`);
-              picks.push(pick);
-              tied.splice(tied.indexOf(pick),1);
-            }
-            picks.forEach(id=>{ selected.push(id); work.delete(id); });
-          } else {
-            for(let i=0;i<remaining;i++){
-              const pick=pickByHohAffinity(hoh, tied);
-              selected.push(pick);
-              work.delete(pick);
-              const idx=tied.indexOf(pick);
-              if(idx>=0) tied.splice(idx,1);
-              if(!tied.length) break;
-            }
-          }
-        }
+      // Multi (double/triple) eviction with cutoff tie detection
+      const result = determineMultiEvictees(counts, K, noms);
+      
+      let finalEvictees;
+      if(result.tie){
+        // Cutoff tie detected - HOH must break it
+        console.info(`[eviction] Cutoff tie detected: ${result.tiedPlayers.length} players tied at ${result.cutoffVotes} votes`);
+        
+        const slotsRemaining = K - result.confirmedEvictees.length;
+        finalEvictees = await handleMultiEvictCutoffTie(
+          result.tiedPlayers,
+          result.confirmedEvictees,
+          slotsRemaining,
+          counts
+        );
+      } else {
+        // No tie, proceed with determined evictees
+        finalEvictees = result.evictees;
       }
 
-      await multiEvictFinalize(selected,counts,K);
+      await multiEvictFinalize(finalEvictees, counts, K);
     }
+  }
+
+  /**
+   * Determine evictees for multi-eviction, checking for cutoff ties
+   * @param {Map<number,number>} counts - Vote counts per nominee
+   * @param {number} evictCount - Number of players to evict (K)
+   * @param {Array<number>} nominees - All nominee IDs
+   * @returns {Object} { tie: boolean, evictees?: Array, tiedPlayers?: Array, cutoffVotes?: number }
+   */
+  function determineMultiEvictees(counts, evictCount, nominees){
+    if(!counts || !(counts instanceof Map) || evictCount < 1 || !Array.isArray(nominees)){
+      return { tie: false, evictees: [] };
+    }
+
+    // Sort nominees by votes DESC, then by ID for determinism
+    const sorted = [...counts.entries()]
+      .sort((a, b) => {
+        // Sort by votes descending
+        if(b[1] !== a[1]) return b[1] - a[1];
+        // Tiebreak by ID ascending for determinism
+        return a[0] - b[0];
+      });
+
+    // If fewer nominees than evictCount, evict all
+    if(sorted.length <= evictCount){
+      return { tie: false, evictees: sorted.map(([id]) => id) };
+    }
+
+    // Get top K nominees
+    const topK = sorted.slice(0, evictCount);
+    const cutoffVotes = topK[evictCount - 1][1]; // Votes of last evictee
+
+    // Check if any nominees OUTSIDE top K have the same vote count as cutoff
+    const outsideTopK = sorted.slice(evictCount);
+    const tiedOutside = outsideTopK.filter(([_, votes]) => votes === cutoffVotes);
+
+    if(tiedOutside.length > 0){
+      // Cutoff tie detected
+      // Collect all nominees at cutoff vote level (inside and outside top K)
+      const allAtCutoff = sorted.filter(([_, votes]) => votes === cutoffVotes);
+      
+      return {
+        tie: true,
+        tiedPlayers: allAtCutoff.map(([id]) => id),
+        cutoffVotes: cutoffVotes,
+        // Also return the non-tied evictees (those with more votes than cutoff)
+        confirmedEvictees: topK.filter(([_, votes]) => votes > cutoffVotes).map(([id]) => id)
+      };
+    }
+
+    // No tie, return top K
+    return { tie: false, evictees: topK.map(([id]) => id) };
   }
 
   function pickByHohAffinity(hoh, candidates){
@@ -1262,6 +1298,79 @@
       if(rel<bestRel){ bestRel=rel; best=id; }
     }
     return best ?? candidates[0];
+  }
+
+  /**
+   * Handle cutoff tie in multi-eviction scenario
+   * @param {Array<number>} tiedPlayers - Players tied at cutoff vote count
+   * @param {Array<number>} confirmedEvictees - Players already confirmed for eviction
+   * @param {number} slotsRemaining - Number of remaining eviction slots to fill
+   * @param {Map<number,number>} counts - Vote counts
+   * @returns {Promise<Array<number>>} - Final list of all evictees
+   */
+  async function handleMultiEvictCutoffTie(tiedPlayers, confirmedEvictees, slotsRemaining, counts){
+    const g = global.game;
+    const hoh = global.getP(g.hohId);
+    const useLv2 = false; // Keep consistent with rest of eviction.js
+    
+    // Show tie message
+    const tiedNames = tiedPlayers.map(id => global.safeName(id)).join(', ');
+    const msg = `Tie at cutoff! The HOH must choose ${slotsRemaining} of: ${tiedNames}`;
+    
+    if (!useLv2) {
+      global.showCard('Multi-Eviction Tiebreak', [msg], 'live', 3000, true);
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
+    }
+    
+    console.info(`[eviction] Multi-eviction cutoff tie: ${slotsRemaining} slots, ${tiedPlayers.length} tied players`);
+    
+    // Log XP for tiebreaker event
+    if(global.ProgressionEvents?.onTiebreakerWin){
+      global.ProgressionEvents.onTiebreakerWin(hoh.id);
+    }
+    
+    const pickedFromTie = [];
+    
+    if(hoh?.human){
+      // Human HOH picks from tied players
+      for(let i = 0; i < slotsRemaining; i++){
+        const remainingTied = tiedPlayers.filter(id => !pickedFromTie.includes(id));
+        if(remainingTied.length === 0) break;
+        
+        const title = slotsRemaining > 1 
+          ? `Multi-Eviction Tie — Pick ${i + 1} of ${slotsRemaining} to Evict`
+          : 'Multi-Eviction Tie — Pick to Evict';
+        
+        const pick = await awaitHumanTieBreakPick(remainingTied, title, useLv2);
+        pickedFromTie.push(pick);
+        
+        // Show human's choice
+        if (!useLv2) {
+          global.showCard('HOH Decision', [`${hoh.name} chooses to evict ${global.safeName(pick)}.`], 'live', 2500, true);
+          try{ await global.cardQueueWaitIdle?.(); }catch{}
+        }
+      }
+    } else {
+      // AI HOH picks by affinity
+      const remaining = [...tiedPlayers];
+      for(let i = 0; i < slotsRemaining; i++){
+        if(remaining.length === 0) break;
+        const pick = pickByHohAffinity(hoh, remaining);
+        pickedFromTie.push(pick);
+        const idx = remaining.indexOf(pick);
+        if(idx >= 0) remaining.splice(idx, 1);
+      }
+      
+      // Show AI's choices
+      if (!useLv2) {
+        const pickedNames = pickedFromTie.map(id => global.safeName(id)).join(', ');
+        global.showCard('HOH Decision', [`${hoh.name} breaks the tie: ${pickedNames}`], 'live', 3000, true);
+        try{ await global.cardQueueWaitIdle?.(); }catch{}
+      }
+    }
+    
+    // Return final evictee list
+    return [...confirmedEvictees, ...pickedFromTie];
   }
 
   async function multiEvictFinalize(evictedIds,counts,K){
