@@ -290,9 +290,10 @@
     // This ensures a single, consistent voting UI across all eviction scenarios
     const useTriple = false;
 
-    // DISABLED: lv2 UI for 2-nominee evictions (force use of LiveVoteOverlay only)
-    // This prevents overlapping UI layers and ensures compact, mobile-friendly layout
-    const useLv2 = false;
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // This prevents overlapping UI layers from lv2 and ensures compact, mobile-friendly layout
+    // The LiveVoteOverlay provides a consistent experience across all devices
+    const useLv2 = false; // DO NOT CHANGE: lv2 is permanently disabled
 
     const box=document.createElement('div'); box.className='minigame-host'; 
     if (!useLv2) {
@@ -706,7 +707,8 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    // DISABLED: Force useLv2 = false (using LiveVoteOverlay only)
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // DO NOT CHANGE: lv2 is permanently disabled
     const useLv2 = false;
     const tripleMode = noms.length === 3;
     let tallyA=0, tallyB=0;
@@ -821,7 +823,8 @@
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
     const g=global.game;
-    // DISABLED: Force useLv2 = false (using LiveVoteOverlay only)
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // DO NOT CHANGE: lv2 is permanently disabled
     const useLv2 = false;
     const hoh=global.getP(global.game.hohId);
     
@@ -1020,7 +1023,8 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    // DISABLED: Force useLv2 = false (using LiveVoteOverlay only)
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // DO NOT CHANGE: lv2 is permanently disabled
     const useLv2 = false;
 
     if(twoMode){
