@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Eviction Nomination Fix Validation</title>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+    }
+    .test-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .test-header {
+      background: rgba(28, 43, 62, 0.7);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      color: #4CAF50;
+    }
+    .test-controls {
+      background: rgba(20, 30, 45, 0.95);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      margin-bottom: 20px;
+    }
+    .test-controls h3 {
+      margin: 0 0 15px 0;
+      color: #83bfff;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .test-controls button {
+      padding: 10px 15px;
+      background: #2a4766;
+      color: #e0e0e0;
+      border: 1px solid #356089;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      flex: 1;
+      min-width: 120px;
+    }
+    .test-controls button:hover {
+      background: #356089;
+    }
+    .test-controls button.danger {
+      background: #8b3333;
+      border-color: #a84444;
+    }
+    .test-controls button.danger:hover {
+      background: #a84444;
+    }
+    .test-results {
+      background: rgba(28, 43, 62, 0.5);
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border-left: 4px solid #83bfff;
+    }
+    .test-results h3 {
+      margin: 0 0 10px 0;
+      color: #83bfff;
+    }
+    .test-result {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .test-result.pass {
+      background: rgba(77, 213, 141, 0.15);
+      border-left: 3px solid #4dd58d;
+      color: #4dd58d;
+    }
+    .test-result.fail {
+      background: rgba(255, 109, 109, 0.15);
+      border-left: 3px solid #ff6d6d;
+      color: #ff6d6d;
+    }
+    .test-result.info {
+      background: rgba(131, 191, 255, 0.15);
+      border-left: 3px solid #83bfff;
+      color: #83bfff;
+    }
+    #tv {
+      position: relative;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 3px solid #356089;
+      border-radius: 24px;
+      padding: 0;
+      min-height: 520px;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .tvHead {
+      padding: 10px 14px;
+      background: rgba(13, 24, 38, 0.6);
+      border-bottom: 1px solid rgba(120, 210, 255, 0.1);
+      color: #c7d7eb;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .tvViewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-wrapper">
+    <div class="test-header">
+      <h1>🧪 Multi-Eviction Nomination Fix Validation</h1>
+      <p><strong>Issue:</strong> Nomination ceremony intro card fails to appear in multi-eviction weeks (3+ nominees)</p>
+      <p><strong>Root Causes:</strong></p>
+      <ul>
+        <li>CSS vars not resolved causing #tvOverlay to collapse to 0×0</li>
+        <li>Missing #tvOverlay scaffold in some code paths</li>
+        <li>Script load order: nominations.js loaded before tv-cards.js</li>
+        <li>Incomplete fallback logic in nominations.js</li>
+      </ul>
+      <p><strong>Fixes Applied:</strong></p>
+      <ul>
+        <li>✅ Added CSS var fallbacks to #tv base class</li>
+        <li>✅ Enhanced ensureTVOverlay to create #tvOverlay if missing</li>
+        <li>✅ Added pre-flight checks in nominations.js</li>
+        <li>✅ Fixed script load order in index.html</li>
+      </ul>
+    </div>
+
+    <div class="test-controls">
+      <h3>Validation Tests</h3>
+      
+      <div class="button-group">
+        <button id="runAllTests">Run All Tests</button>
+        <button id="clearResults">Clear Results</button>
+      </div>
+
+      <h4 style="margin: 20px 0 10px 0; color: #c7d7eb; font-size: 14px;">Manual Tests</h4>
+      <div class="button-group">
+        <button id="test2Nominees">2 Nominees</button>
+        <button id="test3Nominees">3 Nominees</button>
+        <button id="test4Nominees">4 Nominees</button>
+      </div>
+      
+      <div class="button-group">
+        <button id="testWithoutOverlay" class="danger">Remove #tvOverlay</button>
+        <button id="testWithoutScaffold" class="danger">Remove Scaffold</button>
+        <button id="restoreOverlay">Restore Overlay</button>
+      </div>
+    </div>
+
+    <div class="test-results">
+      <h3>Test Results</h3>
+      <div id="results"></div>
+    </div>
+
+    <div id="tv" class="tv tv-screen">
+      <div class="tvHead">Nomination Ceremony Test</div>
+      <div class="tvViewport">
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load TV Cards module BEFORE any code that uses it -->
+  <script src="js/ui/tv-cards.js"></script>
+
+  <script>
+    // Test results tracking
+    const results = [];
+    
+    function logResult(message, type = 'info') {
+      console.log(`[test] ${type.toUpperCase()}: ${message}`);
+      results.push({ message, type, timestamp: new Date() });
+      updateResultsDisplay();
+    }
+    
+    function updateResultsDisplay() {
+      const container = document.getElementById('results');
+      if (!results.length) {
+        container.innerHTML = '<div class="test-result info">No tests run yet. Click "Run All Tests" to begin.</div>';
+        return;
+      }
+      
+      container.innerHTML = results.map(r => 
+        `<div class="test-result ${r.type}">${r.timestamp.toLocaleTimeString()}: ${r.message}</div>`
+      ).join('');
+      
+      // Scroll to bottom
+      container.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    // Validation tests
+    async function runAllTests() {
+      results.length = 0;
+      logResult('Starting validation tests...', 'info');
+      
+      // Test 1: Check CSS vars are defined on #tv
+      const tv = document.getElementById('tv');
+      const computedStyle = window.getComputedStyle(tv);
+      const safeTop = computedStyle.getPropertyValue('--tv-safe-top').trim();
+      const safeBottom = computedStyle.getPropertyValue('--tv-safe-bottom').trim();
+      const safeX = computedStyle.getPropertyValue('--tv-safe-x').trim();
+      
+      if (safeTop && safeBottom && safeX) {
+        logResult('✓ CSS vars defined on #tv (--tv-safe-top, --tv-safe-bottom, --tv-safe-x)', 'pass');
+      } else {
+        logResult('✗ CSS vars not defined on #tv', 'fail');
+      }
+      
+      // Test 2: Check #tvOverlay has fallbacks
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) {
+        const overlayStyle = window.getComputedStyle(overlay);
+        const minWidth = overlayStyle.minWidth;
+        const minHeight = overlayStyle.minHeight;
+        
+        if (minWidth !== '0px' && minHeight !== '0px') {
+          logResult('✓ #tvOverlay has min-width/min-height guards', 'pass');
+        } else {
+          logResult('✗ #tvOverlay missing size guards', 'fail');
+        }
+      } else {
+        logResult('✗ #tvOverlay element not found', 'fail');
+      }
+      
+      // Test 3: Check TVCards module loaded
+      if (window.TVCards && typeof window.TVCards.showNominateIntro === 'function') {
+        logResult('✓ TVCards module loaded and showNominateIntro available', 'pass');
+      } else {
+        logResult('✗ TVCards module not loaded properly', 'fail');
+      }
+      
+      // Test 4: Check ensureTVOverlay helper
+      if (window.TVCards && typeof window.TVCards.ensureTVOverlay === 'function') {
+        logResult('✓ TVCards.ensureTVOverlay helper available', 'pass');
+      } else {
+        logResult('✗ TVCards.ensureTVOverlay not available', 'fail');
+      }
+      
+      // Test 5: Check legacy helper exports
+      if (typeof window.ensureTVOverlayScaffold === 'function') {
+        logResult('✓ Legacy helper window.ensureTVOverlayScaffold exported', 'pass');
+      } else {
+        logResult('✗ Legacy helper not exported', 'fail');
+      }
+      
+      // Test 6: Test scaffold creation with missing overlay
+      logResult('Testing scaffold creation with missing #tvOverlay...', 'info');
+      const originalOverlay = document.getElementById('tvOverlay');
+      if (originalOverlay) {
+        originalOverlay.remove();
+      }
+      
+      if (window.TVCards && window.TVCards.ensureTVOverlay) {
+        const content = window.TVCards.ensureTVOverlay();
+        if (content && document.getElementById('tvOverlay')) {
+          logResult('✓ ensureTVOverlay creates #tvOverlay when missing', 'pass');
+        } else {
+          logResult('✗ ensureTVOverlay failed to create #tvOverlay', 'fail');
+        }
+      }
+      
+      // Test 7: Test intro card for 2, 3, 4 nominees
+      logResult('Testing intro card rendering...', 'info');
+      await testIntroCard(2);
+      await delay(1000);
+      await testIntroCard(3);
+      await delay(1000);
+      await testIntroCard(4);
+      
+      logResult('All validation tests complete!', 'info');
+      
+      // Summary
+      const passCount = results.filter(r => r.type === 'pass').length;
+      const failCount = results.filter(r => r.type === 'fail').length;
+      logResult(`Summary: ${passCount} passed, ${failCount} failed`, passCount === results.filter(r => r.type !== 'info').length ? 'pass' : 'fail');
+    }
+    
+    async function testIntroCard(need) {
+      if (!window.TVCards || !window.TVCards.showNominateIntro) {
+        logResult(`✗ Cannot test ${need} nominees - TVCards not loaded`, 'fail');
+        return;
+      }
+      
+      try {
+        // Clear previous card
+        clearOverlay();
+        await delay(100);
+        
+        // Show intro card
+        const promise = window.TVCards.showNominateIntro({
+          hohName: 'Test HOH',
+          need: need,
+          onNominate: () => {
+            logResult(`✓ ${need} nominees intro card NOMINATE button clicked`, 'pass');
+            clearOverlay();
+          }
+        });
+        
+        // Check if card appeared
+        await delay(200);
+        const overlay = document.getElementById('tvOverlay');
+        const content = overlay?.querySelector('.tvOverlayContent');
+        const card = content?.querySelector('.revealCard');
+        const button = card?.querySelector('button');
+        
+        if (card && button) {
+          logResult(`✓ ${need} nominees intro card rendered successfully`, 'pass');
+          
+          // Check card dimensions (ensure it's visible)
+          const rect = card.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            logResult(`✓ ${need} nominees card has non-zero dimensions (${Math.round(rect.width)}×${Math.round(rect.height)})`, 'pass');
+          } else {
+            logResult(`✗ ${need} nominees card has zero dimensions`, 'fail');
+          }
+          
+          // Auto-dismiss after checking
+          button.click();
+        } else {
+          logResult(`✗ ${need} nominees intro card failed to render`, 'fail');
+        }
+      } catch (err) {
+        logResult(`✗ ${need} nominees test error: ${err.message}`, 'fail');
+      }
+    }
+    
+    function clearOverlay() {
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) {
+        const content = overlay.querySelector('.tvOverlayContent');
+        if (content) {
+          content.innerHTML = '';
+        }
+      }
+      const tv = document.getElementById('tv');
+      if (tv) {
+        tv.classList.remove('tvTall');
+      }
+    }
+    
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    function showIntroCard(need) {
+      logResult(`Showing intro card for ${need} nominees`, 'info');
+      clearOverlay();
+      
+      if (window.TVCards && window.TVCards.showNominateIntro) {
+        window.TVCards.showNominateIntro({
+          hohName: 'Test Player',
+          need: need,
+          onNominate: () => {
+            logResult(`NOMINATE button clicked for ${need} nominees`, 'info');
+          }
+        }).catch(err => {
+          logResult(`Error showing intro card: ${err.message}`, 'fail');
+        });
+      } else {
+        logResult('TVCards.showNominateIntro not available', 'fail');
+      }
+    }
+    
+    function removeOverlay() {
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) {
+        overlay.remove();
+        logResult('#tvOverlay removed (testing pre-flight creation)', 'info');
+      }
+    }
+    
+    function removeScaffold() {
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) {
+        overlay.innerHTML = '';
+        logResult('Scaffold removed (testing scaffold creation)', 'info');
+      }
+    }
+    
+    function restoreOverlay() {
+      let overlay = document.getElementById('tvOverlay');
+      if (!overlay) {
+        const tv = document.getElementById('tv');
+        const viewport = tv?.querySelector('.tvViewport');
+        if (viewport) {
+          overlay = document.createElement('div');
+          overlay.id = 'tvOverlay';
+          viewport.appendChild(overlay);
+          logResult('#tvOverlay restored', 'info');
+        }
+      }
+      
+      // Ensure scaffold
+      if (window.TVCards && window.TVCards.ensureTVOverlay) {
+        window.TVCards.ensureTVOverlay();
+        logResult('Scaffold ensured via TVCards', 'pass');
+      }
+    }
+    
+    // Event handlers
+    document.getElementById('runAllTests').addEventListener('click', runAllTests);
+    document.getElementById('clearResults').addEventListener('click', () => {
+      results.length = 0;
+      updateResultsDisplay();
+    });
+    
+    document.getElementById('test2Nominees').addEventListener('click', () => showIntroCard(2));
+    document.getElementById('test3Nominees').addEventListener('click', () => showIntroCard(3));
+    document.getElementById('test4Nominees').addEventListener('click', () => showIntroCard(4));
+    
+    document.getElementById('testWithoutOverlay').addEventListener('click', () => {
+      removeOverlay();
+      setTimeout(() => showIntroCard(3), 200);
+    });
+    
+    document.getElementById('testWithoutScaffold').addEventListener('click', () => {
+      removeScaffold();
+      setTimeout(() => showIntroCard(3), 200);
+    });
+    
+    document.getElementById('restoreOverlay').addEventListener('click', restoreOverlay);
+    
+    // Initialize
+    window.addEventListener('load', () => {
+      logResult('Test page loaded', 'info');
+      updateResultsDisplay();
+    });
+  </script>
+</body>
+</html>

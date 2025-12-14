@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Live Vote: Observer vs Voter Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/livevote-rollout.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-header {
+      max-width: 1200px;
+      margin: 0 auto 30px;
+      padding: 24px;
+      background: rgba(20,35,55,0.9);
+      border-radius: 12px;
+      border: 2px solid rgba(0,224,204,0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      color: #00e0cc;
+      font-size: 1.8rem;
+      text-shadow: 0 2px 8px rgba(0,224,204,0.4);
+    }
+    
+    .test-header p {
+      margin: 8px 0;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+    
+    .controls {
+      max-width: 1200px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .controls h2 {
+      margin: 0 0 16px 0;
+      font-size: 1.2rem;
+      color: #83bfff;
+    }
+    
+    .control-section {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(143,211,255,0.1);
+    }
+    
+    .control-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    
+    .button-group button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s;
+      min-height: 48px;
+    }
+    
+    .button-group button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .button-group button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+      color: #ffffff;
+    }
+    
+    .button-group button.secondary {
+      background: linear-gradient(135deg, #667eea, #4c63d2);
+      color: #ffffff;
+    }
+    
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .status-card {
+      background: rgba(0,224,204,0.1);
+      border: 1px solid rgba(0,224,204,0.3);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    
+    .status-card h3 {
+      margin: 0 0 6px 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #00e0cc;
+      opacity: 0.8;
+    }
+    
+    .status-card .value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .device-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .device-presets button {
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      min-height: 40px;
+    }
+    
+    .info-panel {
+      background: rgba(0,224,204,0.08);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    
+    .info-panel h3 {
+      margin: 0 0 12px 0;
+      color: #00e0cc;
+      font-size: 1rem;
+    }
+    
+    .info-panel ul {
+      margin: 0;
+      padding-left: 20px;
+      line-height: 1.6;
+    }
+    
+    .info-panel li {
+      margin: 6px 0;
+    }
+    
+    #tv {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #1a2332;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+      position: relative;
+    }
+    
+    #panel {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>🎬 Live Vote: Observer vs Voter Test</h1>
+    <p>
+      This test harness validates the Live Eviction Vote experience across different roles and device sizes.
+      Use the controls below to simulate different scenarios and verify the acceptance criteria.
+    </p>
+  </div>
+
+  <div class="controls">
+    <div class="control-section">
+      <h2>📱 Device Presets</h2>
+      <div class="device-presets">
+        <button onclick="setViewport(375, 667)">Mobile (375×667)</button>
+        <button onclick="setViewport(390, 844)">iPhone 12 (390×844)</button>
+        <button onclick="setViewport(820, 1180)">Tablet (820×1180)</button>
+        <button onclick="setViewport(1366, 768)">Laptop (1366×768)</button>
+        <button onclick="setViewport(1920, 1080)">Desktop (1920×1080)</button>
+        <button class="secondary" onclick="resetViewport()">Reset Viewport</button>
+      </div>
+      <p style="margin-top: 12px; font-size: 0.9rem; opacity: 0.8;">
+        Current viewport: <span id="currentViewport">-</span>
+      </p>
+    </div>
+
+    <div class="control-section">
+      <h2>👤 Role Scenarios</h2>
+      <div class="button-group">
+        <button onclick="setupEligibleVoter()">Eligible Voter (Not Nominated)</button>
+        <button onclick="setupNominatedObserver()">Nominated (Observer)</button>
+        <button onclick="setupHohObserver()">HOH (Observer - No Tie-break)</button>
+        <button onclick="setupHohTieBreak()">HOH (Tie-break Voter)</button>
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h2>🎮 Actions</h2>
+      <div class="button-group">
+        <button onclick="startLiveVote()">Start Live Vote</button>
+        <button class="danger" onclick="cleanup()">Cleanup All UI</button>
+        <button class="secondary" onclick="showStatus()">Show Status</button>
+      </div>
+    </div>
+
+    <div class="status-grid" id="statusGrid">
+      <div class="status-card">
+        <h3>Human Role</h3>
+        <div class="value" id="humanRole">-</div>
+      </div>
+      <div class="status-card">
+        <h3>Eligible Voter</h3>
+        <div class="value" id="eligibleVoter">-</div>
+      </div>
+      <div class="status-card">
+        <h3>Nominees</h3>
+        <div class="value" id="nomineesDisplay">-</div>
+      </div>
+      <div class="status-card">
+        <h3>Vote Cast</h3>
+        <div class="value" id="voteCast">-</div>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <h3>✅ Acceptance Criteria</h3>
+      <ul>
+        <li>Eligible voters see LiveVoteOverlay directly (no pre-vote modal)</li>
+        <li>Nominated players and HOH (without tie-break) see "You are observing this vote"</li>
+        <li>Only one layer (overlay/rollout/lv2) visible at a time</li>
+        <li>CTAs are 48px minimum and stack properly on mobile</li>
+        <li>No clipped, hidden, or overlapped content</li>
+        <li>Panel visibility restored after vote submission</li>
+      </ul>
+    </div>
+
+    <div class="info-panel">
+      <h3>🧪 Test Scenarios</h3>
+      <ul>
+        <li><strong>Scenario 1:</strong> Eligible voter sees overlay directly → vote → rollout shows → panel restored</li>
+        <li><strong>Scenario 2:</strong> Nominated observer sees "observing" message → no vote UI → diary room only</li>
+        <li><strong>Scenario 3:</strong> HOH (no tie) sees "observing" message → no vote UI</li>
+        <li><strong>Scenario 4:</strong> Mobile viewport → CTA buttons are 48px+ and stack properly</li>
+        <li><strong>Scenario 5:</strong> Cleanup called → all overlays removed → panel visible</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="tv">
+    <div id="panel">
+      <p style="text-align: center; opacity: 0.7;">Select a role scenario and start live vote to test.</p>
+    </div>
+  </div>
+
+  <script src="js/livevote-helpers.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script src="js/livevote-rollout.js"></script>
+
+  <script>
+    // Mock global game state
+    window.game = {
+      humanId: 1,
+      hohId: null,
+      nominees: [],
+      __human_vote: null,
+      eviction: null,
+      cfg: {
+        tVote: 30
+      },
+      players: [
+        { id: 1, name: 'You', human: true, nominated: false, hoh: false },
+        { id: 2, name: 'Alice', human: false, nominated: false, hoh: false },
+        { id: 3, name: 'Bob', human: false, nominated: false, hoh: false },
+        { id: 4, name: 'Carol', human: false, nominated: false, hoh: false },
+        { id: 5, name: 'David', human: false, nominated: false, hoh: false },
+        { id: 6, name: 'Eve', human: false, nominated: false, hoh: false }
+      ]
+    };
+
+    // Helper functions
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || 'Unknown';
+    
+    window.alivePlayers = () => {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.fmtList = (ids) => {
+      return ids.map(id => window.safeName(id)).join(', ');
+    };
+
+    window.addLog = (msg, type) => {
+      console.log(`[Log ${type}]`, msg);
+    };
+
+    // Mock resolver for avatars
+    window.getDicebearUrl = (seed) => {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    // Device viewport control
+    function setViewport(width, height) {
+      // Note: This simulates by resizing the window, but real testing should use browser dev tools
+      console.log(`Setting viewport to ${width}×${height}`);
+      document.getElementById('currentViewport').textContent = `${width}×${height}`;
+      
+      // In a real test, you'd use:
+      // window.resizeTo(width, height); // Only works in popup windows
+      // Or browser dev tools: Ctrl+Shift+M (Chrome), Ctrl+Shift+M (Firefox)
+      
+      alert(`Viewport preset selected: ${width}×${height}\n\nPlease resize your browser window or use browser dev tools (F12 → Responsive Design Mode) to simulate this viewport.`);
+    }
+
+    function resetViewport() {
+      document.getElementById('currentViewport').textContent = `${window.innerWidth}×${window.innerHeight}`;
+    }
+
+    // Role setup functions
+    function setupEligibleVoter() {
+      const human = window.getP(1);
+      human.nominated = false;
+      human.hoh = false;
+      
+      window.game.hohId = 2; // Alice is HOH
+      window.game.nominees = [3, 4]; // Bob and Carol nominated
+      window.game.__human_vote = null;
+      
+      window.getP(2).hoh = true;
+      window.getP(3).nominated = true;
+      window.getP(4).nominated = true;
+      
+      updateStatus();
+      console.log('✅ Setup: Eligible voter (not nominated, not HOH)');
+    }
+
+    function setupNominatedObserver() {
+      const human = window.getP(1);
+      human.nominated = true;
+      human.hoh = false;
+      
+      window.game.hohId = 2; // Alice is HOH
+      window.game.nominees = [1, 3]; // You and Bob nominated
+      window.game.__human_vote = null;
+      
+      window.getP(2).hoh = true;
+      window.getP(1).nominated = true;
+      window.getP(3).nominated = true;
+      
+      updateStatus();
+      console.log('✅ Setup: Nominated observer (should only observe)');
+    }
+
+    function setupHohObserver() {
+      const human = window.getP(1);
+      human.nominated = false;
+      human.hoh = true;
+      
+      window.game.hohId = 1; // You are HOH
+      window.game.nominees = [3, 4]; // Bob and Carol nominated
+      window.game.__human_vote = null;
+      
+      window.getP(1).hoh = true;
+      window.getP(3).nominated = true;
+      window.getP(4).nominated = true;
+      
+      updateStatus();
+      console.log('✅ Setup: HOH observer (no tie-break, should only observe)');
+    }
+
+    function setupHohTieBreak() {
+      const human = window.getP(1);
+      human.nominated = false;
+      human.hoh = true;
+      
+      window.game.hohId = 1; // You are HOH
+      window.game.nominees = [3, 4]; // Bob and Carol nominated
+      window.game.__human_vote = null;
+      
+      // Simulate tie scenario (would need to be detected in actual game)
+      window.game._isTieBreakScenario = true;
+      
+      window.getP(1).hoh = true;
+      window.getP(3).nominated = true;
+      window.getP(4).nominated = true;
+      
+      updateStatus();
+      console.log('✅ Setup: HOH tie-break voter (HOH votes to break tie)');
+    }
+
+    function updateStatus() {
+      const human = window.getP(1);
+      const isNominated = human.nominated;
+      const isHoh = human.hoh;
+      const voters = eligibleVoters();
+      const isVoter = voters.some(v => v.id === 1);
+      
+      let role = 'Unknown';
+      if (isNominated) role = 'Nominee';
+      else if (isHoh && !window.game._isTieBreakScenario) role = 'HOH (No Tie)';
+      else if (isHoh && window.game._isTieBreakScenario) role = 'HOH (Tie-break)';
+      else role = 'Houseguest';
+      
+      document.getElementById('humanRole').textContent = role;
+      document.getElementById('eligibleVoter').textContent = isVoter ? '✅ Yes' : '❌ No';
+      document.getElementById('nomineesDisplay').textContent = window.fmtList(window.game.nominees);
+      document.getElementById('voteCast').textContent = window.game.__human_vote 
+        ? `✅ ${window.safeName(window.game.__human_vote)}` 
+        : '❌ No';
+    }
+
+    function eligibleVoters() {
+      const g = window.game;
+      const remain = window.alivePlayers().length;
+      
+      // Final 4: Veto holder votes
+      if (remain === 4) {
+        const holder = window.getP(g.vetoHolder);
+        if (holder && !g.nominees.includes(holder.id)) return [holder];
+        return window.alivePlayers()
+          .filter(p => p.id !== g.hohId && !g.nominees.includes(p.id))
+          .slice(0, 1);
+      }
+      
+      // Normal voting: everyone except HOH and nominees
+      return window.alivePlayers()
+        .filter(p => p.id !== g.hohId && !g.nominees.includes(p.id));
+    }
+
+    function startLiveVote() {
+      if (window.game.nominees.length === 0) {
+        alert('Please select a role scenario first!');
+        return;
+      }
+      
+      const g = window.game;
+      g.eviction = {
+        nominees: [...g.nominees],
+        votes: [],
+        evicted: null,
+        voters: eligibleVoters().map(v => v.id),
+        sequenceStarted: false,
+        sequenceDone: false
+      };
+      
+      renderLiveVotePanel();
+      console.log('🎬 Live vote started');
+    }
+
+    function renderLiveVotePanel() {
+      const g = window.game;
+      const panel = document.querySelector('#panel');
+      if (!panel) return;
+      
+      // Clear any stale vote UI
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+      }
+      
+      panel.innerHTML = '';
+      
+      const you = window.getP(g.humanId);
+      const voters = eligibleVoters();
+      const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
+      const hasVoted = g.__human_vote != null;
+      
+      // COMMIT 2: If human is NOT a voter (observer), skip all vote UI
+      if (!humanIsVoter) {
+        console.info('[TEST] Human is observer (nominated or HOH), showing observer message');
+        panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny muted">You are observing this vote.</div></div>';
+        return;
+      }
+      
+      // If human is eligible voter and hasn't voted yet, show voting overlay directly
+      if (humanIsVoter && !hasVoted && window.LiveVoteOverlay) {
+        // Check if overlay is already open
+        const overlayOpen = window.LiveVoteOverlay?.isOpen?.() || false;
+        
+        if (overlayOpen) {
+          console.debug('[TEST] Skipping overlay show: already open');
+          return;
+        }
+        
+        // Hide panel while overlay is open
+        if (panel) {
+          panel.classList.add('voteOverlayOpen');
+        }
+        
+        console.info('[TEST] Showing LiveVoteOverlay for eligible voter');
+        
+        // Show Voting Overlay directly
+        window.LiveVoteOverlay.show({
+          nominees: g.eviction.nominees,
+          isTieBreak: false,
+          onSubmit: (selectedId) => {
+            console.log('✅ Vote submitted:', window.safeName(selectedId));
+            
+            // Close all vote UI
+            if (window.closeAllVoteUI) {
+              window.closeAllVoteUI();
+            }
+            
+            // Restore panel visibility
+            if (panel) {
+              panel.classList.remove('voteOverlayOpen');
+            }
+            
+            // Lock the vote
+            g.__human_vote = selectedId;
+            
+            updateStatus();
+            
+            // Show rollout overlay
+            if (window.LiveVoteRollout) {
+              const expectedVotes = voters.length;
+              window.LiveVoteRollout.show({
+                expectedVotes: expectedVotes,
+                nominees: g.eviction.nominees
+              });
+              
+              // Mark user vote as first vote in rollout
+              const userPlayer = window.getP(g.humanId);
+              const targetPlayer = window.getP(selectedId);
+              if (userPlayer && targetPlayer) {
+                window.LiveVoteRollout.addVote({
+                  voterId: g.humanId,
+                  voterName: userPlayer.name,
+                  targetId: selectedId,
+                  targetName: targetPlayer.name
+                });
+              }
+              
+              console.log('📊 Rollout overlay shown with user vote');
+            }
+            
+            panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny">Vote submitted! Waiting for other votes...</div></div>';
+          }
+        });
+        
+        return;
+      }
+      
+      // Already voted
+      if (hasVoted) {
+        panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny">You voted to evict ' + window.safeName(g.__human_vote) + '.</div></div>';
+      }
+    }
+
+    function cleanup() {
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+        console.log('🧹 All vote UI cleaned up');
+      }
+      
+      const panel = document.querySelector('#panel');
+      if (panel) {
+        panel.innerHTML = '<p style="text-align: center; opacity: 0.7;">Cleanup complete. Select a scenario to test again.</p>';
+      }
+    }
+
+    function showStatus() {
+      updateStatus();
+      const voters = eligibleVoters();
+      console.log('📊 Status:', {
+        humanRole: document.getElementById('humanRole').textContent,
+        isEligibleVoter: voters.some(v => v.id === 1),
+        nominees: window.game.nominees,
+        voteCast: window.game.__human_vote,
+        allVoters: voters.map(v => v.name)
+      });
+    }
+
+    // Initialize
+    resetViewport();
+    updateStatus();
+    
+    console.log('🎬 Test harness initialized');
+    console.log('📱 Use device presets to test responsive behavior');
+    console.log('👤 Select a role scenario to test observer vs voter logic');
+  </script>
+</body>
+</html>

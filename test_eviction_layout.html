@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Eviction Layout Test - Responsive Containment</title>
+  <!--
+  ============================================================================
+  EVICTION LAYOUT TEST PAGE
+  
+  Purpose: 
+  Manual test page for verifying the responsive containment fix for the
+  eviction (vote) interface. Tests that avatars and the Evict button remain
+  fully contained inside the TV overlay on both laptop and mobile viewports.
+  
+  How to Test:
+  1. Open this file in a browser
+  2. Use browser DevTools to simulate different viewports:
+     - Laptop: ≥1024px width
+     - Tablet: 768-1023px width
+     - Mobile Portrait: ≤640px width (iPhone, Android)
+     - Mobile Landscape: ≤896px width, landscape orientation
+  3. Click avatars to select nominees and verify:
+     - Avatars never overlap or clip at overlay edges
+     - Evict button appears below avatars, inside the overlay
+     - Scrolling works if too many avatars to fit
+     - Safe area padding works (test on iOS simulator with notch)
+  
+  Expected Behavior:
+  - Laptop (≥1024px): All avatars visible, Evict button visible at bottom
+  - Mobile (≤640px): Avatars may scroll horizontally, Evict button stays sticky
+  - No element should extend beyond the TV overlay boundary
+  
+  Files Under Test:
+  - css/eviction-layout-containment.css (new)
+  - css/livevote-voteoverlay.css (existing)
+  - js/eviction-layout-scroll.js (new)
+  - js/livevote-voteoverlay.js (existing)
+  ============================================================================
+  -->
+  
+  <!-- Core styles -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Vote overlay styles -->
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  
+  <!-- NEW: Responsive containment fix -->
+  <link rel="stylesheet" href="css/eviction-layout-containment.css">
+  
+  <style>
+    /* Test page specific styles */
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      padding: 16px;
+      background: rgba(20, 35, 55, 0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(143, 211, 255, 0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 12px;
+      color: #00e0cc;
+      font-size: 1.3rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 4px;
+      transition: transform 0.2s;
+      font-size: 0.9rem;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.secondary {
+      background: linear-gradient(135deg, #3a5a7c, #2a4a6c);
+      color: #e8f4ff;
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 224, 204, 0.1);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    
+    .test-info ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    .test-info li {
+      margin: 4px 0;
+    }
+    
+    /* TV container simulation */
+    .tv-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: linear-gradient(to bottom, rgba(14, 23, 48, 0.7), rgba(14, 23, 48, 0.8));
+      background-color: #0e1730;
+      border: 2px solid rgba(0, 0, 0, 0.35);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 16px 36px -22px rgba(0, 0, 0, 0.75);
+      position: relative;
+    }
+    
+    .tv-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(120, 210, 255, 0.07);
+      background: linear-gradient(180deg, rgba(13, 24, 38, 0.45), rgba(7, 14, 24, 0.2));
+    }
+    
+    .tv-title {
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      font-size: 0.75rem;
+      color: #c7d7eb;
+    }
+    
+    .tv-timer {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e2edf8;
+    }
+    
+    .tv-viewport {
+      position: relative;
+      min-height: 400px;
+      overflow: hidden;
+    }
+    
+    /* Viewport info */
+    .viewport-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #00e0cc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      z-index: 10000;
+      font-family: monospace;
+    }
+    
+    /* Test status panel */
+    .test-status {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(255, 215, 0, 0.1);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    
+    /* Highlight overlay boundary for testing */
+    .show-boundary .lv-overlay {
+      outline: 3px dashed rgba(255, 0, 0, 0.5);
+      outline-offset: -3px;
+    }
+    
+    /* Avatar count selector */
+    .avatar-count-row {
+      margin: 10px 0;
+    }
+    
+    .avatar-count-row label {
+      margin-right: 10px;
+      font-size: 0.9rem;
+    }
+    
+    .avatar-count-row select {
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(20, 35, 55, 0.9);
+      border: 1px solid rgba(143, 211, 255, 0.3);
+      color: #e8f4ff;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎯 Eviction Layout Test - Responsive Containment</h1>
+    
+    <div class="avatar-count-row">
+      <label for="avatarCount">Number of nominees:</label>
+      <select id="avatarCount">
+        <option value="2">2 nominees (standard)</option>
+        <option value="3">3 nominees (triple eviction)</option>
+        <option value="4">4 nominees</option>
+        <option value="6" selected>6 nominees (stress test)</option>
+        <option value="8">8 nominees (max stress)</option>
+        <option value="12">12 nominees (extreme)</option>
+      </select>
+    </div>
+    
+    <div>
+      <button onclick="showVoteOverlay()">Show Vote Overlay</button>
+      <button onclick="hideVoteOverlay()">Hide Overlay</button>
+      <button onclick="toggleBoundary()" class="secondary">Toggle Boundary</button>
+    </div>
+    
+    <div class="test-info">
+      <strong>Testing Instructions:</strong>
+      <ul>
+        <li>Click "Show Vote Overlay" to display the eviction voting UI</li>
+        <li>Click any avatar to select it and show the Evict button</li>
+        <li>Verify avatars never overlap each other or clip at edges</li>
+        <li>Verify the Evict button stays inside the overlay when selected</li>
+        <li>Use browser DevTools to test at different viewport sizes</li>
+        <li>Toggle Boundary to see the overlay container edges</li>
+      </ul>
+    </div>
+    
+    <div class="test-status" id="testStatus">
+      <strong>Status:</strong> Ready. Select number of nominees and click "Show Vote Overlay".
+    </div>
+  </div>
+  
+  <div class="tv-container" id="tv">
+    <div class="tv-head">
+      <div class="tv-title">Live Vote - Eviction Test</div>
+      <div class="tv-timer" id="tvTimer">0:30</div>
+    </div>
+    <div class="tv-viewport" id="tvViewport">
+      <!-- Vote overlay will be inserted here -->
+      <div id="tvNow" style="padding: 20px; text-align: center; color: #95a9c0; font-style: italic;">
+        Click "Show Vote Overlay" to test the eviction UI
+      </div>
+    </div>
+  </div>
+  
+  <div class="viewport-info" id="viewportInfo">
+    Viewport: <span id="vpSize">--</span>
+  </div>
+  
+  <!-- Load the JS modules -->
+  <script src="js/eviction-layout-scroll.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+  
+  <script>
+    // Mock player data generator
+    function generateMockPlayers(count) {
+      const names = [
+        'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank',
+        'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Leo',
+        'Mia', 'Noah', 'Olivia', 'Peter'
+      ];
+      
+      const players = [];
+      for (let i = 0; i < count && i < names.length; i++) {
+        players.push({
+          id: i + 1,
+          name: names[i],
+          avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${names[i]}`
+        });
+      }
+      return players;
+    }
+    
+    // Mock global helpers needed by LiveVoteOverlay
+    let mockPlayers = [];
+    
+    window.getP = function(id) {
+      return mockPlayers.find(p => p.id === id);
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    
+    window.resolveAvatar = function(player) {
+      return player?.avatar || null;
+    };
+    
+    // Track overlay state
+    let overlayVisible = false;
+    let boundaryVisible = false;
+    
+    // Update viewport info
+    function updateViewportInfo() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      document.getElementById('vpSize').textContent = `${w}×${h}`;
+    }
+    
+    // Update test status
+    function updateStatus(message) {
+      document.getElementById('testStatus').innerHTML = `<strong>Status:</strong> ${message}`;
+    }
+    
+    // Show vote overlay
+    function showVoteOverlay() {
+      const count = parseInt(document.getElementById('avatarCount').value);
+      mockPlayers = generateMockPlayers(count);
+      
+      const nomineeIds = mockPlayers.map(p => p.id);
+      
+      // Use the LiveVoteOverlay module
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.show({
+          nominees: nomineeIds,
+          isTieBreak: false,
+          allowClose: true,
+          onSubmit: function(selectedId) {
+            const player = window.getP(selectedId);
+            updateStatus(`✅ Vote submitted for: ${player.name} (ID: ${selectedId})`);
+            overlayVisible = false;
+            
+            // Use EvictionLayoutScroll if available
+            if (window.EvictionLayoutScroll) {
+              const overlay = document.querySelector('.lv-overlay');
+              window.EvictionLayoutScroll.scrollActionBarIntoView(overlay);
+            }
+          },
+          onCancel: function() {
+            updateStatus('Vote cancelled');
+            overlayVisible = false;
+          }
+        });
+        
+        overlayVisible = true;
+        updateStatus(`Showing ${count} nominees. Click an avatar to select, then verify Evict button visibility.`);
+        
+        // Check if boundary mode is on
+        if (boundaryVisible) {
+          document.body.classList.add('show-boundary');
+        }
+        
+        // After a brief delay, check button visibility
+        setTimeout(checkEvictButtonVisibility, 500);
+      } else {
+        updateStatus('❌ Error: LiveVoteOverlay module not loaded');
+      }
+    }
+    
+    // Hide vote overlay
+    function hideVoteOverlay() {
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.hide();
+        overlayVisible = false;
+        updateStatus('Overlay hidden');
+      }
+    }
+    
+    // Toggle boundary visibility
+    function toggleBoundary() {
+      boundaryVisible = !boundaryVisible;
+      document.body.classList.toggle('show-boundary', boundaryVisible);
+      updateStatus(boundaryVisible 
+        ? 'Boundary outline shown (red dashed line)' 
+        : 'Boundary outline hidden');
+    }
+    
+    // Check if Evict button is visible within viewport
+    function checkEvictButtonVisibility() {
+      const btn = document.querySelector('.lv-overlay__evict-btn');
+      if (!btn) {
+        console.log('Evict button not yet rendered');
+        return;
+      }
+      
+      const overlay = document.querySelector('.lv-overlay');
+      if (!overlay) return;
+      
+      const btnRect = btn.getBoundingClientRect();
+      const overlayRect = overlay.getBoundingClientRect();
+      
+      const isFullyVisible = (
+        btnRect.top >= overlayRect.top &&
+        btnRect.bottom <= overlayRect.bottom &&
+        btnRect.left >= overlayRect.left &&
+        btnRect.right <= overlayRect.right
+      );
+      
+      if (isFullyVisible) {
+        console.log('✅ Evict button is fully visible within overlay');
+      } else {
+        console.log('⚠️ Evict button may be outside overlay bounds');
+        console.log('Button:', btnRect);
+        console.log('Overlay:', overlayRect);
+      }
+    }
+    
+    // Initialize
+    window.addEventListener('resize', updateViewportInfo);
+    updateViewportInfo();
+    
+    // Timer simulation
+    let timerSeconds = 30;
+    setInterval(function() {
+      if (overlayVisible && timerSeconds > 0) {
+        timerSeconds--;
+        document.getElementById('tvTimer').textContent = `0:${timerSeconds.toString().padStart(2, '0')}`;
+      }
+    }, 1000);
+    
+    // Reset timer when overlay shown
+    const originalShow = window.LiveVoteOverlay?.show;
+    if (originalShow) {
+      window.LiveVoteOverlay.show = function(opts) {
+        timerSeconds = 30;
+        document.getElementById('tvTimer').textContent = '0:30';
+        return originalShow.call(this, opts);
+      };
+    }
+    
+    console.log('Eviction Layout Test Page loaded');
+    console.log('Instructions:');
+    console.log('1. Select number of nominees');
+    console.log('2. Click "Show Vote Overlay"');
+    console.log('3. Click avatars to test selection');
+    console.log('4. Verify Evict button stays visible');
+    console.log('5. Resize browser to test responsiveness');
+  </script>
+</body>
+</html>
