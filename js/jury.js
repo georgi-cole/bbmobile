@@ -1690,13 +1690,20 @@
   /**
    * Animate avatar revive effect (reverse eviction animation)
    * Adds CSS class and returns Promise that resolves on animation end
-   * @param {HTMLElement} el - Avatar element to animate
+   * @param {HTMLElement|string} elOrSelector - Avatar element or selector to animate
+   * @param {number} maxWait - Maximum wait time in ms (default 1400)
    * @returns {Promise<void>} Resolves when animation completes
    */
-  g.animateReviveAvatar = function(el) {
+  g.animateReviveAvatar = function(elOrSelector, maxWait = 1400) {
     return new Promise((resolve) => {
+      // Resolve element from selector if needed
+      let el = elOrSelector;
+      if (typeof elOrSelector === 'string') {
+        el = document.querySelector(elOrSelector);
+      }
+      
       if (!el || !(el instanceof HTMLElement)) {
-        console.warn('[animateReviveAvatar] Invalid element provided');
+        console.warn('[animateReviveAvatar] Invalid element or selector provided:', elOrSelector);
         resolve();
         return;
       }
@@ -1706,7 +1713,7 @@
         el.removeEventListener('animationend', handleAnimationEnd);
         el.classList.remove('revive-avatar');
         resolve();
-      }, 1200);
+      }, maxWait);
       
       const handleAnimationEnd = () => {
         clearTimeout(timeout);

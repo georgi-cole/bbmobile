@@ -290,7 +290,7 @@
       counts: new Map(jurors.map(id=>[id,0])),
       weights: new Map(jurors.map(id=>[id, 0.7 + rand()*1.1])),
       started: Date.now(),
-      durationMs: Number(g.cfg?.tJurorReturnVoteMs || 6500),
+      durationMs: Math.min(Number(g.cfg?.tJurorReturnVoteMs || 6500), 5000),
       finished:false,
       lastLeader:null,
       _tick:null,
@@ -425,6 +425,46 @@
     }
   }
 
+  // Constants for juror return UI
+  const JUROR_RETURN_PANEL_SELECTORS = '.jrVotePanel, .jrPanel, .jrModalHost';
+  const MAIN_AVATAR_SELECTORS = '[data-id="{id}"] img, [data-player-id="{id}"] img, .player-avatar[data-id="{id}"]';
+  const REVIVE_ANIMATION_DURATION = 1400; // ms, matches CSS animation
+
+  /**
+   * Wait for the voting panel to be removed from DOM
+   * @param {number} maxWaitMs - Maximum time to wait (default 3000ms)
+   * @returns {Promise<void>} Resolves when panel is gone or timeout
+   */
+  async function waitForPanelGone(maxWaitMs = 3000){
+    const startTime = Date.now();
+    const checkInterval = 100;
+    
+    return new Promise((resolve) => {
+      const check = () => {
+        // Check if panel with jrVotePanel is gone
+        const panel = document.querySelector(JUROR_RETURN_PANEL_SELECTORS);
+        
+        if(!panel){
+          console.info('[waitForPanelGone] panel removed');
+          resolve();
+          return;
+        }
+        
+        // Check timeout
+        if(Date.now() - startTime >= maxWaitMs){
+          console.warn('[waitForPanelGone] timeout reached, proceeding anyway');
+          resolve();
+          return;
+        }
+        
+        // Check again after interval
+        setTimeout(check, checkInterval);
+      };
+      
+      check();
+    });
+  }
+
   /**
    * Show juror return result with animation
    * @param {number} winnerId - ID of the returning juror
@@ -433,6 +473,9 @@
    */
   async function showJurorReturnResult(winnerId, percent){
     if(!winnerId) return;
+    
+    // Wait for panel to be removed before showing result
+    await waitForPanelGone(3000);
     
     const winnerName = global.safeName?.(winnerId) || 'Juror';
     const pctDisplay = Math.round(percent);
@@ -466,17 +509,25 @@
       setTimeout(()=>modal.remove(), 3800);
     }
     
-    // Trigger revive animation on winner's avatar
-    const st = global.game?.__returnTwist;
-    if(st && st._domCache && st._domCache[winnerId]){
-      const avatarEl = st._domCache[winnerId].slot?.querySelector('.jrAvatar');
-      if(avatarEl && typeof global.animateReviveAvatar === 'function'){
+    // Trigger revive animation on main screen avatar (not panel avatar since panel is gone)
+    // Look for the winner's avatar in the main UI (roster/HUD)
+    const avatarSelector = MAIN_AVATAR_SELECTORS.replace(/{id}/g, winnerId);
+    const mainAvatar = document.querySelector(avatarSelector);
+    
+    if(mainAvatar && typeof global.animateReviveAvatar === 'function'){
+      try{
+        await global.animateReviveAvatar(mainAvatar, REVIVE_ANIMATION_DURATION);
+      }catch(e){
+        console.warn('[showJurorReturnResult] Animation failed:', e);
+        // Fallback: add class directly
         try{
-          await global.animateReviveAvatar(avatarEl);
-        }catch(e){
-          console.warn('[showJurorReturnResult] Animation failed:', e);
-        }
+          mainAvatar.classList.add('revive-avatar');
+          await new Promise(resolve => setTimeout(resolve, REVIVE_ANIMATION_DURATION));
+          mainAvatar.classList.remove('revive-avatar');
+        }catch(e2){}
       }
+    } else {
+      console.info('[showJurorReturnResult] Main avatar not found or animateReviveAvatar unavailable');
     }
     
     // Small delay to let animation be visible
@@ -526,14 +577,8 @@
       try{
         global.addJuryLog?.(`<b>${global.safeName(winnerId)}</b> wins America's Vote and returns!`,'ok');
         global.setMusic?.('victory',true);
-        
-        // Show result with animation before final card
-        await showJurorReturnResult(winnerId, winnerPercent);
-        
-        global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
-        await global.cardQueueWaitIdle?.();
-        // Confetti removed per spec
       }catch(e){}
+      
       g.__returnFlashId=winnerId;
       setTimeout(()=>{ g.__returnFlashId=null; global.updateHud?.(); },6500);
       // Flags already set at eligibility check
@@ -542,12 +587,30 @@
       if(typeof global.PlayerService?.setAlivePlayers === 'function' && g.players){
         global.PlayerService.setAlivePlayers(g.players);
       }
+      
+      // Clean up panel and resume game flow FIRST
+      cleanupReturnPanel();
+      resumeWeekAfterReturn();
+      
+      // THEN schedule result announcement and animation in non-blocking async IIFE
+      // This allows game logic to continue while UI waits for panel removal
+      (async () => {
+        try{
+          // Show result with animation after panel is removed
+          await showJurorReturnResult(winnerId, winnerPercent);
+          
+          // Show final card
+          global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
+          await global.cardQueueWaitIdle?.();
+        }catch(e){
+          console.error('[finalizeAmericaReturnVote] Error in result announcement:', e);
+        }
+      })();
     } else {
       try{ global.showCard?.('No Returnee',['Vote produced no clear winner.'],'jury',3200,true); }catch(e){}
+      cleanupReturnPanel();
+      resumeWeekAfterReturn();
     }
-
-    cleanupReturnPanel();
-    resumeWeekAfterReturn();
   }
 
   function cleanupReturnPanel(){
@@ -676,6 +739,7 @@
   global.finishAmericaReturnVote=function(){ finalizeAmericaReturnVote(true); };
   global.startAmericaReturnVote=startAmericaReturnVote;
   global.renderReturnTwistPanel=renderReturnTwistPanel;
+  global.__showJurorReturnResult=showJurorReturnResult;
 
   function tryMaybeAutoSelfEvict(){
     const g=global.game; if(!g) return;
