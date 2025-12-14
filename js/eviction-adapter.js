@@ -154,7 +154,8 @@
     }
 
     // Determine if human is eligible to vote
-    const voters = eligibleVoters();
+    const nomineeIds = nominees.map(n => n.id);
+    const voters = eligibleVoters(nomineeIds);
     const humanId = g.humanId || g.local?.id;
     const eligible = voters.some(v => v.id === humanId);
 
@@ -196,26 +197,27 @@
 
   /**
    * Determine eligible voters (copied from old eviction.js logic)
+   * @param {Array} nomineeIds - Array of nominee IDs
    */
-  function eligibleVoters() {
+  function eligibleVoters(nomineeIds = []) {
     const g = global.game;
     const remain = alivePlayers().length;
 
     // Final 4 logic: Only veto holder votes
     if (remain === 4) {
       const holder = global.getP ? global.getP(g.vetoHolder) : null;
-      if (holder && !g.eviction.nominees.includes(holder.id)) {
+      if (holder && !nomineeIds.includes(holder.id)) {
         return [holder];
       }
       // Fallback: any non-HOH, non-nominee
       return alivePlayers().filter(p => 
-        p.id !== g.hohId && !g.eviction.nominees.includes(p.id)
+        p.id !== g.hohId && !nomineeIds.includes(p.id)
       ).slice(0, 1);
     }
 
     // Normal logic: All non-HOH, non-nominees
     return alivePlayers().filter(p => 
-      p.id !== g.hohId && !g.eviction.nominees.includes(p.id)
+      p.id !== g.hohId && !nomineeIds.includes(p.id)
     );
   }
 
