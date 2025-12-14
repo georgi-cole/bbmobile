@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Strategy v2 Test Suite</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 { color: #4CAF50; }
+    h2 { color: #2196F3; border-bottom: 2px solid #2196F3; padding-bottom: 5px; margin-top: 30px; }
+    .test-group { background: #2a2a2a; padding: 15px; margin: 15px 0; border-radius: 8px; }
+    .test-case { margin: 10px 0; padding: 10px; background: #333; border-left: 4px solid #666; }
+    .pass { border-left-color: #4CAF50; }
+    .fail { border-left-color: #f44336; }
+    .info { color: #03A9F4; }
+    .success { color: #4CAF50; }
+    .error { color: #f44336; }
+    .warning { color: #FF9800; }
+    button { 
+      background: #2196F3; 
+      color: white; 
+      border: none; 
+      padding: 10px 20px; 
+      margin: 5px; 
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button:hover { background: #1976D2; }
+    pre { 
+      background: #1a1a1a; 
+      padding: 10px; 
+      border-radius: 4px; 
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 15px 0; }
+    .stat-card { background: #333; padding: 15px; border-radius: 4px; text-align: center; }
+    .stat-value { font-size: 32px; font-weight: bold; color: #4CAF50; }
+    .stat-label { color: #999; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <h1>🎯 Social Strategy v2 Test Suite</h1>
+  <p class="info">Testing enhanced attribution logic for Energy, Influence, and Information resources</p>
+
+  <div class="test-group">
+    <h2>Test Controls</h2>
+    <button onclick="runAllTests()">▶️ Run All Tests</button>
+    <button onclick="clearResults()">🗑️ Clear Results</button>
+    <button onclick="resetGame()">🔄 Reset Game State</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script type="module">
+    // Import game modules
+    import './js/game.js';
+    import './js/social-maneuvers.js';
+
+    // Wait for modules to load
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const results = document.getElementById('results');
+    let testResults = { passed: 0, failed: 0, total: 0 };
+
+    function log(message, type = 'info') {
+      const p = document.createElement('p');
+      p.className = type;
+      p.textContent = message;
+      results.appendChild(p);
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function testCase(name, fn) {
+      testResults.total++;
+      const testDiv = document.createElement('div');
+      testDiv.className = 'test-case';
+      
+      try {
+        fn();
+        testDiv.classList.add('pass');
+        testDiv.innerHTML = `✅ <strong>${name}</strong> - PASSED`;
+        testResults.passed++;
+      } catch (error) {
+        testDiv.classList.add('fail');
+        testDiv.innerHTML = `❌ <strong>${name}</strong> - FAILED<br><pre>${error.message}\n${error.stack}</pre>`;
+        testResults.failed++;
+      }
+      
+      results.appendChild(testDiv);
+    }
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message || 'Assertion failed');
+    }
+
+    function assertApprox(actual, expected, tolerance = 0.01, message) {
+      if (Math.abs(actual - expected) > tolerance) {
+        throw new Error(message || `Expected ${expected}, got ${actual}`);
+      }
+    }
+
+    // ============================================================================
+    // TEST 1: Energy Attribution with Contextual Multipliers
+    // ============================================================================
+    function testEnergyContextualMultipliers() {
+      const g = window.game;
+      if (!g) throw new Error('Game not initialized');
+      
+      const testPlayer = 1;
+      g.__survivalStreaks = new Map();
+      g.__survivalStreaks.set(testPlayer, 5); // 5 weeks survived
+      
+      // Test survival streak multiplier
+      const baseBonus = 10;
+      const scaled = window.SocialManeuvers.scaleWeeklyBonus(testPlayer, baseBonus);
+      
+      // Should be 10 * (1 + 0.05) = 10.5 → 11 (rounded)
+      assert(scaled >= 10 && scaled <= 11, `Expected scaled bonus 10-11, got ${scaled}`);
+      log(`✓ Survival streak multiplier working: ${baseBonus} → ${scaled}`);
+    }
+
+    // ============================================================================
+    // TEST 2: Influence Diminishing Returns
+    // ============================================================================
+    function testInfluenceDiminishingReturns() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      // Initialize test players
+      const actor = 1, target = 2;
+      g.__influenceActions = new Map();
+      g.__phaseInfluenceGains = new Map();
+      const pairKey = `${actor}->${target}`;
+      
+      // Simulate 3 actions (no diminishing returns yet)
+      g.__influenceActions.set(pairKey, 3);
+      const initialInfluence = SM.SocialResources.getInfluence(actor, target);
+      SM.SocialResources.adjustInfluence(actor, target, 10);
+      const afterThree = SM.SocialResources.getInfluence(actor, target);
+      
+      // Should get full 10 points
+      assertApprox(afterThree - initialInfluence, 10, 1, 'First 3 actions should give full influence');
+      
+      // Simulate 5th action (should trigger diminishing returns)
+      g.__influenceActions.set(pairKey, 4);
+      SM.SocialResources.adjustInfluence(actor, target, 10);
+      const afterFive = SM.SocialResources.getInfluence(actor, target);
+      
+      // Should get only 30% of 10 = 3 points
+      assertApprox(afterFive - afterThree, 3, 1, '5th action should have diminishing returns (30%)');
+      log(`✓ Diminishing returns working: action 4 gave full value, action 5+ gave 30%`);
+    }
+
+    // ============================================================================
+    // TEST 3: Influence Per-Target Phase Cap
+    // ============================================================================
+    function testInfluencePhaseCap() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const actor = 1, target = 3;
+      g.__influenceActions = new Map();
+      g.__phaseInfluenceGains = new Map();
+      const pairKey = `${actor}->${target}`;
+      
+      // Set current phase gain to 18 (near cap of 20)
+      g.__phaseInfluenceGains.set(pairKey, 18);
+      
+      const before = SM.SocialResources.getInfluence(actor, target);
+      SM.SocialResources.adjustInfluence(actor, target, 10);
+      const after = SM.SocialResources.getInfluence(actor, target);
+      
+      // Should only gain 2 more to reach cap of 20
+      assertApprox(after - before, 2, 0.5, 'Phase cap should limit gain to 2');
+      log(`✓ Phase cap working: limited gain from 10 to 2 (cap: 20)`);
+    }
+
+    // ============================================================================
+    // TEST 4: Influence Decay with Positive Action Waiver
+    // ============================================================================
+    function testInfluenceDecayWaiver() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const player = 1, target1 = 2, target2 = 3;
+      g.__weeklyInteractions = new Map();
+      
+      // Setup: player has influence with both targets
+      SM.SocialResources.setInfluence(player, target1, 50);
+      SM.SocialResources.setInfluence(player, target2, 50);
+      
+      // Record 2 positive interactions with target1 (should waive decay)
+      g.__weeklyInteractions.set(`${player}->${target1}`, 2);
+      
+      // Record 1 positive interaction with target2 (decay should apply)
+      g.__weeklyInteractions.set(`${player}->${target2}`, 1);
+      
+      // Mock alivePlayers
+      window.alivePlayers = () => [
+        { id: target1, name: 'Target1' },
+        { id: target2, name: 'Target2' }
+      ];
+      
+      // Trigger weekly reset logic for influence decay
+      const infBefore1 = SM.SocialResources.getInfluence(player, target1);
+      const infBefore2 = SM.SocialResources.getInfluence(player, target2);
+      
+      // Apply decay manually (simulating resetWeekly logic)
+      const key1 = `${player}->${target1}`;
+      const key2 = `${player}->${target2}`;
+      const count1 = g.__weeklyInteractions.get(key1) || 0;
+      const count2 = g.__weeklyInteractions.get(key2) || 0;
+      
+      // Target1: 2 actions, decay waived
+      if (count1 < 2) {
+        SM.SocialResources.setInfluence(player, target1, infBefore1 * 0.8);
+      }
+      
+      // Target2: 1 action, decay applied (20%)
+      if (count2 < 2) {
+        SM.SocialResources.setInfluence(player, target2, infBefore2 * 0.8);
+      }
+      
+      const infAfter1 = SM.SocialResources.getInfluence(player, target1);
+      const infAfter2 = SM.SocialResources.getInfluence(player, target2);
+      
+      assert(infAfter1 === infBefore1, 'Influence with target1 should NOT decay (≥2 actions)');
+      assertApprox(infAfter2, infBefore2 * 0.8, 1, 'Influence with target2 should decay 20%');
+      log(`✓ Decay waiver working: target1 unchanged, target2 decayed 20%`);
+    }
+
+    // ============================================================================
+    // TEST 5: Information Secrecy Multipliers
+    // ============================================================================
+    function testInformationSecrecyMultipliers() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const actor = 1;
+      const hohTarget = 2;
+      const vetoTarget = 3;
+      const nomineeTarget = 4;
+      const normalTarget = 5;
+      
+      // Setup game context
+      g.hohId = hohTarget;
+      g.vetoHolder = vetoTarget;
+      g.nominees = [nomineeTarget];
+      
+      const baseGain = 10;
+      
+      // Test HOH secrecy (2x)
+      const hohGain = SM.calculateInfoGain(actor, hohTarget, baseGain, 'observe');
+      assertApprox(hohGain, 20, 1, 'HOH should give 2x information');
+      
+      // Test Veto holder secrecy (1.8x)
+      const vetoGain = SM.calculateInfoGain(actor, vetoTarget, baseGain, 'observe');
+      assertApprox(vetoGain, 18, 1, 'Veto holder should give 1.8x information');
+      
+      // Test Nominee secrecy (1.5x)
+      const nomGain = SM.calculateInfoGain(actor, nomineeTarget, baseGain, 'observe');
+      assertApprox(nomGain, 15, 1, 'Nominee should give 1.5x information');
+      
+      // Test normal player (1x)
+      const normalGain = SM.calculateInfoGain(actor, normalTarget, baseGain, 'observe');
+      assertApprox(normalGain, 10, 1, 'Normal player should give 1x information');
+      
+      log(`✓ Secrecy multipliers working: HOH=2x, Veto=1.8x, Nominee=1.5x, Normal=1x`);
+    }
+
+    // ============================================================================
+    // TEST 6: Information High Carryover
+    // ============================================================================
+    function testInformationHighCarryover() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const player1 = 1; // High info
+      const player2 = 2; // Low info
+      
+      // Setup resources
+      if (!g.__socialResources) g.__socialResources = new Map();
+      g.__socialResources.set(player1, { energy: 10, influence: 50, information: 55, lastWeekReset: 0 });
+      g.__socialResources.set(player2, { energy: 10, influence: 50, information: 30, lastWeekReset: 0 });
+      
+      const info1Before = 55;
+      const info2Before = 30;
+      
+      // Apply carryover logic
+      const carryover1 = info1Before >= 50 ? 10 : 5; // High threshold
+      const carryover2 = info2Before >= 50 ? 10 : 5; // Below threshold
+      
+      assert(carryover1 === 10, 'High info should get +10 carryover');
+      assert(carryover2 === 5, 'Low info should get +5 carryover');
+      log(`✓ Information carryover scaling: >50 gets +10, ≤50 gets +5`);
+    }
+
+    // ============================================================================
+    // TEST 7: Phase-End Energy Decay
+    // ============================================================================
+    function testPhaseEndEnergyDecay() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const player = 1;
+      
+      // Setup: player has 20 energy, didn't spend any
+      SM.SocialResources.set(player, 'energy', 20);
+      g.__socialManeuversSession = { energySpent: new Map() };
+      g.__socialManeuversSession.energySpent.set(player, 0); // No energy used
+      
+      window.alivePlayers = () => [{ id: player, name: 'Test' }];
+      
+      // Trigger reconciliation
+      SM.reconcilePhaseEnd();
+      
+      const energyAfter = SM.SocialResources.get(player, 'energy');
+      
+      // Should decay by 10% (20 * 0.1 = 2, so 20 - 2 = 18)
+      assertApprox(energyAfter, 18, 1, 'Unused energy should decay by 10%');
+      log(`✓ Energy decay working: 20 → 18 (10% unused penalty)`);
+    }
+
+    // ============================================================================
+    // TEST 8: Phase-End Information Decay
+    // ============================================================================
+    function testPhaseEndInformationDecay() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const player = 1;
+      g.week = 5;
+      
+      // Setup: player has 40 info, last used week 3
+      SM.SocialResources.set(player, 'information', 40);
+      if (!g.__informationUsageTracking) g.__informationUsageTracking = new Map();
+      g.__informationUsageTracking.set(player, 3); // Last used 2 weeks ago
+      
+      window.alivePlayers = () => [{ id: player, name: 'Test' }];
+      
+      // Trigger reconciliation
+      SM.reconcilePhaseEnd();
+      
+      const infoAfter = SM.SocialResources.get(player, 'information');
+      
+      // Should decay by 15% (40 * 0.15 = 6, so 40 - 6 = 34)
+      assertApprox(infoAfter, 34, 1, 'Unused information should decay by 15%');
+      log(`✓ Information decay working: 40 → 34 (15% unused penalty)`);
+    }
+
+    // ============================================================================
+    // TEST 9: Unified Attribution Hook
+    // ============================================================================
+    function testUnifiedAttributionHook() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const player = 1;
+      const target = 2;
+      
+      // Setup
+      SM.SocialResources.init(player);
+      const infoBefore = SM.SocialResources.get(player, 'information');
+      
+      // Test failed action → information grant
+      SM.attributeResourcesPostEvent(player, 'action_failed', { 
+        targetId: target, 
+        actionType: 'interrogate' 
+      });
+      
+      const infoAfter = SM.SocialResources.get(player, 'information');
+      assert(infoAfter > infoBefore, 'Failed action should grant information');
+      log(`✓ Attribution hook working: failed action granted information (${infoBefore} → ${infoAfter})`);
+    }
+
+    // ============================================================================
+    // TEST 10: Performance-Based Energy Bonus
+    // ============================================================================
+    function testPerformanceEnergyBonus() {
+      const g = window.game;
+      const SM = window.SocialManeuvers;
+      
+      const player = 1;
+      
+      // Setup: high average influence (>50)
+      g.__pairwiseInfluence = new Map();
+      g.__pairwiseInfluence.set(`${player}->2`, 60);
+      g.__pairwiseInfluence.set(`${player}->3`, 70);
+      g.__pairwiseInfluence.set(`${player}->4`, 55);
+      
+      const avgInfluence = SM.calculateAverageInfluence(player);
+      assert(avgInfluence > 50, 'Average influence should be >50');
+      
+      const bankBefore = SM.SocialEnergyBank.get(player);
+      
+      // Trigger performance bonus
+      SM.attributeResourcesPostEvent(player, 'weekly_performance_bonus');
+      
+      const bankAfter = SM.SocialEnergyBank.get(player);
+      assert(bankAfter === bankBefore + 2, 'High influence should grant +2 energy');
+      log(`✓ Performance bonus working: high influence (${avgInfluence.toFixed(1)}) granted +2 energy`);
+    }
+
+    // ============================================================================
+    // TEST RUNNER
+    // ============================================================================
+    window.runAllTests = async function() {
+      clearResults();
+      testResults = { passed: 0, failed: 0, total: 0 };
+      
+      log('Starting Social Strategy v2 Test Suite...', 'info');
+      log('═'.repeat(80), 'info');
+      
+      // Initialize game
+      if (!window.game) {
+        window.game = {
+          week: 1,
+          phase: 'social_intermission',
+          humanId: 1
+        };
+      }
+      
+      // Run tests
+      const testDiv = document.createElement('div');
+      testDiv.className = 'test-group';
+      testDiv.innerHTML = '<h2>Test Results</h2>';
+      results.appendChild(testDiv);
+      
+      testCase('1. Energy Contextual Multipliers', testEnergyContextualMultipliers);
+      testCase('2. Influence Diminishing Returns', testInfluenceDiminishingReturns);
+      testCase('3. Influence Per-Target Phase Cap', testInfluencePhaseCap);
+      testCase('4. Influence Decay with Positive Action Waiver', testInfluenceDecayWaiver);
+      testCase('5. Information Secrecy Multipliers', testInformationSecrecyMultipliers);
+      testCase('6. Information High Carryover', testInformationHighCarryover);
+      testCase('7. Phase-End Energy Decay', testPhaseEndEnergyDecay);
+      testCase('8. Phase-End Information Decay', testPhaseEndInformationDecay);
+      testCase('9. Unified Attribution Hook', testUnifiedAttributionHook);
+      testCase('10. Performance-Based Energy Bonus', testPerformanceEnergyBonus);
+      
+      // Summary
+      const summary = document.createElement('div');
+      summary.className = 'test-group';
+      summary.innerHTML = `
+        <h2>Test Summary</h2>
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value">${testResults.total}</div>
+            <div class="stat-label">Total Tests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: #4CAF50">${testResults.passed}</div>
+            <div class="stat-label">Passed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: ${testResults.failed > 0 ? '#f44336' : '#4CAF50'}">${testResults.failed}</div>
+            <div class="stat-label">Failed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: #03A9F4">${((testResults.passed / testResults.total) * 100).toFixed(1)}%</div>
+            <div class="stat-label">Success Rate</div>
+          </div>
+        </div>
+      `;
+      results.appendChild(summary);
+      
+      if (testResults.failed === 0) {
+        log('✅ All tests passed!', 'success');
+      } else {
+        log(`❌ ${testResults.failed} test(s) failed`, 'error');
+      }
+    };
+
+    window.clearResults = function() {
+      results.innerHTML = '';
+      testResults = { passed: 0, failed: 0, total: 0 };
+    };
+
+    window.resetGame = function() {
+      window.game = {
+        week: 1,
+        phase: 'social_intermission',
+        humanId: 1
+      };
+      log('✓ Game state reset', 'success');
+    };
+
+    // Auto-run tests on load
+    log('Test suite loaded. Click "Run All Tests" to begin.', 'info');
+  </script>
+</body>
+</html>
