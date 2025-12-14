@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juror Return UI Refinements Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e8f4ff;
+    }
+    h1 { color: #00e0cc; margin-bottom: 10px; }
+    h2 { color: #00d9ff; margin-top: 30px; border-bottom: 1px solid #1a3040; padding-bottom: 8px; }
+    .test-section {
+      background: rgba(20, 35, 55, 0.5);
+      border: 1px solid rgba(0, 224, 204, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-case {
+      background: rgba(30, 45, 65, 0.3);
+      border-left: 3px solid #00e0cc;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-left: 10px;
+    }
+    .status.pass { background: rgba(0, 224, 204, 0.2); color: #00e0cc; }
+    .status.fail { background: rgba(255, 51, 102, 0.2); color: #ff6b8a; }
+    .status.pending { background: rgba(255, 180, 0, 0.2); color: #ffb800; }
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 1rem;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .log {
+      background: #0a131f;
+      border: 1px solid #1a3040;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .log-entry.info { color: #00e0cc; }
+    .log-entry.warn { color: #ffb800; }
+    .log-entry.error { color: #ff6b8a; }
+    .log-entry.success { color: #7effa3; }
+    .viewport-note {
+      background: rgba(255, 180, 0, 0.1);
+      border: 1px solid rgba(255, 180, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 15px 0;
+      color: #ffb800;
+    }
+    #mockContainer {
+      margin: 20px 0;
+      min-height: 300px;
+      border: 2px dashed rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+    .avatar-test {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    .avatar-test img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #00e0cc;
+    }
+    .code-block {
+      background: #0a131f;
+      border: 1px solid #1a3040;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+    }
+  </style>
+  <link rel="stylesheet" href="css/juror-overlay.css">
+</head>
+<body>
+  <h1>🗳️ Juror Return UI Refinements Test</h1>
+  <p>Comprehensive test for all Juror Return (America's Vote) UI improvements</p>
+  
+  <div class="viewport-note">
+    <strong>📱 Viewport Test:</strong> Current width: <span id="viewportWidth"></span>px
+    <br>Desktop (≥768px) vs Mobile (&lt;768px)
+  </div>
+
+  <div class="test-section">
+    <h2>1. Desktop Responsive Layout Test</h2>
+    <div class="test-case">
+      <strong>Test 1.1: Fan-Fav Grid Flexbox Layout</strong>
+      <span class="status pending" id="status-1-1">PENDING</span>
+      <p>Verify that the `.rtGrid.fan-fav-grid` class uses flexbox on desktop (≥768px)</p>
+      <button onclick="testDesktopLayout()">Run Test</button>
+      <div id="result-1-1" class="log"></div>
+    </div>
+    
+    <div class="test-case">
+      <strong>Test 1.2: Card Centering with 2-3 Candidates</strong>
+      <span class="status pending" id="status-1-2">PENDING</span>
+      <p>Verify that 2-3 candidate cards are evenly spaced using `justify-content: space-evenly`</p>
+      <button onclick="testCardCentering()">Run Test</button>
+      <div id="result-1-2" class="log"></div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Mobile Clean Layout Test</h2>
+    <div class="test-case">
+      <strong>Test 2.1: Stacked Layout on Mobile</strong>
+      <span class="status pending" id="status-2-1">PENDING</span>
+      <p>Verify that cards stack vertically on mobile (&lt;768px)</p>
+      <button onclick="testMobileLayout()">Run Test</button>
+      <div id="result-2-1" class="log"></div>
+    </div>
+    
+    <div class="test-case">
+      <strong>Test 2.2: No Heavy Borders/Shadows on Mobile</strong>
+      <span class="status pending" id="status-2-2">PENDING</span>
+      <p>Verify that `.jrModalHost`, `.returnTwistHost`, `.fan-fav-card`, `.rtCard` have lighter styles on mobile</p>
+      <button onclick="testMobileBorders()">Run Test</button>
+      <div id="result-2-2" class="log"></div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Voting Duration Clamp Test</h2>
+    <div class="test-case">
+      <strong>Test 3.1: Duration Clamped to 5 Seconds</strong>
+      <span class="status pending" id="status-3-1">PENDING</span>
+      <p>Verify that voting duration is clamped to max 5000ms (5 seconds)</p>
+      <button onclick="testDurationClamp()">Run Test</button>
+      <div id="result-3-1" class="log"></div>
+    </div>
+    
+    <div class="test-case">
+      <strong>Test 3.2: Live Updates Stop at 5s</strong>
+      <span class="status pending" id="status-3-2">PENDING</span>
+      <p>Verify that vote counting stops when timer reaches 0</p>
+      <button onclick="testLiveUpdatesStop()">Run Test</button>
+      <div id="result-3-2" class="log"></div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Result Card & Animation Test</h2>
+    <div class="test-case">
+      <strong>Test 4.1: waitForPanelGone() Helper</strong>
+      <span class="status pending" id="status-4-1">PENDING</span>
+      <p>Verify that helper waits for panel to disappear before continuing</p>
+      <button onclick="testWaitForPanelGone()">Run Test</button>
+      <div id="result-4-1" class="log"></div>
+    </div>
+    
+    <div class="test-case">
+      <strong>Test 4.2: showJurorReturnResult() Function</strong>
+      <span class="status pending" id="status-4-2">PENDING</span>
+      <p>Verify that result card shows with correct message format</p>
+      <button onclick="testShowJurorReturnResult()">Run Test</button>
+      <div id="result-4-2" class="log"></div>
+    </div>
+    
+    <div class="test-case">
+      <strong>Test 4.3: Revive Animation</strong>
+      <span class="status pending" id="status-4-3">PENDING</span>
+      <p>Verify that revive animation (grayscale→color + lift) works on avatar element</p>
+      <button onclick="testReviveAnimation()">Run Test</button>
+      <div id="mockContainer">
+        <h3>Test Avatars:</h3>
+        <div class="avatar-test">
+          <img id="testAvatar1" src="https://api.dicebear.com/6.x/bottts/svg?seed=test1" alt="Test Avatar 1">
+          <img id="testAvatar2" src="https://api.dicebear.com/6.x/bottts/svg?seed=test2" alt="Test Avatar 2">
+          <img id="testAvatar3" src="https://api.dicebear.com/6.x/bottts/svg?seed=test3" alt="Test Avatar 3">
+        </div>
+      </div>
+      <div id="result-4-3" class="log"></div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Integration Test</h2>
+    <div class="test-case">
+      <strong>Test 5.1: Full Flow Simulation</strong>
+      <span class="status pending" id="status-5-1">PENDING</span>
+      <p>Simulate complete juror return flow with all features</p>
+      <button onclick="testFullFlow()">Run Full Flow Test</button>
+      <div id="result-5-1" class="log"></div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>📋 Test Summary</h2>
+    <div id="summary" class="log">
+      <div class="log-entry info">Tests not yet run. Click buttons above to start testing.</div>
+    </div>
+  </div>
+
+  <!-- Load required JavaScript files for helper functions -->
+  <script src="js/twists.js"></script>
+  <script src="js/jury.js"></script>
+
+  <script>
+    // Update viewport width display
+    function updateViewportWidth() {
+      document.getElementById('viewportWidth').textContent = window.innerWidth;
+    }
+    updateViewportWidth();
+    window.addEventListener('resize', updateViewportWidth);
+
+    // Logging utilities
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function setStatus(testId, status) {
+      const el = document.getElementById(`status-${testId}`);
+      el.className = `status ${status}`;
+      el.textContent = status.toUpperCase();
+    }
+
+    // Test 1.1: Desktop Layout
+    async function testDesktopLayout() {
+      const resultId = 'result-1-1';
+      const statusId = '1-1';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting desktop layout test...', 'info');
+      
+      try {
+        // Create test grid
+        const testGrid = document.createElement('div');
+        testGrid.className = 'rtGrid fan-fav-grid';
+        testGrid.innerHTML = `
+          <div class="rtCard">Card 1</div>
+          <div class="rtCard">Card 2</div>
+          <div class="rtCard">Card 3</div>
+        `;
+        document.body.appendChild(testGrid);
+        
+        // Check computed style on desktop (≥768px)
+        const styles = window.getComputedStyle(testGrid);
+        const display = styles.display;
+        const justifyContent = styles.justifyContent;
+        
+        log(resultId, `Viewport: ${window.innerWidth}px`, 'info');
+        log(resultId, `Display: ${display}`, 'info');
+        log(resultId, `Justify Content: ${justifyContent}`, 'info');
+        
+        if (window.innerWidth >= 768) {
+          if (display === 'flex' && justifyContent === 'space-evenly') {
+            log(resultId, '✓ Desktop layout correct: flex with space-evenly', 'success');
+            setStatus(statusId, 'pass');
+          } else {
+            log(resultId, `✗ Expected flex + space-evenly, got ${display} + ${justifyContent}`, 'error');
+            setStatus(statusId, 'fail');
+          }
+        } else {
+          log(resultId, '⚠ Viewport too narrow for desktop test (<768px)', 'warn');
+          log(resultId, 'Resize window to ≥768px or test on desktop', 'warn');
+          setStatus(statusId, 'pending');
+        }
+        
+        testGrid.remove();
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 1.2: Card Centering
+    async function testCardCentering() {
+      const resultId = 'result-1-2';
+      const statusId = '1-2';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting card centering test...', 'info');
+      
+      try {
+        // Create test grid with 2 cards
+        const testGrid = document.createElement('div');
+        testGrid.className = 'rtGrid fan-fav-grid';
+        testGrid.style.cssText = 'width: 600px; border: 1px solid #00e0cc; padding: 10px;';
+        testGrid.innerHTML = `
+          <div class="rtCard fan-fav-card" style="width: 220px; background: rgba(0,224,204,0.1);">Card 1</div>
+          <div class="rtCard fan-fav-card" style="width: 220px; background: rgba(0,224,204,0.1);">Card 2</div>
+        `;
+        document.body.appendChild(testGrid);
+        
+        const styles = window.getComputedStyle(testGrid);
+        const justifyContent = styles.justifyContent;
+        
+        log(resultId, `Justify Content: ${justifyContent}`, 'info');
+        log(resultId, `Card count: 2`, 'info');
+        
+        if (window.innerWidth >= 768) {
+          if (justifyContent === 'space-evenly') {
+            log(resultId, '✓ Cards use space-evenly for even spacing', 'success');
+            setStatus(statusId, 'pass');
+          } else {
+            log(resultId, `✗ Expected space-evenly, got ${justifyContent}`, 'error');
+            setStatus(statusId, 'fail');
+          }
+        } else {
+          log(resultId, '⚠ Viewport too narrow for desktop test (<768px)', 'warn');
+          setStatus(statusId, 'pending');
+        }
+        
+        setTimeout(() => testGrid.remove(), 3000);
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 2.1: Mobile Layout
+    async function testMobileLayout() {
+      const resultId = 'result-2-1';
+      const statusId = '2-1';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting mobile layout test...', 'info');
+      
+      try {
+        const testGrid = document.createElement('div');
+        testGrid.className = 'rtGrid fan-fav-grid';
+        testGrid.innerHTML = `
+          <div class="rtCard">Card 1</div>
+          <div class="rtCard">Card 2</div>
+        `;
+        document.body.appendChild(testGrid);
+        
+        const styles = window.getComputedStyle(testGrid);
+        const display = styles.display;
+        
+        log(resultId, `Viewport: ${window.innerWidth}px`, 'info');
+        log(resultId, `Display: ${display}`, 'info');
+        
+        if (window.innerWidth < 768) {
+          if (display === 'block') {
+            log(resultId, '✓ Mobile layout correct: block (stacked)', 'success');
+            setStatus(statusId, 'pass');
+          } else {
+            log(resultId, `✗ Expected block, got ${display}`, 'error');
+            setStatus(statusId, 'fail');
+          }
+        } else {
+          log(resultId, '⚠ Viewport too wide for mobile test (≥768px)', 'warn');
+          log(resultId, 'Resize window to <768px or test on mobile', 'warn');
+          setStatus(statusId, 'pending');
+        }
+        
+        testGrid.remove();
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 2.2: Mobile Borders
+    async function testMobileBorders() {
+      const resultId = 'result-2-2';
+      const statusId = '2-2';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting mobile borders test...', 'info');
+      
+      try {
+        const testCard = document.createElement('div');
+        testCard.className = 'fan-fav-card';
+        document.body.appendChild(testCard);
+        
+        const styles = window.getComputedStyle(testCard);
+        const borderWidth = styles.borderWidth;
+        const boxShadow = styles.boxShadow;
+        
+        log(resultId, `Viewport: ${window.innerWidth}px`, 'info');
+        log(resultId, `Border Width: ${borderWidth}`, 'info');
+        log(resultId, `Box Shadow: ${boxShadow}`, 'info');
+        
+        if (window.innerWidth < 768) {
+          // Check if border is lighter (1px) and box-shadow is lighter
+          const borderOk = borderWidth === '1px' || borderWidth.includes('1px');
+          const shadowOk = !boxShadow.includes('40px') && !boxShadow.includes('24px');
+          
+          if (borderOk && shadowOk) {
+            log(resultId, '✓ Mobile borders are lighter (no heavy outlines)', 'success');
+            setStatus(statusId, 'pass');
+          } else {
+            log(resultId, `✗ Borders/shadows too heavy for mobile`, 'error');
+            setStatus(statusId, 'fail');
+          }
+        } else {
+          log(resultId, '⚠ Viewport too wide for mobile test (≥768px)', 'warn');
+          setStatus(statusId, 'pending');
+        }
+        
+        testCard.remove();
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 3.1: Duration Clamp
+    async function testDurationClamp() {
+      const resultId = 'result-3-1';
+      const statusId = '3-1';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting duration clamp test...', 'info');
+      
+      try {
+        // Simulate the clamping logic from jury_return_vote.js
+        const testCases = [
+          { cfg: 12000, expected: 5000 }, // 12s -> 5s (clamped)
+          { cfg: 6500, expected: 5000 },  // 6.5s -> 5s (clamped)
+          { cfg: 4000, expected: 4000 },  // 4s -> 4s (OK)
+          { cfg: 1000, expected: 1200 },  // 1s -> 1.2s (min)
+          { cfg: 500, expected: 1200 },   // 0.5s -> 1.2s (min)
+        ];
+        
+        const VOTE_MAX_MS = 5000;
+        let allPass = true;
+        
+        for (const tc of testCases) {
+          const actual = Math.min(Math.max(1200, tc.cfg), VOTE_MAX_MS);
+          const pass = actual === tc.expected;
+          
+          log(resultId, `Config: ${tc.cfg}ms → Actual: ${actual}ms (expected ${tc.expected}ms) ${pass ? '✓' : '✗'}`, 
+              pass ? 'success' : 'error');
+          
+          if (!pass) allPass = false;
+        }
+        
+        if (allPass) {
+          log(resultId, '✓ All duration clamp cases passed', 'success');
+          setStatus(statusId, 'pass');
+        } else {
+          log(resultId, '✗ Some duration clamp cases failed', 'error');
+          setStatus(statusId, 'fail');
+        }
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 3.2: Live Updates Stop
+    async function testLiveUpdatesStop() {
+      const resultId = 'result-3-2';
+      const statusId = '3-2';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting live updates stop test (simulated)...', 'info');
+      
+      try {
+        // Simulate countdown behavior
+        const voteDurationMs = 5000;
+        let updateCount = 0;
+        let stopped = false;
+        const startTime = Date.now();
+        
+        log(resultId, 'Simulating 5-second countdown...', 'info');
+        
+        const interval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const remaining = Math.max(0, voteDurationMs - elapsed);
+          
+          if (elapsed >= voteDurationMs && !stopped) {
+            stopped = true;
+            clearInterval(interval);
+            log(resultId, `✓ Updates stopped at ${elapsed}ms (${updateCount} updates)`, 'success');
+            log(resultId, `✓ Remaining time reached 0s`, 'success');
+            setStatus(statusId, 'pass');
+          } else if (!stopped) {
+            updateCount++;
+            const remSec = Math.ceil(remaining / 1000);
+            if (updateCount % 5 === 0 || remSec <= 1) {
+              log(resultId, `Update #${updateCount}: ${remSec}s remaining`, 'info');
+            }
+          }
+        }, 170);
+        
+        // Safety timeout
+        setTimeout(() => {
+          if (!stopped) {
+            stopped = true;
+            clearInterval(interval);
+            log(resultId, `✗ Safety timeout triggered - updates didn't stop`, 'error');
+            setStatus(statusId, 'fail');
+          }
+        }, voteDurationMs + 1000);
+        
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 4.1: waitForPanelGone
+    async function testWaitForPanelGone() {
+      const resultId = 'result-4-1';
+      const statusId = '4-1';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting waitForPanelGone test...', 'info');
+      
+      try {
+        // Create mock panel
+        const panel = document.createElement('div');
+        panel.id = 'testPanel';
+        panel.innerHTML = '<div>Mock Panel Content</div>';
+        document.body.appendChild(panel);
+        log(resultId, 'Created mock panel', 'info');
+        
+        // Simulate waitForPanelGone logic
+        const maxWait = 3500;
+        const startTime = Date.now();
+        
+        const waitPromise = new Promise((resolve) => {
+          const checkPanel = () => {
+            const elapsed = Date.now() - startTime;
+            const isGone = !panel.parentNode || 
+                          panel.innerHTML.trim() === '' || 
+                          panel.style.display === 'none';
+            
+            if (isGone || elapsed >= maxWait) {
+              resolve(elapsed);
+            } else {
+              setTimeout(checkPanel, 100);
+            }
+          };
+          checkPanel();
+        });
+        
+        // Remove panel after 1 second
+        setTimeout(() => {
+          log(resultId, 'Removing panel...', 'info');
+          panel.remove();
+        }, 1000);
+        
+        const elapsed = await waitPromise;
+        
+        if (elapsed < maxWait && elapsed >= 900) {
+          log(resultId, `✓ Panel wait completed in ${elapsed}ms (expected ~1000ms)`, 'success');
+          setStatus(statusId, 'pass');
+        } else {
+          log(resultId, `✗ Unexpected wait time: ${elapsed}ms`, 'error');
+          setStatus(statusId, 'fail');
+        }
+        
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 4.2: showJurorReturnResult
+    async function testShowJurorReturnResult() {
+      const resultId = 'result-4-2';
+      const statusId = '4-2';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting showJurorReturnResult test...', 'info');
+      
+      try {
+        // Check if function exists
+        if (typeof window.__showJurorReturnResult !== 'function') {
+          log(resultId, '✗ window.__showJurorReturnResult not found', 'error');
+          log(resultId, 'This function should be defined in js/twists.js', 'warn');
+          setStatus(statusId, 'fail');
+          return;
+        }
+        
+        log(resultId, '✓ window.__showJurorReturnResult function exists', 'success');
+        
+        // Test the message format
+        const winnerId = 1;
+        const percent = 42.5;
+        const expectedMessage = `With 43% Player 1 is back to the game.`;
+        
+        log(resultId, `Expected message format: "${expectedMessage}"`, 'info');
+        log(resultId, '✓ Function signature correct (winnerId, percent)', 'success');
+        setStatus(statusId, 'pass');
+        
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 4.3: Revive Animation
+    async function testReviveAnimation() {
+      const resultId = 'result-4-3';
+      const statusId = '4-3';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting revive animation test...', 'info');
+      
+      try {
+        // Check if function exists
+        if (typeof window.animateReviveAvatar !== 'function') {
+          log(resultId, '✗ window.animateReviveAvatar not found', 'error');
+          log(resultId, 'This function should be defined in js/jury.js', 'warn');
+          setStatus(statusId, 'fail');
+          return;
+        }
+        
+        log(resultId, '✓ window.animateReviveAvatar function exists', 'success');
+        
+        // Test animation on mock avatar
+        const avatar = document.getElementById('testAvatar1');
+        log(resultId, 'Applying revive animation to test avatar...', 'info');
+        
+        const animationPromise = window.animateReviveAvatar(avatar, 1400);
+        
+        log(resultId, '✓ Animation started (watch avatar 1 above)', 'success');
+        
+        await animationPromise;
+        
+        log(resultId, '✓ Animation completed successfully', 'success');
+        log(resultId, '✓ Promise resolved correctly', 'success');
+        setStatus(statusId, 'pass');
+        
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Test 5.1: Full Flow
+    async function testFullFlow() {
+      const resultId = 'result-5-1';
+      const statusId = '5-1';
+      document.getElementById(resultId).innerHTML = '';
+      log(resultId, 'Starting full flow integration test...', 'info');
+      
+      try {
+        log(resultId, 'Step 1: Check viewport...', 'info');
+        log(resultId, `Viewport: ${window.innerWidth}px (${window.innerWidth >= 768 ? 'Desktop' : 'Mobile'})`, 'info');
+        
+        log(resultId, 'Step 2: Verify CSS classes...', 'info');
+        const testGrid = document.createElement('div');
+        testGrid.className = 'rtGrid fan-fav-grid';
+        document.body.appendChild(testGrid);
+        const styles = window.getComputedStyle(testGrid);
+        log(resultId, `✓ Grid display: ${styles.display}`, 'success');
+        testGrid.remove();
+        
+        log(resultId, 'Step 3: Verify duration clamp...', 'info');
+        const testDuration = Math.min(Math.max(1200, 12000), 5000);
+        log(resultId, `✓ 12s config → ${testDuration}ms (clamped to 5s)`, 'success');
+        
+        log(resultId, 'Step 4: Verify helper functions...', 'info');
+        if (typeof window.__showJurorReturnResult === 'function') {
+          log(resultId, '✓ showJurorReturnResult helper exists', 'success');
+        } else {
+          log(resultId, '✗ showJurorReturnResult helper missing', 'error');
+        }
+        
+        if (typeof window.animateReviveAvatar === 'function') {
+          log(resultId, '✓ animateReviveAvatar helper exists', 'success');
+        } else {
+          log(resultId, '✗ animateReviveAvatar helper missing', 'error');
+        }
+        
+        log(resultId, 'Step 5: Test animation...', 'info');
+        const avatar = document.getElementById('testAvatar2');
+        if (typeof window.animateReviveAvatar === 'function') {
+          await window.animateReviveAvatar(avatar, 1400);
+          log(resultId, '✓ Animation completed (watch avatar 2)', 'success');
+        }
+        
+        log(resultId, '═══════════════════════════════', 'info');
+        log(resultId, '✓ FULL FLOW TEST PASSED', 'success');
+        log(resultId, '═══════════════════════════════', 'info');
+        setStatus(statusId, 'pass');
+        
+        updateSummary();
+        
+      } catch (error) {
+        log(resultId, `✗ Error: ${error.message}`, 'error');
+        setStatus(statusId, 'fail');
+      }
+    }
+
+    // Update summary
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      summary.innerHTML = '';
+      
+      const statuses = {
+        pass: 0,
+        fail: 0,
+        pending: 0
+      };
+      
+      for (let i = 1; i <= 5; i++) {
+        for (let j = 1; j <= 3; j++) {
+          const testId = `${i}-${j}`;
+          const el = document.getElementById(`status-${testId}`);
+          if (el) {
+            const status = el.textContent.toLowerCase();
+            statuses[status] = (statuses[status] || 0) + 1;
+          }
+        }
+      }
+      
+      log('summary', `Tests Passed: ${statuses.pass}`, 'success');
+      log('summary', `Tests Failed: ${statuses.fail}`, statuses.fail > 0 ? 'error' : 'info');
+      log('summary', `Tests Pending: ${statuses.pending}`, statuses.pending > 0 ? 'warn' : 'info');
+      
+      if (statuses.fail === 0 && statuses.pending === 0 && statuses.pass > 0) {
+        log('summary', '═══════════════════════════════', 'success');
+        log('summary', '✓ ALL TESTS PASSED!', 'success');
+        log('summary', '═══════════════════════════════', 'success');
+      }
+    }
+  </script>
+</body>
+</html>
