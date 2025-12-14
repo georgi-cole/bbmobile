@@ -432,8 +432,8 @@
     populateActionMenu();
 
     // Attach event listeners
-    $('.modal-close-btn')?.addEventListener('click', closeSocializeModal);
-    $('.socialize-modal-backdrop')?.addEventListener('click', closeSocializeModal);
+    $('.modal-close-btn')?.addEventListener('click', () => closeSocializeModal());
+    $('.socialize-modal-backdrop')?.addEventListener('click', () => closeSocializeModal());
     $('#executeActionBtn')?.addEventListener('click', executeAction);
 
     // Animation
@@ -442,9 +442,19 @@
     });
   }
 
-  function closeSocializeModal() {
+  function closeSocializeModal(skipEnergyCheck = false) {
     const modal = $('#socializeModal');
     if (!modal) return;
+
+    // Check if there's remaining energy and prompt user (unless explicitly skipped)
+    if (!skipEnergyCheck) {
+      const res = getResourceState();
+      if (res.energy > 0) {
+        console.info('[socialize-mobile] 🔋 Energy remaining, prompting user to continue or view summary');
+        showContinueSocializingPrompt();
+        return; // Don't close the modal yet - wait for user's decision
+      }
+    }
 
     // Flush queued heavy actions from background executor
     if (global.SocialActionExecutor?.flushQueue) {
@@ -501,6 +511,162 @@
       modal.remove();
       // REMOVED: Legacy toast UI - engine summary is sole owner
     }, 300);
+  }
+
+  function showContinueSocializingPrompt() {
+    // Temporarily pause timers/executors to show the prompt
+    if (global.SocialActionExecutor?.flushQueue) {
+      try {
+        global.SocialActionExecutor.flushQueue();
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to flush executor queue:', e);
+      }
+    }
+    if (global.SocialActionExecutor?.stopBackgroundTicks) {
+      try {
+        global.SocialActionExecutor.stopBackgroundTicks();
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to stop background executor:', e);
+      }
+    }
+
+    // Get or create decision deck
+    let deck = document.getElementById('decisionDeck');
+    if (!deck) {
+      deck = document.createElement('div');
+      deck.id = 'decisionDeck';
+      deck.style.position = 'fixed';
+      deck.style.top = '50%';
+      deck.style.left = '50%';
+      deck.style.transform = 'translate(-50%, -50%)';
+      deck.style.zIndex = '10001'; // Above the social modal
+      deck.style.pointerEvents = 'auto';
+      document.body.appendChild(deck);
+    }
+
+    // Create the prompt card
+    const card = document.createElement('div');
+    card.className = 'revealCard diaryRoomCard decisionCard social-continue-prompt';
+    card.style.minWidth = '320px';
+    card.style.maxWidth = '480px';
+    
+    // Card title
+    const title = document.createElement('h3');
+    title.textContent = 'Continue Socializing?';
+    card.appendChild(title);
+    
+    // Card message
+    const message = document.createElement('div');
+    message.textContent = 'Do you want to socialize more?';
+    message.style.marginBottom = '1rem';
+    card.appendChild(message);
+    
+    // Energy info
+    const res = getResourceState();
+    const energyInfo = document.createElement('div');
+    energyInfo.innerHTML = `<small>You have <strong>${res.energy} energy</strong> remaining.</small>`;
+    energyInfo.style.marginBottom = '1rem';
+    energyInfo.style.opacity = '0.9';
+    card.appendChild(energyInfo);
+    
+    // Button container
+    const buttonBar = document.createElement('div');
+    buttonBar.className = 'decisionActions';
+    buttonBar.style.display = 'flex';
+    buttonBar.style.gap = '0.5rem';
+    buttonBar.style.justifyContent = 'center';
+    
+    // "Yes" button - re-open the social module
+    const yesBtn = document.createElement('button');
+    yesBtn.className = 'btn small';
+    yesBtn.textContent = 'Yes';
+    yesBtn.setAttribute('aria-label', 'Continue socializing');
+    yesBtn.onclick = () => {
+      console.info('[socialize-mobile] User chose to continue socializing');
+      card.remove();
+      if (deck && !deck.hasChildNodes()) {
+        deck.remove();
+      }
+      // Restart background executor since we're continuing
+      if (global.SocialActionExecutor?.startBackgroundTicks) {
+        try {
+          global.SocialActionExecutor.startBackgroundTicks();
+        } catch(e) {
+          console.error('[socialize-mobile] Failed to restart background executor:', e);
+        }
+      }
+      // Modal is still open, user can continue
+    };
+    
+    // "No" button - show summary and close
+    const noBtn = document.createElement('button');
+    noBtn.className = 'btn small';
+    noBtn.textContent = 'No';
+    noBtn.setAttribute('aria-label', 'View summary and finish socializing');
+    noBtn.onclick = () => {
+      console.info('[socialize-mobile] User chose to view summary');
+      card.remove();
+      if (deck && !deck.hasChildNodes()) {
+        deck.remove();
+      }
+      // Close the modal without checking energy again
+      closeSocializeModal(true);
+      // Show the summary directly
+      setTimeout(() => {
+        showSocialSummary();
+      }, 350); // Small delay to let modal close animation finish
+    };
+    
+    buttonBar.appendChild(yesBtn);
+    buttonBar.appendChild(noBtn);
+    card.appendChild(buttonBar);
+    
+    // Add card to deck with fade-in animation
+    deck.appendChild(card);
+    
+    // Focus the first button for accessibility
+    setTimeout(() => {
+      yesBtn.focus();
+    }, 100);
+  }
+
+  function showSocialSummary() {
+    // Try to generate and show the summary using SocialManeuvers methods
+    if (global.SocialManeuvers?.generatePhaseSummary && global.SocialManeuvers?.showSummaryPanel) {
+      try {
+        const summary = global.SocialManeuvers.generatePhaseSummary();
+        global.SocialManeuvers.showSummaryPanel(summary);
+        console.info('[socialize-mobile] ✓ Summary shown via SocialManeuvers.showSummaryPanel');
+        return;
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to show summary via SocialManeuvers:', e);
+      }
+    }
+
+    // Fallback: try alternate methods
+    if (global.SocialManeuvers?.showEndOfPhaseSummary) {
+      try {
+        global.SocialManeuvers.showEndOfPhaseSummary();
+        console.info('[socialize-mobile] ✓ Summary shown via showEndOfPhaseSummary');
+        return;
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to show summary via showEndOfPhaseSummary:', e);
+      }
+    }
+
+    if (global.SocialManeuvers?.presentPhaseSummary) {
+      try {
+        global.SocialManeuvers.presentPhaseSummary();
+        console.info('[socialize-mobile] ✓ Summary shown via presentPhaseSummary');
+        return;
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to show summary via presentPhaseSummary:', e);
+      }
+    }
+
+    // If all else fails, log a message
+    console.warn('[socialize-mobile] Could not show social summary - no methods available');
+    global.addLog?.('Social session ended. Summary not available.', 'info');
   }
 
   function populatePlayerPicker() {
@@ -1315,7 +1481,7 @@
     if(humanPlayer && humanPlayer.evicted){
       console.info('[socialize-mobile] Human player is evicted - cannot execute action');
       global.addLog?.('You have been evicted and can no longer participate in social interactions.', 'danger');
-      closeSocializeModal(false);
+      closeSocializeModal(true); // Skip energy check for evicted players
       return;
     }
 
@@ -1470,7 +1636,7 @@
     const updatedRes = getResourceState();
     if (updatedRes.energy <= 0) {
       setTimeout(() => {
-        closeSocializeModal();
+        closeSocializeModal(true); // Skip energy check since we know it's depleted
       }, 800);
     }
   }
