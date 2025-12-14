@@ -286,86 +286,14 @@
       .map(id => ({ id, name: global.safeName?.(id) || 'Unknown' }))
       .filter(n => n.id != null);
 
-    // COMMIT 2: Check if we should use triple 3-up UI (only for voters with 3 nominees)
-    const useTriple = humanIsVoter
-      && nominees.length === 3 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && typeof global.lv2?.initTriple === 'function';
+    // DISABLED: lv2 triple UI (force use of LiveVoteOverlay for all nominee counts)
+    // This ensures a single, consistent voting UI across all eviction scenarios
+    const useTriple = false;
 
-    if (useTriple) {
-      // Clear any lingering TV overlay content before showing triple UI
-      try { 
-        if (typeof global.clearTVOverlayContent === 'function') {
-          global.clearTVOverlayContent(); 
-        }
-      } catch (e) { 
-        console.warn('[LiveVote] clearTVOverlayContent failed', e); 
-      }
-      
-      // Use modern Live Vote 2.0 triple UI - render inside TV
-      global.lv2.initTriple({
-        nominees: nominees,
-        onVote: (pickId) => {
-          lockHumanVote(pickId);
-        }
-      });
-
-      // Panel will be hidden by initTriple, so we're done
-      return;
-    }
-
-    // Check if we should use modern lv2 UI (for any two-nominee eviction, voter or observer)
-    const useLv2 = g.eviction.nominees.length === 2 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && global.lv2?.enabled !== false;
-
-    if (useLv2) {
-      // Clear any lingering TV overlay content before showing lv2 UI
-      try { 
-        if (typeof global.clearTVOverlayContent === 'function') {
-          global.clearTVOverlayContent(); 
-        }
-      } catch (e) { 
-        console.warn('[LiveVote] clearTVOverlayContent failed', e); 
-      }
-      
-      // Use modern Live Vote 2.0 UI - render inside TV
-      const [leftId, rightId] = g.eviction.nominees;
-      global.lv2.init({
-        leftName: global.safeName(leftId),
-        rightName: global.safeName(rightId),
-        leftId: leftId,
-        rightId: rightId
-      });
-
-      // Create CTA bar for voting inside TV
-      const remain = global.alivePlayers().length;
-      const isFinal4 = remain === 4;
-
-      // Only make CTA if human can vote and hasn't voted yet
-      if (humanIsVoter && !hasVoted) {
-        global.lv2.createCtaBar({
-          enabled: true,
-          isFinal4: isFinal4,
-          isTieBreak: false,
-          leftName: global.safeName(leftId),
-          rightName: global.safeName(rightId),
-          leftId: leftId,
-          rightId: rightId,
-          onVote: (pickId) => {
-            lockHumanVote(pickId);
-            global.lv2.updateCtaBar({ enabled: false });
-          }
-        });
-        global.lv2.setTurn?.(true);
-      } else {
-        // Observer mode: no voting UI, just watch
-        global.lv2.setTurn?.(false);
-      }
-
-      // Panel will be hidden by lv2.init, so we're done
-      return;
-    }
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // This prevents overlapping UI layers from lv2 and ensures compact, mobile-friendly layout
+    // The LiveVoteOverlay provides a consistent experience across all devices
+    const useLv2 = false; // DO NOT CHANGE: lv2 is permanently disabled
 
     const box=document.createElement('div'); box.className='minigame-host'; 
     if (!useLv2) {
@@ -779,10 +707,9 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
-    const useLv2 = g.eviction.nominees.length === 2 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && global.lv2?.enabled !== false;
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // DO NOT CHANGE: lv2 is permanently disabled
+    const useLv2 = false;
     const tripleMode = noms.length === 3;
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
@@ -896,10 +823,9 @@
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
     const g=global.game;
-    // Consistent with main activation logic: check two-nominee condition
-    const useLv2 = g.eviction.nominees.length === 2 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && global.lv2?.enabled !== false;
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // DO NOT CHANGE: lv2 is permanently disabled
+    const useLv2 = false;
     const hoh=global.getP(global.game.hohId);
     
     if (!useLv2) {
@@ -1097,10 +1023,9 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
-    const useLv2 = g.eviction.nominees.length === 2 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && global.lv2?.enabled !== false;
+    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
+    // DO NOT CHANGE: lv2 is permanently disabled
+    const useLv2 = false;
 
     if(twoMode){
       let ca=preAorCounts, cb=preB;

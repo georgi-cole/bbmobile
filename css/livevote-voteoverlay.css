@@ -27,9 +27,9 @@
 
 .lv-overlay__header {
   text-align: center;
-  padding: 20px 16px 16px;
+  padding: 8px 16px 6px; /* Further reduced for compact layout */
   color: #ffd96b;
-  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  font-size: clamp(1rem, 3.5vw, 1.3rem); /* Smaller for compact layout */
   font-weight: 700;
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
@@ -47,7 +47,7 @@
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
   scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
-  padding: 20px 16px;
+  padding: 8px 16px; /* Further reduced for compact layout */
   min-height: 0; /* Critical: Allow flex child to shrink below content size */
   
   /* Hide scrollbars visually while keeping functionality */
@@ -96,14 +96,14 @@
 
 .lv-overlay__avatar-container {
   position: relative;
-  width: clamp(120px, 30vw, 200px);
-  height: clamp(120px, 30vw, 200px);
+  width: clamp(90px, 24vw, 140px); /* Further reduced for compact layout */
+  height: clamp(90px, 24vw, 140px);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lv-overlay__nominee.center .lv-overlay__avatar-container {
-  width: clamp(160px, 38vw, 240px);
-  height: clamp(160px, 38vw, 240px);
+  width: clamp(120px, 30vw, 180px); /* Further reduced for compact layout */
+  height: clamp(120px, 30vw, 180px);
 }
 
 .lv-overlay__avatar {
@@ -185,14 +185,14 @@
   right: 8px;
 }
 
-/* Confirmation container - positioned close to selected avatar (8-16px below carousel) */
+/* Confirmation container - positioned close to selected avatar (directly below, 8-12px gap) */
 .lv-overlay__confirm-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  margin-top: 8px; /* 8px below carousel for proximity to selected avatar */
+  gap: 6px; /* Tight spacing between elements */
+  padding: 2px 16px 12px; /* Minimal top padding, bottom for safe area */
+  margin-top: 8px; /* 8-12px gap under avatars as per requirements */
   flex-shrink: 0;
   animation: fadeIn 0.3s ease-out;
 }
@@ -211,9 +211,9 @@
 .lv-overlay__evict-btn {
   background: linear-gradient(135deg, #ff6b6b, #d63031);
   border: none;
-  border-radius: 18px; /* Reduced from 999px for more compact look */
-  padding: 10px 32px; /* Reduced vertical padding from 14px to 10px */
-  font-size: clamp(15px, 3.8vw, 17px); /* Slightly smaller font */
+  border-radius: 20px; /* Pill shape for compact look */
+  padding: 10px 32px; /* Balanced padding for 44px min touch target */
+  font-size: clamp(14px, 3.6vw, 16px); /* Clear readable font */
   font-weight: 700;
   color: #ffffff;
   cursor: pointer;
@@ -222,9 +222,8 @@
     0 4px 16px rgba(255, 107, 107, 0.4),
     0 0 0 1px rgba(255, 107, 107, 0.2);
   
-  /* Reduced size: height ~40-44px, narrower width */
-  min-height: 42px;
-  max-height: 44px;
+  /* Maintain accessible 44x44 touch target */
+  min-height: 44px;
   width: auto;
   min-width: 140px;
   max-width: 200px;
@@ -317,11 +316,11 @@
 
 /* Status message area - now inside confirm container, close to avatar */
 .lv-overlay__status {
-  padding: 4px 12px;
+  padding: 2px 12px;
   text-align: center;
-  font-size: clamp(0.85rem, 2.3vw, 0.95rem); /* Slightly smaller, subdued */
+  font-size: clamp(0.75rem, 2vw, 0.85rem); /* Compact font size */
   color: #8fb3d3;
-  min-height: 28px;
+  min-height: 20px; /* Minimal height */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -343,11 +342,11 @@
 /* Mobile portrait optimizations */
 @media (max-width: 767px) and (orientation: portrait) {
   .lv-overlay__header {
-    padding: 16px 12px 12px;
+    padding: 6px 12px 4px; /* Further reduced for mobile portrait */
   }
   
   .lv-overlay__carousel {
-    padding: 16px 12px;
+    padding: 6px 12px; /* Further reduced for mobile portrait */
   }
   
   .lv-overlay__track {
@@ -370,8 +369,8 @@
   
   /* Ensure confirmation container stays visible and close to avatar */
   .lv-overlay__confirm-container {
-    margin-top: 12px;
-    padding-bottom: 16px; /* Extra padding for bottom safe area */
+    margin-top: 8px; /* 8-12px gap as per requirements */
+    padding-bottom: 16px; /* Safe area padding for mobile */
   }
 }
 
@@ -386,22 +385,27 @@
 /* Landscape mobile (rotate to landscape on phone) */
 @media (max-width: 896px) and (orientation: landscape) {
   .lv-overlay__header {
-    padding: 12px 16px 8px;
-    font-size: 1.1rem;
+    padding: 4px 16px 2px; /* Very compact for landscape */
+    font-size: 0.95rem;
   }
   
   .lv-overlay__carousel {
-    padding: 12px 16px;
+    padding: 4px 16px; /* Very compact for landscape */
   }
   
   .lv-overlay__avatar-container {
-    width: clamp(100px, 25vw, 140px);
-    height: clamp(100px, 25vw, 140px);
+    width: clamp(80px, 20vw, 110px); /* Smaller for landscape */
+    height: clamp(80px, 20vw, 110px);
   }
   
   .lv-overlay__nominee.center .lv-overlay__avatar-container {
-    width: clamp(120px, 30vw, 160px);
-    height: clamp(120px, 30vw, 160px);
+    width: clamp(100px, 24vw, 130px); /* Smaller for landscape */
+    height: clamp(100px, 24vw, 130px);
+  }
+  
+  .lv-overlay__confirm-container {
+    margin-top: 6px;
+    padding-bottom: 12px;
   }
 }
 
