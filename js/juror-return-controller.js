@@ -276,16 +276,21 @@
     overlay.style.visibility = 'hidden';
     overlay.style.opacity = '0';
 
-    // Also hide mobile backdrop if present
-    const backdrop = document.body.querySelector('div[style*="position: fixed"][style*="rgba(0, 0, 0, 0.85)"]');
-    if (backdrop) {
-      backdrop.style.display = 'none';
-    }
+    // Also hide mobile backdrop if present (more robust selector)
+    const backdrops = document.body.querySelectorAll('div');
+    backdrops.forEach(el => {
+      const styles = el.style;
+      if (styles.position === 'fixed' && 
+          styles.zIndex === '9998' &&
+          styles.background.includes('rgba')) {
+        el.style.display = 'none';
+      }
+    });
 
-    // Clear panel content to remove visual artifacts
+    // Remove overlay from panel if it's a child
     const panel = document.getElementById('panel');
     if (panel && panel.contains(overlay)) {
-      panel.innerHTML = '';
+      overlay.remove();
     }
   }
 
