@@ -97,14 +97,28 @@
     // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
     // Old cards removed: Stop the presses!, America's Vote, How it works
 
+    // Clamp vote duration to max 5 seconds (5000ms)
+    const g = global.game || {};
+    const cfgVoteMs = Number(g.cfg?.tJurorReturnVoteMs || g.cfg?.tJurorVoteMs || g.cfg?.tJuryReturnVote || 6500);
+    const VOTE_MAX_MS = 5000;
+    const voteDurationMs = Math.min(Math.max(1200, cfgVoteMs), VOTE_MAX_MS);
+    const voteDurationSecs = voteDurationMs / 1000;
+    
+    console.info(`[jury_return_vote] voteDurationMs=${voteDurationMs} (cfg=${cfgVoteMs} clamped to max ${VOTE_MAX_MS}ms)`);
+
+    // Store duration in state for reference
+    if (g.__returnTwist) {
+      g.__returnTwist.durationMs = voteDurationMs;
+    }
+
     // Show panel (avatars + live bars, timer starts)
-    showReturnVotePanel(jurors, Number(global.game?.cfg?.tJuryReturnVote||12), (state)=>{
+    showReturnVotePanel(jurors, voteDurationSecs, voteDurationMs, (state)=>{
       finalizeAmericaVote(state, jurors);
     });
   }
 
   // Jury panel with avatars and live percentages - COMPACT & CONSISTENT
-  function showReturnVotePanel(jurors, voteSecs, onDone) {
+  function showReturnVotePanel(jurors, voteSecs, voteDurationMs, onDone) {
     const panel = document.getElementById('panel');
     if (!panel) return;
     panel.innerHTML = '';
@@ -292,15 +306,33 @@
 
     // Animate percentages only (no progress bars) and highlight leader
     let running = true;
+    let updateInterval = null;
     const start = Date.now();
-    const endAt = start + voteSecs*1000;
+    const endAt = start + voteDurationMs; // Use clamped duration in ms
     let leaderId = null;
     
     function update() {
       if (!running) return;
       const now = Date.now();
-      const rem = Math.max(0, Math.ceil((endAt-now)/1000));
+      const elapsed = now - start;
+      const rem = Math.max(0, Math.ceil((voteDurationMs - elapsed)/1000));
       timer.innerHTML = `⏱️ <span style="font-size:${isMobile ? '1.3rem' : '1.5rem'}">${rem}</span>s remaining`;
+      
+      // Stop updates when time expires
+      if (elapsed >= voteDurationMs) {
+        running = false;
+        if (updateInterval) {
+          clearInterval(updateInterval);
+          updateInterval = null;
+        }
+        // Clean up mobile backdrop
+        if (backdrop && backdrop.parentNode) {
+          backdrop.remove();
+        }
+        console.info(`[jury_return_vote] voting stopped elapsed=${elapsed}ms`);
+        if(onDone) onDone(state);
+        return;
+      }
       
       jurors.forEach((id) => {
         // Simulate voting
@@ -352,19 +384,28 @@
           card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
         }
       });
-      
-      if(now < endAt) {
-        setTimeout(update, 170);
-      } else {
+    }
+    
+    // Use setInterval for consistent updates
+    updateInterval = setInterval(update, 170);
+    update(); // Run immediately
+    
+    // Safety timeout to ensure finalization at max duration
+    setTimeout(() => {
+      if (running) {
         running = false;
+        if (updateInterval) {
+          clearInterval(updateInterval);
+          updateInterval = null;
+        }
         // Clean up mobile backdrop
         if (backdrop && backdrop.parentNode) {
           backdrop.remove();
         }
+        console.info(`[jury_return_vote] safety timeout triggered at ${voteDurationMs}ms`);
         if(onDone) onDone(state);
       }
-    }
-    update();
+    }, voteDurationMs + 100); // Add small buffer for safety
   }
 
   // Flash returning juror, update game state, show card
