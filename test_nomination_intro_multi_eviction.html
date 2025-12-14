@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Nomination Intro Card - Multi-Eviction Weeks</title>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+    }
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(20, 30, 45, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      max-width: 300px;
+    }
+    .test-controls button {
+      display: block;
+      margin: 8px 0;
+      padding: 10px 15px;
+      background: #2a4766;
+      color: #e0e0e0;
+      border: 1px solid #356089;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 14px;
+    }
+    .test-controls button:hover {
+      background: #356089;
+    }
+    .test-info {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 12px;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-info h2 {
+      margin-top: 0;
+      color: #4CAF50;
+    }
+    #wrapper {
+      margin: 20px auto;
+      max-width: 900px;
+    }
+    #tv {
+      position: relative;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 3px solid #356089;
+      border-radius: 24px;
+      padding: 0;
+      min-height: 520px;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #tv::before {
+      content: 'Faux TV Screen';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 12px;
+      font-weight: 600;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .tvViewport {
+      flex: 1;
+      position: relative;
+    }
+    #tvOverlay {
+      /* Will use CSS from styles.css with fallbacks */
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3 style="margin: 0 0 10px 0; color: #83bfff;">Test Controls</h3>
+    <button id="test2Nominees">2 Nominees (Single Week)</button>
+    <button id="test3Nominees">3 Nominees (Double Week)</button>
+    <button id="test4Nominees">4 Nominees (Triple Week)</button>
+    <button id="testNoVars">Test Without CSS Vars</button>
+    <button id="testWithVars">Test With CSS Vars</button>
+    <button id="clearOverlay">Clear Overlay</button>
+  </div>
+
+  <div class="test-info">
+    <h2>🧪 Nomination Intro Card - Multi-Eviction Fix</h2>
+    <p><strong>Purpose:</strong> Verify nomination ceremony intro card appears in multi-eviction weeks (3+ nominees).</p>
+    <ul>
+      <li><strong>Expected:</strong> Intro card should appear centered in faux TV for all nominee counts (2, 3, 4)</li>
+      <li><strong>Bug:</strong> Previously missing in multi-eviction weeks due to undefined CSS vars</li>
+      <li><strong>Fix:</strong> Added CSS var fallbacks and min-width/min-height guards</li>
+    </ul>
+    <p><strong>Test:</strong> Click buttons above to test different nominee counts and CSS var scenarios.</p>
+  </div>
+
+  <div id="wrapper">
+    <div id="tv" class="tv tv-screen">
+      <div class="tvViewport">
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load TV Cards module -->
+  <script src="js/ui/tv-cards.js"></script>
+
+  <script>
+    console.log('[test] TV Cards module loaded:', typeof window.TVCards);
+    
+    // Test helper functions
+    function clearOverlay() {
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) {
+        overlay.innerHTML = '';
+      }
+      const tv = document.getElementById('tv');
+      if (tv) {
+        tv.classList.remove('tvTall');
+      }
+      console.log('[test] Overlay cleared');
+    }
+
+    function showIntroCard(need) {
+      console.log(`[test] Showing intro card for ${need} nominees`);
+      clearOverlay();
+      
+      if (window.TVCards && window.TVCards.showNominateIntro) {
+        window.TVCards.showNominateIntro({
+          hohName: 'Test Player',
+          need: need,
+          onNominate: () => {
+            console.log('[test] NOMINATE button clicked');
+            alert(`Nomination selector would open for ${need} nominees`);
+          }
+        }).then(() => {
+          console.log('[test] Intro card displayed');
+        }).catch(err => {
+          console.error('[test] Error showing intro card:', err);
+        });
+      } else {
+        console.error('[test] TVCards.showNominateIntro not available');
+        alert('TVCards module not loaded properly');
+      }
+    }
+
+    function removeCSSVars() {
+      const tv = document.getElementById('tv');
+      if (tv) {
+        tv.style.setProperty('--tv-safe-top', '');
+        tv.style.setProperty('--tv-safe-bottom', '');
+        tv.style.setProperty('--tv-safe-x', '');
+        console.log('[test] CSS vars removed (testing fallback)');
+      }
+    }
+
+    function addCSSVars() {
+      const tv = document.getElementById('tv');
+      if (tv) {
+        tv.style.setProperty('--tv-safe-top', '44px');
+        tv.style.setProperty('--tv-safe-bottom', '42px');
+        tv.style.setProperty('--tv-safe-x', '16px');
+        console.log('[test] CSS vars set (normal mode)');
+      }
+    }
+
+    // Test button handlers
+    document.getElementById('test2Nominees').addEventListener('click', () => {
+      console.log('[test] Testing 2 nominees (single eviction)');
+      showIntroCard(2);
+    });
+
+    document.getElementById('test3Nominees').addEventListener('click', () => {
+      console.log('[test] Testing 3 nominees (double eviction)');
+      showIntroCard(3);
+    });
+
+    document.getElementById('test4Nominees').addEventListener('click', () => {
+      console.log('[test] Testing 4 nominees (triple eviction)');
+      showIntroCard(4);
+    });
+
+    document.getElementById('testNoVars').addEventListener('click', () => {
+      console.log('[test] Testing without CSS vars');
+      removeCSSVars();
+      setTimeout(() => showIntroCard(3), 100);
+    });
+
+    document.getElementById('testWithVars').addEventListener('click', () => {
+      console.log('[test] Testing with CSS vars');
+      addCSSVars();
+      setTimeout(() => showIntroCard(3), 100);
+    });
+
+    document.getElementById('clearOverlay').addEventListener('click', () => {
+      clearOverlay();
+    });
+
+    // Auto-test on load
+    window.addEventListener('load', () => {
+      console.log('[test] Page loaded, running auto-test');
+      setTimeout(() => {
+        console.log('[test] Auto-testing 3 nominees scenario');
+        showIntroCard(3);
+      }, 500);
+    });
+  </script>
+</body>
+</html>

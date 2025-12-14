@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EvictionManager Test Harness</title>
+  <link rel="stylesheet" href="css/eviction-manager.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: white;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .test-section h2 {
+      margin-bottom: 1rem;
+      color: #4a90e2;
+    }
+
+    .test-section p {
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    button {
+      padding: 1rem 2rem;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    button:hover {
+      background: #357abd;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .status div {
+      margin-bottom: 0.5rem;
+    }
+
+    .status .success {
+      color: #4ade80;
+    }
+
+    .status .error {
+      color: #f87171;
+    }
+
+    .status .info {
+      color: #60a5fa;
+    }
+
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .tv-mock {
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-top: 2rem;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .instructions {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid #4a90e2;
+      margin-bottom: 1rem;
+    }
+
+    .instructions h3 {
+      margin-bottom: 0.5rem;
+      color: #4a90e2;
+      font-size: 1rem;
+    }
+
+    .instructions ul {
+      margin-left: 1.5rem;
+    }
+
+    .instructions li {
+      margin-bottom: 0.3rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎭 EvictionManager Test Harness</h1>
+
+    <div class="test-section">
+      <div class="instructions">
+        <h3>📋 Test Instructions</h3>
+        <ul>
+          <li>Click a test scenario button to start</li>
+          <li>Click on a nominee avatar to select them</li>
+          <li>The "Evict" button will appear inline under the selected avatar</li>
+          <li>Click "Evict" to submit vote (button disables immediately)</li>
+          <li>Vote callback simulates 600-800ms delay</li>
+          <li>UI auto-hides after successful vote</li>
+          <li>Use arrow keys to navigate, Enter/Space to select, Escape to cancel</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 1: Single Eviction (2 nominees)</h2>
+      <p>Standard eviction with 2 nominees, evictCount = 1</p>
+      <div class="btn-group">
+        <button onclick="testSingleEviction()">Start Single Eviction Test</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 2: Double Eviction (3 nominees)</h2>
+      <p>Double eviction with 3 nominees, evictCount = 2</p>
+      <div class="btn-group">
+        <button onclick="testDoubleEviction()">Start Double Eviction Test</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 3: Triple Eviction (4 nominees)</h2>
+      <p>Triple eviction with 4 nominees, evictCount = 3</p>
+      <div class="btn-group">
+        <button onclick="testTripleEviction()">Start Triple Eviction Test</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 4: Validation Error</h2>
+      <p>Should fail validation: 3 nominees with evictCount = 1 (invalid)</p>
+      <div class="btn-group">
+        <button onclick="testValidationError()">Test Validation Error</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>📊 Test Status</h2>
+      <div class="status" id="status">
+        <div class="info">Ready to test. Click a scenario button above.</div>
+      </div>
+    </div>
+
+    <div class="tv-mock" id="tvMock">
+      TV Container (UI will render here)
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Mock game globals for testing
+    window.game = {
+      bus: {
+        emit: function(event, data) {
+          log(`Event: ${event}`, 'info');
+          console.log('[Event]', event, data);
+        }
+      }
+    };
+
+    window.safeName = function(id) {
+      return id;
+    };
+
+    window.getP = function(id) {
+      return { id, name: id, avatar: null };
+    };
+
+    window.resolveAvatar = null; // Use Dicebear fallback
+
+    // Mock closeAllVoteUI
+    window.closeAllVoteUI = function() {
+      log('closeAllVoteUI called', 'info');
+    };
+
+    // Status logger
+    function log(message, type = 'info') {
+      const status = document.getElementById('status');
+      const div = document.createElement('div');
+      div.className = type;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      status.insertBefore(div, status.firstChild);
+
+      // Keep only last 20 messages
+      while (status.children.length > 20) {
+        status.removeChild(status.lastChild);
+      }
+    }
+
+    // Simulate vote callback with delay
+    async function simulateVote(nomineeId) {
+      const delay = Math.floor(Math.random() * 200) + 600; // 600-800ms
+      log(`Simulating vote for ${nomineeId} (${delay}ms delay)...`, 'info');
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      log(`Vote completed for ${nomineeId}`, 'success');
+      return true;
+    }
+
+    // Test scenarios
+    function testSingleEviction() {
+      log('=== Starting Single Eviction Test ===', 'info');
+      
+      const result = window.EvictionManager.show({
+        nominees: ['Alice', 'Bob'],
+        evictCount: 1,
+        container: document.getElementById('tvMock'),
+        onVote: simulateVote
+      });
+
+      if (result) {
+        log('Single eviction UI rendered successfully', 'success');
+      } else {
+        log('Failed to render single eviction UI', 'error');
+      }
+    }
+
+    function testDoubleEviction() {
+      log('=== Starting Double Eviction Test ===', 'info');
+      
+      const result = window.EvictionManager.show({
+        nominees: ['Alice', 'Bob', 'Charlie'],
+        evictCount: 2,
+        container: document.getElementById('tvMock'),
+        onVote: simulateVote
+      });
+
+      if (result) {
+        log('Double eviction UI rendered successfully', 'success');
+      } else {
+        log('Failed to render double eviction UI', 'error');
+      }
+    }
+
+    function testTripleEviction() {
+      log('=== Starting Triple Eviction Test ===', 'info');
+      
+      const result = window.EvictionManager.show({
+        nominees: ['Alice', 'Bob', 'Charlie', 'Diana'],
+        evictCount: 3,
+        container: document.getElementById('tvMock'),
+        onVote: simulateVote
+      });
+
+      if (result) {
+        log('Triple eviction UI rendered successfully', 'success');
+      } else {
+        log('Failed to render triple eviction UI', 'error');
+      }
+    }
+
+    function testValidationError() {
+      log('=== Testing Validation Error (should fail) ===', 'info');
+      
+      const result = window.EvictionManager.show({
+        nominees: ['Alice', 'Bob', 'Charlie'],
+        evictCount: 1, // Invalid: should be 2 for 3 nominees
+        container: document.getElementById('tvMock'),
+        onVote: simulateVote
+      });
+
+      if (result === null) {
+        log('Validation correctly rejected invalid configuration', 'success');
+      } else {
+        log('Validation FAILED - should have rejected invalid config', 'error');
+      }
+    }
+
+    // Listen for events
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Page loaded. EvictionManager ready.', 'success');
+    });
+  </script>
+
+  <!-- Load EvictionManager -->
+  <script src="js/ui/evictionManager.js"></script>
+  <script src="js/ui/livevote-adapter.js"></script>
+</body>
+</html>

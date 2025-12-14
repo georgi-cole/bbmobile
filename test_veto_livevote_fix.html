@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Card → Live Vote Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.secondary {
+      background: linear-gradient(135deg, #ff6b6b, #ff4747);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .test-info ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    .status-display {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(255, 217, 107, 0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      border-left: 3px solid #ffd96b;
+    }
+    
+    .status-display strong {
+      color: #ffd96b;
+    }
+    
+    .pass {
+      color: #4ade80;
+      font-weight: 700;
+    }
+    
+    .fail {
+      color: #f87171;
+      font-weight: 700;
+    }
+    
+    #tv {
+      max-width: 600px;
+      margin: 20px auto;
+      min-height: 400px;
+      background: rgba(20,35,55,0.5);
+      border-radius: 12px;
+      border: 2px solid rgba(143,211,255,0.2);
+      position: relative;
+      padding: 20px;
+    }
+    
+    .tvOverlayContent {
+      position: relative;
+      z-index: 10;
+    }
+    
+    .mock-veto-card {
+      background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+      border: 2px solid rgba(120,180,240,0.5);
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    
+    .mock-veto-card h3 {
+      color: #ffd96b;
+      margin: 0 0 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🔧 Veto Card → Live Vote Fix Test</h1>
+    
+    <div class="test-info">
+      <strong>Test Objectives:</strong>
+      <ul>
+        <li><strong>Issue A:</strong> Verify TV overlay is cleared before Live Vote UI appears</li>
+        <li><strong>Issue B:</strong> Verify close button is NOT visible by default (no X button)</li>
+        <li><strong>Issue C:</strong> Verify close button appears only when <code>allowClose: true</code></li>
+        <li><strong>Issue D:</strong> Verify <code>onCancel</code> callback is invoked when close button is clicked</li>
+      </ul>
+    </div>
+    
+    <button onclick="testScenario1()">Test 1: Simulate Veto Card → Live Vote</button>
+    <button onclick="testScenario2()">Test 2: Live Vote with NO close button (default)</button>
+    <button onclick="testScenario3()">Test 3: Live Vote WITH close button (allowClose: true)</button>
+    <button class="secondary" onclick="clearAll()">Clear All</button>
+    
+    <div class="status-display">
+      <strong>Test Results:</strong>
+      <div id="statusText">No tests run yet</div>
+    </div>
+  </div>
+  
+  <div id="tv">
+    <div class="tvOverlayContent"></div>
+  </div>
+  
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script>
+    // Mock global helpers
+    window.game = {
+      cfg: {}
+    };
+    
+    const mockPlayers = {
+      1: { id: 1, name: 'Alice', avatar: null },
+      2: { id: 2, name: 'Bob', avatar: null },
+      3: { id: 3, name: 'Charlie', avatar: null },
+      4: { id: 4, name: 'Diana', avatar: null }
+    };
+    
+    window.getP = function(id) {
+      return mockPlayers[id];
+    };
+    
+    window.safeName = function(id) {
+      return mockPlayers[id]?.name || 'Unknown';
+    };
+    
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    // Mock scroll lock helpers
+    window.lockBodyScroll = function() {
+      document.body.style.overflow = 'hidden';
+    };
+    
+    window.unlockBodyScroll = function() {
+      document.body.style.overflow = '';
+    };
+    
+    window.centerTVInViewport = function() {
+      return Promise.resolve();
+    };
+    
+    // Mock clearTVOverlayContent function (from veto.js)
+    window.clearTVOverlayContent = function() {
+      const content = document.querySelector('.tvOverlayContent');
+      if (content) {
+        content.innerHTML = '';
+        console.log('✓ TV overlay content cleared');
+      }
+    };
+    
+    function createMockVetoCard() {
+      const content = document.querySelector('.tvOverlayContent');
+      content.innerHTML = `
+        <div class="mock-veto-card">
+          <h3>Veto Ceremony Complete</h3>
+          <p>The Power of Veto was used to save <strong>Alice</strong>.</p>
+          <p><strong>Bob</strong> has been named as the replacement nominee.</p>
+        </div>
+      `;
+      return content.querySelector('.mock-veto-card') !== null;
+    }
+    
+    function updateStatus(message, isPass) {
+      const statusEl = document.getElementById('statusText');
+      statusEl.innerHTML = message;
+      if (isPass !== undefined) {
+        statusEl.className = isPass ? 'pass' : 'fail';
+      }
+    }
+    
+    function clearAll() {
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      window.clearTVOverlayContent();
+      updateStatus('All cleared');
+    }
+    
+    // Test Scenario 1: Simulate Veto Card remaining, then show Live Vote
+    async function testScenario1() {
+      updateStatus('Running Test 1: Veto Card → Live Vote...');
+      
+      // Step 1: Create mock veto card
+      const cardCreated = createMockVetoCard();
+      if (!cardCreated) {
+        updateStatus('❌ Test 1 FAILED: Could not create mock veto card', false);
+        return;
+      }
+      
+      await new Promise(r => setTimeout(r, 500)); // Brief delay to see card
+      
+      // Step 2: Simulate what eviction.js does - clear TV overlay before showing Live Vote
+      try {
+        if (typeof window.clearTVOverlayContent === 'function') {
+          window.clearTVOverlayContent();
+        }
+      } catch (e) {
+        console.warn('[LiveVote] clearTVOverlayContent failed', e);
+      }
+      
+      // Step 3: Check if TV overlay was cleared
+      const content = document.querySelector('.tvOverlayContent');
+      const isCleared = content && content.innerHTML.trim() === '';
+      
+      if (!isCleared) {
+        updateStatus('❌ Test 1 FAILED: TV overlay was not cleared', false);
+        return;
+      }
+      
+      // Step 4: Show Live Vote overlay
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2],
+        onSubmit: (id) => {
+          updateStatus(`✅ Test 1 PASSED: TV cleared + Vote cast for ${window.getP(id).name}`, true);
+        },
+        isTieBreak: false,
+        container: document.getElementById('tv')
+      });
+      
+      // Step 5: Check for lingering veto card in overlay
+      await new Promise(r => setTimeout(r, 200));
+      const vetoCardStillVisible = document.querySelector('.mock-veto-card') !== null;
+      
+      if (vetoCardStillVisible) {
+        updateStatus('❌ Test 1 FAILED: Veto card is still visible behind Live Vote UI', false);
+      } else {
+        updateStatus('✅ Test 1 PASSED: TV overlay cleared, no lingering veto card detected. Cast a vote to complete.', true);
+      }
+    }
+    
+    // Test Scenario 2: Show Live Vote WITHOUT close button (default behavior)
+    function testScenario2() {
+      updateStatus('Running Test 2: Live Vote without close button...');
+      
+      // Clear any existing overlay
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      
+      // Show overlay WITHOUT allowClose option (default)
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2],
+        onSubmit: (id) => {
+          updateStatus(`✅ Test 2 PASSED: Vote cast for ${window.getP(id).name}, no close button available`, true);
+        },
+        isTieBreak: false,
+        container: document.getElementById('tv')
+      });
+      
+      // Check if close button exists
+      setTimeout(() => {
+        const closeBtn = document.querySelector('.lv-overlay__close');
+        if (closeBtn) {
+          updateStatus('❌ Test 2 FAILED: Close button (X) is visible when it should be hidden', false);
+        } else {
+          updateStatus('✅ Test 2 PASSED: No close button visible. Try pressing Escape - it should NOT close. Cast a vote to complete.', true);
+        }
+      }, 200);
+    }
+    
+    // Test Scenario 3: Show Live Vote WITH close button (allowClose: true)
+    function testScenario3() {
+      updateStatus('Running Test 3: Live Vote with close button...');
+      
+      // Clear any existing overlay
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      
+      let cancelCalled = false;
+      
+      // Show overlay WITH allowClose option
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2],
+        allowClose: true,
+        onCancel: () => {
+          cancelCalled = true;
+          console.log('✓ onCancel callback invoked');
+        },
+        onSubmit: (id) => {
+          updateStatus(`Vote cast for ${window.getP(id).name}`, true);
+        },
+        isTieBreak: false,
+        container: document.getElementById('tv')
+      });
+      
+      // Check if close button exists
+      setTimeout(() => {
+        const closeBtn = document.querySelector('.lv-overlay__close');
+        if (!closeBtn) {
+          updateStatus('❌ Test 3 FAILED: Close button (X) is NOT visible when allowClose: true', false);
+        } else {
+          updateStatus('✅ Test 3 PASSED: Close button (X) is visible. Click it or press Escape to test onCancel callback.', true);
+          
+          // Add listener to verify cancel was called
+          setTimeout(() => {
+            if (!window.LiveVoteOverlay.isOpen() && cancelCalled) {
+              updateStatus('✅ Test 3 COMPLETE: Close button worked and onCancel callback was invoked', true);
+            }
+          }, 1000);
+        }
+      }, 200);
+    }
+    
+    // Auto-run initial status
+    updateStatus('Ready to test. Click a test button to begin.');
+  </script>
+</body>
+</html>

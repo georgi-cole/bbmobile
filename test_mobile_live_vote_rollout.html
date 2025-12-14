@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Test: Mobile Live Vote Rollout</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <link rel="stylesheet" href="css/livevote-choice-card.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/livevote-rollout.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0f16;
+      color: #e8f4ff;
+    }
+    
+    .test-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #ffd96b;
+      margin-bottom: 2rem;
+    }
+    
+    .test-section {
+      background: rgba(20, 35, 55, 0.5);
+      border: 1px solid rgba(143, 211, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #00e0cc;
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc, #00b3a6);
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 8px 8px 8px 0;
+      font-size: 1rem;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+    }
+    
+    .status {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 224, 204, 0.1);
+      border-left: 3px solid #00e0cc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      height: 400px;
+      margin: 20px auto;
+      background: #0e1a28;
+      border: 2px solid rgba(143, 211, 255, 0.3);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    
+    .log {
+      background: rgba(20, 35, 55, 0.3);
+      border: 1px solid rgba(143, 211, 255, 0.15);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(143, 211, 255, 0.1);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .ok { color: #7cffad; }
+    .warn { color: #ffd96b; }
+    .danger { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+
+<div class="test-container">
+  <h1>Mobile Live Vote Rollout Test</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Choice Card → Overlay → Rollout</h2>
+    <p>Tests the full two-step mobile voting flow with rollout overlay.</p>
+    <button onclick="testFullFlow()">Start Full Flow Test</button>
+    <div class="status" id="status1"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Rollout Overlay Only</h2>
+    <p>Tests the rollout overlay in isolation with simulated votes.</p>
+    <button onclick="testRolloutOnly()">Show Rollout Overlay</button>
+    <button onclick="addMockVote()">Add Mock Vote</button>
+    <button class="danger" onclick="hideRollout()">Hide Rollout</button>
+    <div class="status" id="status2"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: Body Scroll Locking</h2>
+    <p>Tests that body scroll is locked when modal opens.</p>
+    <button onclick="testScrollLock()">Test Scroll Lock</button>
+    <div class="status" id="status3"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 4: closeAllVoteUI()</h2>
+    <p>Tests the shared function to force close all voting UI.</p>
+    <button onclick="testCloseAll()">Open Both → Close All</button>
+    <div class="status" id="status4"></div>
+  </div>
+  
+  <div id="tv"></div>
+  
+  <div class="log" id="log">
+    <strong>Event Log:</strong>
+    <div id="log-entries"></div>
+  </div>
+</div>
+
+<script src="js/livevote-helpers.js"></script>
+<script src="js/livevote-choice-card.js"></script>
+<script src="js/livevote-voteoverlay.js"></script>
+<script src="js/livevote-rollout.js"></script>
+
+<script>
+// Mock player data
+window.game = { humanId: 1 };
+window.getP = (id) => {
+  const players = {
+    1: { id: 1, name: 'You', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=you' },
+    2: { id: 2, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice' },
+    3: { id: 3, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob' },
+    4: { id: 4, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=charlie' },
+    5: { id: 5, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=diana' }
+  };
+  return players[id] || { id, name: `Player${id}`, avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}` };
+};
+window.safeName = (id) => window.getP(id).name;
+
+let voteCount = 0;
+
+function log(message, type = '') {
+  const logEntries = document.getElementById('log-entries');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  const timestamp = new Date().toLocaleTimeString();
+  entry.textContent = `[${timestamp}] ${message}`;
+  logEntries.appendChild(entry);
+  logEntries.scrollTop = logEntries.scrollHeight;
+}
+
+function setStatus(id, message, type = '') {
+  const status = document.getElementById(id);
+  status.textContent = message;
+  status.className = `status ${type}`;
+}
+
+// Test 1: Full flow (Choice Card → Overlay → Rollout)
+function testFullFlow() {
+  log('Starting full flow test...', 'ok');
+  setStatus('status1', 'Opening choice card...', 'ok');
+  
+  const nominees = [2, 3]; // Alice and Bob
+  
+  LiveVoteChoiceCard.show({
+    nominees: nominees,
+    onVoteClick: (noms) => {
+      log('Choice card: Vote button clicked', 'ok');
+      setStatus('status1', 'Opening voting overlay...', 'ok');
+      
+      LiveVoteOverlay.show({
+        nominees: noms,
+        isTieBreak: false,
+        onSubmit: (selectedId) => {
+          log(`Vote submitted for: ${window.safeName(selectedId)}`, 'ok');
+          setStatus('status1', `Voted for ${window.safeName(selectedId)}. Showing rollout...`, 'ok');
+          
+          // Show rollout overlay
+          LiveVoteRollout.show({
+            expectedVotes: 5,
+            nominees: nominees
+          });
+          
+          // Add user vote
+          LiveVoteRollout.addVote({
+            voterId: 1,
+            voterName: 'You',
+            targetId: selectedId,
+            targetName: window.safeName(selectedId)
+          });
+          
+          // Simulate other votes
+          let delay = 1500;
+          const otherVoters = [4, 5, 2, 3].filter(id => nominees.includes(selectedId) ? id !== selectedId : true).slice(0, 4);
+          
+          otherVoters.forEach((voterId, index) => {
+            setTimeout(() => {
+              const target = nominees[Math.floor(Math.random() * nominees.length)];
+              LiveVoteRollout.addVote({
+                voterId: voterId,
+                voterName: window.safeName(voterId),
+                targetId: target,
+                targetName: window.safeName(target)
+              });
+              log(`${window.safeName(voterId)} voted for ${window.safeName(target)}`, 'ok');
+              
+              if (index === otherVoters.length - 1) {
+                setTimeout(() => {
+                  LiveVoteRollout.hide();
+                  setStatus('status1', 'Flow complete! All votes cast.', 'ok');
+                  log('Rollout overlay hidden', 'ok');
+                }, 2000);
+              }
+            }, delay * (index + 1));
+          });
+        }
+      });
+    }
+  });
+}
+
+// Test 2: Rollout only
+function testRolloutOnly() {
+  log('Showing rollout overlay...', 'ok');
+  setStatus('status2', 'Rollout overlay displayed', 'ok');
+  voteCount = 0;
+  
+  LiveVoteRollout.show({
+    expectedVotes: 5,
+    nominees: [2, 3]
+  });
+}
+
+function addMockVote() {
+  if (!LiveVoteRollout.isShowing()) {
+    setStatus('status2', 'Error: Rollout not showing. Click "Show Rollout Overlay" first.', 'danger');
+    log('Cannot add vote: Rollout not showing', 'warn');
+    return;
+  }
+  
+  voteCount++;
+  const voters = [1, 2, 3, 4, 5];
+  const voterId = voters[voteCount % voters.length];
+  const target = [2, 3][Math.floor(Math.random() * 2)];
+  
+  LiveVoteRollout.addVote({
+    voterId: voterId,
+    voterName: window.safeName(voterId),
+    targetId: target,
+    targetName: window.safeName(target)
+  });
+  
+  log(`Mock vote added: ${window.safeName(voterId)} → ${window.safeName(target)}`, 'ok');
+  setStatus('status2', `${voteCount} vote(s) added`, 'ok');
+}
+
+function hideRollout() {
+  LiveVoteRollout.hide();
+  log('Rollout overlay hidden', 'ok');
+  setStatus('status2', 'Rollout hidden', 'ok');
+}
+
+// Test 3: Scroll lock
+function testScrollLock() {
+  log('Testing body scroll lock...', 'ok');
+  
+  const wasLocked = document.body.dataset.scrollLocked === 'true';
+  setStatus('status3', `Body scroll locked: ${wasLocked}`, wasLocked ? 'ok' : 'warn');
+  
+  // Show overlay to trigger lock
+  LiveVoteOverlay.show({
+    nominees: [2, 3],
+    isTieBreak: false,
+    onSubmit: (id) => {
+      log('Vote submitted, checking unlock...', 'ok');
+      setTimeout(() => {
+        const isLocked = document.body.dataset.scrollLocked === 'true';
+        setStatus('status3', `After close - Body scroll locked: ${isLocked}`, isLocked ? 'warn' : 'ok');
+        log(`Body scroll lock after close: ${isLocked}`, isLocked ? 'warn' : 'ok');
+      }, 100);
+    }
+  });
+  
+  setTimeout(() => {
+    const isLocked = document.body.dataset.scrollLocked === 'true';
+    log(`Body scroll lock while open: ${isLocked}`, isLocked ? 'ok' : 'warn');
+  }, 100);
+}
+
+// Test 4: closeAllVoteUI
+function testCloseAll() {
+  log('Opening both choice card and overlay...', 'ok');
+  
+  // Open choice card
+  LiveVoteChoiceCard.show({
+    nominees: [2, 3],
+    onVoteClick: () => {}
+  });
+  
+  // Open overlay on top
+  setTimeout(() => {
+    LiveVoteOverlay.show({
+      nominees: [2, 3],
+      isTieBreak: false,
+      onSubmit: () => {}
+    });
+    
+    log('Both UI elements opened', 'ok');
+    setStatus('status4', 'Both opened. Closing all in 2s...', 'ok');
+    
+    // Close all after 2 seconds
+    setTimeout(() => {
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+        log('closeAllVoteUI() called', 'ok');
+        setStatus('status4', 'All vote UI closed successfully', 'ok');
+        
+        // Verify scroll is unlocked
+        setTimeout(() => {
+          const isLocked = document.body.dataset.scrollLocked === 'true';
+          log(`Body scroll locked after closeAllVoteUI: ${isLocked}`, isLocked ? 'warn' : 'ok');
+        }, 100);
+      } else {
+        log('ERROR: closeAllVoteUI not available', 'danger');
+        setStatus('status4', 'Error: closeAllVoteUI not found', 'danger');
+      }
+    }, 2000);
+  }, 500);
+}
+
+// Initial log
+log('Test page loaded successfully', 'ok');
+log('Available functions: testFullFlow(), testRolloutOnly(), testScrollLock(), testCloseAll()', 'ok');
+</script>
+
+</body>
+</html>

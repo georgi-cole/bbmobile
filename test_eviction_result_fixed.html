@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Result - Fixed vs Broken</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/eviction-modal.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+      color: white;
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    #tv {
+      position: relative;
+      margin: 20px auto;
+      width: min(90vw, 600px);
+      aspect-ratio: 9/16;
+      background: linear-gradient(135deg, #1a2332, #0e1620);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 12px;
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    
+    .tv-content {
+      padding: 20px;
+      text-align: center;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎬 Eviction Result: Fixed vs Broken</h1>
+    
+    <div class="test-info">
+      <strong>Comparison Test:</strong> This demonstrates the difference between:
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li><strong>OLD (Broken):</strong> Result card rendered inside #tvOverlay - gets clipped</li>
+        <li><strong>NEW (Fixed):</strong> Result modal rendered to document.body - always visible</li>
+      </ul>
+    </div>
+    
+    <button onclick="showOldBroken()">❌ Show OLD (Broken) - Clipped Card</button>
+    <button onclick="showNewFixed()">✅ Show NEW (Fixed) - Centered Modal</button>
+    <button onclick="clearAll()">🗑️ Clear</button>
+    
+    <div class="test-info" id="status">
+      <strong>Status:</strong> Ready to test
+    </div>
+  </div>
+
+  <div id="tv">
+    <div id="tvOverlay"></div>
+    <div class="tv-content">
+      <h3>Big Brother House</h3>
+      <p>EVT • S1W1 • 9/9 players</p>
+      <p>Eviction ceremony in progress...</p>
+    </div>
+  </div>
+
+  <!-- Load modal module -->
+  <script src="src/ui/evictionModal.js"></script>
+  
+  <script>
+    function updateStatus(msg) {
+      document.getElementById('status').innerHTML = `<strong>Status:</strong> ${msg}`;
+    }
+
+    // OLD BROKEN SYSTEM - renders inside #tvOverlay which clips it
+    function showOldBroken() {
+      updateStatus('Showing OLD (Broken) system - card rendered in #tvOverlay');
+      
+      const tv = document.getElementById('tv');
+      let tvOverlay = document.getElementById('tvOverlay');
+      
+      if (!tvOverlay) {
+        tvOverlay = document.createElement('div');
+        tvOverlay.id = 'tvOverlay';
+        tvOverlay.style.cssText = 'position:absolute; inset:12px; z-index:12; display:flex; align-items:center; justify-content:center; pointer-events:auto;';
+        tv.appendChild(tvOverlay);
+      }
+
+      tvOverlay.innerHTML = '';
+
+      const card = document.createElement('div');
+      card.className = 'revealCard';
+      card.style.cssText = `
+        background: linear-gradient(135deg, rgba(28,43,62,0.95), rgba(12,22,36,0.95));
+        backdrop-filter: blur(16px);
+        border: 2px solid rgba(239,68,68,0.5);
+        border-radius: 20px;
+        padding: 32px 24px;
+        box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95);
+        max-width: 90%;
+        text-align: center;
+        pointer-events: auto;
+        margin: auto;
+      `;
+
+      const titleEl = document.createElement('div');
+      titleEl.textContent = 'Eviction Result';
+      titleEl.style.cssText = 'font-size: 1.4rem; font-weight: 700; color: #ff6b6b; margin-bottom: 16px;';
+      card.appendChild(titleEl);
+
+      const msgEl = document.createElement('div');
+      msgEl.textContent = 'By a vote of 5 to 2, Alice, you have been evicted from the Big Brother house.';
+      msgEl.style.cssText = 'font-size: 1.05rem; color: #e8f4ff; line-height: 1.5;';
+      card.appendChild(msgEl);
+
+      tvOverlay.appendChild(card);
+      
+      updateStatus('❌ OLD system: Card is inside #tvOverlay and gets clipped at bottom');
+    }
+
+    // NEW FIXED SYSTEM - uses eviction modal
+    function showNewFixed() {
+      updateStatus('Showing NEW (Fixed) system - modal at viewport level');
+      
+      if (window.EvictionModal && typeof window.EvictionModal.show === 'function') {
+        window.EvictionModal.show({
+          title: 'Eviction Result',
+          lines: [
+            'By a vote of 5 to 2,',
+            'Alice, you have been evicted from the Big Brother house.'
+          ],
+          tone: 'evict',
+          duration: 0 // Manual close only
+        });
+        
+        updateStatus('✅ NEW system: Modal rendered to body, always fully visible and centered!');
+      } else {
+        updateStatus('❌ Error: EvictionModal not loaded');
+      }
+    }
+
+    function clearAll() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.innerHTML = '';
+      }
+      
+      if (window.EvictionModal) {
+        window.EvictionModal.hide();
+      }
+      
+      updateStatus('Cleared - ready for next test');
+    }
+    
+    // Check if modal loaded
+    if (window.EvictionModal) {
+      console.log('✅ EvictionModal module loaded');
+    } else {
+      console.error('❌ EvictionModal module not loaded');
+      updateStatus('⚠️ Warning: EvictionModal not loaded - new system may not work');
+    }
+  </script>
+</body>
+</html>

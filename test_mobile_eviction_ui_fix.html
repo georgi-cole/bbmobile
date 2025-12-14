@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mobile Eviction UI Fix Test (Issue #574)</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(20, 30, 45, 0.9);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #83bfff;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #f2ce7b;
+      margin-bottom: 30px;
+      font-size: 0.95rem;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.5);
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .test-section h2 {
+      color: #f2ce7b;
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    .test-item {
+      padding: 12px;
+      margin: 10px 0;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      display: flex;
+      align-items: start;
+      gap: 12px;
+    }
+    .checkbox {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      margin-top: 2px;
+    }
+    .status {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      display: inline-block;
+      font-size: 0.85rem;
+    }
+    .status.pass {
+      background: #22c55e;
+      color: #fff;
+    }
+    .status.fail {
+      background: #dc2626;
+      color: #fff;
+    }
+    .status.pending {
+      background: #f2ce7b;
+      color: #000;
+    }
+    .btn {
+      background: linear-gradient(135deg, #4a6fa5 0%, #2d5aa0 100%);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #5a7fb5 0%, #3d6ab0 100%);
+    }
+    .code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    .note {
+      background: rgba(242,206,123,0.1);
+      border-left: 3px solid #f2ce7b;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mobile Eviction UI Fix Test</h1>
+    <div class="subtitle">Issue #574 - Testing Checklist</div>
+
+    <div class="test-section">
+      <h2>✅ Requirements Verification</h2>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="req1">
+        <label for="req1">
+          <strong>Button Placement:</strong> Evict button sits directly under nominee avatars in DOM
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="req2">
+        <label for="req2">
+          <strong>SELECTION Phase:</strong> Button visible and disabled until nominee selected
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="req3">
+        <label for="req3">
+          <strong>On Click:</strong> Button immediately disabled and debounced (no double-press)
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="req4">
+        <label for="req4">
+          <strong>VOTING Phase:</strong> Button hidden when <code class="code">beginDiaryRoomSequence()</code> starts
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="req5">
+        <label for="req5">
+          <strong>Vertical Scrolling:</strong> Page remains scrollable throughout ceremony (no body lock)
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="req6">
+        <label for="req6">
+          <strong>Tally Card:</strong> Centered within faux TV overlay, no clipping
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="req7">
+        <label for="req7">
+          <strong>Evictee Animation:</strong> Centered on screen, B&W transition, fade out, cleanup
+        </label>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>📱 Mobile Viewport Tests</h2>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="mobile1">
+        <label for="mobile1">
+          <strong>iPhone 8/SE:</strong> Portrait (375x667px) - Button visible, scrolling works
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="mobile2">
+        <label for="mobile2">
+          <strong>iPhone 12-15 Pro:</strong> Portrait (390x844px) - Button visible, scrolling works
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="mobile3">
+        <label for="mobile3">
+          <strong>iPad:</strong> Portrait (768x1024px) - Layout centered, no clipping
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="mobile4">
+        <label for="mobile4">
+          <strong>Orientation Change:</strong> Portrait → Landscape → Portrait maintains layout
+        </label>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>🔧 Code Changes Verification</h2>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="code1">
+        <label for="code1">
+          <strong>livevote-voteoverlay.css:</strong> Changed to <code class="code">min-height/max-height: 100dvh</code>, <code class="code">overflow-y: auto</code>
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="code2">
+        <label for="code2">
+          <strong>livevote-voteoverlay.js:</strong> Removed <code class="code">lockBodyScroll()</code> calls
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="code3">
+        <label for="code3">
+          <strong>livevote-ui.js:</strong> Added <code class="code">hideCtaBar()</code> function for 2-nominee UI
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="code4">
+        <label for="code4">
+          <strong>livevote-v2-triple.js:</strong> Added <code class="code">hideCtasTriple()</code> for 3-nominee UI
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="code5">
+        <label for="code5">
+          <strong>eviction.js:</strong> Called hide functions in <code class="code">beginDiaryRoomSequence()</code>
+        </label>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>🎬 Behavior Flow Test</h2>
+      
+      <div class="note">
+        <strong>Test Procedure:</strong>
+        <ol style="margin: 10px 0; padding-left: 20px;">
+          <li>Start game and advance to eviction phase</li>
+          <li>Verify button is visible under nominees (SELECTION phase)</li>
+          <li>Select/tap a nominee (button should enable)</li>
+          <li>Click "Evict" button (button should disable immediately)</li>
+          <li>Wait for diary room sequence to begin (button should hide)</li>
+          <li>Observe other players voting (button remains hidden)</li>
+          <li>View tally card (should be centered, not clipped)</li>
+          <li>Watch evictee animation (should be centered, B&W fade)</li>
+          <li>Verify page scrolling works throughout</li>
+        </ol>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="flow1">
+        <label for="flow1">
+          <strong>Step 1-4:</strong> Button behavior correct (visible → enabled → disabled)
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="flow2">
+        <label for="flow2">
+          <strong>Step 5-6:</strong> Button hides when voting begins and stays hidden
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="flow3">
+        <label for="flow3">
+          <strong>Step 7-8:</strong> Tally and animation properly centered
+        </label>
+      </div>
+      
+      <div class="test-item">
+        <input type="checkbox" class="checkbox" id="flow4">
+        <label for="flow4">
+          <strong>Step 9:</strong> Page scrolling works in all phases
+        </label>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>📊 Test Summary</h2>
+      <div id="summary" style="font-size: 1.1rem; text-align: center; padding: 20px;">
+        <span id="checkedCount">0</span> / <span id="totalCount">0</span> tests completed
+      </div>
+      <div style="text-align: center;">
+        <button class="btn" onclick="checkAll()">Check All</button>
+        <button class="btn" onclick="uncheckAll()">Uncheck All</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Count checkboxes and update summary
+    function updateSummary() {
+      const checkboxes = document.querySelectorAll('.checkbox');
+      const checked = document.querySelectorAll('.checkbox:checked');
+      document.getElementById('totalCount').textContent = checkboxes.length;
+      document.getElementById('checkedCount').textContent = checked.length;
+      
+      // Save state to localStorage
+      const states = {};
+      checkboxes.forEach(cb => {
+        states[cb.id] = cb.checked;
+      });
+      localStorage.setItem('evictionUITestState', JSON.stringify(states));
+    }
+
+    // Load saved state
+    function loadState() {
+      try {
+        const saved = localStorage.getItem('evictionUITestState');
+        if (saved) {
+          const states = JSON.parse(saved);
+          Object.entries(states).forEach(([id, checked]) => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) checkbox.checked = checked;
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load saved state:', e);
+      }
+    }
+
+    // Check/uncheck all
+    function checkAll() {
+      document.querySelectorAll('.checkbox').forEach(cb => cb.checked = true);
+      updateSummary();
+    }
+
+    function uncheckAll() {
+      document.querySelectorAll('.checkbox').forEach(cb => cb.checked = false);
+      updateSummary();
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      updateSummary();
+      
+      // Add change listeners
+      document.querySelectorAll('.checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSummary);
+      });
+    });
+  </script>
+</body>
+</html>
