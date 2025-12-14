@@ -183,6 +183,102 @@
     }
   }
 
+  /**
+   * Animate revival of returning juror's avatar in faux TV
+   * Sequence: grayscale → color (0.8s) → pulse (0.4s) → cleanup
+   * Total: ~1.2s
+   * @param {number} returningId - Player ID of returning juror
+   */
+  async function animateRevivalAvatar(returningId){
+    const player = global.getP?.(returningId);
+    if(!player) {
+      console.warn('[eviction-visuals] animateRevivalAvatar: player not found', returningId);
+      return;
+    }
+
+    // Find TV container using robust selector chain
+    const tvContainer = getTvContainer();
+    
+    if(!tvContainer){
+      console.warn('[eviction-visuals] TV container not found for revival animation');
+      return;
+    }
+
+    console.info('[eviction-visuals] Starting revival animation for', player.name);
+
+    // Get avatar URL
+    const avatarUrl = global.resolveAvatar?.(player) || 
+                      player.avatar || 
+                      player.img || 
+                      player.photo || 
+                      getDicebearUrl(player.name || 'player');
+
+    // Create temporary avatar element (starts grayscale)
+    const avatarEl = document.createElement('div');
+    avatarEl.className = 'revival-visual-avatar';
+    avatarEl.innerHTML = `
+      <img src="${avatarUrl}" alt="${player.name}" 
+           onerror="this.onerror=null;this.src='${getDicebearUrl(player.name)}'">
+    `;
+
+    // Add styles for revival animation (start grayscale)
+    avatarEl.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      overflow: hidden;
+      z-index: 100;
+      box-shadow: 0 0 20px rgba(0, 224, 204, 0.5);
+      transition: all 0.8s ease-out;
+    `;
+
+    const img = avatarEl.querySelector('img');
+    if (img) {
+      img.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: grayscale(100%);
+        transition: filter 0.8s ease-out;
+      `;
+    }
+
+    // Append to TV
+    tvContainer.appendChild(avatarEl);
+
+    // Animation sequence
+    try{
+      // Phase 1: Colorize (0.8s)
+      await sleep(50); // Small delay for DOM render
+      if (img) {
+        img.style.filter = 'grayscale(0%)';
+      }
+      avatarEl.style.boxShadow = '0 0 40px rgba(126, 255, 163, 0.8)';
+      await sleep(800);
+
+      // Phase 2: Pulse effect (0.4s)
+      avatarEl.style.transform = 'translate(-50%, -50%) scale(1.1)';
+      await sleep(200);
+      avatarEl.style.transform = 'translate(-50%, -50%) scale(1.0)';
+      await sleep(200);
+
+      // Remove element
+      avatarEl.remove();
+      
+      console.info('[eviction-visuals] Revival animation complete');
+    }catch(e){
+      console.error('[eviction-visuals] revival animation error:', e);
+      avatarEl.remove();
+    }
+  }
+
+  // Export revival animation to global
+  global.animateRevivalAvatar = animateRevivalAvatar;
+
   console.info('[eviction-visuals] module loaded');
 
 })(window);
