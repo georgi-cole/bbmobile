@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Social Continue Prompt Test</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      border-radius: 8px;
+      z-index: 9999;
+      max-width: 300px;
+    }
+    .test-controls h3 {
+      margin: 0 0 10px 0;
+      color: #4fc3f7;
+      font-size: 14px;
+    }
+    .test-controls button {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .test-controls button:hover {
+      background: #1976D2;
+    }
+    .test-controls .info {
+      color: #aaa;
+      font-size: 11px;
+      margin: 5px 0;
+    }
+    #gameArea {
+      margin-top: 60px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3>Test Controls</h3>
+    <div class="info">Phase: <span id="phaseDisplay">-</span></div>
+    <div class="info">Energy: <span id="energyDisplay">-</span></div>
+    <button onclick="setupTest()">1. Setup Game State</button>
+    <button onclick="openSocialModal()">2. Open Social Modal</button>
+    <button onclick="setSomeEnergy()">3. Set Energy to 3</button>
+    <button onclick="setNoEnergy()">4. Set Energy to 0</button>
+    <button onclick="closeSocialModal()">5. Close Modal (Test Prompt)</button>
+  </div>
+
+  <div id="gameArea">
+    <h1>Social Continue Prompt Test</h1>
+    <p>This test validates the "continue socializing?" prompt after partial energy usage.</p>
+    
+    <h2>Test Steps:</h2>
+    <ol>
+      <li>Click "Setup Game State" to initialize the game</li>
+      <li>Click "Open Social Modal" to open the social interface</li>
+      <li>Click "Set Energy to 3" to give yourself some energy</li>
+      <li>Click "Close Modal" - you should see a prompt asking if you want to continue</li>
+      <li>Test both "Yes" (should keep modal open) and "No" (should show summary) options</li>
+      <li>Also test with "Set Energy to 0" - closing should NOT show the prompt</li>
+    </ol>
+
+    <div id="panel"></div>
+  </div>
+
+  <!-- Core dependencies -->
+  <script src="prng.js"></script>
+  <script src="game.js"></script>
+  <script src="config.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/data/houseguests.js"></script>
+  <script src="js/data/alliances.js"></script>
+  <script src="js/names.js"></script>
+  <script src="js/relationships.js"></script>
+  <script src="js/social-relations.js"></script>
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+
+  <script>
+    // Initialize game
+    function setupTest() {
+      console.log('[TEST] Setting up game state...');
+      
+      // Initialize game object
+      if (!window.game) {
+        window.game = {
+          week: 1,
+          phase: 'social_intermission',
+          cfg: {
+            enableSocialManeuvers: true
+          }
+        };
+      }
+      
+      window.game.phase = 'social_intermission';
+      window.game.cfg.enableSocialManeuvers = true;
+      
+      // Create mock players
+      const players = [];
+      for (let i = 0; i < 12; i++) {
+        players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          alive: true
+        });
+      }
+      window.game.players = players;
+      window.game.humanId = 0;
+      
+      // Initialize helper functions
+      window.getP = (id) => players.find(p => p.id === id);
+      window.alivePlayers = () => players.filter(p => !p.evicted);
+      window.addLog = (msg, type) => {
+        console.log(`[GAME LOG ${type}]`, msg);
+      };
+      
+      // Initialize social resources
+      if (window.SocialManeuvers?.SocialResources) {
+        window.SocialManeuvers.SocialResources.init(0);
+        window.SocialManeuvers.SocialResources.set(0, 'energy', 5);
+        console.log('[TEST] Social resources initialized');
+      }
+      
+      // Initialize session tracking
+      if (window.SocialManeuvers?.initSessionTracking) {
+        window.SocialManeuvers.initSessionTracking();
+      }
+      
+      updateDisplay();
+      console.log('[TEST] ✓ Game state setup complete');
+    }
+    
+    function openSocialModal() {
+      console.log('[TEST] Opening social modal...');
+      if (window.SocializeMobile?.openModal) {
+        window.SocializeMobile.openModal();
+        console.log('[TEST] ✓ Social modal opened');
+      } else {
+        console.error('[TEST] SocializeMobile.openModal not available');
+      }
+    }
+    
+    function closeSocialModal() {
+      console.log('[TEST] Closing social modal...');
+      if (window.SocializeMobile?.closeModal) {
+        window.SocializeMobile.closeModal();
+        console.log('[TEST] ✓ Close modal called');
+      } else {
+        console.error('[TEST] SocializeMobile.closeModal not available');
+      }
+    }
+    
+    function setSomeEnergy() {
+      console.log('[TEST] Setting energy to 3...');
+      if (window.SocialManeuvers?.SocialResources) {
+        window.SocialManeuvers.SocialResources.set(0, 'energy', 3);
+        console.log('[TEST] ✓ Energy set to 3');
+        updateDisplay();
+      }
+    }
+    
+    function setNoEnergy() {
+      console.log('[TEST] Setting energy to 0...');
+      if (window.SocialManeuvers?.SocialResources) {
+        window.SocialManeuvers.SocialResources.set(0, 'energy', 0);
+        console.log('[TEST] ✓ Energy set to 0');
+        updateDisplay();
+      }
+    }
+    
+    function updateDisplay() {
+      const phase = window.game?.phase || '-';
+      const energy = window.SocialManeuvers?.SocialResources?.get(0, 'energy') || 0;
+      
+      document.getElementById('phaseDisplay').textContent = phase;
+      document.getElementById('energyDisplay').textContent = energy;
+    }
+    
+    // Auto-setup on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[TEST] Page loaded, ready for testing');
+      console.log('[TEST] Click "Setup Game State" to begin');
+    });
+    
+    // Update display periodically
+    setInterval(updateDisplay, 1000);
+  </script>
+</body>
+</html>

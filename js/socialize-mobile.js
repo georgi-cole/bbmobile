@@ -432,8 +432,8 @@
     populateActionMenu();
 
     // Attach event listeners
-    $('.modal-close-btn')?.addEventListener('click', closeSocializeModal);
-    $('.socialize-modal-backdrop')?.addEventListener('click', closeSocializeModal);
+    $('.modal-close-btn')?.addEventListener('click', () => closeSocializeModal());
+    $('.socialize-modal-backdrop')?.addEventListener('click', () => closeSocializeModal());
     $('#executeActionBtn')?.addEventListener('click', executeAction);
 
     // Animation
