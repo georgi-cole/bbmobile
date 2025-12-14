@@ -1029,55 +1029,46 @@
     // Clear resolving flag before async operations
     g.__vetoResolving = false;
 
-    // Show reveal (condensed if fast-forward, full otherwise)
-    if (ffActive && g.__humanPlayedVeto) {
-      // Condensed reveal for fast-forward
-      console.info('[veto] Fast-forward condensed reveal: Winner', safeName(global.game.vetoHolder));
-      if (window.TvStatus && window.TvStatus.set) {
-        window.TvStatus.set('POV Winner: ' + safeName(global.game.vetoHolder), 'veto');
-      }
-      setTimeout(function(){
-        handlePostVetoReveal();
-      }, 600);
-    } else {
-      // Full reveal sequence - use new leaderboard renderer if available
-      if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
-        try{
-          // Normalize scores to plain object for renderer
-          var scoresObj = {};
-          g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
-          
-          // Render top-3 leaderboard with auto-dismiss and FFWD support
-          console.info('[veto] Rendering top-3 competition leaderboard');
-          window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
-            maxResults: 3, 
-            autoDismissMs: 5000 
-          });
-          
-          // Continue to ceremony after auto-dismiss (5s + buffer)
-          setTimeout(function(){
-            handlePostVetoReveal();
-          }, 5200); // Buffer to account for auto-dismiss
-        }catch(e){
-          console.warn('[veto] VetoResultsUI error, using fallback reveal', e);
-          // Fallback to legacy reveal
-          showVetoRevealSequence(top3).then(function(){
-            handlePostVetoReveal();
-          }).catch(function(err){
-            console.warn('[veto] fallback reveal error, proceeding', err);
-            handlePostVetoReveal();
-          });
-        }
-      } else {
-        // Fallback: Use legacy tri-slot reveal if new renderer not available
-        console.info('[veto] VetoResultsUI not available, using legacy reveal');
+    // Always show full reveal - skip/FFWD should jump to results, not bypass them
+    // Use new leaderboard renderer if available
+    if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
+      try{
+        // Normalize scores to plain object for renderer
+        var scoresObj = {};
+        g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
+        
+        // Render top-3 leaderboard with auto-dismiss and FFWD support
+        // Use shorter duration if fast-forward is active
+        var displayDuration = (ffActive && g.__humanPlayedVeto) ? 2500 : 5000;
+        console.info('[veto] Rendering top-3 competition leaderboard (duration: ' + displayDuration + 'ms)');
+        window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
+          maxResults: 3, 
+          autoDismissMs: displayDuration 
+        });
+        
+        // Continue to ceremony after auto-dismiss (with buffer)
+        setTimeout(function(){
+          handlePostVetoReveal();
+        }, displayDuration + 200); // Buffer to account for auto-dismiss
+      }catch(e){
+        console.warn('[veto] VetoResultsUI error, using fallback reveal', e);
+        // Fallback to legacy reveal
         showVetoRevealSequence(top3).then(function(){
           handlePostVetoReveal();
-        }).catch(function(e){
-          console.warn('[veto] reveal error, proceeding', e);
+        }).catch(function(err){
+          console.warn('[veto] fallback reveal error, proceeding', err);
           handlePostVetoReveal();
         });
       }
+    } else {
+      // Fallback: Use legacy tri-slot reveal if new renderer not available
+      console.info('[veto] VetoResultsUI not available, using legacy reveal');
+      showVetoRevealSequence(top3).then(function(){
+        handlePostVetoReveal();
+      }).catch(function(e){
+        console.warn('[veto] reveal error, proceeding', e);
+        handlePostVetoReveal();
+      });
     }
   }
 

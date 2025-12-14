@@ -41,7 +41,7 @@
           ? `<img src="${player.avatarUrl}" alt="${player.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="avatar-fallback" style="display:none;"></div>`
           : '<div class="avatar-fallback" style="display:flex;"></div>');
 
-    tile.innerHTML = `\n      <div class="comp-rank">${rank}</div>\n      <div class="comp-avatar">${avatarContent}</div>\n      <div class="comp-meta">\n        <div class="comp-name">${player.name}</div>\n        <div class="comp-score">${roundedScore}</div>\n      </div>\n      ${isFirst ? '<div class="comp-badge" aria-hidden="true">👑</div>' : ''}\n    `;
+    tile.innerHTML = `\n      <div class="comp-rank">${rank}</div>\n      <div class="comp-avatar">${avatarContent}</div>\n      <div class="comp-meta">\n        <div class="comp-name">${player.name}</div>\n        <div class="comp-score">${roundedScore}</div>\n      </div>\n      ${isFirst ? '<div class="comp-badge" aria-hidden="true">🛡️</div>' : ''}\n    `;
     return tile;
   }
 
@@ -131,7 +131,8 @@
   }
 
   /**
-   * Render split-card sequence: winner card, then runners-up card
+   * Render split-card sequence: winner card, then runner-up card (2nd place only)
+   * On very small viewports, show only 1st and 2nd place for space optimization
    * Total display time: ~5s (2.5s + 2.5s + buffers)
    */
   function renderSplitCardSequence(top, ffwdSelectors, tvContainer){
@@ -146,13 +147,13 @@
     // Store timeout reference for cleanup
     var transitionTimeout = null;
     
-    // Phase 2: Runners-up card (shown after winner card dismisses)
+    // Phase 2: Runner-up card (2nd place only for mobile space optimization)
     transitionTimeout = setTimeout(function(){
       if(winnerCard && winnerCard.parentNode){
         // Winner card still visible, remove it first
         removePanel(winnerCard);
       }
-      var runnersUp = top.slice(1); // Get 2nd and 3rd place
+      var runnersUp = top.slice(1, 2); // Get only 2nd place (not 3rd)
       var runnersCard = renderSingleCard(runnersUp, ffwdSelectors, tvContainer, SPLIT_CARD_RUNNERS_DURATION, 'split-card-runners');
       
       // Store reference for potential cleanup
