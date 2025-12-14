@@ -280,12 +280,13 @@
             return;
           }
 
-          // Simulate double-click
+          // Simulate double-click (coordinates relative to element center)
+          const rect = tile.getBoundingClientRect();
           const event = new MouseEvent('dblclick', {
             bubbles: true,
             cancelable: true,
-            clientX: 100,
-            clientY: 100
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2
           });
           tile.dispatchEvent(event);
         }, 500);
@@ -295,10 +296,11 @@
     // Test 2: Verify single click does NOT emit event
     runner.test('Should NOT emit event on single click', async () => {
       return new Promise((resolve, reject) => {
+        const SINGLE_CLICK_WAIT_MS = 2000; // Wait time to confirm no event is emitted
         const timeout = setTimeout(() => {
           cleanup();
           resolve(); // Success - no event emitted
-        }, 2000);
+        }, SINGLE_CLICK_WAIT_MS);
 
         const handler = (payload) => {
           cleanup();
@@ -330,12 +332,13 @@
             return;
           }
 
-          // Simulate single click (not double)
+          // Simulate single click (not double) - coordinates relative to element center
+          const rect = tile.getBoundingClientRect();
           const event = new MouseEvent('mousedown', {
             bubbles: true,
             cancelable: true,
-            clientX: 100,
-            clientY: 100
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2
           });
           tile.dispatchEvent(event);
         }, 500);
@@ -345,10 +348,11 @@
     // Test 3: Verify ineligible voter skips UI
     runner.test('Should skip voting UI when ineligible', async () => {
       return new Promise((resolve, reject) => {
+        const FAUX_TV_NAVIGATION_TIMEOUT = 2000; // Time to wait for faux-TV navigation
         const timeout = setTimeout(() => {
           cleanup();
           reject(new Error('Timeout: Expected faux-TV navigation within 2 seconds'));
-        }, 2000);
+        }, FAUX_TV_NAVIGATION_TIMEOUT);
 
         let fauxTvCalled = false;
 
