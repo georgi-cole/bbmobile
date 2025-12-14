@@ -587,6 +587,211 @@ The `demo_tv_fit_live_vote.html` demo has been updated to:
 - **Body Class Management**: The `lv-active-livevote` class is automatically added/removed as needed
 - **TV Centering**: The system now calls `centerTVInViewport()` before showing LV2 to ensure proper positioning
 
+## Nomination-Style Vote Casting Overlay
+
+### Overview
+
+The **Nomination-Style Vote Casting Overlay** (v3.0) is a full-screen modal that provides a unified, accessible interface for casting eviction votes. It uses the same visual language as the nominations ceremony, creating a consistent UX across all voting interactions.
+
+This overlay **replaces** the previous dual-UI behavior (LV2 + legacy overlays) for the actual vote-casting step. When enabled, all live vote flows (2-nominee, 3-nominee triple eviction, final 4, etc.) use this single full-screen overlay for human vote casting, while LV2 can still be used for in-TV animations and vote reveals.
+
+### Module: `js/livevote-nomination-ui.js`
+
+Exposes a global API via `window.LiveVoteNominationUI`:
+
+```javascript
+// Show the overlay with 2 nominees
+LiveVoteNominationUI.show({
+  nominees: [
+    { id: 1, name: 'Alice', avatar: 'https://...' },
+    { id: 2, name: 'Bob', avatar: 'https://...' }
+  ],
+  timeoutSecs: 60, // Optional: countdown timer
+  onVote: (selectedId) => {
+    console.log('User voted to evict:', selectedId);
+    // Handle vote submission
+  }
+});
+
+// Show the overlay with 3 nominees (triple eviction)
+LiveVoteNominationUI.show({
+  nominees: [
+    { id: 1, name: 'Alice', avatar: 'https://...' },
+    { id: 2, name: 'Bob', avatar: 'https://...' },
+    { id: 3, name: 'Carol', avatar: 'https://...' }
+  ],
+  timeoutSecs: 60,
+  onVote: (selectedId) => {
+    console.log('User voted to evict:', selectedId);
+  }
+});
+
+// Hide the overlay programmatically
+LiveVoteNominationUI.hide();
+
+// Check if overlay is open
+console.log(LiveVoteNominationUI.isOpen()); // true/false
+```
+
+### Features
+
+**Visual Design:**
+- **Full-Screen Modal**: Dimmed backdrop (85% opacity) with blur effect
+- **Floating Emojis**: Animated emojis float upward in the background (can be disabled via reduced motion)
+- **Compact Card**: Centered glassmorphic card matching nominations ceremony style
+- **Nominee Grid**: 2-up or 3-up responsive grid with avatar, name, and keyboard shortcut hints
+- **Countdown Timer**: Optional timer display showing time remaining to vote
+- **Primary Button**: "Evict" button positioned like the "Nominate" button in nominations flow
+- **Cancel Button**: Secondary button to close without voting
+
+**Interaction:**
+- **Click to Select**: Click/tap any nominee card to select them
+- **Keyboard Shortcuts**: Press `1`, `2`, or `3` to quickly select nominees
+- **Enter/Space**: Press Enter or Space on a focused nominee card to select
+- **ESC to Close**: Press Escape to close the modal without voting
+- **Focus Trap**: Focus is trapped within the modal for accessibility
+
+**Accessibility:**
+- **ARIA Dialog**: Proper `role="dialog"` and `aria-modal="true"`
+- **ARIA Labels**: All interactive elements have descriptive ARIA labels
+- **Focus Management**: Focus moves to first nominee on open, trapped within modal
+- **Keyboard Navigation**: Full keyboard navigation support
+- **Screen Reader Support**: Selection state announced to screen readers
+- **High Contrast**: Works with high-contrast mode
+- **Reduced Motion**: Disables animations when `prefers-reduced-motion` is set
+
+**Mobile Optimizations:**
+- **Responsive Grid**: Stacks vertically on mobile for easier tapping
+- **Large Tap Targets**: All buttons meet 48px minimum height for accessibility
+- **Touch-Friendly**: Proper spacing and sizing for touch interactions
+- **Full-Width Buttons**: Action buttons span full width on mobile
+
+### CSS Module: `css/livevote-nomination.css`
+
+The styling matches the nominations ceremony visual language:
+- Glassmorphic card with gradient background
+- Floating emoji animations with upward drift and fade
+- Nominee cards with hover/focus states
+- Selected state with red accent and glow
+- Countdown timer with warning state (red pulse when <10 seconds)
+- Responsive breakpoints for mobile optimization
+- Reduced motion fallbacks
+- Dark theme support
+
+### Integration in `js/eviction.js`
+
+The nomination-style overlay is automatically used in `renderLiveVotePanel()` when:
+1. Human player is an eligible voter
+2. Human player has not voted yet
+3. `LiveVoteNominationUI` module is loaded
+4. `game.cfg.modernLiveVoteUI` is not explicitly set to `false`
+
+```javascript
+// In renderLiveVotePanel()
+if (humanIsVoter && !hasVoted && global.LiveVoteNominationUI && g.cfg?.modernLiveVoteUI !== false) {
+  const nominees = g.eviction.nominees.map(id => ({
+    id: id,
+    name: global.safeName?.(id) || 'Unknown',
+    avatar: getAvatarUrl(id)
+  }));
+  
+  global.LiveVoteNominationUI.show({
+    nominees: nominees,
+    timeoutSecs: g.cfg?.tVote || null,
+    onVote: (selectedId) => {
+      lockHumanVote(selectedId);
+      // LV2 handles vote animations
+    }
+  });
+}
+```
+
+### Cleanup Integration
+
+The overlay is automatically cleaned up in `js/livevote-helpers.js`:
+
+```javascript
+// In closeAllVoteUI()
+try {
+  if (global.LiveVoteNominationUI?.isOpen?.()) {
+    global.LiveVoteNominationUI.hide();
+  }
+} catch (e) {
+  console.warn('[livevote-helpers] Error hiding Nomination UI:', e);
+}
+
+// Also removes .livevote-nom-overlay from DOM
+```
+
+### How to Opt Out
+
+To disable the nomination-style overlay and use legacy vote UI:
+
+```javascript
+// Disable via config
+window.game.cfg.modernLiveVoteUI = false;
+```
+
+When disabled, the system falls back to the legacy LiveVoteOverlay or below-TV panel UI.
+
+### Demo
+
+The `demo_tv_fit_live_vote.html` file demonstrates both the LV2 in-TV animations and the nomination-style overlay:
+
+```html
+<!-- Include CSS -->
+<link rel="stylesheet" href="css/livevote-nomination.css">
+
+<!-- Include JS -->
+<script src="js/livevote-nomination-ui.js"></script>
+
+<!-- Demo buttons -->
+<button onclick="showNominationOverlay(2)">Show 2-Nominee Overlay</button>
+<button onclick="showNominationOverlay(3)">Show 3-Nominee Overlay</button>
+```
+
+### Testing Checklist
+
+**Functionality:**
+- [ ] Overlay appears full-screen with dimmed backdrop
+- [ ] Emojis float upward in background
+- [ ] Nominee cards display correctly (2 and 3 nominee layouts)
+- [ ] Clicking a nominee selects it (red border + glow)
+- [ ] Keyboard shortcuts (1/2/3) select nominees
+- [ ] Enter/Space on focused card selects nominee
+- [ ] Evict button is disabled until selection
+- [ ] Evict button submits vote and closes overlay
+- [ ] Cancel button closes overlay without voting
+- [ ] ESC key closes overlay without voting
+- [ ] Countdown timer works (if enabled)
+- [ ] Timer turns red and pulses when <10 seconds
+- [ ] Overlay auto-closes on timeout
+
+**Accessibility:**
+- [ ] Focus trapped within modal
+- [ ] Tab/Shift+Tab cycles through interactive elements
+- [ ] ARIA labels present and descriptive
+- [ ] Screen reader announces selection state
+- [ ] High contrast mode works
+- [ ] Reduced motion disables animations
+
+**Mobile:**
+- [ ] Cards stack vertically on mobile
+- [ ] Buttons are full-width on mobile
+- [ ] All tap targets ≥48px height
+- [ ] Overlay fits within viewport (no cutoff)
+- [ ] Body scroll locked while overlay open
+- [ ] Body scroll restored after close
+
+**Integration:**
+- [ ] Called automatically from renderLiveVotePanel()
+- [ ] Works with 2 nominees
+- [ ] Works with 3 nominees (triple eviction)
+- [ ] Vote callback triggers correctly
+- [ ] closeAllVoteUI() closes overlay
+- [ ] LV2 animations work after vote cast
+- [ ] No UI duplication or conflicts
+
 ## Conclusion
 
-The Modern Live Vote UI (lv2) delivers a polished, cinematic experience for the eviction phase while maintaining full backward compatibility, accessibility, and graceful degradation. With LV2 enforcement, it now serves as the single source of truth for voting UX, eliminating legacy UI leakage and providing a consistent, high-quality experience across all eviction flows. The system gracefully falls back to legacy behavior when LV2 is unavailable, ensuring no users are left without a working vote interface.
+The Modern Live Vote UI (lv2) delivers a polished, cinematic experience for the eviction phase while maintaining full backward compatibility, accessibility, and graceful degradation. With the addition of the Nomination-Style Vote Casting Overlay (v3.0), the system now provides a unified, accessible interface for casting votes that matches the visual language of the nominations ceremony. LV2 serves as the in-TV animation engine, while the nomination overlay handles the actual vote-casting interaction. The system gracefully falls back to legacy behavior when modern features are unavailable, ensuring no users are left without a working vote interface.

@@ -224,12 +224,22 @@
     } catch (e) {
       console.warn('[livevote-helpers] Error hiding Vote Overlay via API:', e);
     }
+    
+    try {
+      if (global.LiveVoteNominationUI?.isOpen?.()) {
+        global.LiveVoteNominationUI.hide();
+        console.debug('[livevote-helpers] Nomination UI hidden via API');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error hiding Nomination UI via API:', e);
+    }
 
     // Remove all known overlay types (belt-and-suspenders cleanup)
     const overlaySelectors = [
       '.lv-root',              // Live vote modal root
       '.lv-choice-card',       // Live vote choice card (legacy)
       '.lv-overlay',           // Live vote overlay
+      '.livevote-nom-overlay', // Live vote nomination overlay
       '.carousel-picker-overlay', // POV carousel picker
       '.fullscreen-pov-selector',  // POV fullscreen selector
       '.eviction-manager-root' // EvictionManager UI
