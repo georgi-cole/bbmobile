@@ -60,7 +60,7 @@
   100% {
     bottom: calc(100% + 50px);
     opacity: 0;
-    transform: translateX(calc((var(--emoji-drift, 0) * 50px))) rotate(360deg) scale(0.8);
+    transform: translateX(calc(var(--emoji-drift, 0) * 50px)) rotate(360deg) scale(0.8);
   }
 }
 

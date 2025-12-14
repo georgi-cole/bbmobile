@@ -32,15 +32,14 @@
    * @returns {string} Avatar URL
    */
   function getAvatarUrl(playerId) {
-    if (global.resolveAvatar) {
-      const player = global.getP?.(playerId);
-      if (player) {
-        return global.resolveAvatar(player) || getDicebearUrl(player.name);
-      }
-    }
     const player = global.getP?.(playerId);
-    if (player?.avatar) return player.avatar;
-    return getDicebearUrl(global.safeName?.(playerId) || 'player');
+    if (!player) return getDicebearUrl(global.safeName?.(playerId) || 'player');
+    
+    if (global.resolveAvatar) {
+      return global.resolveAvatar(player) || getDicebearUrl(player.name);
+    }
+    
+    return player.avatar || getDicebearUrl(player.name);
   }
 
   /**
@@ -105,10 +104,9 @@
    * Create the nominee card element
    * @param {Object} nominee - Nominee data { id, name, avatar }
    * @param {number} index - Nominee index (for keyboard shortcuts)
-   * @param {number} _totalCount - Total number of nominees (unused but kept for API consistency)
    * @returns {HTMLElement} Nominee card element
    */
-  function createNomineeCard(nominee, index, _totalCount) {
+  function createNomineeCard(nominee, index) {
     const card = document.createElement('div');
     card.className = 'lvnom-nominee-card';
     card.dataset.nomineeId = nominee.id;
@@ -381,7 +379,7 @@
     grid.className = `lvnom-grid lvnom-grid-${state.nominees.length}`;
     
     state.nominees.forEach((nominee, index) => {
-      const card = createNomineeCard(nominee, index, state.nominees.length);
+      const card = createNomineeCard(nominee, index);
       grid.appendChild(card);
     });
     
