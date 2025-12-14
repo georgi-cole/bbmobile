@@ -7,7 +7,8 @@
 .lv-overlay {
   position: fixed;
   inset: 0;
-  background: linear-gradient(135deg, rgba(10, 15, 22, 0.97), rgba(20, 35, 55, 0.98));
+  /* COMPACT MODE: Darker background with increased transparency (lower opacity) */
+  background: linear-gradient(135deg, rgba(5, 10, 18, 0.85), rgba(15, 25, 40, 0.88));
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
@@ -27,9 +28,9 @@
 
 .lv-overlay__header {
   text-align: center;
-  padding: 8px 16px 6px; /* Further reduced for compact layout */
+  padding: 4px 16px 2px; /* COMPACT MODE: Minimal padding for tighter layout */
   color: #ffd96b;
-  font-size: clamp(1rem, 3.5vw, 1.3rem); /* Smaller for compact layout */
+  font-size: clamp(0.95rem, 3.2vw, 1.2rem); /* COMPACT MODE: Smaller for tighter layout */
   font-weight: 700;
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
@@ -47,7 +48,7 @@
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
   scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
-  padding: 8px 16px; /* Further reduced for compact layout */
+  padding: 4px 16px; /* COMPACT MODE: Minimal padding for tighter layout */
   min-height: 0; /* Critical: Allow flex child to shrink below content size */
   
   /* Hide scrollbars visually while keeping functionality */
@@ -64,7 +65,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 16px; /* COMPACT MODE: Tighter gap between nominees */
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 60px; /* Space for arrows */
 }
@@ -75,7 +76,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px; /* COMPACT MODE: Tighter gap between avatar and name */
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.4;
   transform: scale(0.75);
@@ -96,14 +97,14 @@
 
 .lv-overlay__avatar-container {
   position: relative;
-  width: clamp(90px, 24vw, 140px); /* Further reduced for compact layout */
-  height: clamp(90px, 24vw, 140px);
+  width: clamp(85px, 22vw, 130px); /* COMPACT MODE: Smaller avatars */
+  height: clamp(85px, 22vw, 130px);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lv-overlay__nominee.center .lv-overlay__avatar-container {
-  width: clamp(120px, 30vw, 180px); /* Further reduced for compact layout */
-  height: clamp(120px, 30vw, 180px);
+  width: clamp(110px, 28vw, 160px); /* COMPACT MODE: Smaller center avatar */
+  height: clamp(110px, 28vw, 160px);
 }
 
 .lv-overlay__avatar {
@@ -190,9 +191,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px; /* Tight spacing between elements */
-  padding: 2px 16px 12px; /* Minimal top padding, bottom for safe area */
-  margin-top: 8px; /* 8-12px gap under avatars as per requirements */
+  gap: 4px; /* COMPACT MODE: Minimal spacing between elements */
+  padding: 0 16px 10px; /* COMPACT MODE: Minimal padding */
+  margin-top: 10px; /* COMPACT MODE: 8-12px gap under avatars as per requirements */
   flex-shrink: 0;
   animation: fadeIn 0.3s ease-out;
 }
@@ -212,8 +213,8 @@
   background: linear-gradient(135deg, #ff6b6b, #d63031);
   border: none;
   border-radius: 20px; /* Pill shape for compact look */
-  padding: 10px 32px; /* Balanced padding for 44px min touch target */
-  font-size: clamp(14px, 3.6vw, 16px); /* Clear readable font */
+  padding: 9px 28px; /* COMPACT MODE: Slightly reduced padding while maintaining 44px touch target */
+  font-size: clamp(14px, 3.4vw, 15px); /* COMPACT MODE: Slightly smaller but still readable */
   font-weight: 700;
   color: #ffffff;
   cursor: pointer;
@@ -225,8 +226,8 @@
   /* Maintain accessible 44x44 touch target */
   min-height: 44px;
   width: auto;
-  min-width: 140px;
-  max-width: 200px;
+  min-width: 130px; /* COMPACT MODE: Slightly smaller min-width */
+  max-width: 180px; /* COMPACT MODE: Slightly smaller max-width */
 }
 
 .lv-overlay__evict-btn:hover:not(:disabled):not(.submitting):not(.submitted) {
@@ -316,11 +317,11 @@
 
 /* Status message area - now inside confirm container, close to avatar */
 .lv-overlay__status {
-  padding: 2px 12px;
+  padding: 1px 10px;
   text-align: center;
-  font-size: clamp(0.75rem, 2vw, 0.85rem); /* Compact font size */
+  font-size: clamp(0.7rem, 1.8vw, 0.8rem); /* COMPACT MODE: Smaller font */
   color: #8fb3d3;
-  min-height: 20px; /* Minimal height */
+  min-height: 18px; /* COMPACT MODE: Minimal height */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,15 +343,16 @@
 /* Mobile portrait optimizations */
 @media (max-width: 767px) and (orientation: portrait) {
   .lv-overlay__header {
-    padding: 6px 12px 4px; /* Further reduced for mobile portrait */
+    padding: 3px 12px 2px; /* COMPACT MODE: Minimal padding for mobile */
   }
   
   .lv-overlay__carousel {
-    padding: 6px 12px; /* Further reduced for mobile portrait */
+    padding: 3px 12px; /* COMPACT MODE: Minimal padding for mobile */
   }
   
   .lv-overlay__track {
     padding: 0 48px; /* Tighter spacing for arrows */
+    gap: 12px; /* COMPACT MODE: Tighter gap on mobile */
   }
   
   .lv-overlay__arrow {
@@ -370,7 +372,7 @@
   /* Ensure confirmation container stays visible and close to avatar */
   .lv-overlay__confirm-container {
     margin-top: 8px; /* 8-12px gap as per requirements */
-    padding-bottom: 16px; /* Safe area padding for mobile */
+    padding-bottom: 12px; /* COMPACT MODE: Reduced bottom padding for mobile */
   }
 }
 
@@ -385,49 +387,49 @@
 /* Landscape mobile (rotate to landscape on phone) */
 @media (max-width: 896px) and (orientation: landscape) {
   .lv-overlay__header {
-    padding: 4px 16px 2px; /* Very compact for landscape */
-    font-size: 0.95rem;
+    padding: 2px 16px 1px; /* COMPACT MODE: Minimal for landscape */
+    font-size: 0.9rem;
   }
   
   .lv-overlay__carousel {
-    padding: 4px 16px; /* Very compact for landscape */
+    padding: 2px 16px; /* COMPACT MODE: Minimal for landscape */
   }
   
   .lv-overlay__avatar-container {
-    width: clamp(80px, 20vw, 110px); /* Smaller for landscape */
-    height: clamp(80px, 20vw, 110px);
+    width: clamp(75px, 18vw, 100px); /* COMPACT MODE: Smaller for landscape */
+    height: clamp(75px, 18vw, 100px);
   }
   
   .lv-overlay__nominee.center .lv-overlay__avatar-container {
-    width: clamp(100px, 24vw, 130px); /* Smaller for landscape */
-    height: clamp(100px, 24vw, 130px);
+    width: clamp(95px, 22vw, 120px); /* COMPACT MODE: Smaller for landscape */
+    height: clamp(95px, 22vw, 120px);
   }
   
   .lv-overlay__confirm-container {
     margin-top: 6px;
-    padding-bottom: 12px;
+    padding-bottom: 8px; /* COMPACT MODE: Minimal bottom padding */
   }
 }
 
 /* Very narrow screens (iPhone SE, etc.) */
 @media (max-width: 390px) {
   .lv-overlay__header {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   
   .lv-overlay__track {
-    gap: 16px;
+    gap: 12px; /* COMPACT MODE: Tighter gap */
     padding: 0 40px;
   }
   
   .lv-overlay__avatar-container {
-    width: 100px;
-    height: 100px;
+    width: 90px; /* COMPACT MODE: Smaller avatars */
+    height: 90px;
   }
   
   .lv-overlay__nominee.center .lv-overlay__avatar-container {
-    width: 140px;
-    height: 140px;
+    width: 125px; /* COMPACT MODE: Smaller center avatar */
+    height: 125px;
   }
   
   .lv-overlay__arrow {
@@ -437,7 +439,7 @@
   }
   
   .lv-overlay__evict-btn {
-    padding: 12px 32px;
+    padding: 10px 28px; /* COMPACT MODE: Smaller padding */
   }
 }
 
