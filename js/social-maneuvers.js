@@ -3812,6 +3812,8 @@
     recordCompetitionParticipation, // Skip watcher integration
     trackPreVetoNominees, // Pre-veto tracking for save detection
     installPropertyWatchers, // Manual watcher installation if needed
+    // Summary functions
+    generatePhaseSummary, showSummaryPanel,
     // Modifiers/hooks
     calculateTraitModifiers, calculateMemoryModifiers,
     // Constants
