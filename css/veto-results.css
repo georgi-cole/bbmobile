@@ -1,5 +1,7 @@
 /* css/veto-results.css */
-/* Vertical top-3 veto competition results with mobile fit strategy */
+/* Vertical top-3 veto competition results with mobile fit strategy
+ * Centered horizontally and vertically within faux TV UI
+ * Mobile optimization: Shows only 1st and 2nd place on very small viewports */
 
 /* Main container */
 .veto-comp-results.comp-results {
@@ -271,7 +273,7 @@
   display: none;
 }
 
-/* Add subtitle to runners-up card */
+/* Add subtitle to runner-up card (2nd place only on mobile) */
 .veto-comp-results.split-card-runners .comp-results-header h3::after {
-  content: ' — Runners-Up';
+  content: ' — Runner-Up';
 }
