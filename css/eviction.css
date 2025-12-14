@@ -1,0 +1,416 @@
+/* =========================================================================
+   Eviction UI Styles - New ground-up voting flow
+   Double-tap/double-click interaction with glow effects
+   ========================================================================= */
+
+/* Container for eviction voting UI */
+.eviction-ui-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9000;
+  background: linear-gradient(135deg, rgba(10, 15, 30, 0.97), rgba(20, 25, 40, 0.97));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  animation: evictionFadeIn 0.4s ease-out;
+}
+
+@keyframes evictionFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Instruction card at the top */
+.eviction-instruction-card {
+  background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+  border: 2px solid rgba(120, 180, 240, 0.5);
+  border-radius: 16px;
+  padding: 24px 32px;
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+  margin-bottom: 32px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  animation: evictionCardSlide 0.5s ease-out;
+}
+
+@keyframes evictionCardSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.eviction-instruction-card h3 {
+  color: #ffd96b;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
+}
+
+.eviction-instruction-text {
+  color: #e8f4ff;
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.eviction-instruction-hint {
+  color: rgba(232, 244, 255, 0.6);
+  font-size: 0.9rem;
+  font-weight: 400;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Confirmed state */
+.eviction-instruction-card.confirmed {
+  border-color: rgba(124, 255, 173, 0.7);
+  background: linear-gradient(135deg, #1c3e2b, #0e281a);
+}
+
+.eviction-instruction-text.confirmed-text {
+  color: #7cffad;
+  font-weight: 600;
+}
+
+/* Nominee roster */
+.eviction-nominee-roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  align-items: center;
+  max-width: 900px;
+  width: 100%;
+  animation: evictionRosterFade 0.6s ease-out 0.2s backwards;
+}
+
+@keyframes evictionRosterFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Individual nominee tile */
+.eviction-nominee {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #1a2332, #0f1620);
+  border: 2px solid rgba(255, 107, 107, 0.4);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 160px;
+  max-width: 200px;
+  user-select: none;
+}
+
+/* Glow effect animation */
+.eviction-nominee.glow {
+  animation: evictionGlow 2s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.5), 0 0 40px rgba(255, 107, 107, 0.3);
+}
+
+@keyframes evictionGlow {
+  0%, 100% {
+    border-color: rgba(255, 107, 107, 0.4);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5), 0 0 40px rgba(255, 107, 107, 0.3);
+  }
+  50% {
+    border-color: rgba(255, 107, 107, 0.8);
+    box-shadow: 0 0 30px rgba(255, 107, 107, 0.8), 0 0 60px rgba(255, 107, 107, 0.5);
+  }
+}
+
+/* Hover state */
+.eviction-nominee:hover:not(.disabled) {
+  transform: translateY(-4px) scale(1.05);
+  border-color: rgba(255, 107, 107, 0.7);
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4), 0 0 50px rgba(255, 107, 107, 0.4);
+}
+
+/* Focus state for keyboard navigation */
+.eviction-nominee:focus {
+  outline: none;
+  border-color: rgba(120, 180, 240, 0.9);
+  box-shadow: 0 0 0 4px rgba(120, 180, 240, 0.3), 0 8px 24px rgba(120, 180, 240, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Active/pressed state (during tap) */
+.eviction-nominee:active:not(.disabled) {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 0.1s;
+}
+
+/* Disabled state (after vote cast) */
+.eviction-nominee.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  animation: none;
+  border-color: rgba(100, 100, 100, 0.3);
+  box-shadow: none;
+}
+
+/* Voted state (highlight selected nominee) */
+.eviction-nominee.voted {
+  opacity: 1 !important;
+  border-color: rgba(124, 255, 173, 0.8);
+  background: linear-gradient(145deg, #1a3225, #0f2018);
+  box-shadow: 0 0 30px rgba(124, 255, 173, 0.6), 0 0 60px rgba(124, 255, 173, 0.4);
+  animation: evictionVotedPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes evictionVotedPulse {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(124, 255, 173, 0.6), 0 0 60px rgba(124, 255, 173, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(124, 255, 173, 0.8), 0 0 80px rgba(124, 255, 173, 0.6);
+  }
+}
+
+/* Nominee avatar container */
+.eviction-nominee-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(255, 107, 107, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+  background: #0a0f14;
+}
+
+.eviction-nominee:hover:not(.disabled) .eviction-nominee-avatar {
+  border-color: rgba(255, 107, 107, 0.9);
+  box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
+}
+
+.eviction-nominee.voted .eviction-nominee-avatar {
+  border-color: rgba(124, 255, 173, 0.9);
+}
+
+.eviction-nominee-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Nominee name label */
+.eviction-nominee-name {
+  color: #e8f4ff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.eviction-nominee.voted .eviction-nominee-name {
+  color: #7cffad;
+}
+
+/* Toast notification */
+.eviction-toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+  border: 2px solid rgba(124, 255, 173, 0.7);
+  border-radius: 12px;
+  padding: 16px 24px;
+  color: #7cffad;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  opacity: 0;
+  transition: all 0.3s ease;
+  max-width: 90%;
+  text-align: center;
+}
+
+.eviction-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Waiting state (after vote, before faux-TV) */
+.eviction-waiting {
+  text-align: center;
+  padding: 40px 20px;
+  color: #e8f4ff;
+}
+
+.eviction-waiting h3 {
+  color: #ffd96b;
+  font-size: 1.4rem;
+  margin-bottom: 12px;
+}
+
+.eviction-waiting p {
+  font-size: 1.1rem;
+  color: rgba(232, 244, 255, 0.8);
+}
+
+/* =========================================================================
+   Responsive Adjustments
+   ========================================================================= */
+
+/* Mobile/Portrait - Stack nominees vertically */
+@media (max-width: 768px) {
+  .eviction-ui-container {
+    padding: 16px;
+  }
+
+  .eviction-instruction-card {
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+
+  .eviction-instruction-card h3 {
+    font-size: 1.3rem;
+  }
+
+  .eviction-instruction-text {
+    font-size: 1rem;
+  }
+
+  .eviction-instruction-hint {
+    font-size: 0.85rem;
+  }
+
+  .eviction-nominee-roster {
+    gap: 16px;
+    max-width: 100%;
+  }
+
+  .eviction-nominee {
+    min-width: 140px;
+    max-width: 160px;
+    padding: 16px;
+  }
+
+  .eviction-nominee-avatar {
+    width: 100px;
+    height: 100px;
+  }
+
+  .eviction-nominee-name {
+    font-size: 1rem;
+  }
+
+  .eviction-toast {
+    bottom: 20px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .eviction-instruction-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .eviction-instruction-text {
+    font-size: 0.95rem;
+  }
+
+  .eviction-nominee {
+    min-width: 120px;
+    max-width: 140px;
+    padding: 12px;
+  }
+
+  .eviction-nominee-avatar {
+    width: 80px;
+    height: 80px;
+  }
+
+  .eviction-nominee-name {
+    font-size: 0.95rem;
+  }
+}
+
+/* =========================================================================
+   Accessibility - Reduced Motion
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .eviction-ui-container,
+  .eviction-instruction-card,
+  .eviction-nominee-roster,
+  .eviction-nominee,
+  .eviction-toast {
+    animation: none !important;
+    transition-duration: 0.1s !important;
+  }
+
+  .eviction-nominee.glow {
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+  }
+
+  .eviction-nominee:hover:not(.disabled) {
+    transform: none;
+  }
+}
+
+/* =========================================================================
+   Dark Theme Support (if app has theme switcher)
+   ========================================================================= */
+
+[data-theme="dark"] .eviction-ui-container {
+  background: linear-gradient(135deg, rgba(5, 10, 20, 0.98), rgba(10, 15, 25, 0.98));
+}
+
+[data-theme="dark"] .eviction-instruction-card {
+  background: linear-gradient(135deg, #0d1620, #060d14);
+  border-color: rgba(100, 150, 200, 0.4);
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .eviction-nominee {
+    border-width: 3px;
+  }
+
+  .eviction-instruction-card {
+    border-width: 3px;
+  }
+
+  .eviction-nominee:focus {
+    border-width: 4px;
+    box-shadow: 0 0 0 6px rgba(120, 180, 240, 0.5);
+  }
+}
