@@ -99,12 +99,9 @@
 
     // Clamp vote duration to max 5 seconds (5000ms)
     const g = global.game || {};
-    const cfgVoteMs = Number(g.cfg?.tJurorReturnVoteMs || g.cfg?.tJurorVoteMs || g.cfg?.tJuryReturnVote || 6500);
-    const VOTE_MAX_MS = 5000;
-    const voteDurationMs = Math.min(Math.max(1200, cfgVoteMs), VOTE_MAX_MS);
-    const voteDurationSecs = voteDurationMs / 1000;
+    const voteDurationMs = getClampedVoteDuration(g);
     
-    console.info(`[jury_return_vote] voteDurationMs=${voteDurationMs} (cfg=${cfgVoteMs} clamped to max ${VOTE_MAX_MS}ms)`);
+    console.info(`[jury_return_vote] voteDurationMs=${voteDurationMs}`);
 
     // Store duration in state for reference
     if (g.__returnTwist) {
@@ -112,13 +109,45 @@
     }
 
     // Show panel (avatars + live bars, timer starts)
-    showReturnVotePanel(jurors, voteDurationSecs, voteDurationMs, (state)=>{
+    showReturnVotePanel(jurors, voteDurationMs, (state)=>{
       finalizeAmericaVote(state, jurors);
     });
   }
 
+  /**
+   * Get clamped vote duration from config with fallback chain
+   * Precedence: tJurorReturnVoteMs > tJurorVoteMs > tJuryReturnVote (deprecated, in seconds)
+   * @param {object} g - Game state object
+   * @returns {number} Clamped duration in milliseconds (1200-5000ms)
+   */
+  function getClampedVoteDuration(g) {
+    const cfg = g.cfg || {};
+    
+    // Try millisecond-based config keys first (preferred)
+    let cfgValue = cfg.tJurorReturnVoteMs || cfg.tJurorVoteMs;
+    
+    // Fall back to seconds-based config (deprecated, convert to ms)
+    if (!cfgValue && cfg.tJuryReturnVote) {
+      cfgValue = Number(cfg.tJuryReturnVote) * 1000;
+    }
+    
+    // Default to 6500ms if no config found
+    const cfgVoteMs = Number(cfgValue) || 6500;
+    
+    // Clamp to range [1200ms, 5000ms]
+    const VOTE_MIN_MS = 1200;
+    const VOTE_MAX_MS = 5000;
+    const clamped = Math.min(Math.max(VOTE_MIN_MS, cfgVoteMs), VOTE_MAX_MS);
+    
+    if (clamped !== cfgVoteMs) {
+      console.info(`[jury_return_vote] duration clamped: ${cfgVoteMs}ms → ${clamped}ms`);
+    }
+    
+    return clamped;
+  }
+
   // Jury panel with avatars and live percentages - COMPACT & CONSISTENT
-  function showReturnVotePanel(jurors, voteSecs, voteDurationMs, onDone) {
+  function showReturnVotePanel(jurors, voteDurationMs, onDone) {
     const panel = document.getElementById('panel');
     if (!panel) return;
     panel.innerHTML = '';
@@ -309,6 +338,7 @@
     let updateInterval = null;
     const start = Date.now();
     const endAt = start + voteDurationMs; // Use clamped duration in ms
+    const voteDurationSecs = voteDurationMs / 1000; // Derived from ms for display
     let leaderId = null;
     
     function update() {
@@ -391,6 +421,7 @@
     update(); // Run immediately
     
     // Safety timeout to ensure finalization at max duration
+    const SAFETY_BUFFER_MS = 100; // Buffer to ensure interval clears before timeout
     setTimeout(() => {
       if (running) {
         running = false;
@@ -405,7 +436,7 @@
         console.info(`[jury_return_vote] safety timeout triggered at ${voteDurationMs}ms`);
         if(onDone) onDone(state);
       }
-    }, voteDurationMs + 100); // Add small buffer for safety
+    }, voteDurationMs + SAFETY_BUFFER_MS);
   }
 
   // Flash returning juror, update game state, show card
