@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Compact Vote Overlay Test - Live Voting UI Cleanup</title>
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      padding: 16px;
+      background: rgba(20, 35, 55, 0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(143, 211, 255, 0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 12px;
+      color: #00e0cc;
+      font-size: 1.3rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 224, 204, 0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .test-info ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    .test-info li {
+      margin: 4px 0;
+    }
+    
+    .checklist {
+      background: rgba(255, 215, 0, 0.1);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+    }
+    
+    .checklist h3 {
+      margin: 0 0 8px;
+      color: #ffd96b;
+      font-size: 1rem;
+    }
+    
+    #tv {
+      position: relative;
+      max-width: 900px;
+      margin: 20px auto;
+      height: 600px;
+      background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
+      background-color: #0e1730;
+      border: 2px solid rgba(0,0,0,0.35);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    
+    /* Viewport size indicators */
+    .viewport-info {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #00e0cc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      z-index: 9999999;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-info" id="viewportInfo"></div>
+  
+  <div class="test-controls">
+    <h1>🎯 Compact Vote Overlay Test (Live Voting UI Cleanup)</h1>
+    
+    <button onclick="testTwoNominees()">Test 2 Nominees</button>
+    <button onclick="testThreeNominees()">Test 3 Nominees</button>
+    <button onclick="testFourNominees()">Test 4 Nominees</button>
+    <button onclick="closeOverlay()">Close Overlay</button>
+    
+    <div class="test-info">
+      <strong>✨ What Was Changed:</strong>
+      <ul>
+        <li>✅ <strong>lv2 disabled:</strong> Only LiveVoteOverlay is used (no overlapping layers)</li>
+        <li>✅ <strong>Compact layout:</strong> Reduced padding, margins, and avatar sizes</li>
+        <li>✅ <strong>Evict button placement:</strong> 8-12px directly under avatars</li>
+        <li>✅ <strong>Accessible:</strong> 44x44px min touch target maintained</li>
+        <li>✅ <strong>No scrolling:</strong> CTA should be visible without page scroll on laptop/mobile</li>
+      </ul>
+    </div>
+    
+    <div class="checklist">
+      <h3>📋 Testing Checklist:</h3>
+      <ul>
+        <li>[ ] Header is compact (reduced padding)</li>
+        <li>[ ] Avatars are smaller but still visible</li>
+        <li>[ ] Evict button appears 8-12px below selected avatar</li>
+        <li>[ ] Evict button is 44px height (accessible)</li>
+        <li>[ ] No scrolling required to see Evict button on laptop (≥1024px)</li>
+        <li>[ ] No scrolling required on mobile portrait (375px x 667px)</li>
+        <li>[ ] Mobile landscape works (896px x 414px)</li>
+        <li>[ ] Safe areas respected on notched devices</li>
+        <li>[ ] Selection flow works: select → Evict → close</li>
+        <li>[ ] Only one UI layer visible (no lv2 overlap)</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div id="tv"></div>
+  
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script>
+    // Mock global helpers
+    window.game = { cfg: {} };
+    
+    window.getP = function(id) {
+      return mockPlayers[id];
+    };
+    
+    window.safeName = function(id) {
+      return mockPlayers[id]?.name || 'Unknown';
+    };
+    
+    window.resolveAvatar = function(player) {
+      return player.avatar || getDicebearUrl(player.name);
+    };
+    
+    function getDicebearUrl(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    }
+    
+    // Mock players
+    const mockPlayers = {
+      1: { id: 1, name: 'Ash', avatar: null },
+      2: { id: 2, name: 'Blake', avatar: null },
+      3: { id: 3, name: 'Charlie', avatar: null },
+      4: { id: 4, name: 'Dana', avatar: null },
+      5: { id: 5, name: 'Elena', avatar: null },
+      6: { id: 6, name: 'Frank', avatar: null }
+    };
+    
+    function testTwoNominees() {
+      closeOverlay();
+      setTimeout(() => {
+        window.LiveVoteOverlay.show({
+          nominees: [1, 2],
+          onSubmit: handleVote,
+          allowClose: true,
+          onCancel: () => console.log('Vote cancelled')
+        });
+      }, 100);
+    }
+    
+    function testThreeNominees() {
+      closeOverlay();
+      setTimeout(() => {
+        window.LiveVoteOverlay.show({
+          nominees: [3, 4, 5],
+          onSubmit: handleVote,
+          allowClose: true,
+          onCancel: () => console.log('Vote cancelled')
+        });
+      }, 100);
+    }
+    
+    function testFourNominees() {
+      closeOverlay();
+      setTimeout(() => {
+        window.LiveVoteOverlay.show({
+          nominees: [1, 2, 3, 4],
+          onSubmit: handleVote,
+          allowClose: true,
+          onCancel: () => console.log('Vote cancelled')
+        });
+      }, 100);
+    }
+    
+    function handleVote(selectedId) {
+      console.log('✅ Vote submitted for:', window.safeName(selectedId));
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          console.log('✅ Vote processed successfully');
+          resolve();
+        }, 500);
+      });
+    }
+    
+    function closeOverlay() {
+      if (window.LiveVoteOverlay?.isOpen?.()) {
+        window.LiveVoteOverlay.hide();
+      }
+    }
+    
+    // Update viewport info
+    function updateViewportInfo() {
+      const info = document.getElementById('viewportInfo');
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const orientation = width > height ? 'landscape' : 'portrait';
+      
+      let deviceType = 'Desktop';
+      if (width < 768) deviceType = 'Mobile';
+      else if (width < 1024) deviceType = 'Tablet';
+      
+      info.textContent = `${deviceType} | ${width}x${height} | ${orientation}`;
+    }
+    
+    updateViewportInfo();
+    window.addEventListener('resize', updateViewportInfo);
+    
+    // Auto-test on load
+    setTimeout(() => {
+      console.log('🎬 Auto-starting test with 2 nominees...');
+      testTwoNominees();
+    }, 500);
+  </script>
+</body>
+</html>
