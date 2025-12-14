@@ -419,7 +419,6 @@
 
 .revive-avatar {
   animation: reviveAnimation 1.2s ease-out forwards;
-  animation-fill-mode: forwards;
 }
 
 /* Also apply to parent container if it's the one being animated */

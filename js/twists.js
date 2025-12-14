@@ -425,6 +425,11 @@
     }
   }
 
+  // Constants for juror return UI
+  const JUROR_RETURN_PANEL_SELECTORS = '.jrVotePanel, .jrPanel, .jrModalHost';
+  const MAIN_AVATAR_SELECTORS = '[data-id="{id}"] img, [data-player-id="{id}"] img, .player-avatar[data-id="{id}"]';
+  const REVIVE_ANIMATION_DURATION = 1400; // ms, matches CSS animation
+
   /**
    * Wait for the voting panel to be removed from DOM
    * @param {number} maxWaitMs - Maximum time to wait (default 3000ms)
@@ -437,7 +442,7 @@
     return new Promise((resolve) => {
       const check = () => {
         // Check if panel with jrVotePanel is gone
-        const panel = document.querySelector('.jrVotePanel, .jrPanel, .jrModalHost');
+        const panel = document.querySelector(JUROR_RETURN_PANEL_SELECTORS);
         
         if(!panel){
           console.info('[waitForPanelGone] panel removed');
@@ -506,17 +511,18 @@
     
     // Trigger revive animation on main screen avatar (not panel avatar since panel is gone)
     // Look for the winner's avatar in the main UI (roster/HUD)
-    const mainAvatar = document.querySelector(`[data-id="${winnerId}"] img, [data-player-id="${winnerId}"] img, .player-avatar[data-id="${winnerId}"]`);
+    const avatarSelector = MAIN_AVATAR_SELECTORS.replace(/{id}/g, winnerId);
+    const mainAvatar = document.querySelector(avatarSelector);
     
     if(mainAvatar && typeof global.animateReviveAvatar === 'function'){
       try{
-        await global.animateReviveAvatar(mainAvatar);
+        await global.animateReviveAvatar(mainAvatar, REVIVE_ANIMATION_DURATION);
       }catch(e){
         console.warn('[showJurorReturnResult] Animation failed:', e);
         // Fallback: add class directly
         try{
           mainAvatar.classList.add('revive-avatar');
-          await new Promise(resolve => setTimeout(resolve, 1200));
+          await new Promise(resolve => setTimeout(resolve, REVIVE_ANIMATION_DURATION));
           mainAvatar.classList.remove('revive-avatar');
         }catch(e2){}
       }
