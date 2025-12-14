@@ -242,6 +242,9 @@
     // Announce winner with compact TV card and small modal
     await announceWinner(winner);
 
+    // Small delay before revival
+    await sleep(500);
+
     // Trigger revival animation
     await animateRevival(winner.id);
 
@@ -270,12 +273,19 @@
     // Fallback: DOM manipulation
     overlay.classList.add('hidden');
     overlay.style.display = 'none';
+    overlay.style.visibility = 'hidden';
+    overlay.style.opacity = '0';
 
-    // Also try to hide parent container if it's a modal backdrop
-    const parent = overlay.parentElement;
-    if (parent && parent.classList.contains('juror-overlay-backdrop')) {
-      parent.classList.add('hidden');
-      parent.style.display = 'none';
+    // Also hide mobile backdrop if present
+    const backdrop = document.body.querySelector('div[style*="position: fixed"][style*="rgba(0, 0, 0, 0.85)"]');
+    if (backdrop) {
+      backdrop.style.display = 'none';
+    }
+
+    // Clear panel content to remove visual artifacts
+    const panel = document.getElementById('panel');
+    if (panel && panel.contains(overlay)) {
+      panel.innerHTML = '';
     }
   }
 
@@ -354,12 +364,12 @@
   async function announceWinner(winner) {
     console.info('[JurorReturnController] Announcing winner:', winner.name);
 
-    // Show on TV using TvStatus if available
+    // Show on TV using TvStatus if available (non-blocking, compact)
     if (global.TvStatus && typeof global.TvStatus.set === 'function') {
       global.TvStatus.set(`🎉 ${winner.name} Returns!`, 'success');
     }
 
-    // Show card using showCard if available
+    // Show compact card using showCard (not showBigCard for smaller presentation)
     if (typeof global.showCard === 'function') {
       await global.showCard(
         'America Has Voted! 🗳️',
@@ -368,10 +378,10 @@
         2500,
         true
       );
+    } else {
+      // Fallback: just wait
+      await sleep(2500);
     }
-
-    // Small delay for card to be visible
-    await sleep(2500);
   }
 
   /**
