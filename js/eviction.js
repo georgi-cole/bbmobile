@@ -128,7 +128,7 @@
   }
   global.startLiveVote=startLiveVote;
 
-  function renderLiveVotePanel(){
+  async function renderLiveVotePanel(){
     const g=global.game; const panel=document.querySelector('#panel'); if(!panel) return;
     
     // Clear any stale vote UI and unlock scroll before starting new flow
@@ -147,27 +147,37 @@
       return;
     }
 
-    // COMMIT 1 & 2: Direct voting flow + observer/voter enforcement
+    // LV2 ENFORCEMENT: Check if LV2 is available and enabled
+    // Priority: Always use LV2 when available, fall back to legacy only if LV2 is missing
+    const lv2Available = global.lv2 && typeof global.lv2.init === 'function';
+    const lv2Enabled = g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    
     const you = global.getP?.(g.humanId);
     const voters = eligibleVoters();
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
-    const lv2Eligible = g.eviction.nominees.length === 2 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && global.lv2?.enabled !== false;
+    
+    // Determine if LV2 should be used for this vote scenario
+    const lv2Eligible = lv2Available && lv2Enabled && g.eviction.nominees.length === 2;
+    const lv2TripleEligible = lv2Available && lv2Enabled 
+      && g.eviction.nominees.length === 3 
+      && typeof global.lv2.initTriple === 'function';
+    
+    // Set body class to hide legacy panel when LV2 is active
+    if (lv2Eligible || lv2TripleEligible) {
+      document.body.classList.add('lv-active-livevote');
+      console.info('[eviction] LV2 active - legacy panel hidden via CSS');
+    } else {
+      document.body.classList.remove('lv-active-livevote');
+    }
     
     // Detect if human is HOH and is a potential tie-breaker
-    // This happens when: HOH is human, there are 2 nominees, and HOH is not in the regular voter list
-    // Note: Tie-breaks only occur with 2 nominees (1-on-1 vote scenarios)
-    // With 3+ nominees, ties are resolved by plurality (most votes), not HOH
     const humanIsHOH = g.hohId === g.humanId;
     const humanIsTieBreaker = humanIsHOH && !humanIsVoter && g.eviction.nominees.length === 2;
     
-    // COMMIT 2: If human is NOT a voter (observer), skip all vote UI
-    // EXCEPTION: If human is HOH and potential tie-breaker, show status message
-    // Observers (nominated or HOH without tie-break) only see the diary room sequence
-    if (!humanIsVoter && !humanIsTieBreaker && !lv2Eligible) {
-      console.info('[eviction] Human is observer (nominated or HOH), skipping all vote UI');
+    // FALLBACK: If LV2 is not available, use legacy UI for observers
+    if (!humanIsVoter && !humanIsTieBreaker && !lv2Eligible && !lv2TripleEligible) {
+      console.info('[eviction] Human is observer - using fallback UI (LV2 not available)');
       // Use inline status instead of below-TV message
       if (global.TVInlineStatus?.set) {
         global.TVInlineStatus.set('You are observing this vote.', 'muted');
@@ -177,23 +187,28 @@
       return;
     }
     
-    // If human is HOH tie-breaker, show special status
-    if (humanIsTieBreaker && !lv2Eligible) {
-      console.info('[eviction] Human is HOH tie-breaker, showing status');
+    // Observer/tie-breaker status when LV2 is active
+    if (!humanIsVoter && !humanIsTieBreaker && (lv2Eligible || lv2TripleEligible)) {
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('You are observing this vote.', 'muted');
+      }
+    }
+    
+    if (humanIsTieBreaker && (lv2Eligible || lv2TripleEligible)) {
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('You will break any tie as HOH.', 'info');
+      }
+    }
+    
+    // FALLBACK: If LV2 not available and human is tie-breaker, show legacy status
+    if (humanIsTieBreaker && !lv2Eligible && !lv2TripleEligible) {
+      console.info('[eviction] Human is HOH tie-breaker - using fallback UI');
       if (global.TVInlineStatus?.set) {
         global.TVInlineStatus.set('You will break any tie as HOH.', 'info');
       } else {
         panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny info">You will break any tie as HOH.</div></div>';
       }
       return;
-    }
-    
-    if (!humanIsVoter && !humanIsTieBreaker && lv2Eligible && global.TVInlineStatus?.set) {
-      global.TVInlineStatus.set('You are observing this vote.', 'muted');
-    }
-    
-    if (humanIsTieBreaker && lv2Eligible && global.TVInlineStatus?.set) {
-      global.TVInlineStatus.set('You will break any tie as HOH.', 'info');
     }
     
     // If human is eligible voter and hasn't voted yet, show voting overlay directly
@@ -297,13 +312,15 @@
       .map(id => ({ id, name: global.safeName?.(id) || 'Unknown' }))
       .filter(n => n.id != null);
 
-    // COMMIT 2: Check if we should use triple 3-up UI (only for voters with 3 nominees)
-    const useTriple = humanIsVoter
-      && nominees.length === 3 
-      && g.cfg?.modernLiveVoteUI !== false 
-      && typeof global.lv2?.initTriple === 'function';
-
-    if (useTriple) {
+    // LV2 TRIPLE: Use lv2TripleEligible (calculated above with proper LV2 checks)
+    if (lv2TripleEligible && humanIsVoter) {
+      console.info('[eviction] Using LV2 triple UI for 3-nominee vote');
+      
+      // Ensure TV is centered before showing LV2 UI
+      if (typeof global.centerTVInViewport === 'function') {
+        await global.centerTVInViewport();
+      }
+      
       // Clear any lingering TV overlay content before showing triple UI
       try { 
         if (typeof global.clearTVOverlayContent === 'function') {
@@ -321,14 +338,19 @@
         }
       });
 
-      // Panel will be hidden by initTriple, so we're done
+      // Panel is hidden by body class, LV2 is now active
       return;
     }
 
-    // Check if we should use modern lv2 UI (for any two-nominee eviction, voter or observer)
-    const useLv2 = lv2Eligible;
-
-    if (useLv2) {
+    // LV2 TWO-NOMINEE: Use lv2Eligible (calculated above with proper LV2 checks)
+    if (lv2Eligible) {
+      console.info('[eviction] Using LV2 UI for 2-nominee vote');
+      
+      // Ensure TV is centered before showing LV2 UI
+      if (typeof global.centerTVInViewport === 'function') {
+        await global.centerTVInViewport();
+      }
+      
       // Clear any lingering TV overlay content before showing lv2 UI
       try { 
         if (typeof global.clearTVOverlayContent === 'function') {
@@ -372,14 +394,16 @@
         global.lv2.setTurn?.(false);
       }
 
-      // Panel will be hidden by lv2.init, so we're done
+      // Panel is hidden by body class, LV2 is now active
       return;
     }
 
+    // FALLBACK PATH: Legacy UI (only reached if LV2 is not available)
+    console.warn('[eviction] Using legacy UI - LV2 not available or disabled');
+    
     const box=document.createElement('div'); box.className='minigame-host'; 
-    if (!useLv2) {
-      box.innerHTML='<h3>Live Vote</h3>';
-    }
+    box.innerHTML='<h3>Live Vote</h3>';
+    
     const remain=global.alivePlayers().length;
 
     const info=document.createElement('div'); info.className='tiny';
@@ -396,49 +420,47 @@
       box.appendChild(note);
     }
 
-    // Live tally (handles 2 or >2 automatically) - only show if NOT using lv2
-    if (!useLv2) {
-      if(g.eviction.nominees.length===2){
-        const [A,B]=g.eviction.nominees;
-        const tally=document.createElement('div');
-        tally.innerHTML=`
-          <div class="tiny" style="margin-top:8px;margin-bottom:4px">Live Tally</div>
-          <div style="display:flex; gap:8px; align-items:flex-end">
-            <div class="lvCol">
-              <div class="tiny muted" id="lvNameA">${global.safeName(A)}</div>
-              <div class="lvBarWrap"><div id="lvBarA" class="lvBar"></div></div>
-              <div class="tiny" id="lvCountA">0</div>
-            </div>
-            <div class="lvCol">
-              <div class="tiny muted" id="lvNameB">${global.safeName(B)}</div>
-              <div class="lvBarWrap"><div id="lvBarB" class="lvBar alt"></div></div>
-              <div class="tiny" id="lvCountB">0</div>
-            </div>
-          </div>`;
-        box.appendChild(tally);
-      } else {
-        const hdr=document.createElement('div');
-        hdr.className='tiny'; hdr.style.margin='8px 0 4px';
-        hdr.textContent='Live Tally';
-        box.appendChild(hdr);
-        const ul=document.createElement('ul'); ul.id='lvMultiList'; ul.className='tiny';
-        g.eviction.nominees.forEach(id=>{
-          const li=document.createElement('li'); li.dataset.candId=String(id);
-          li.textContent=`${global.safeName(id)} — 0`;
-          ul.appendChild(li);
-        });
-        box.appendChild(ul);
-      }
-
-      // Voter checklist
-      const ul=document.createElement('ul'); ul.id='liveVoteList'; ul.className='tiny'; ul.style.marginTop='6px';
-      voters.forEach(v=>{
-        const li=document.createElement('li'); li.dataset.voterId=String(v.id);
-        li.textContent=`${v.name} — waiting`;
+    // Live tally (handles 2 or >2 automatically) - legacy fallback only
+    if(g.eviction.nominees.length===2){
+      const [A,B]=g.eviction.nominees;
+      const tally=document.createElement('div');
+      tally.innerHTML=`
+        <div class="tiny" style="margin-top:8px;margin-bottom:4px">Live Tally</div>
+        <div style="display:flex; gap:8px; align-items:flex-end">
+          <div class="lvCol">
+            <div class="tiny muted" id="lvNameA">${global.safeName(A)}</div>
+            <div class="lvBarWrap"><div id="lvBarA" class="lvBar"></div></div>
+            <div class="tiny" id="lvCountA">0</div>
+          </div>
+          <div class="lvCol">
+            <div class="tiny muted" id="lvNameB">${global.safeName(B)}</div>
+            <div class="lvBarWrap"><div id="lvBarB" class="lvBar alt"></div></div>
+            <div class="tiny" id="lvCountB">0</div>
+          </div>
+        </div>`;
+      box.appendChild(tally);
+    } else {
+      const hdr=document.createElement('div');
+      hdr.className='tiny'; hdr.style.margin='8px 0 4px';
+      hdr.textContent='Live Tally';
+      box.appendChild(hdr);
+      const ul=document.createElement('ul'); ul.id='lvMultiList'; ul.className='tiny';
+      g.eviction.nominees.forEach(id=>{
+        const li=document.createElement('li'); li.dataset.candId=String(id);
+        li.textContent=`${global.safeName(id)} — 0`;
         ul.appendChild(li);
       });
       box.appendChild(ul);
     }
+
+    // Voter checklist
+    const ul=document.createElement('ul'); ul.id='liveVoteList'; ul.className='tiny'; ul.style.marginTop='6px';
+    voters.forEach(v=>{
+      const li=document.createElement('li'); li.dataset.voterId=String(v.id);
+      li.textContent=`${v.name} — waiting`;
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
 
     // Human voting UI (2-nom or multi-nom), locked after vote
     const votedName = hasVoted ? global.safeName(g.__human_vote) : null;
