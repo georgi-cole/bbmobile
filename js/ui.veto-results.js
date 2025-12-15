@@ -120,7 +120,7 @@
   /**
    * Check if viewport is very constrained (needs split-card mode)
    * Matches CSS media query: (max-width: 480px) and (max-height: 700px)
-   * Split-card mode: show winner first, then runners-up
+   * Split-card mode: show winner first, then runner-up (2nd place only)
    */
   function shouldUseSplitCardMode(){
     try{
@@ -134,6 +134,7 @@
    * Render split-card sequence: winner card, then runner-up card (2nd place only)
    * On very small viewports, show only 1st and 2nd place for space optimization
    * Total display time: ~5s (2.5s + 2.5s + buffers)
+   * IMPORTANT: Always shows results even when FFWD/Skip pressed
    */
   function renderSplitCardSequence(top, ffwdSelectors, tvContainer){
     if(top.length < 2){
@@ -147,7 +148,7 @@
     // Store timeout reference for cleanup
     var transitionTimeout = null;
     
-    // Phase 2: Runner-up card (2nd place only for mobile space optimization)
+    // Phase 2: Runner-up card (2nd place only)
     transitionTimeout = setTimeout(function(){
       if(winnerCard && winnerCard.parentNode){
         // Winner card still visible, remove it first
@@ -215,7 +216,8 @@
 
   function renderVetoCompResults(scoresMap, participantIds, options){
     options = options || {};
-    var maxResults = typeof options.maxResults === 'number' ? options.maxResults : 3;
+    // Default to 2 results: winner + runner-up only
+    var maxResults = typeof options.maxResults === 'number' ? options.maxResults : 2;
     var autoDismissMs = typeof options.autoDismissMs === 'number' ? options.autoDismissMs : 5000;
     var ffwdSelectors = options.ffwdSelectors || null;
 
@@ -246,7 +248,13 @@
       }); 
     }catch(e){}
 
-    const tvContainer = document.getElementById('tvOverlay') || document.querySelector('#tvOverlay') || document.getElementById('tv') || document.body;
+    // Find the faux-TV container (try multiple selectors for compatibility)
+    const tvContainer = document.querySelector('[data-sm-faux-tv]') || 
+                       document.querySelector('[data-faux-tv]') ||
+                       document.querySelector('.tvViewport') ||
+                       document.getElementById('tvOverlay') || 
+                       document.getElementById('tv') || 
+                       document.body;
 
     // Determine if we need split-card mode for very small viewports
     if(shouldUseSplitCardMode() && top.length >= 2){
