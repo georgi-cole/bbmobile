@@ -47,3 +47,4 @@ test-results/
 playwright/.cache/
 social_phase_16_players.png
 capture_social_16_players.mjs
+nohup.out
