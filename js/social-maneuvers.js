@@ -49,10 +49,11 @@
       const g = global.game; if(!g) return;
       if(!g.__sm_bankEnergy) g.__sm_bankEnergy = new Map();
       
-      // Week 1 seeding: Initialize to default energy (5) for new games
+      // Initialize all players with default energy regardless of week
+      // This ensures AI players and any dynamically added players start with energy
       if(!g.__sm_bankEnergy.has(playerId)) {
         const week = g.week || 1;
-        const initialEnergy = (week === 1) ? RESOURCE_CONFIG.energy.default : 0;
+        const initialEnergy = RESOURCE_CONFIG.energy.default; // Always start with default (5)
         g.__sm_bankEnergy.set(playerId, initialEnergy);
         console.info(`[social-bank] 🏦 Bank initialized for player ${playerId}: ${initialEnergy} (week ${week})`);
       }
