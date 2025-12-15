@@ -3,10 +3,11 @@
  * Geometrically centered within faux TV visible area
  * Mobile optimization: Split-card sequence on very small viewports */
 
-/* Faux-TV container clipping */
+/* Faux-TV container clipping and positioning context */
 .tvViewport[data-sm-faux-tv],
 .tvViewport[data-faux-tv],
-.faux-tv .visible-area {
+.faux-tv .visible-area,
+#tvOverlay {
   overflow: hidden !important;
   position: relative;
 }

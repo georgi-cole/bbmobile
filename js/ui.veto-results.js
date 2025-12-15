@@ -248,7 +248,13 @@
       }); 
     }catch(e){}
 
-    const tvContainer = document.getElementById('tvOverlay') || document.querySelector('#tvOverlay') || document.getElementById('tv') || document.body;
+    // Find the faux-TV container (try multiple selectors for compatibility)
+    const tvContainer = document.querySelector('[data-sm-faux-tv]') || 
+                       document.querySelector('[data-faux-tv]') ||
+                       document.querySelector('.tvViewport') ||
+                       document.getElementById('tvOverlay') || 
+                       document.getElementById('tv') || 
+                       document.body;
 
     // Determine if we need split-card mode for very small viewports
     if(shouldUseSplitCardMode() && top.length >= 2){
