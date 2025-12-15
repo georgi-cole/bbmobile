@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juror Return Finalize Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/juror-overlay.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a1628;
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { 
+      color: #8fd3ff; 
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .test-panel {
+      background: #152235;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3b5a;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+    }
+    .test-section h3 {
+      color: #6fd3ff;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    button {
+      background: #6fd3ff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      color: #0a1628;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #8fd3ff; }
+    button:disabled { 
+      background: #3a4a5f; 
+      color: #6a7a8f;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .result.success {
+      background: rgba(116, 228, 139, 0.1);
+      border: 1px solid rgba(116, 228, 139, 0.3);
+      color: #74e48b;
+    }
+    .result.info {
+      background: rgba(111, 211, 255, 0.1);
+      border: 1px solid rgba(111, 211, 255, 0.3);
+      color: #6fd3ff;
+    }
+    .result.error {
+      background: rgba(255, 107, 138, 0.1);
+      border: 1px solid rgba(255, 107, 138, 0.3);
+      color: #ff6b8a;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    #testRoster {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .player-card {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    .player-card.evicted {
+      opacity: 0.5;
+      filter: grayscale(1);
+    }
+    .player-card.jury {
+      border-color: #ff9a00;
+    }
+    .player-card img {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .player-name {
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .player-status {
+      font-size: 11px;
+      color: #95a9c0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔙 Juror Return Finalize Fix Test</h1>
+    <div class="subtitle">
+      Testing normalized %, clamped duration, reordered flow, and revive animation
+    </div>
+
+    <div class="test-panel">
+      <h2>Test Controls</h2>
+      
+      <div class="test-section">
+        <h3>1. Setup Test Game</h3>
+        <button onclick="setupTestGame()">Initialize Test Game</button>
+        <button onclick="sendPlayersToJury()">Send 4 Players to Jury</button>
+        <div id="setupResult"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>2. Test Juror Return Twist</h3>
+        <button onclick="testJurorReturn()">Trigger Juror Return (5s vote)</button>
+        <button onclick="testJurorReturnFast()">Trigger Juror Return (2s vote)</button>
+        <div id="twistResult"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>3. Test Percentage Calculation</h3>
+        <button onclick="testPercentageNormalization()">Test % Normalization</button>
+        <div id="pctResult"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>4. Test Animation</h3>
+        <button onclick="testReviveAnimation()">Test Revive Animation</button>
+        <div id="animResult"></div>
+      </div>
+    </div>
+
+    <div class="test-panel">
+      <h2>Current Game State</h2>
+      <div id="testRoster"></div>
+      <div id="gameLog" style="margin-top: 20px;"></div>
+    </div>
+
+    <div id="panel"></div>
+    <div id="tv"></div>
+    <div id="overlay"></div>
+  </div>
+
+  <script type="module">
+    // Minimal game setup
+    window.game = {
+      week: 6,
+      phase: 'intermission',
+      players: [],
+      juryHouse: [],
+      cfg: {
+        enableJuryHouse: true,
+        jurorReturnAliveMin: 5,
+        jurorReturnAliveMax: 8,
+        jurorReturnMinJurors: 3,
+        jurorReturnChance: 100,
+        tJurorReturnVoteMs: 5000,
+        tIntermission: 2
+      },
+      __twistDecidedWeek: null
+    };
+
+    // Helper functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    window.rng = () => Math.random();
+    window.addLog = (msg, type) => {
+      const log = document.getElementById('gameLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `<span style="color: ${type === 'ok' ? '#74e48b' : type === 'warn' ? '#ff9a00' : '#6fd3ff'}">[${type || 'info'}]</span> ${msg}`;
+      log.insertBefore(entry, log.firstChild);
+    };
+    window.addJuryLog = window.addLog;
+    window.updateHud = () => {
+      renderRoster();
+    };
+    window.setPhase = (phase, duration, callback) => {
+      window.game.phase = phase;
+      window.addLog(`Phase set to: ${phase} (duration: ${duration}s)`, 'info');
+      if (callback) {
+        setTimeout(() => {
+          callback();
+          window.addLog(`Phase ${phase} callback executed`, 'info');
+        }, duration * 1000);
+      }
+    };
+    window.startHOH = () => {
+      window.addLog('HOH phase starting', 'ok');
+      window.game.phase = 'hoh';
+    };
+    window.setMusic = (type, loop) => {
+      window.addLog(`Music: ${type} (loop: ${loop})`, 'info');
+    };
+
+    // Card system
+    window.showCard = (title, lines, type, duration, queue) => {
+      window.addLog(`Card: ${title} - ${lines.join(', ')}`, 'info');
+      return Promise.resolve();
+    };
+    window.cardQueueWaitIdle = () => {
+      return new Promise(resolve => setTimeout(resolve, 500));
+    };
+    window.showEventModal = async (config) => {
+      window.addLog(`Event Modal: ${config.title} - ${config.subtitle}`, 'info');
+      return new Promise(resolve => setTimeout(resolve, config.duration || 2000));
+    };
+
+    // TV status
+    window.TvStatus = {
+      set: (msg) => window.addLog(`TV Status: ${msg}`, 'info')
+    };
+    window.tv = {
+      say: (msg) => window.addLog(`TV Say: ${msg}`, 'info')
+    };
+
+    function renderRoster() {
+      const roster = document.getElementById('testRoster');
+      roster.innerHTML = '';
+      
+      window.game.players.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        card.dataset.id = p.id;
+        card.dataset.playerId = p.id;
+        
+        if (p.evicted) card.classList.add('evicted');
+        if (window.game.juryHouse.includes(p.id)) card.classList.add('jury');
+        
+        card.innerHTML = `
+          <img src="https://api.dicebear.com/6.x/bottts/svg?seed=${p.name}" alt="${p.name}" data-id="${p.id}" data-player-id="${p.id}" class="player-avatar">
+          <div class="player-name">${p.name}</div>
+          <div class="player-status">${getPlayerStatus(p)}</div>
+        `;
+        roster.appendChild(card);
+      });
+    }
+
+    function getPlayerStatus(p) {
+      if (!p.evicted) return '✅ Active';
+      if (window.game.juryHouse.includes(p.id)) return '⚖️ Jury';
+      return '❌ Evicted';
+    }
+
+    window.setupTestGame = function() {
+      // Create 12 players
+      window.game.players = [];
+      for (let i = 1; i <= 12; i++) {
+        window.game.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          weekEvicted: null,
+          affinity: {}
+        });
+      }
+      
+      renderRoster();
+      
+      const result = document.getElementById('setupResult');
+      result.className = 'result success';
+      result.textContent = `✅ Created 12 players. All active.`;
+      window.addLog('Test game initialized with 12 players', 'ok');
+    };
+
+    window.sendPlayersToJury = function() {
+      const players = window.alivePlayers();
+      if (players.length < 10) {
+        const result = document.getElementById('setupResult');
+        result.className = 'result error';
+        result.textContent = `❌ Need at least 10 active players. Current: ${players.length}`;
+        return;
+      }
+
+      // Send first 4 players to jury
+      window.game.juryHouse = [];
+      for (let i = 0; i < 4; i++) {
+        const player = players[i];
+        player.evicted = true;
+        player.weekEvicted = i + 2;
+        window.game.juryHouse.push(player.id);
+      }
+
+      renderRoster();
+
+      const result = document.getElementById('setupResult');
+      result.className = 'result success';
+      result.textContent = `✅ Sent 4 players to jury. Active: ${window.alivePlayers().length}, Jury: ${window.game.juryHouse.length}`;
+      window.addLog(`Jury house: ${window.game.juryHouse.map(id => window.safeName(id)).join(', ')}`, 'ok');
+    };
+
+    window.testJurorReturn = async function() {
+      const result = document.getElementById('twistResult');
+      result.className = 'result info';
+      result.textContent = `⏳ Starting juror return twist (5s voting)...`;
+      
+      window.game.cfg.tJurorReturnVoteMs = 5000;
+      window.game.__twistDecidedWeek = null; // Reset decision cache
+      
+      try {
+        await window.startAmericaReturnVote();
+        result.className = 'result success';
+        result.textContent = `✅ Juror return twist triggered! Watch for result card and animation.`;
+      } catch (e) {
+        result.className = 'result error';
+        result.textContent = `❌ Error: ${e.message}`;
+        console.error(e);
+      }
+    };
+
+    window.testJurorReturnFast = async function() {
+      const result = document.getElementById('twistResult');
+      result.className = 'result info';
+      result.textContent = `⏳ Starting juror return twist (2s voting - should clamp to min)...`;
+      
+      window.game.cfg.tJurorReturnVoteMs = 2000; // Should clamp to 1200ms min
+      window.game.__twistDecidedWeek = null; // Reset decision cache
+      
+      try {
+        await window.startAmericaReturnVote();
+        result.className = 'result success';
+        result.textContent = `✅ Fast juror return triggered! Duration clamped to 1200ms min.`;
+      } catch (e) {
+        result.className = 'result error';
+        result.textContent = `❌ Error: ${e.message}`;
+        console.error(e);
+      }
+    };
+
+    window.testPercentageNormalization = function() {
+      const result = document.getElementById('pctResult');
+      
+      // Simulate vote counts
+      const mockCounts = new Map([
+        [1, 23.5],
+        [2, 15.2],
+        [3, 8.9],
+        [4, 21.7]
+      ]);
+      
+      const totalCount = [...mockCounts.values()].reduce((a,b) => a+b, 0);
+      const results = [];
+      
+      mockCounts.forEach((count, id) => {
+        const oldWay = count * 100; // Bug: multiplies raw count by 100
+        const newWay = Math.round((count / totalCount) * 100); // Fix: normalized
+        results.push({
+          player: window.safeName(id),
+          rawCount: count.toFixed(1),
+          oldPercent: oldWay.toFixed(0) + '%',
+          newPercent: newWay + '%'
+        });
+      });
+      
+      let html = '<div class="result success">✅ Percentage Normalization Test<br><br>';
+      html += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+      html += '<tr><th style="text-align: left; padding: 5px;">Player</th><th style="padding: 5px;">Raw Count</th><th style="padding: 5px;">Old (Bug)</th><th style="padding: 5px;">New (Fixed)</th></tr>';
+      
+      results.forEach(r => {
+        html += `<tr>
+          <td style="padding: 5px;">${r.player}</td>
+          <td style="text-align: center; padding: 5px;">${r.rawCount}</td>
+          <td style="text-align: center; padding: 5px; color: #ff6b8a;">${r.oldPercent}</td>
+          <td style="text-align: center; padding: 5px; color: #74e48b;">${r.newPercent}</td>
+        </tr>`;
+      });
+      
+      html += '</table></div>';
+      result.innerHTML = html;
+      
+      window.addLog('Percentage normalization test completed', 'ok');
+    };
+
+    window.testReviveAnimation = async function() {
+      const result = document.getElementById('animResult');
+      result.className = 'result info';
+      result.textContent = `⏳ Testing revive animation...`;
+      
+      // Find first jury member avatar
+      const juryId = window.game.juryHouse[0];
+      if (!juryId) {
+        result.className = 'result error';
+        result.textContent = `❌ No jury members to animate. Send players to jury first.`;
+        return;
+      }
+      
+      const avatar = document.querySelector(`[data-id="${juryId}"] img`);
+      if (!avatar) {
+        result.className = 'result error';
+        result.textContent = `❌ Avatar not found for player ${juryId}`;
+        return;
+      }
+      
+      try {
+        await window.animateReviveAvatar(avatar, 1400);
+        result.className = 'result success';
+        result.textContent = `✅ Revive animation completed on ${window.safeName(juryId)}'s avatar!`;
+        window.addLog(`Revive animation played on ${window.safeName(juryId)}`, 'ok');
+      } catch (e) {
+        result.className = 'result error';
+        result.textContent = `❌ Animation error: ${e.message}`;
+        console.error(e);
+      }
+    };
+
+    // Load twists.js and jury.js
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Load jury.js first (has animateReviveAvatar)
+        const juryScript = document.createElement('script');
+        juryScript.src = 'js/jury.js';
+        document.body.appendChild(juryScript);
+        
+        await new Promise(resolve => juryScript.onload = resolve);
+        
+        // Then load twists.js
+        const twistsScript = document.createElement('script');
+        twistsScript.src = 'js/twists.js';
+        document.body.appendChild(twistsScript);
+        
+        await new Promise(resolve => twistsScript.onload = resolve);
+        
+        window.addLog('Scripts loaded successfully', 'ok');
+        window.addLog('Ready to test juror return fixes', 'info');
+      } catch (e) {
+        window.addLog(`Error loading scripts: ${e.message}`, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

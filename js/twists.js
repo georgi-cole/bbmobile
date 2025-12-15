@@ -285,12 +285,16 @@
       }
     }
 
+    // Clamp vote duration to 1200-5000ms range
+    const cfgValue = Number(g.cfg?.tJurorReturnVoteMs || g.cfg?.tJurorVoteMs || 6500);
+    const voteDurationMs = Math.min(Math.max(1200, cfgValue), 5000);
+    
     g.__returnTwist={
       jurors: jurors.slice(),
       counts: new Map(jurors.map(id=>[id,0])),
       weights: new Map(jurors.map(id=>[id, 0.7 + rand()*1.1])),
       started: Date.now(),
-      durationMs: Math.min(Number(g.cfg?.tJurorReturnVoteMs || 6500), 5000),
+      durationMs: voteDurationMs,
       finished:false,
       lastLeader:null,
       _tick:null,
@@ -524,7 +528,9 @@
           mainAvatar.classList.add('revive-avatar');
           await new Promise(resolve => setTimeout(resolve, REVIVE_ANIMATION_DURATION));
           mainAvatar.classList.remove('revive-avatar');
-        }catch(e2){}
+        }catch(e2){
+          console.warn('[showJurorReturnResult] Fallback animation also failed:', e2);
+        }
       }
     } else {
       console.info('[showJurorReturnResult] Main avatar not found or animateReviveAvatar unavailable');
@@ -569,7 +575,10 @@
 
     if(winnerId!=null){
       const w=gp(winnerId);
-      const winnerPercent = (st.counts.get(winnerId) || 0) * 100;
+      // Normalize percentage: compute (winnerRaw / totalCount) * 100
+      const totalCount = [...st.counts.values()].reduce((a,b)=>a+b,0) || 1;
+      const winnerRaw = st.counts.get(winnerId) || 0;
+      const winnerPercent = Math.round((winnerRaw / totalCount) * 100);
       
       if(w){ w.evicted=false; delete w.weekEvicted; }
       if(Array.isArray(g.juryHouse)) g.juryHouse=g.juryHouse.filter(id=>id!==winnerId);
@@ -577,7 +586,9 @@
       try{
         global.addJuryLog?.(`<b>${global.safeName(winnerId)}</b> wins America's Vote and returns!`,'ok');
         global.setMusic?.('victory',true);
-      }catch(e){}
+      }catch(e){
+        console.warn('[finalizeAmericaReturnVote] Error logging or setting music:', e);
+      }
       
       g.__returnFlashId=winnerId;
       setTimeout(()=>{ g.__returnFlashId=null; global.updateHud?.(); },6500);
@@ -588,12 +599,7 @@
         global.PlayerService.setAlivePlayers(g.players);
       }
       
-      // Clean up panel and resume game flow FIRST
-      cleanupReturnPanel();
-      resumeWeekAfterReturn();
-      
-      // THEN schedule result announcement and animation in non-blocking async IIFE
-      // This allows game logic to continue while UI waits for panel removal
+      // Show result announcement and animation BEFORE cleanup/resume to prevent phase overlap
       (async () => {
         try{
           // Show result with animation after panel is removed
@@ -602,12 +608,23 @@
           // Show final card
           global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
           await global.cardQueueWaitIdle?.();
+          
+          // NOW clean up panel and resume game flow after all UI completes
+          cleanupReturnPanel();
+          resumeWeekAfterReturn();
         }catch(e){
           console.error('[finalizeAmericaReturnVote] Error in result announcement:', e);
+          // Still cleanup on error to prevent stuck state
+          cleanupReturnPanel();
+          resumeWeekAfterReturn();
         }
       })();
     } else {
-      try{ global.showCard?.('No Returnee',['Vote produced no clear winner.'],'jury',3200,true); }catch(e){}
+      try{ 
+        global.showCard?.('No Returnee',['Vote produced no clear winner.'],'jury',3200,true); 
+      }catch(e){
+        console.warn('[finalizeAmericaReturnVote] Error showing no returnee card:', e);
+      }
       cleanupReturnPanel();
       resumeWeekAfterReturn();
     }
@@ -764,7 +781,11 @@
     } else {
       // Fallback to legacy handler
       global.addLog?.(`Auto self-eviction (${pct}%): ${victim.name}.`,'warn');
-      try{ global.handleSelfEviction?.(victim.id,'self'); }catch(e){}
+      try{ 
+        global.handleSelfEviction?.(victim.id,'self'); 
+      }catch(e){
+        console.error('[twists] Error in legacy self-eviction handler:', e);
+      }
     }
   }
 
@@ -835,7 +856,11 @@
     } else if(phase!=='return_twist'){
       const g=global.game;
       if(g?.__returnTwist && !g.__returnTwist.finished){
-        try{ finalizeAmericaReturnVote(true); }catch(e){}
+        try{ 
+          finalizeAmericaReturnVote(true); 
+        }catch(e){
+          console.error('[onPhaseChange] Error finalizing return vote:', e);
+        }
       }
     }
   }
