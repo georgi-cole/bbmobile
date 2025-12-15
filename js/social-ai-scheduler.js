@@ -215,7 +215,7 @@
       
       // Build full cost object including energy, influence, and information
       const fullCosts = {
-        energy: costCalc.total,
+        energy: costCalc?.total ?? 0,
         influence: a.costs?.influence ?? 0,
         information: a.costs?.information ?? 0
       };
@@ -273,7 +273,7 @@
 
       // Build full cost object including energy, influence, and information
       const fullCosts = {
-        energy: costCalc.total,
+        energy: costCalc?.total ?? 0,
         influence: action.costs?.influence ?? 0,
         information: action.costs?.information ?? 0
       };

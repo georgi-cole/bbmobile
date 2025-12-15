@@ -158,8 +158,8 @@
             window.SocialManeuvers.SocialResources.init(p.id);
         });
         
-        // Test action: small_talk (costs 1 energy, 0 influence, 0 information)
-        const smallTalkAction = window.SocialManeuvers.SOCIAL_ACTIONS.find(a => a.id === 'small_talk');
+        // Test action: smalltalk (costs 1 energy, 0 influence, 0 information)
+        const smallTalkAction = window.SocialManeuvers.SOCIAL_ACTIONS.find(a => a.id === 'smalltalk');
         const player2 = players[1]; // AI Player 1
         
         const player2Resources = window.SocialManeuvers.SocialResources.getAll(player2.id);
@@ -170,7 +170,7 @@
         });
         
         test(
-            'AI can afford energy-only action (small_talk)',
+            'AI can afford energy-only action (smalltalk)',
             canAffordSmallTalk,
             `Player 2 Resources: ${JSON.stringify(player2Resources)}<br>Small Talk Cost: {energy: 1, influence: 0, information: 0}`
         );
