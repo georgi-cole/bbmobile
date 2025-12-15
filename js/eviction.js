@@ -1084,9 +1084,9 @@
         // 1. Begin result card phase (fade nominees/feed, manage z-index)
         global.lv2?.beginResultCardPhase?.();
         
-        // 2. Show result: prioritize inline card for mobile/narrow, viewport modal for desktop
-        if (global.lv2?.supportsInlineCard?.()) {
-          // Mobile/narrow: Inline card within TV that respects safe areas
+        // 2. Show result: always prioritize inline card within TV for consistency
+        if (global.lv2?.showInlineCard) {
+          // Inline card within TV that respects safe areas (works across all viewports)
           await global.lv2.showInlineCard({
             title: 'Eviction Result',
             body: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
@@ -1094,7 +1094,7 @@
             tone: 'evict'
           });
         } else if (typeof global.EvictionModal?.show === 'function') {
-          // Desktop/wide: Viewport-level modal (escapes TV clipping)
+          // Fallback: Viewport-level modal (if lv2 not available)
           await global.EvictionModal.show({
             title: 'Eviction Result',
             lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
