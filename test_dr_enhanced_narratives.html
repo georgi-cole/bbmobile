@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enhanced DR Narratives Test</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      padding: 20px; 
+      background: #1a1a2e; 
+      color: #eee; 
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #00d4ff; text-shadow: 0 0 10px rgba(0, 212, 255, 0.5); }
+    h2 { color: #ff6b9d; margin-top: 30px; }
+    button { 
+      padding: 12px 24px; 
+      margin: 8px; 
+      font-size: 14px; 
+      cursor: pointer; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .log { 
+      background: #16213e; 
+      padding: 20px; 
+      margin-top: 20px; 
+      max-height: 600px; 
+      overflow-y: auto; 
+      font-family: 'Courier New', monospace; 
+      font-size: 13px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    .log-entry { 
+      padding: 8px 12px; 
+      margin: 4px 0;
+      border-left: 4px solid #444;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .log-entry.success { border-left-color: #4ade80; color: #4ade80; }
+    .log-entry.error { border-left-color: #ef4444; color: #ef4444; }
+    .log-entry.info { border-left-color: #60a5fa; color: #60a5fa; }
+    .log-entry.event { border-left-color: #fbbf24; color: #fbbf24; }
+    .log-entry.dramatic { border-left-color: #ff6b9d; color: #ff6b9d; font-weight: bold; }
+    .log-entry.narrative { border-left-color: #a78bfa; color: #a78bfa; }
+    
+    .dr-entries {
+      background: #0f3460;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    .dr-entry {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px 16px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border-left: 4px solid #00d4ff;
+    }
+    .dr-entry.high { border-left-color: #ff6b9d; background: rgba(255, 107, 157, 0.1); }
+    .dr-entry.dramatic { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+    .dr-entry-text { font-size: 14px; line-height: 1.6; }
+    .dr-entry-meta { 
+      font-size: 11px; 
+      color: #aaa; 
+      margin-top: 6px;
+      font-family: monospace;
+    }
+    
+    .status { 
+      padding: 12px 20px; 
+      margin: 15px 0; 
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      border-left: 4px solid #60a5fa;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Enhanced DR Narratives Test</h1>
+  <p>Testing new relationship-aware diary room logs with alliances, romances, and rivalries.</p>
+  
+  <div class="status">
+    <strong>Status:</strong> <span id="statusText">Ready to test</span>
+  </div>
+
+  <h2>Test Controls</h2>
+  <div class="controls">
+    <button onclick="setupMockGame()">1. Setup Mock Game</button>
+    <button onclick="testBasicInteractions()">2. Test Basic Interactions</button>
+    <button onclick="testAllianceFormation()">3. Test Alliance Formation</button>
+    <button onclick="testRomance()">4. Test Romance Development</button>
+    <button onclick="testRivalry()">5. Test Rivalry/Betrayal</button>
+    <button onclick="testPhaseSummary()">6. Test Phase Summary</button>
+    <button onclick="showDREntries()">7. Show All DR Entries</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+  </div>
+
+  <div class="log" id="log"></div>
+  
+  <div class="dr-entries" id="drEntries">
+    <h3>📖 Diary Room Entries</h3>
+    <div id="drEntriesContent">No entries yet. Run tests to generate DR logs.</div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/dr/diaryTemplates.js"></script>
+  <script src="js/dr/diaryRoomLogger.js"></script>
+  <script src="js/dr/socialSimulator.js"></script>
+
+  <script>
+    let mockGame = null;
+    let mockPlayers = [];
+    let drEntries = [];
+
+    // Logging utilities
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[Test] ${message}`);
+    }
+
+    function updateStatus(text) {
+      document.getElementById('statusText').textContent = text;
+    }
+
+    function clearLogs() {
+      document.getElementById('log').innerHTML = '';
+      log('Logs cleared', 'info');
+    }
+
+    // Setup mock game environment
+    function setupMockGame() {
+      log('Setting up mock game environment...', 'info');
+      
+      // Create mock players
+      mockPlayers = [
+        { id: 0, name: 'You', evicted: false, affinity: {} },
+        { id: 1, name: 'Alex', evicted: false, affinity: {} },
+        { id: 2, name: 'Bailey', evicted: false, affinity: {} },
+        { id: 3, name: 'Casey', evicted: false, affinity: {} },
+        { id: 4, name: 'Drew', evicted: false, affinity: {} },
+        { id: 5, name: 'Ellie', evicted: false, affinity: {} },
+        { id: 6, name: 'Finn', evicted: false, affinity: {} }
+      ];
+
+      // Initialize affinities (bonds)
+      mockPlayers.forEach(p1 => {
+        mockPlayers.forEach(p2 => {
+          if (p1.id !== p2.id) {
+            p1.affinity[p2.id] = 0.2; // Neutral starting point
+          }
+        });
+      });
+
+      // Create mock game object
+      mockGame = {
+        week: 3,
+        phase: 'social_intermission',
+        humanId: 0,
+        me: 0,
+        meId: 0,
+        players: mockPlayers,
+        hohId: 1,
+        nominees: [3, 4],
+        cfg: {
+          humanName: 'You',
+          debugSocialAI: true
+        },
+        drLogs: []
+      };
+
+      // Create simple event bus
+      mockGame.bus = {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        },
+        emit(event, payload) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(h => h(payload));
+          }
+        }
+      };
+
+      window.game = mockGame;
+      window.safeName = (id) => mockPlayers.find(p => p.id === id)?.name || `Player ${id}`;
+      window.getP = (id) => mockPlayers.find(p => p.id === id);
+      window.alivePlayers = () => mockPlayers.filter(p => !p.evicted);
+
+      // Initialize DiaryRoomLogger
+      if (window.DiaryRoomLogger) {
+        try {
+          window.DiaryRoomLogger.init();
+          log('✓ DiaryRoomLogger initialized', 'success');
+        } catch (e) {
+          log('✗ Failed to initialize DiaryRoomLogger: ' + e.message, 'error');
+        }
+      }
+
+      // Capture DR entries
+      mockGame.bus.on('dr:entry', (entry) => {
+        drEntries.push(entry);
+        log(`DR Entry [${entry.severity}]: ${entry.text}`, 'narrative');
+      });
+
+      log('✓ Mock game setup complete', 'success');
+      log(`Players: ${mockPlayers.map(p => p.name).join(', ')}`, 'info');
+      updateStatus('Mock game ready');
+    }
+
+    // Test basic interactions
+    function testBasicInteractions() {
+      if (!mockGame) {
+        setupMockGame();
+      }
+
+      log('Testing basic interactions...', 'info');
+
+      // Simulate some basic actions
+      const actions = [
+        { actor: 1, target: 2, action: 'compliment', bondDelta: 0.05 },
+        { actor: 2, target: 5, action: 'gossip', bondDelta: 0.03 },
+        { actor: 3, target: 4, action: 'comfort', bondDelta: 0.04 },
+        { actor: 5, target: 6, action: 'small_talk', bondDelta: 0.02 }
+      ];
+
+      actions.forEach((action, idx) => {
+        setTimeout(() => {
+          const bondBefore = mockPlayers[action.actor].affinity[action.target];
+          const bondAfter = bondBefore + action.bondDelta;
+          mockPlayers[action.actor].affinity[action.target] = bondAfter;
+
+          mockGame.bus.emit('social.action:result', {
+            actor: { id: action.actor },
+            target: { id: action.target },
+            actionType: action.action,
+            success: true,
+            bondBefore,
+            bondAfter,
+            bondDelta: action.bondDelta,
+            outcome: 'success'
+          });
+
+          log(`${mockPlayers[action.actor].name} → ${action.action} → ${mockPlayers[action.target].name}`, 'event');
+        }, idx * 500);
+      });
+
+      updateStatus('Running basic interaction tests...');
+    }
+
+    // Test alliance formation
+    function testAllianceFormation() {
+      if (!mockGame) {
+        setupMockGame();
+      }
+
+      log('Testing alliance formation...', 'info');
+
+      // Alex and Bailey form an alliance through multiple positive interactions
+      const actor = 1; // Alex
+      const target = 2; // Bailey
+      
+      let currentBond = mockPlayers[actor].affinity[target] || 0.2;
+
+      // Multiple strategize actions that push bond into alliance territory
+      const interactions = [
+        { action: 'strategize', delta: 0.08 },
+        { action: 'confide', delta: 0.07 },
+        { action: 'form_alliance', delta: 0.10 },
+        { action: 'strategize', delta: 0.05 }
+      ];
+
+      interactions.forEach((interaction, idx) => {
+        setTimeout(() => {
+          const bondBefore = currentBond;
+          const bondAfter = bondBefore + interaction.delta;
+          currentBond = bondAfter;
+          mockPlayers[actor].affinity[target] = bondAfter;
+
+          mockGame.bus.emit('social.action:result', {
+            actor: { id: actor },
+            target: { id: target },
+            actionType: interaction.action,
+            success: true,
+            bondBefore,
+            bondAfter,
+            bondDelta: interaction.delta,
+            outcome: 'success'
+          });
+
+          log(`Bond progression: ${bondBefore.toFixed(2)} → ${bondAfter.toFixed(2)}`, 'info');
+        }, idx * 800);
+      });
+
+      updateStatus('Testing alliance formation...');
+    }
+
+    // Test romance development
+    function testRomance() {
+      if (!mockGame) {
+        setupMockGame();
+      }
+
+      log('Testing romance development...', 'info');
+
+      // Casey and Drew develop a romance
+      const actor = 3; // Casey
+      const target = 4; // Drew
+      
+      let currentBond = mockPlayers[actor].affinity[target] || 0.2;
+
+      // Multiple flirty interactions that push bond into romance territory
+      const interactions = [
+        { action: 'flirt', delta: 0.10 },
+        { action: 'compliment', delta: 0.08 },
+        { action: 'confide', delta: 0.09 },
+        { action: 'flirt', delta: 0.12 },
+        { action: 'small_talk', delta: 0.06 }
+      ];
+
+      interactions.forEach((interaction, idx) => {
+        setTimeout(() => {
+          const bondBefore = currentBond;
+          const bondAfter = bondBefore + interaction.delta;
+          currentBond = bondAfter;
+          mockPlayers[actor].affinity[target] = bondAfter;
+
+          mockGame.bus.emit('social.action:result', {
+            actor: { id: actor },
+            target: { id: target },
+            actionType: interaction.action,
+            success: true,
+            bondBefore,
+            bondAfter,
+            bondDelta: interaction.delta,
+            outcome: 'success'
+          });
+
+          log(`Romance progression: ${bondBefore.toFixed(2)} → ${bondAfter.toFixed(2)}`, 'info');
+        }, idx * 800);
+      });
+
+      updateStatus('Testing romance development...');
+    }
+
+    // Test rivalry and betrayal
+    function testRivalry() {
+      if (!mockGame) {
+        setupMockGame();
+      }
+
+      log('Testing rivalry and betrayal...', 'info');
+
+      // Ellie and Finn develop a rivalry
+      const actor = 5; // Ellie
+      const target = 6; // Finn
+      
+      let currentBond = mockPlayers[actor].affinity[target] || 0.2;
+
+      // Start friendly, then betrayal
+      const interactions = [
+        { action: 'strategize', delta: 0.08 },
+        { action: 'backstab', delta: -0.18 },
+        { action: 'spread_rumor', delta: -0.10 },
+        { action: 'insult', delta: -0.12 },
+        { action: 'confront', delta: -0.08 }
+      ];
+
+      interactions.forEach((interaction, idx) => {
+        setTimeout(() => {
+          const bondBefore = currentBond;
+          const bondAfter = bondBefore + interaction.delta;
+          currentBond = bondAfter;
+          mockPlayers[actor].affinity[target] = bondAfter;
+
+          mockGame.bus.emit('social.action:result', {
+            actor: { id: actor },
+            target: { id: target },
+            actionType: interaction.action,
+            success: true,
+            bondBefore,
+            bondAfter,
+            bondDelta: interaction.delta,
+            outcome: interaction.delta < 0 ? 'dramatic' : 'success',
+            severity: Math.abs(interaction.delta) > 0.10 ? 'high' : 'neutral'
+          });
+
+          log(`Rivalry progression: ${bondBefore.toFixed(2)} → ${bondAfter.toFixed(2)}`, 'event');
+        }, idx * 800);
+      });
+
+      updateStatus('Testing rivalry development...');
+    }
+
+    // Test phase summary
+    function testPhaseSummary() {
+      if (!mockGame) {
+        setupMockGame();
+      }
+
+      log('Testing phase summary generation...', 'info');
+
+      // Create mock phase data with various actions and bond shifts
+      const phaseData = {
+        week: 3,
+        actionCount: 15,
+        actions: [
+          { actor: 1, target: 2, action: 'strategize', success: true, bondBefore: 0.35, bondAfter: 0.45 },
+          { actor: 1, target: 2, action: 'form_alliance', success: true, bondBefore: 0.45, bondAfter: 0.52 },
+          { actor: 3, target: 4, action: 'flirt', success: true, bondBefore: 0.50, bondAfter: 0.62 },
+          { actor: 5, target: 6, action: 'backstab', success: true, bondBefore: 0.25, bondAfter: -0.10 },
+          { actor: 5, target: 6, action: 'spread_rumor', success: true, bondBefore: -0.10, bondAfter: -0.25 },
+          { actor: 2, target: 5, action: 'confront', success: true, bondBefore: 0.15, bondAfter: -0.05 }
+        ],
+        bondShifts: [
+          { player1: 1, player2: 2, delta: 0.17, before: 0.35, after: 0.52 },
+          { player1: 3, player2: 4, delta: 0.12, before: 0.50, after: 0.62 },
+          { player1: 5, player2: 6, delta: -0.35, before: 0.25, after: -0.25 }
+        ]
+      };
+
+      mockGame.bus.emit('social.phase:end', phaseData);
+
+      log('✓ Phase summary generated', 'success');
+      updateStatus('Phase summary test complete');
+    }
+
+    // Show all DR entries
+    function showDREntries() {
+      const container = document.getElementById('drEntriesContent');
+      
+      if (drEntries.length === 0) {
+        container.innerHTML = '<p style="color: #888;">No entries yet. Run some tests first.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      drEntries.forEach((entry, idx) => {
+        const div = document.createElement('div');
+        div.className = `dr-entry ${entry.severity}`;
+        
+        const text = document.createElement('div');
+        text.className = 'dr-entry-text';
+        text.textContent = entry.text;
+        
+        const meta = document.createElement('div');
+        meta.className = 'dr-entry-meta';
+        meta.textContent = `#${idx + 1} | ${entry.category} | severity: ${entry.severity} | ${new Date(entry.timestamp).toLocaleTimeString()}`;
+        
+        div.appendChild(text);
+        div.appendChild(meta);
+        container.appendChild(div);
+      });
+
+      log(`Displayed ${drEntries.length} DR entries`, 'success');
+      updateStatus(`${drEntries.length} entries displayed`);
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Enhanced DR Narratives Test loaded', 'success');
+      log('Click "Setup Mock Game" to begin testing', 'info');
+    });
+  </script>
+</body>
+</html>
