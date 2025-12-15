@@ -212,7 +212,16 @@
     const affordable = actions.filter(a => {
       // Check if actor can afford the action (use unified cost calculation)
       const costCalc = SM.computeActionCost?.(a.id, targetIds) || { total: 0 };
-      if (!SM.SocialResources?.canAfford(actorId, { energy: costCalc.total })) return false;
+      
+      // Build full cost object including energy, influence, and information
+      const fullCosts = {
+        energy: costCalc?.total ?? 0,
+        influence: a.costs?.influence ?? 0,
+        information: a.costs?.information ?? 0
+      };
+      
+      // Check affordability for ALL resource types
+      if (!SM.SocialResources?.canAfford(actorId, fullCosts)) return false;
       
       // Multi-target actions only if we have multiple targets
       if (a.multiTarget && targetIds.length < (a.minTargets || 2)) return false;
@@ -262,8 +271,15 @@
         return null;
       }
 
-      // Verify affordability (cost may have changed)
-      if (!SM.SocialResources?.canAfford(actorId, { energy: costCalc.total })) {
+      // Build full cost object including energy, influence, and information
+      const fullCosts = {
+        energy: costCalc?.total ?? 0,
+        influence: action.costs?.influence ?? 0,
+        information: action.costs?.information ?? 0
+      };
+
+      // Verify affordability for ALL resource types (cost may have changed)
+      if (!SM.SocialResources?.canAfford(actorId, fullCosts)) {
         return null;
       }
 

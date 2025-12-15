@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test AI Energy Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; }
+        h2 { color: #666; margin-top: 30px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        .info { color: #666; font-size: 0.9em; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+    <script>
+        // Minimal test setup
+        window.game = {
+            week: 1,
+            humanId: 1,
+            cfg: {
+                enableSocialManeuvers: true
+            }
+        };
+        
+        // Mock alivePlayers
+        window.alivePlayers = () => [
+            { id: 1, name: 'Human' },
+            { id: 2, name: 'AI Player 1' },
+            { id: 3, name: 'AI Player 2' },
+            { id: 4, name: 'AI Player 3' }
+        ];
+        
+        window.getP = (id) => window.alivePlayers().find(p => p.id === id);
+    </script>
+    <script src="js/social-maneuvers.js"></script>
+    <script src="js/social-ai-scheduler.js"></script>
+</head>
+<body>
+    <h1>AI Energy Fix Validation</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        let testCount = 0;
+        let passCount = 0;
+        let failCount = 0;
+        
+        function test(name, condition, details = '') {
+            testCount++;
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            
+            const status = condition ? '✅ PASS' : '❌ FAIL';
+            const statusClass = condition ? 'pass' : 'fail';
+            
+            if (condition) passCount++;
+            else failCount++;
+            
+            section.innerHTML = `
+                <strong class="${statusClass}">${status}</strong>: ${name}
+                ${details ? `<div class="info">${details}</div>` : ''}
+            `;
+            results.appendChild(section);
+            
+            console.log(`[TEST] ${status}: ${name}`, details);
+            return condition;
+        }
+        
+        function log(msg) {
+            console.log(msg);
+        }
+        
+        // ===== TEST 1: Initial Energy for Week 1 Players =====
+        log('\n=== TEST 1: Initial Energy for Week 1 Players ===');
+        const players = window.alivePlayers();
+        
+        // Initialize all players at week 1
+        players.forEach(p => {
+            window.SocialManeuvers.SocialResources.init(p.id);
+        });
+        
+        const week1Results = players.map(p => {
+            const bank = window.SocialManeuvers.SocialEnergyBank.get(p.id);
+            const energy = window.SocialManeuvers.SocialResources.get(p.id, 'energy');
+            return { id: p.id, name: p.name, bank, energy };
+        });
+        
+        let week1Table = '<table><tr><th>Player</th><th>Bank</th><th>Energy</th><th>Status</th></tr>';
+        week1Results.forEach(r => {
+            const ok = r.bank === 5 && r.energy === 5;
+            week1Table += `<tr><td>${r.name}</td><td>${r.bank}</td><td>${r.energy}</td><td>${ok ? '✅' : '❌'}</td></tr>`;
+        });
+        week1Table += '</table>';
+        
+        test(
+            'All players initialized at week 1 get 5 energy',
+            week1Results.every(r => r.bank === 5 && r.energy === 5),
+            week1Table
+        );
+        
+        // ===== TEST 2: Week Rollover Energy Grant =====
+        log('\n=== TEST 2: Week Rollover Energy Grant ===');
+        
+        // Trigger week rollover
+        window.game.week = 2;
+        
+        const week2Results = players.map(p => {
+            const bank = window.SocialManeuvers.SocialEnergyBank.get(p.id);
+            return { id: p.id, name: p.name, bank };
+        });
+        
+        let week2Table = '<table><tr><th>Player</th><th>Bank After Rollover</th><th>Expected</th><th>Status</th></tr>';
+        week2Results.forEach(r => {
+            const expected = 10; // 5 initial + 5 from rollover
+            const ok = r.bank === expected;
+            week2Table += `<tr><td>${r.name}</td><td>${r.bank}</td><td>${expected}</td><td>${ok ? '✅' : '❌'}</td></tr>`;
+        });
+        week2Table += '</table>';
+        
+        test(
+            'All players receive +5 energy on week rollover',
+            week2Results.every(r => r.bank === 10),
+            week2Table
+        );
+        
+        // ===== TEST 3: Late Initialization (Week 2+) =====
+        log('\n=== TEST 3: Late Initialization (Week 2+) ===');
+        
+        // Create a new player and initialize at week 2
+        window.game.week = 2;
+        const latePlayerId = 99;
+        window.SocialManeuvers.SocialResources.init(latePlayerId);
+        
+        const latePlayerBank = window.SocialManeuvers.SocialEnergyBank.get(latePlayerId);
+        const latePlayerEnergy = window.SocialManeuvers.SocialResources.get(latePlayerId, 'energy');
+        
+        test(
+            'Players initialized after week 1 still get default energy (5)',
+            latePlayerBank === 5 && latePlayerEnergy === 5,
+            `Late player (week 2 init): Bank=${latePlayerBank}, Energy=${latePlayerEnergy} (Expected: 5)`
+        );
+        
+        // ===== TEST 4: AI Affordability Check - Energy Only Action =====
+        log('\n=== TEST 4: AI Affordability Check - Energy Only Action ===');
+        
+        // Reset to week 1 for clean test
+        window.game = {
+            week: 1,
+            humanId: 1,
+            cfg: { enableSocialManeuvers: true, aiSocialEnabled: true }
+        };
+        
+        // Re-initialize players
+        players.forEach(p => {
+            window.SocialManeuvers.SocialResources.init(p.id);
+        });
+        
+        // Test action: smalltalk (costs 1 energy, 0 influence, 0 information)
+        const smallTalkAction = window.SocialManeuvers.SOCIAL_ACTIONS.find(a => a.id === 'smalltalk');
+        const player2 = players[1]; // AI Player 1
+        
+        const player2Resources = window.SocialManeuvers.SocialResources.getAll(player2.id);
+        const canAffordSmallTalk = window.SocialManeuvers.SocialResources.canAfford(player2.id, {
+            energy: 1,
+            influence: 0,
+            information: 0
+        });
+        
+        test(
+            'AI can afford energy-only action (smalltalk)',
+            canAffordSmallTalk,
+            `Player 2 Resources: ${JSON.stringify(player2Resources)}<br>Small Talk Cost: {energy: 1, influence: 0, information: 0}`
+        );
+        
+        // ===== TEST 5: AI Affordability Check - Information Required Action =====
+        log('\n=== TEST 5: AI Affordability Check - Information Required Action ===');
+        
+        // Test action: form_alliance (costs 3 energy, 0 influence, 10 information)
+        const formAllianceAction = window.SocialManeuvers.SOCIAL_ACTIONS.find(a => a.id === 'form_alliance');
+        
+        const canAffordFormAlliance = window.SocialManeuvers.SocialResources.canAfford(player2.id, {
+            energy: 3,
+            influence: 0,
+            information: 10
+        });
+        
+        test(
+            'AI correctly identifies unaffordable action (form_alliance requires 10 information)',
+            !canAffordFormAlliance,
+            `Player 2 Resources: ${JSON.stringify(player2Resources)}<br>Form Alliance Cost: {energy: 3, influence: 0, information: 10}<br>Should fail due to insufficient information`
+        );
+        
+        // ===== TEST 6: Grant Information and Retest =====
+        log('\n=== TEST 6: Grant Information and Retest ===');
+        
+        // Grant player 2 enough information
+        window.SocialManeuvers.SocialResources.set(player2.id, 'information', 15);
+        
+        const player2ResourcesAfter = window.SocialManeuvers.SocialResources.getAll(player2.id);
+        const canAffordFormAllianceAfter = window.SocialManeuvers.SocialResources.canAfford(player2.id, {
+            energy: 3,
+            influence: 0,
+            information: 10
+        });
+        
+        test(
+            'AI can afford action after receiving sufficient information',
+            canAffordFormAllianceAfter,
+            `Player 2 Resources After: ${JSON.stringify(player2ResourcesAfter)}<br>Form Alliance Cost: {energy: 3, influence: 0, information: 10}`
+        );
+        
+        // ===== TEST 7: Simulate Week 3+ Initialization =====
+        log('\n=== TEST 7: Simulate Week 3+ Initialization ===');
+        
+        window.game.week = 5;
+        const week5PlayerId = 100;
+        window.SocialManeuvers.SocialResources.init(week5PlayerId);
+        
+        const week5PlayerBank = window.SocialManeuvers.SocialEnergyBank.get(week5PlayerId);
+        
+        test(
+            'Players initialized at week 5 get default energy (not 0)',
+            week5PlayerBank === 5,
+            `Week 5 player: Bank=${week5PlayerBank} (Expected: 5, NOT 0)`
+        );
+        
+        // ===== Summary =====
+        const summary = document.createElement('div');
+        summary.className = 'test-section';
+        summary.style.backgroundColor = failCount === 0 ? '#e8f5e9' : '#ffebee';
+        summary.innerHTML = `
+            <h2>Test Summary</h2>
+            <strong>Total Tests: ${testCount}</strong><br>
+            <span class="pass">✅ Passed: ${passCount}</span><br>
+            <span class="fail">❌ Failed: ${failCount}</span><br>
+            ${failCount === 0 ? '<br><strong class="pass">All tests passed! ✅</strong>' : '<br><strong class="fail">Some tests failed! ❌</strong>'}
+        `;
+        results.appendChild(summary);
+        
+        console.log('\n=== TEST SUMMARY ===');
+        console.log(`Total: ${testCount}, Passed: ${passCount}, Failed: ${failCount}`);
+    </script>
+</body>
+</html>
