@@ -234,24 +234,35 @@
         }
       }
     } else {
-      // Fallback: use template system (backwards compat)
+      // Enhanced: use new generateNarrative function with relationship context
       const actorId = payload.actor?.id || payload.actorId;
       const targetId = payload.target?.id || payload.targetId;
       const actionType = payload.actionType || payload.action || 'generic';
+      
+      // Get bond values for relationship analysis
+      const bondBefore = payload.bondBefore;
+      const bondAfter = payload.bondAfter;
+      const outcome = payload.outcome || payload.success;
 
-      const actor = templates.resolveName(actorId);
-      const target = templates.resolveName(targetId);
+      // Use enhanced narrative generation if available
+      if (templates.generateNarrative && bondBefore !== undefined && bondAfter !== undefined) {
+        text = templates.generateNarrative(actorId, targetId, actionType, bondBefore, bondAfter, outcome);
+      } else {
+        // Fallback: use simple template system (backwards compat)
+        const actor = templates.resolveName(actorId);
+        const target = templates.resolveName(targetId);
 
-      // Get template and render
-      const template = templates.getSocialTemplate(actionType);
-      text = templates.render(template, { actor, target });
+        // Get template and render
+        const template = templates.getSocialTemplate(actionType);
+        text = templates.render(template, { actor, target });
 
-      // Add bond delta if available
-      const bondDelta = payload.bondDelta || payload.delta;
-      if (bondDelta !== null && bondDelta !== undefined && Math.abs(bondDelta) > 0.01) {
-        const deltaText = templates.deltaStr(bondDelta);
-        if (deltaText) {
-          text += ` ${deltaText}`;
+        // Add bond delta if available
+        const bondDelta = payload.bondDelta || payload.delta;
+        if (bondDelta !== null && bondDelta !== undefined && Math.abs(bondDelta) > 0.01) {
+          const deltaText = templates.deltaStr(bondDelta);
+          if (deltaText) {
+            text += ` ${deltaText}`;
+          }
         }
       }
     }
@@ -269,15 +280,142 @@
     const templates = global.DiaryTemplates;
     if (!templates) return;
 
-    const actorId = payload.actor || payload.playerId;
-    const count = payload.actionCount || payload.count || 0;
     const week = (global.game?.week || 1);
 
-    const actor = templates.resolveName(actorId);
-    const template = templates.getSocialSummaryTemplate();
-    const text = templates.render(template, { actor, count, week });
+    // NEW: Generate rich phase summary with highlights
+    if (templates.getPhaseSummaryTemplate && payload.actions && Array.isArray(payload.actions)) {
+      const highlights = extractPhaseHighlights(payload.actions, payload.bondShifts);
+      
+      if (highlights.length > 0) {
+        // Create highlight entries
+        highlights.forEach(highlight => {
+          const template = templates.getPhaseSummaryTemplate(highlight.type);
+          const text = templates.render(template, {
+            week,
+            highlight: highlight.text,
+            actionCount: payload.actionCount || payload.actions.length
+          });
+          createEntry(text, highlight.severity, 'social');
+        });
+      } else {
+        // No highlights, create general summary
+        const template = templates.getPhaseSummaryTemplate('general');
+        const text = templates.render(template, {
+          week,
+          actionCount: payload.actionCount || payload.actions.length
+        });
+        createEntry(text, 'neutral', 'social');
+      }
+    } else {
+      // Fallback: simple per-actor summary (backwards compat)
+      const actorId = payload.actor || payload.playerId;
+      const count = payload.actionCount || payload.count || 0;
 
-    createEntry(text, 'neutral', 'social');
+      if (actorId) {
+        const actor = templates.resolveName(actorId);
+        const template = templates.getSocialSummaryTemplate();
+        const text = templates.render(template, { actor, count, week });
+        createEntry(text, 'neutral', 'social');
+      } else {
+        // General summary
+        const template = templates.getPhaseSummaryTemplate('general');
+        const text = templates.render(template, {
+          week,
+          actionCount: count
+        });
+        createEntry(text, 'neutral', 'social');
+      }
+    }
+  }
+
+  /**
+   * Extract interesting highlights from phase actions and bond shifts
+   */
+  function extractPhaseHighlights(actions, bondShifts) {
+    const highlights = [];
+    
+    if (!actions || !Array.isArray(actions)) return highlights;
+
+    // Track relationships
+    const relationships = new Map();
+    
+    // Analyze bond shifts for major relationship changes
+    if (bondShifts && Array.isArray(bondShifts)) {
+      bondShifts.forEach(shift => {
+        if (Math.abs(shift.delta) < 0.01) return; // Skip tiny changes
+        
+        const key = [shift.player1, shift.player2].sort().join('-');
+        if (!relationships.has(key)) {
+          relationships.set(key, {
+            player1: shift.player1,
+            player2: shift.player2,
+            bondBefore: shift.before || 0,
+            bondAfter: shift.after || 0,
+            totalDelta: 0
+          });
+        }
+        
+        const rel = relationships.get(key);
+        rel.totalDelta += shift.delta;
+        rel.bondAfter = shift.after;
+      });
+    }
+
+    const templates = global.DiaryTemplates;
+    
+    // Find most dramatic relationship changes
+    const sortedRelationships = Array.from(relationships.values())
+      .sort((a, b) => Math.abs(b.totalDelta) - Math.abs(a.totalDelta));
+    
+    // Add up to 3 relationship highlights
+    sortedRelationships.slice(0, 3).forEach(rel => {
+      if (Math.abs(rel.totalDelta) >= 0.10) { // Significant change threshold
+        const relType = templates.analyzeRelationship?.(rel.bondBefore, rel.bondAfter);
+        if (relType) {
+          const relText = templates.getRelationshipTemplate?.(relType, rel.player1, rel.player2);
+          if (relText) {
+            highlights.push({
+              type: rel.totalDelta > 0 ? 'social' : 'dramatic',
+              text: relText,
+              severity: Math.abs(rel.totalDelta) >= 0.20 ? 'high' : 'neutral'
+            });
+          }
+        }
+      }
+    });
+
+    // Find most dramatic actions (backstabs, betrayals)
+    const dramaticActions = actions.filter(a => 
+      ['backstab', 'lie', 'insult', 'betray', 'spread_rumor', 'confront'].includes(a.action)
+    );
+    
+    if (dramaticActions.length > 0) {
+      const action = dramaticActions[0]; // Most recent dramatic action
+      const actorName = templates.resolveName(action.actor);
+      const targetName = templates.resolveName(action.target);
+      const actionLabel = action.action.replace(/_/g, ' ');
+      
+      highlights.push({
+        type: 'dramatic',
+        text: `${actorName} ${actionLabel} against ${targetName}`,
+        severity: 'high'
+      });
+    }
+
+    // Find strategic actions (alliances, strategizing)
+    const strategicActions = actions.filter(a => 
+      ['strategize', 'form_alliance', 'bribe'].includes(a.action)
+    );
+    
+    if (strategicActions.length >= 3) {
+      highlights.push({
+        type: 'strategic',
+        text: `${strategicActions.length} strategic moves were made`,
+        severity: 'neutral'
+      });
+    }
+
+    return highlights;
   }
 
   /**
@@ -289,15 +427,33 @@
     const templates = global.DiaryTemplates;
     if (!templates) return;
 
-    const player1 = templates.resolveName(payload.player1 || payload.actorId);
-    const player2 = templates.resolveName(payload.player2 || payload.targetId);
+    const player1Id = payload.player1 || payload.actorId;
+    const player2Id = payload.player2 || payload.targetId;
+    const player1 = templates.resolveName(player1Id);
+    const player2 = templates.resolveName(player2Id);
     const delta = payload.delta || 0;
 
     if (Math.abs(delta) < 0.01) return; // Ignore tiny shifts
 
-    const deltaText = templates.deltaStr(delta);
-    const relationship = delta > 0 ? 'improved' : 'worsened';
-    const text = `Relationship ${relationship}: ${player1} ↔ ${player2} ${deltaText}`;
+    // NEW: Check for relationship type changes (alliance, romance, rivalry)
+    let text = '';
+    const bondBefore = payload.before;
+    const bondAfter = payload.after;
+    
+    if (templates.analyzeRelationship && bondBefore !== undefined && bondAfter !== undefined) {
+      const relType = templates.analyzeRelationship(bondBefore, bondAfter);
+      if (relType) {
+        // Significant relationship change detected
+        text = templates.getRelationshipTemplate(relType, player1Id, player2Id);
+      }
+    }
+    
+    // Fallback to simple bond shift description
+    if (!text) {
+      const deltaText = templates.deltaStr(delta);
+      const relationship = delta > 0 ? 'improved' : 'worsened';
+      text = `Relationship ${relationship}: ${player1} ↔ ${player2} ${deltaText}`;
+    }
 
     const severity = Math.abs(delta) > 0.15 ? 'high' : 'neutral';
     createEntry(text, severity, 'social');

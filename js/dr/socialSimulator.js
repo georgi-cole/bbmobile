@@ -201,7 +201,7 @@
 
       // If significant bond shift, emit bond.shift event and track
       if (Math.abs(magnitude) > 0.01) {
-        emitBondShift(actor.id, target.id, magnitude);
+        emitBondShift(actor.id, target.id, magnitude, bondBefore, bondAfter);
         phaseBondShifts.push({
           player1: actor.id,
           player2: target.id,
@@ -508,7 +508,7 @@
   /**
    * Emit bond shift event
    */
-  function emitBondShift(playerId1, playerId2, delta) {
+  function emitBondShift(playerId1, playerId2, delta, bondBefore, bondAfter) {
     const bus = getBus();
     if (!bus || typeof bus.emit !== 'function') {
       return;
@@ -519,7 +519,9 @@
       player2: playerId2,
       actorId: playerId1,
       targetId: playerId2,
-      delta: delta
+      delta: delta,
+      before: bondBefore,
+      after: bondAfter
     };
 
     bus.emit('bond.shift', payload);
