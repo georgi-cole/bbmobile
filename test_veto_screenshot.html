@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Results Screenshot</title>
+  <link rel="stylesheet" href="css/veto-results.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0d151f;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="tvOverlay" style="width: 800px; height: 600px; margin: 0 auto;"></div>
+
+  <script>
+    window.getP = function(id) {
+      const mockPlayers = {
+        1: { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+        2: { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+        3: { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' }
+      };
+      return mockPlayers[id] || null;
+    };
+
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : 'Player ' + id;
+    };
+  </script>
+
+  <script src="js/ui.veto-results.js"></script>
+
+  <script>
+    window.addEventListener('load', function() {
+      // Render immediately on load with very long display time for screenshot
+      const scores = { 1: 75.2, 2: 88.9, 3: 92.5 };
+      const participants = [1, 2, 3];
+      
+      window.VetoResultsUI.renderVetoCompResults(scores, participants, {
+        maxResults: 1,  // Show only winner
+        autoDismissMs: 60000  // 60 seconds for screenshot
+      });
+    });
+  </script>
+</body>
+</html>
