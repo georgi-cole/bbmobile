@@ -2,9 +2,12 @@
    Compact and centered live vote layout for LV2
    - Shrinks the blue panel and centers avatars + CTA
    - Scoped to lv2 classes but tuned for both mobile and laptop
+   
+   Breakpoint: 1280px
+   Activates on: mobile, tablet, and small laptop screens (≤1280px wide)
 */
 
-/* Base: apply on small and medium screens, and also on laptop widths for a tighter footprint */
+/* Apply compact layout on screens up to 1280px wide (mobile, tablet, small laptops) */
 @media (max-width: 1280px) {
   /* Panel (blue area) */
   .lv2-overlay .lv2-panel,
@@ -77,11 +80,13 @@
     justify-content: center !important;
     align-items: center !important;
     z-index: 9999 !important;
-    /* Creates a new stacking context and forces GPU acceleration on iOS Safari.
-       This prevents the sticky element from being clipped by parent overflow containers
-       and resolves rendering glitches where the CTA disappears during scrolling.
-       Alternative approaches (will-change: transform, isolation: isolate) were tested
-       but translateZ(0) provides the most consistent cross-browser behavior. */
+    /*
+     * Creates a new stacking context and forces GPU acceleration on iOS Safari.
+     * This prevents the sticky element from being clipped by parent overflow containers
+     * and resolves rendering glitches where the CTA disappears during scrolling.
+     * Alternative approaches (will-change: transform, isolation: isolate) were tested
+     * but translateZ(0) provides the most consistent cross-browser behavior.
+     */
     transform: translateZ(0);
   }
 
