@@ -1029,20 +1029,20 @@
     // Clear resolving flag before async operations
     g.__vetoResolving = false;
 
-    // Always show results - FFWD/Skip must NEVER bypass the results display
-    // Use new leaderboard renderer if available (shows only winner + runner-up)
+    // Always show full reveal - skip/FFWD should jump to results, not bypass them
+    // Use new leaderboard renderer if available
     if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
       try{
         // Normalize scores to plain object for renderer
         var scoresObj = {};
         g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
         
-        // Render top-2 leaderboard (winner + runner-up only) with auto-dismiss and FFWD support
+        // Render top-3 leaderboard with auto-dismiss and FFWD support
         // Use shorter duration if fast-forward is active
         var displayDuration = (ffActive && g.__humanPlayedVeto) ? 2500 : 5000;
-        console.info('[veto] Rendering top-2 competition results (winner + runner-up, duration: ' + displayDuration + 'ms)');
+        console.info('[veto] Rendering top-3 competition leaderboard (duration: ' + displayDuration + 'ms)');
         window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
-          maxResults: 2,  // Show only winner + runner-up
+          maxResults: 3, 
           autoDismissMs: displayDuration 
         });
         
