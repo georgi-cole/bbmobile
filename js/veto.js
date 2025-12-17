@@ -1037,12 +1037,12 @@
         var scoresObj = {};
         g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
         
-        // Render top-3 leaderboard with auto-dismiss and FFWD support
+        // Render winner-only result card with auto-dismiss and FFWD support
         // Use shorter duration if fast-forward is active
         var displayDuration = (ffActive && g.__humanPlayedVeto) ? 2500 : 5000;
-        console.info('[veto] Rendering top-3 competition leaderboard (duration: ' + displayDuration + 'ms)');
+        console.info('[veto] Rendering winner result card (duration: ' + displayDuration + 'ms)');
         window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
-          maxResults: 3, 
+          maxResults: 1,  // Cosmetic: Show only winner (not top 3)
           autoDismissMs: displayDuration 
         });
         
