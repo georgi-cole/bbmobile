@@ -150,11 +150,7 @@
     SERIOUS_NEGATIVE_CONTEXT: -10
   };
 
-  const INFLUENCE_WEEKLY_DECAY = 0.20; // 20% decay if no positive interaction (v2: reduced from 25%)
-  const INFLUENCE_POSITIVE_ACTION_THRESHOLD = 2; // v2: waive decay if ≥2 positive actions per target
-  const INFLUENCE_PER_TARGET_PHASE_CAP = 20; // v2: cap per-target gain at +20/phase
-  const INFLUENCE_DIMINISHING_RETURNS_THRESHOLD = 4; // v2: after 4 actions to same target
-  const INFLUENCE_DIMINISHING_RETURNS_RATE = 0.30; // v2: 70% reduction after threshold (30% of original)
+  const INFLUENCE_WEEKLY_DECAY = 0.25; // 25% decay if no positive interaction
 
   // Information earning
   const INFORMATION_EARNINGS = {
@@ -173,23 +169,10 @@
   };
 
   const INFORMATION_WEEKLY_CARRYOVER = 5;
-  const INFORMATION_HIGH_THRESHOLD = 50; // v2: threshold for high information bonus
-  const INFORMATION_HIGH_CARRYOVER = 10; // v2: increased carryover if >50
-  const INFORMATION_UNUSED_DECAY_RATE = 0.15; // v2: 15% decay if unused
-  const INFORMATION_PER_PHASE_CAP = 25; // v2: cap per-phase earn at +25
-  const INFORMATION_SECRECY_MULTIPLIERS = { // v2: scale gains by target secrecy
-    HOH: 2.0,
-    VETO_HOLDER: 1.8,
-    NOMINEE: 1.5,
-    DEFAULT: 1.0
-  };
 
   // SM Bank Configuration
   const SM_BANK_CONFIG = {
-    baseWeeklyAdd: 5, // Base energy added to bank for all alive players at week rollover (moved to post-eviction)
-    phaseEndDecayRate: 0.10, // 10% unused energy decay at phase end
-    perWeekEventCap: 15, // Cap per-week event bonuses at +15
-    diversityRequired: true // Require diversity in event types for bonuses
+    baseWeeklyAdd: 5 // Base energy added to bank for all alive players at week rollover
   };
 
   const SocialResources = {
@@ -202,13 +185,6 @@
       if(!g.__pairwiseInfluence){ g.__pairwiseInfluence = new Map(); }
       if(!g.__weeklyInteractions){ g.__weeklyInteractions = new Map(); }
       if(!g.__phaseRefunds){ g.__phaseRefunds = new Map(); }
-      
-      // v2: New tracking structures
-      if(!g.__influenceActions){ g.__influenceActions = new Map(); } // Track actions per target for diminishing returns
-      if(!g.__survivalStreaks){ g.__survivalStreaks = new Map(); } // Track survival streaks for multipliers
-      if(!g.__phaseInfluenceGains){ g.__phaseInfluenceGains = new Map(); } // Track per-target phase gains for caps
-      if(!g.__phaseInformationGains){ g.__phaseInformationGains = new Map(); } // Track per-phase information gains for caps
-      if(!g.__informationUsageTracking){ g.__informationUsageTracking = new Map(); } // Track if information was used
       
       // Initialize bank for this player
       SocialEnergyBank.init(playerId);
@@ -360,11 +336,8 @@
           // Energy managed by SocialEnergyBank system - skip legacy weekly reset
           continue;
         } else if(type === 'information' && config.carryover) {
-          // v2: Information carryover based on current level
-          const currentInfo = resources[type];
-          const carryover = currentInfo >= INFORMATION_HIGH_THRESHOLD ? INFORMATION_HIGH_CARRYOVER : INFORMATION_WEEKLY_CARRYOVER;
-          resources[type] = Math.min(currentInfo + carryover, config.max);
-          console.info(`[sm-v2] Information carryover: ${currentInfo} + ${carryover} (high threshold: ${currentInfo >= INFORMATION_HIGH_THRESHOLD})`);
+          // Information: add weekly carryover
+          resources[type] = Math.min(resources[type] + INFORMATION_WEEKLY_CARRYOVER, config.max);
         } else if(config.weeklyReset) {
           resources[type] = config.default;
         } else if(config.carryover) {
@@ -372,22 +345,18 @@
         }
       }
       
-      // v2: Apply influence decay (20% if no positive interaction, waived if ≥2 positive actions)
+      // Apply influence decay (25% if no positive interaction this week)
       const alivePlayers = global.alivePlayers?.() || [];
       for(const target of alivePlayers) {
         if(target.id !== playerId) {
           const interactionKey = `${playerId}->${target.id}`;
-          const positiveActionCount = g.__weeklyInteractions.get(interactionKey) || 0;
-          
-          // v2: Waive decay if ≥2 positive actions per target
-          if(positiveActionCount < INFLUENCE_POSITIVE_ACTION_THRESHOLD) {
+          const hadPositiveInteraction = g.__weeklyInteractions.get(interactionKey) || false;
+          if(!hadPositiveInteraction) {
             const influenceKey = `${playerId}->${target.id}`;
             const currentInfluence = this.getInfluence(playerId, target.id);
             const decayed = currentInfluence * (1 - INFLUENCE_WEEKLY_DECAY);
             this.setInfluence(playerId, target.id, decayed);
-            console.info(`[sm-v2] Influence decay: ${influenceKey} ${currentInfluence.toFixed(1)} → ${decayed.toFixed(1)} (actions=${positiveActionCount})`);
-          } else {
-            console.info(`[sm-v2] Influence decay waived: ${interactionKey} had ${positiveActionCount} positive actions`);
+            console.info(`[social-resources] Influence decay: ${influenceKey} ${currentInfluence.toFixed(1)} → ${decayed.toFixed(1)}`);
           }
         }
       }
@@ -459,53 +428,9 @@
     },
     
     adjustInfluence(actorId, targetId, delta) {
-      const g = global.game;
       const current = this.getInfluence(actorId, targetId);
-      
-      // v2: Track actions per target for diminishing returns
-      if(!g.__influenceActions) g.__influenceActions = new Map();
-      const pairKey = `${actorId}->${targetId}`;
-      const actionCount = g.__influenceActions.get(pairKey) || 0;
-      
-      // v2: Apply diminishing returns after threshold
-      let effectiveDelta = delta;
-      if(actionCount >= INFLUENCE_DIMINISHING_RETURNS_THRESHOLD && delta > 0) {
-        effectiveDelta = delta * INFLUENCE_DIMINISHING_RETURNS_RATE;
-        console.info(`[sm-v2] Diminishing returns: ${pairKey} action #${actionCount}, delta ${delta} → ${effectiveDelta.toFixed(2)}`);
-      }
-      
-      // v2: Check per-target phase cap
-      if(!g.__phaseInfluenceGains) g.__phaseInfluenceGains = new Map();
-      const phaseGain = g.__phaseInfluenceGains.get(pairKey) || 0;
-      
-      if(delta > 0 && phaseGain >= INFLUENCE_PER_TARGET_PHASE_CAP) {
-        console.warn(`[sm-v2] Phase cap reached: ${pairKey} already gained ${phaseGain}, ignoring +${delta}`);
-        effectiveDelta = 0;
-      } else if(delta > 0 && phaseGain + effectiveDelta > INFLUENCE_PER_TARGET_PHASE_CAP) {
-        effectiveDelta = INFLUENCE_PER_TARGET_PHASE_CAP - phaseGain;
-        console.info(`[sm-v2] Phase cap limiting: ${pairKey} gain capped to ${effectiveDelta} (current: ${phaseGain})`);
-      }
-      
-      // v2: Scale by relationship history and alliance alignment
-      const actor = global.getP?.(actorId);
-      const target = global.getP?.(targetId);
-      if(actor && target && global.Relations) {
-        const areAllies = global.Relations.getRelation?.(actorId, targetId) === 'ally';
-        if(areAllies && delta > 0) {
-          effectiveDelta *= 1.1; // 10% bonus for allied players
-          console.info(`[sm-v2] Alliance bonus: ${pairKey} gain +10%`);
-        }
-      }
-      
-      const newValue = current + effectiveDelta;
+      const newValue = current + delta;
       this.setInfluence(actorId, targetId, newValue);
-      
-      // Update tracking
-      g.__influenceActions.set(pairKey, actionCount + 1);
-      if(delta > 0) {
-        g.__phaseInfluenceGains.set(pairKey, phaseGain + effectiveDelta);
-      }
-      
       return newValue;
     },
     
@@ -641,14 +566,12 @@
       return preview;
     },
     
-    // v2: Track positive interactions for influence decay (now counts instead of boolean)
+    // Track positive interactions for influence decay
     recordPositiveInteraction(actorId, targetId) {
       const g = global.game; if(!g) return;
       if(!g.__weeklyInteractions) g.__weeklyInteractions = new Map();
       const key = `${actorId}->${targetId}`;
-      const count = g.__weeklyInteractions.get(key) || 0;
-      g.__weeklyInteractions.set(key, count + 1);
-      console.info(`[sm-v2] Positive interaction recorded: ${key} count=${count + 1}`);
+      g.__weeklyInteractions.set(key, true);
     },
     
     // Energy refund tracking (per phase)
@@ -700,182 +623,6 @@
       }
     }
   };
-
-  // ============================================================================
-  // SOCIAL STRATEGY V2 HELPER FUNCTIONS
-  // ============================================================================
-  
-  /**
-   * v2: Scale weekly bonus based on survival streaks and social activity
-   * @param {number} playerId - Player ID
-   * @param {number} baseBonus - Base bonus amount
-   * @returns {number} Scaled bonus with contextual multipliers
-   */
-  function scaleWeeklyBonus(playerId, baseBonus) {
-    const g = global.game;
-    if(!g) return baseBonus;
-    
-    // Initialize survival streak tracking
-    if(!g.__survivalStreaks) g.__survivalStreaks = new Map();
-    const streak = g.__survivalStreaks.get(playerId) || 0;
-    
-    // Apply survival streak multiplier (1% per week survived, max 20%)
-    const streakMultiplier = 1 + Math.min(0.20, streak * 0.01);
-    
-    // Apply social activity multiplier based on actions this week
-    const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
-    let activityMultiplier = 1.0;
-    if(weeklyEvents.newAlliances > 0) activityMultiplier += 0.05;
-    if(weeklyEvents.hohWin || weeklyEvents.povWin) activityMultiplier += 0.10;
-    
-    const scaledBonus = Math.round(baseBonus * streakMultiplier * activityMultiplier);
-    
-    console.info(`[sm-v2] Scaled bonus for player ${playerId}: ${baseBonus} → ${scaledBonus} (streak=${streak}, activity=${activityMultiplier.toFixed(2)})`);
-    return scaledBonus;
-  }
-  
-  /**
-   * v2: Calculate information gain with secrecy factors and variety bonuses
-   * @param {number} actorId - Actor player ID
-   * @param {number} targetId - Target player ID
-   * @param {number} baseGain - Base information gain
-   * @param {string} actionType - Type of action
-   * @returns {number} Scaled information gain
-   */
-  function calculateInfoGain(actorId, targetId, baseGain, actionType) {
-    const g = global.game;
-    if(!g) return baseGain;
-    
-    // Determine target secrecy multiplier
-    let secrecyMultiplier = INFORMATION_SECRECY_MULTIPLIERS.DEFAULT;
-    if(g.hohId === targetId) {
-      secrecyMultiplier = INFORMATION_SECRECY_MULTIPLIERS.HOH;
-    } else if(g.vetoHolder === targetId) {
-      secrecyMultiplier = INFORMATION_SECRECY_MULTIPLIERS.VETO_HOLDER;
-    } else if(Array.isArray(g.nominees) && g.nominees.includes(targetId)) {
-      secrecyMultiplier = INFORMATION_SECRECY_MULTIPLIERS.NOMINEE;
-    }
-    
-    // Apply variety bonus if actor hasn't used this action type recently
-    let varietyMultiplier = 1.0;
-    if(!g.__recentActionTypes) g.__recentActionTypes = new Map();
-    const actorActions = g.__recentActionTypes.get(actorId) || [];
-    const sameTypeCount = actorActions.filter(a => a === actionType).length;
-    if(sameTypeCount === 0) varietyMultiplier = 1.2; // 20% bonus for variety
-    
-    const scaledGain = Math.round(baseGain * secrecyMultiplier * varietyMultiplier);
-    
-    console.info(`[sm-v2] Info gain for ${actorId}->${targetId}: ${baseGain} → ${scaledGain} (secrecy=${secrecyMultiplier}, variety=${varietyMultiplier})`);
-    return scaledGain;
-  }
-  
-  /**
-   * v2: Unified attribution hook for post-event resource adjustments
-   * Centralizes logic for applying resource changes after events
-   * @param {number} playerId - Player ID
-   * @param {string} eventType - Event type (e.g., 'hohWin', 'nominated')
-   * @param {Object} context - Additional context for attribution
-   */
-  function attributeResourcesPostEvent(playerId, eventType, context = {}) {
-    const g = global.game;
-    if(!g) return;
-    
-    console.info(`[sm-v2] Post-event attribution: player=${playerId}, event=${eventType}`);
-    
-    // Risk-reward integration: failed actions grant information but cost energy
-    if(eventType === 'action_failed' && context.actionType) {
-      // Grant information as consolation for failed action
-      const infoGain = calculateInfoGain(playerId, context.targetId || 0, 3, context.actionType);
-      SocialResources.earn(playerId, { information: infoGain });
-      console.info(`[sm-v2] Risk-reward: Failed action granted ${infoGain} information`);
-    }
-    
-    // Extend weekly resets to factor in overall performance
-    if(eventType === 'weekly_performance_bonus') {
-      const avgInfluence = calculateAverageInfluence(playerId);
-      if(avgInfluence > 50) {
-        const energyBonus = 2;
-        SocialEnergyBank.adjust(playerId, energyBonus);
-        console.info(`[sm-v2] Performance bonus: High influence (${avgInfluence.toFixed(1)}) granted +${energyBonus} energy`);
-      }
-    }
-    
-    // Track information usage for decay calculations
-    if(eventType === 'information_used') {
-      if(!g.__informationUsageTracking) g.__informationUsageTracking = new Map();
-      g.__informationUsageTracking.set(playerId, g.week || 1);
-    }
-  }
-  
-  /**
-   * v2: Phase-end reconciliation for decays, caps, and summaries
-   * Called at the end of social phase to apply final adjustments
-   */
-  function reconcilePhaseEnd() {
-    const g = global.game;
-    if(!g) return;
-    
-    const alivePlayers = global.alivePlayers?.() || [];
-    console.info('[sm-v2] Phase-end reconciliation starting...');
-    
-    alivePlayers.forEach(player => {
-      const playerId = player.id;
-      
-      // 1. Apply unused energy decay (10%)
-      const currentEnergy = SocialResources.get(playerId, 'energy');
-      const startEnergy = g.__socialManeuversSession?.energySpent?.get(playerId) || 0;
-      const energyUsed = startEnergy > 0;
-      
-      if(!energyUsed && currentEnergy > 0) {
-        const decayAmount = Math.floor(currentEnergy * SM_BANK_CONFIG.phaseEndDecayRate);
-        if(decayAmount > 0) {
-          SocialResources.set(playerId, 'energy', currentEnergy - decayAmount);
-          console.info(`[sm-v2] Energy decay: player ${playerId} lost ${decayAmount} (10% unused)`);
-        }
-      }
-      
-      // 2. Apply information decay if unused (15%)
-      const currentInfo = SocialResources.get(playerId, 'information');
-      const lastUsed = g.__informationUsageTracking?.get(playerId) || 0;
-      const currentWeek = g.week || 1;
-      
-      if(currentInfo > 0 && lastUsed < currentWeek) {
-        const infoDecay = Math.floor(currentInfo * INFORMATION_UNUSED_DECAY_RATE);
-        if(infoDecay > 0) {
-          SocialResources.set(playerId, 'information', currentInfo - infoDecay);
-          console.info(`[sm-v2] Information decay: player ${playerId} lost ${infoDecay} (15% unused)`);
-        }
-      }
-      
-      // 3. Reset phase tracking
-      if(g.__phaseInfluenceGains) g.__phaseInfluenceGains.clear();
-      if(g.__phaseInformationGains) g.__phaseInformationGains.clear();
-    });
-    
-    console.info('[sm-v2] ✓ Phase-end reconciliation complete');
-  }
-  
-  /**
-   * v2: Calculate average influence across all targets
-   * @param {number} playerId - Player ID
-   * @returns {number} Average influence value
-   */
-  function calculateAverageInfluence(playerId) {
-    const g = global.game;
-    if(!g?.__pairwiseInfluence) return 0;
-    
-    let total = 0;
-    let count = 0;
-    
-    g.__pairwiseInfluence.forEach((value, key) => {
-      if(key.startsWith(`${playerId}->`)) {
-        total += value;
-        count++;
-      }
-    });
-    
-    return count > 0 ? total / count : 0;
-  }
 
   // ============================================================================
   // UNIFIED ACTION COST CALCULATOR (Single Source of Truth)
@@ -1248,26 +995,21 @@
     if(succeeded) {
       if(action.id === 'strategize') {
         SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.STRATEGY_CHAT_SUCCESS);
-        // v2: Strategy chat can reveal information with secrecy scaling
+        // Strategy chat can reveal information
         if(Math.random() < 0.4) {
-          const infoGain = calculateInfoGain(actorId, targetId, INFORMATION_EARNINGS.STRATEGY_CHAT_REVEAL, 'strategize');
-          SocialResources.earn(actorId, { information: infoGain });
+          SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.STRATEGY_CHAT_REVEAL });
         }
       } else if(action.id === 'confide') {
         SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.CONFIDE_SUCCESS);
       } else if(action.id === 'interrogate') {
-        // v2: Interrogate with secrecy scaling
-        const infoGain = calculateInfoGain(actorId, targetId, INFORMATION_EARNINGS.INTERROGATE_SUCCESS, 'interrogate');
-        SocialResources.earn(actorId, { information: infoGain });
+        SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.INTERROGATE_SUCCESS });
       } else if(action.id === 'observe') {
-        // v2: Eavesdrop/observe earns information with secrecy scaling
-        const infoGain = calculateInfoGain(actorId, targetId, INFORMATION_EARNINGS.EAVESDROP_SUCCESS, 'observe');
-        SocialResources.earn(actorId, { information: infoGain });
+        // Eavesdrop/observe earns information
+        SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.EAVESDROP_SUCCESS });
       } else if(action.id === 'mediate') {
         // Mediate can reveal information
         if(Math.random() < 0.5) {
-          const infoGain = calculateInfoGain(actorId, targetId, INFORMATION_EARNINGS.MEDIATE_REVEAL, 'mediate');
-          SocialResources.earn(actorId, { information: infoGain });
+          SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.MEDIATE_REVEAL });
         }
       } else if(action.id === 'compliment') {
         SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.GIVE_GIFT_SUCCESS);
@@ -1277,9 +1019,6 @@
       if(action.id === 'confront') {
         SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.CONFRONT_FAIL);
       }
-      
-      // v2: Risk-reward - failed actions grant information but already cost energy
-      attributeResourcesPostEvent(actorId, 'action_failed', { targetId, actionType: action.id });
     }
     
     // ==================== Apply action rewards (influence, information) ====================
@@ -3515,9 +3254,6 @@
       console.info('[social-maneuvers] Cleared pending fast-advance timeout');
     }
     
-    // v2: Phase-end reconciliation BEFORE syncing
-    reconcilePhaseEnd();
-    
     // SYNC LEFTOVER ENERGY TO BANK: Update bank with remaining in-phase energy
     const alivePlayers = global.alivePlayers?.() || [];
     alivePlayers.forEach(player => {
@@ -4081,19 +3817,10 @@
     generatePhaseSummary, showSummaryPanel,
     // Modifiers/hooks
     calculateTraitModifiers, calculateMemoryModifiers,
-    // v2: New helper functions
-    scaleWeeklyBonus, calculateInfoGain, attributeResourcesPostEvent, 
-    reconcilePhaseEnd, calculateAverageInfluence,
     // Constants
     DEFAULT_ENERGY, SOCIAL_ACTIONS, RESOURCE_CONFIG, SM_BANK_CONFIG,
     WEEKLY_ENERGY_BONUSES, WEEKLY_ENERGY_PENALTIES,
-    INFLUENCE_DELTAS, INFORMATION_EARNINGS, INFORMATION_COSTS,
-    // v2: New constants
-    INFLUENCE_WEEKLY_DECAY, INFLUENCE_POSITIVE_ACTION_THRESHOLD, 
-    INFLUENCE_PER_TARGET_PHASE_CAP, INFLUENCE_DIMINISHING_RETURNS_THRESHOLD,
-    INFLUENCE_DIMINISHING_RETURNS_RATE, INFORMATION_HIGH_THRESHOLD,
-    INFORMATION_HIGH_CARRYOVER, INFORMATION_UNUSED_DECAY_RATE,
-    INFORMATION_PER_PHASE_CAP, INFORMATION_SECRECY_MULTIPLIERS
+    INFLUENCE_DELTAS, INFORMATION_EARNINGS, INFORMATION_COSTS
   };
   global.SocialManager = global.SocialManeuvers;
   Object.defineProperty(global, 'USE_SOCIAL_MANEUVERS', {
@@ -4203,54 +3930,9 @@
           bank: SocialEnergyBank.get(p.id),
           currentEnergy: SocialResources.get(p.id, 'energy')
         })));
-      },
-      // v2: New debug methods
-      testScaledBonus(playerId, baseBonus) {
-        const scaled = scaleWeeklyBonus(playerId, baseBonus);
-        console.info(`[__smDebug] v2: Scaled bonus test: ${baseBonus} → ${scaled}`);
-        return scaled;
-      },
-      testInfoGain(actorId, targetId, baseGain, actionType = 'observe') {
-        const scaled = calculateInfoGain(actorId, targetId, baseGain, actionType);
-        console.info(`[__smDebug] v2: Info gain test: ${baseGain} → ${scaled}`);
-        return scaled;
-      },
-      testAttributePost(playerId, eventType, context = {}) {
-        attributeResourcesPostEvent(playerId, eventType, context);
-        console.info(`[__smDebug] v2: Post-event attribution test completed`);
-      },
-      testReconcile() {
-        reconcilePhaseEnd();
-        console.info(`[__smDebug] v2: Phase-end reconciliation test completed`);
-      },
-      showV2Stats(playerId) {
-        const g = global.game;
-        const stats = {
-          influenceActions: Array.from(g.__influenceActions?.entries() || [])
-            .filter(([k]) => k.startsWith(`${playerId}->`)),
-          survivalStreak: g.__survivalStreaks?.get(playerId) || 0,
-          phaseInfluenceGains: Array.from(g.__phaseInfluenceGains?.entries() || [])
-            .filter(([k]) => k.startsWith(`${playerId}->`)),
-          phaseInfoGains: g.__phaseInformationGains?.get(playerId) || 0,
-          infoLastUsed: g.__informationUsageTracking?.get(playerId) || 0
-        };
-        console.info(`[__smDebug] v2 Stats for player ${playerId}:`, stats);
-        console.table(stats.influenceActions.map(([pair, count]) => ({ pair, count })));
-        return stats;
-      },
-      showAllV2Stats() {
-        const g = global.game;
-        const alivePlayers = global.alivePlayers?.() || [];
-        console.info('[__smDebug] v2 Stats for all players:');
-        alivePlayers.forEach(p => {
-          console.group(`Player ${p.id}: ${p.name || 'Unknown'}`);
-          this.showV2Stats(p.id);
-          console.groupEnd();
-        });
       }
     };
     console.info('[social-maneuvers] ✓ Dev helpers available at window.__smDebug');
-    console.info('[social-maneuvers] v2 commands: testScaledBonus, testInfoGain, testAttributePost, testReconcile, showV2Stats, showAllV2Stats');
     console.info('[social-maneuvers] Available commands: grantEnergy, grantInfluence, grantInformation, setEnergy, setInfluence, setInformation, recordWeeklyEvent, getResources, getInfluence, showAllInfluence, getBank, setBank, adjustBank, showAllBanks');
   }
 
