@@ -556,3 +556,67 @@
     font-size: 1rem;
   }
 }
+
+/* ============================================================================
+   SOCIAL SUMMARY BACKDROP (Dimmed with Thematic Emojis)
+   ============================================================================ */
+
+.social-summary-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 11;
+  pointer-events: auto;
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+}
+
+.social-summary-emoji-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.social-summary-emoji {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  animation-name: float-emoji;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes float-emoji {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.15;
+  }
+  25% {
+    transform: translateY(-10px) rotate(5deg);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-20px) rotate(-5deg);
+    opacity: 0.25;
+  }
+  75% {
+    transform: translateY(-10px) rotate(3deg);
+    opacity: 0.2;
+  }
+}
+
+.social-summary-card {
+  position: relative;
+  z-index: 13;
+  pointer-events: auto;
+}
+
+/* Ensure backdrop doesn't interfere with card interactions */
+.social-summary-backdrop ~ #decisionDeck {
+  pointer-events: none;
+}
+
+.social-summary-backdrop ~ #decisionDeck .social-summary-card {
+  pointer-events: auto;
+}

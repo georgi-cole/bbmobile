@@ -3663,6 +3663,13 @@
           deck.remove();
         }
         
+        // Remove backdrop when summary is dismissed
+        const backdrop = document.getElementById('socialSummaryBackdrop');
+        if(backdrop) {
+          backdrop.remove();
+          console.info('[social-maneuvers] ✓ Summary backdrop removed');
+        }
+        
         // Let the phase timer callback handle phase advance naturally
         // Don't try to advance manually here - it will happen via timer or explicit call
         console.info('[social-maneuvers] ✓ Summary dismissed - phase will advance via timer callback');
@@ -3687,14 +3694,50 @@
     const tv = document.querySelector('[data-sm-faux-tv], #tvViewport, .tvViewport, #fauxTv, #panel, #tv, .tv') ||
                document.body;
     
+    // Create dimmed backdrop with thematic emojis
+    const backdrop = document.createElement('div');
+    backdrop.id = 'socialSummaryBackdrop';
+    backdrop.className = 'social-summary-backdrop';
+    backdrop.setAttribute('data-social-summary-backdrop', '');
+    
+    // Add thematic emoji decorations to backdrop
+    const emojiContainer = document.createElement('div');
+    emojiContainer.className = 'social-summary-emoji-container';
+    
+    // Add floating emojis (people and loudspeaker) - predefined positions for consistent UX
+    const emojiConfigs = [
+      { emoji: '👥', left: '15%', top: '20%', size: '60px', duration: '4s', delay: '0s' },
+      { emoji: '📢', left: '85%', top: '15%', size: '50px', duration: '3.5s', delay: '0.5s' },
+      { emoji: '💬', left: '25%', top: '70%', size: '55px', duration: '4.5s', delay: '1s' },
+      { emoji: '🗣️', left: '75%', top: '65%', size: '65px', duration: '3.8s', delay: '0.3s' },
+      { emoji: '👥', left: '50%', top: '40%', size: '70px', duration: '4.2s', delay: '1.5s' },
+      { emoji: '📢', left: '10%', top: '50%', size: '45px', duration: '3.6s', delay: '0.8s' },
+      { emoji: '💬', left: '90%', top: '45%', size: '52px', duration: '4.3s', delay: '1.2s' },
+      { emoji: '🗣️', left: '40%', top: '85%', size: '58px', duration: '3.9s', delay: '0.2s' }
+    ];
+    
+    emojiConfigs.forEach((config) => {
+      const emojiEl = document.createElement('div');
+      emojiEl.className = 'social-summary-emoji';
+      emojiEl.textContent = config.emoji;
+      emojiEl.style.fontSize = config.size;
+      emojiEl.style.left = config.left;
+      emojiEl.style.top = config.top;
+      emojiEl.style.animationDuration = config.duration;
+      emojiEl.style.animationDelay = config.delay;
+      emojiContainer.appendChild(emojiEl);
+    });
+    
+    backdrop.appendChild(emojiContainer);
+    tv.appendChild(backdrop);
+    
     deck = document.createElement('div');
     deck.id = 'decisionDeck';
-    // Deck background is non-interactive to allow modal close buttons to remain clickable
-    // Individual cards inside should use pointer-events:auto for their interactive elements
+    // Deck is now on top of backdrop, allows interaction with cards
     deck.style.cssText = 'position:absolute;inset:var(--tv-safe-top,10%) var(--tv-safe-x,5%) var(--tv-safe-bottom,10%) var(--tv-safe-x,5%);display:grid;place-items:center;gap:8px;z-index:12;pointer-events:none;';
     tv.appendChild(deck);
     
-    console.info('[social-maneuvers] Summary deck anchored to:', tv.id || tv.className || 'body');
+    console.info('[social-maneuvers] Summary deck with dimmed backdrop and thematic emojis created');
     return deck;
   }
 
@@ -3795,7 +3838,11 @@
     closeBtn.className = 'btn small';
     closeBtn.textContent = 'Close';
     closeBtn.style.cssText = 'display:block;margin:1em auto 0;';
-    closeBtn.onclick = () => modal.remove();
+    closeBtn.onclick = () => {
+      modal.remove();
+      // Note: Don't remove backdrop here - it's owned by the summary card
+      // Backdrop will be cleaned up when user clicks Continue on the main summary
+    };
     panel.appendChild(closeBtn);
 
     modal.appendChild(panel);
@@ -3803,7 +3850,10 @@
 
     // Close on backdrop click
     modal.onclick = (e) => {
-      if(e.target === modal) modal.remove();
+      if(e.target === modal) {
+        modal.remove();
+        // Note: Don't remove backdrop here - it's owned by the summary card
+      }
     };
   }
 

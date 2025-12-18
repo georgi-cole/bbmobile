@@ -432,7 +432,16 @@
     populateActionMenu();
 
     // Attach event listeners
-    $('.modal-close-btn')?.addEventListener('click', () => closeSocializeModal());
+    // X button should ALWAYS close immediately (bypass energy check)
+    $('.modal-close-btn')?.addEventListener('click', () => {
+      console.info('[socialize-mobile] ❌ X button clicked - forcing immediate close');
+      closeSocializeModal(true); // Skip energy check - always close on X
+      // Show summary after modal closes
+      setTimeout(() => {
+        showSocialSummary();
+      }, 350);
+    });
+    // Backdrop click still shows the prompt (original behavior)
     $('.socialize-modal-backdrop')?.addEventListener('click', () => closeSocializeModal());
     $('#executeActionBtn')?.addEventListener('click', executeAction);
 
