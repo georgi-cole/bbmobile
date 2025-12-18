@@ -8603,10 +8603,6 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 
 /* ============================================================================
    COMPACT LV2 OVERRIDE
-   Loaded after main stylesheet to provide compact/centered live vote layout.
-   Can be easily removed or adjusted by editing css/livevote-compact.css
+   Now loaded directly in index.html for better reliability on GitHub Pages.
+   See index.html: livevote-compact.css and livevote-compact-fullyfit.css
    ============================================================================ */
-@import url('css/livevote-compact.css');
-
-/* LV2 compact fully-fit override — must load after main styles */
-@import url('css/livevote-compact-fullyfit.css');
