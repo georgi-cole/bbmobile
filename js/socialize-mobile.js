@@ -431,30 +431,8 @@
     // Populate action menu
     populateActionMenu();
 
-    // Attach event listeners with defensive error handling
-    const closeBtn = $('.modal-close-btn');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', (e) => {
-        try {
-          e.stopPropagation();
-          console.log('[socialize-mobile] Close button clicked');
-          closeSocializeModal();
-        } catch (err) {
-          console.error('[socialize-mobile] Close button handler error:', err);
-          // Force close on error
-          try {
-            const modal = $('#socializeModal');
-            if (modal) modal.remove();
-            document.body.style.overflow = '';
-          } catch (e) {
-            console.error('[socialize-mobile] Failed to force close:', e);
-          }
-        }
-      });
-    } else {
-      console.warn('[socialize-mobile] Close button not found in modal');
-    }
-    
+    // Attach event listeners
+    $('.modal-close-btn')?.addEventListener('click', () => closeSocializeModal());
     $('.socialize-modal-backdrop')?.addEventListener('click', () => closeSocializeModal());
     $('#executeActionBtn')?.addEventListener('click', executeAction);
 
