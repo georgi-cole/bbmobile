@@ -21,9 +21,12 @@
   
   const cfg = global.game?.cfg || {};
   
-  // Gate adapter installation - production-safe with enableDrSocialLogs (default: true)
+  // Gate adapter installation - production-safe with enableDrSocialLogs (default: true if undefined)
   // Also accepts legacy debug flags for backwards compatibility
-  if (!(cfg.enableDrSocialLogs || cfg.debugSocialAI || cfg.aiSocialEmitDrEvents)) {
+  const enableDrSocialLogs = cfg.enableDrSocialLogs !== false; // Default to true if undefined
+  const legacyDebugFlags = cfg.debugSocialAI || cfg.aiSocialEmitDrEvents;
+  
+  if (!(enableDrSocialLogs || legacyDebugFlags)) {
     console.info('[sm-to-dr-adapter] Skipped (gate=false). Enable via window.game.cfg.enableDrSocialLogs');
     return;
   }
@@ -34,6 +37,8 @@
     return;
   }
   global.__smToDrAdapterInstalled = true;
+  
+  console.info('[sm-to-dr-adapter] ✓ Adapter installed (enableDrSocialLogs=' + enableDrSocialLogs + ')');
 
   // ============================================================================
   // UTILITIES
