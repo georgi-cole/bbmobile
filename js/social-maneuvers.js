@@ -3699,27 +3699,32 @@
     backdrop.id = 'socialSummaryBackdrop';
     backdrop.className = 'social-summary-backdrop';
     backdrop.setAttribute('data-social-summary-backdrop', '');
-    backdrop.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.7);z-index:11;pointer-events:auto;overflow:hidden;';
     
     // Add thematic emoji decorations to backdrop
     const emojiContainer = document.createElement('div');
     emojiContainer.className = 'social-summary-emoji-container';
-    emojiContainer.style.cssText = 'position:absolute;inset:0;pointer-events:none;opacity:0.15;';
     
-    // Add floating emojis (people and loudspeaker)
-    const emojis = ['👥', '📢', '💬', '🗣️', '👥', '📢', '💬', '🗣️'];
-    emojis.forEach((emoji, i) => {
+    // Add floating emojis (people and loudspeaker) - predefined positions for consistent UX
+    const emojiConfigs = [
+      { emoji: '👥', left: '15%', top: '20%', size: '60px', duration: '4s', delay: '0s' },
+      { emoji: '📢', left: '85%', top: '15%', size: '50px', duration: '3.5s', delay: '0.5s' },
+      { emoji: '💬', left: '25%', top: '70%', size: '55px', duration: '4.5s', delay: '1s' },
+      { emoji: '🗣️', left: '75%', top: '65%', size: '65px', duration: '3.8s', delay: '0.3s' },
+      { emoji: '👥', left: '50%', top: '40%', size: '70px', duration: '4.2s', delay: '1.5s' },
+      { emoji: '📢', left: '10%', top: '50%', size: '45px', duration: '3.6s', delay: '0.8s' },
+      { emoji: '💬', left: '90%', top: '45%', size: '52px', duration: '4.3s', delay: '1.2s' },
+      { emoji: '🗣️', left: '40%', top: '85%', size: '58px', duration: '3.9s', delay: '0.2s' }
+    ];
+    
+    emojiConfigs.forEach((config) => {
       const emojiEl = document.createElement('div');
       emojiEl.className = 'social-summary-emoji';
-      emojiEl.textContent = emoji;
-      emojiEl.style.cssText = `
-        position:absolute;
-        font-size:${40 + Math.random() * 40}px;
-        left:${Math.random() * 100}%;
-        top:${Math.random() * 100}%;
-        animation:float-emoji ${3 + Math.random() * 2}s ease-in-out infinite;
-        animation-delay:${Math.random() * 2}s;
-      `;
+      emojiEl.textContent = config.emoji;
+      emojiEl.style.fontSize = config.size;
+      emojiEl.style.left = config.left;
+      emojiEl.style.top = config.top;
+      emojiEl.style.animationDuration = config.duration;
+      emojiEl.style.animationDelay = config.delay;
       emojiContainer.appendChild(emojiEl);
     });
     

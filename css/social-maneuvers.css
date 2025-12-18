@@ -582,6 +582,9 @@
   position: absolute;
   pointer-events: none;
   user-select: none;
+  animation-name: float-emoji;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
 
 @keyframes float-emoji {
