@@ -19,7 +19,7 @@
   pointer-events: auto !important;
 }
 
-/* Panel content becomes strict grid: avatars | stage | CTA */
+/* Panel content becomes strict grid: header | avatars | cta with balanced spacing */
 #tv .lv2-panel,
 #tv .lv2-panel .panel-content {
   position: relative !important;
@@ -28,50 +28,63 @@
   max-height: 100% !important;
   display: grid !important;
   grid-template-columns: 1fr !important;
-  /* avatars: auto | stage: flexible but bounded | cta: auto */
-  grid-template-rows: auto minmax(0, 1fr) auto !important;
+  /* Balanced 3-row layout: header | avatars | cta with optical centering */
+  grid-template-rows: auto 1fr auto !important;
   grid-template-areas:
+    "header"
     "avatars"
-    "stage"
     "cta" !important;
   align-items: center !important;
   justify-items: center !important;
-  gap: 8px !important;
+  justify-content: space-between !important;
+  /* Responsive gaps for balanced vertical spacing */
+  gap: clamp(12px, 3vh, 24px) !important;
   overflow: hidden !important;
-  padding: 8px 12px !important;
+  /* Responsive padding for breathing room from faux TV edges */
+  padding: clamp(16px, 4vh, 32px) clamp(12px, 3vw, 24px) clamp(16px, 4vh, 32px) clamp(12px, 3vw, 24px) !important;
 }
 
-/* Avatar row centered at the top of the grid area, visually middle if stage small */
+/* Header row at top */
+#tv .lv2-header {
+  grid-area: header !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Avatar row centered in middle with responsive gap */
 #tv .lv2-grid {
   grid-area: avatars !important;
   width: 100% !important;
+  max-width: min(72vw, 320px) !important; /* Constrain width for better centering */
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  gap: clamp(8px, 2vw, 20px) !important;
-  padding: 6px 12px !important;
+  gap: clamp(12px, 3vw, 24px) !important;
+  padding: 0 !important;
   box-sizing: border-box !important;
 }
 
-/* Stage occupies flexible middle row but is capped so it can't push CTA out */
+/* Stage is hidden in 2-nominee layout but keep defensive bounds if shown */
 #tv .lv2-stage {
-  grid-area: stage !important;
+  display: none !important;
+  grid-area: avatars !important; /* Place in same area as avatars if visible */
   width: 100% !important;
   min-height: 0 !important;
-  max-height: min(52vh, 520px) !important; /* bound the stage so CTA stays visible */
-  display: flex !important;
+  max-height: min(40vh, 320px) !important; /* tighter bound to prevent CTA overflow */
   align-items: center !important;
   justify-content: center !important;
   overflow: hidden !important;
-  padding: 6px !important;
+  padding: 0 !important;
 }
 
-/* CTA row pinned to bottom of panel grid (inside the faux TV) */
+/* CTA row at bottom with sufficient gap */
 #tv .lv2-cta-row,
 #tv .lv-overlay__confirm-container {
   grid-area: cta !important;
   width: min(92%, 520px) !important;
-  margin: 6px auto 0 auto !important;
+  margin: 0 auto !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
@@ -79,17 +92,30 @@
   z-index: 50 !important;
 }
 
-/* Style tweaks for selected name/eVict button to ensure visibility */
+/* Style tweaks for selected name/evict button to ensure visibility and spacing */
 #tv .lv2-name-btn-selected {
   box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
   transform: translateY(0) !important;
+  min-height: clamp(44px, 6vh, 56px) !important;
+  padding: clamp(10px, 2vh, 16px) clamp(20px, 4vw, 32px) !important;
 }
 
-/* Ensure avatars are slightly smaller on small viewports to fit */
+/* Ensure text centering within contestant cards */
+#tv .lv2-contestant {
+  text-align: center !important;
+}
+
+#tv .lv2-name,
+#tv .lv2-name-btn {
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* Responsive avatar sizing with larger bounds for better space usage */
 #tv .lv2-avatar,
 #tv .lv2-contestant .lv2-avatar {
-  width: clamp(60px, 12vmin, 120px) !important;
-  height: clamp(60px, 12vmin, 120px) !important;
+  width: clamp(80px, 16vmin, 160px) !important;
+  height: clamp(80px, 16vmin, 160px) !important;
 }
 
 /* Defensive: prevent stage/panel from forcing page scroll */
