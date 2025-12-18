@@ -55,14 +55,15 @@
   }
 
   /**
-   * Get or create WebAudio context (lazily, after user gesture)
-   * Returns null if no user gesture has been received yet
+   * Get or create WebAudio context
+   * Creates in suspended state initially to avoid autoplay warnings
+   * Will be resumed on first user gesture
    */
   function getCtx(){
-    if (!ctx && userGestureReceived) {
+    if (!ctx) {
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
-        console.info('[IntroHubSfx] AudioContext created after user gesture');
+        console.info('[IntroHubSfx] AudioContext created (state: ' + ctx.state + ')');
       } catch(e) {
         console.warn('[IntroHubSfx] Failed to create AudioContext:', e);
         ctx = null;
@@ -175,16 +176,30 @@
   /**
    * Play click sound using WebAudio (low latency) or HTMLAudio fallback
    */
-  function playClick(){
+  async function playClick(){
     if (!enabled) return;
     
-    // Mark that user has interacted (enables AudioContext creation)
+    // Mark that user has interacted
     if (!userGestureReceived) {
       userGestureReceived = true;
-      console.info('[IntroHubSfx] User gesture received, AudioContext now permitted');
     }
     
     const ac = getCtx();
+    
+    // Resume AudioContext if suspended (required after user gesture)
+    if (ac && ac.state === 'suspended') {
+      try {
+        await ac.resume();
+        console.info('[IntroHubSfx] AudioContext resumed after user gesture');
+        
+        // Try to load buffer now if not already loaded
+        if (!clickBuffer) {
+          tryLoadBuffer().catch(e => console.warn('[IntroHubSfx] Buffer load after resume failed:', e));
+        }
+      } catch(e) {
+        console.warn('[IntroHubSfx] Failed to resume AudioContext:', e);
+      }
+    }
     
     // Try WebAudio first (low latency)
     if (useWebAudio && ac && clickBuffer) {
