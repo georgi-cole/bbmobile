@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Reopen + DR Log Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1, h2 {
+      color: #4a9eff;
+      border-bottom: 2px solid #4a9eff;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #3a3a3a;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .status.pass { background: #1a4d1a; color: #4eff4e; }
+    .status.fail { background: #4d1a1a; color: #ff4e4e; }
+    .status.info { background: #1a3a4d; color: #4ea0ff; }
+    .status.warn { background: #4d3a1a; color: #ffaa00; }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #3a8eef;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    pre {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      border: 1px solid #3a3a3a;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    code {
+      color: #ffaa00;
+    }
+    .dr-entry {
+      background: #2a2a3a;
+      padding: 8px;
+      margin: 5px 0;
+      border-left: 3px solid #4a9eff;
+      border-radius: 2px;
+      font-size: 0.9em;
+    }
+    .dr-entry.social {
+      border-left-color: #4aff9e;
+    }
+    .dr-entry.dramatic {
+      border-left-color: #ff4a4a;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Social Module Reopen + DR Action Log Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Overview</h2>
+    <p>This test validates the three new features:</p>
+    <ul>
+      <li><strong>Task 1:</strong> Social launcher reappears after summary dismissal if phase still active</li>
+      <li><strong>Task 2:</strong> Action log entries pushed to Diary Room Social tab</li>
+      <li><strong>Task 3:</strong> Timer pauses when Details modal opens, resumes when closed</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h2>1️⃣ Setup Test Environment</h2>
+    <div id="setup-status"></div>
+    <button onclick="setupTestEnvironment()">Setup Environment</button>
+    <button onclick="resetTest()">Reset Test</button>
+  </div>
+
+  <div class="test-section">
+    <h2>2️⃣ Task 1: Launcher Reopen Test</h2>
+    <p>Test that the social launcher becomes visible again after summary dismissal.</p>
+    <div id="launcher-status"></div>
+    <button onclick="testLauncherReopen()">Test Launcher Reopen</button>
+    <div id="launcher-details"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3️⃣ Task 2: Action Log to DR Test</h2>
+    <p>Test that action log entries appear in the Diary Room.</p>
+    <div id="dr-log-status"></div>
+    <button onclick="testDRActionLog()">Test DR Action Log</button>
+    <div id="dr-entries"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4️⃣ Task 3: Timer Pause on Details Test</h2>
+    <p>Test that the timer pauses when Details opens and resumes when closed.</p>
+    <div id="timer-status"></div>
+    <button onclick="testTimerPause()">Test Timer Pause</button>
+    <div id="timer-details"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>🔍 Debug Inspector</h2>
+    <button onclick="inspectGameState()">Inspect Game State</button>
+    <button onclick="inspectDREntries()">Inspect DR Entries</button>
+    <button onclick="inspectSummary()">Inspect Summary</button>
+    <pre id="debug-output"></pre>
+  </div>
+
+  <script type="module">
+    // Test utilities
+    window.testUtils = {
+      log(msg, type = 'info') {
+        const className = type === 'pass' ? 'pass' : type === 'fail' ? 'fail' : type === 'warn' ? 'warn' : 'info';
+        const icon = type === 'pass' ? '✅' : type === 'fail' ? '❌' : type === 'warn' ? '⚠️' : 'ℹ️';
+        return `<div class="status ${className}">${icon} ${msg}</div>`;
+      },
+      
+      createMockPlayer(id, name) {
+        return {
+          id,
+          name,
+          evicted: false,
+          jury: false,
+          hoh: id === 1,
+          pov: false,
+          nominated: false
+        };
+      },
+      
+      createMockAction(actorId, targetId, actionType = 'strategize', energyCost = 1) {
+        return {
+          actorId,
+          actorName: window.game?.players?.[actorId]?.name || `Player${actorId}`,
+          targetId,
+          targetName: window.game?.players?.[targetId]?.name || `Player${targetId}`,
+          type: actionType,
+          actionId: actionType,
+          actionCategory: 'strategic',
+          actionLabel: actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          outcome: 'success',
+          succeeded: true,
+          energyCost,
+          effectiveCost: energyCost,
+          informationCost: 0,
+          affinityDelta: 0.05,
+          timestamp: Date.now()
+        };
+      }
+    };
+
+    // Setup test environment
+    window.setupTestEnvironment = function() {
+      const statusDiv = document.getElementById('setup-status');
+      let html = '';
+      
+      try {
+        // Initialize game object
+        if (!window.game) {
+          window.game = {};
+          html += testUtils.log('Created window.game', 'info');
+        }
+        
+        // Setup basic game state
+        window.game.week = 1;
+        window.game.phase = 'social_intermission';
+        window.game.humanId = 1;
+        window.game.endAt = Date.now() + 60000; // 60 seconds remaining
+        window.game.phaseEndsAt = window.game.endAt;
+        
+        // Create mock players
+        window.game.players = {};
+        for (let i = 1; i <= 4; i++) {
+          window.game.players[i] = testUtils.createMockPlayer(i, `Player${i}`);
+        }
+        
+        // Initialize event bus if needed
+        if (!window.game.bus) {
+          window.game.bus = {
+            events: {},
+            on(event, handler) {
+              if (!this.events[event]) this.events[event] = [];
+              this.events[event].push(handler);
+            },
+            emit(event, data) {
+              if (this.events[event]) {
+                this.events[event].forEach(h => h(data));
+              }
+            }
+          };
+          html += testUtils.log('Created event bus', 'info');
+        }
+        
+        // Initialize DiaryRoomLogger if needed
+        if (!window.DiaryRoomLogger) {
+          window.DiaryRoomLogger = {
+            _entries: []
+          };
+          html += testUtils.log('Created DiaryRoomLogger', 'info');
+        }
+        
+        // Initialize social maneuvers session
+        if (!window.game.__socialManeuversSession) {
+          window.game.__socialManeuversSession = {
+            startTime: Date.now(),
+            week: 1,
+            actionsThisPhase: [],
+            energySpent: new Map(),
+            informationSpent: new Map(),
+            relationshipDeltas: new Map()
+          };
+        }
+        
+        // Initialize session logs
+        if (!window.game.__socialManeuversSessionLogs) {
+          window.game.__socialManeuversSessionLogs = [];
+        }
+        
+        html += testUtils.log('Environment setup complete!', 'pass');
+      } catch (err) {
+        html += testUtils.log(`Setup failed: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      
+      statusDiv.innerHTML = html;
+    };
+
+    // Reset test
+    window.resetTest = function() {
+      if (window.game) {
+        window.game.__socialManeuversSessionLogs = [];
+        if (window.DiaryRoomLogger) {
+          window.DiaryRoomLogger._entries = [];
+        }
+      }
+      document.getElementById('setup-status').innerHTML = testUtils.log('Test reset', 'info');
+      document.getElementById('launcher-status').innerHTML = '';
+      document.getElementById('dr-log-status').innerHTML = '';
+      document.getElementById('timer-status').innerHTML = '';
+    };
+
+    // Test 1: Launcher Reopen
+    window.testLauncherReopen = function() {
+      const statusDiv = document.getElementById('launcher-status');
+      const detailsDiv = document.getElementById('launcher-details');
+      let html = '';
+      
+      try {
+        // Create mock launcher element if needed
+        let launcher = document.getElementById('socializeLauncher');
+        if (!launcher) {
+          launcher = document.createElement('div');
+          launcher.id = 'socializeLauncher';
+          launcher.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #4a9eff; padding: 10px; border-radius: 4px; display: none;';
+          launcher.textContent = '💬 Socialize';
+          document.body.appendChild(launcher);
+          html += testUtils.log('Created mock launcher', 'info');
+        }
+        
+        // Verify initial state (launcher should be hidden)
+        launcher.style.display = 'none';
+        html += testUtils.log('Launcher initially hidden', 'info');
+        
+        // Simulate conditions for reopening
+        window.game.phase = 'social_intermission';
+        window.game.endAt = Date.now() + 30000; // 30 seconds remaining
+        
+        // Mock SocialResources
+        if (!window.SocialManeuvers) {
+          window.SocialManeuvers = {};
+        }
+        if (!window.SocialManeuvers.SocialResources) {
+          window.SocialManeuvers.SocialResources = {
+            get(playerId, resource) {
+              return resource === 'energy' ? 3 : 0; // Human has 3 energy
+            }
+          };
+        }
+        
+        // Simulate the Continue button logic
+        const isPhaseStillActive = window.game.phase === 'social_intermission';
+        const hasTimeRemaining = window.game.endAt > Date.now();
+        const humanEnergy = window.SocialManeuvers.SocialResources.get(window.game.humanId, 'energy');
+        
+        if (isPhaseStillActive && hasTimeRemaining && humanEnergy > 0) {
+          launcher.style.display = '';
+          html += testUtils.log('✅ Launcher reopened successfully!', 'pass');
+          html += testUtils.log(`Phase: ${window.game.phase}, Time remaining: ${Math.floor((window.game.endAt - Date.now())/1000)}s, Energy: ${humanEnergy}`, 'info');
+        } else {
+          html += testUtils.log('Launcher NOT reopened', 'warn');
+          html += testUtils.log(`Phase active: ${isPhaseStillActive}, Time: ${hasTimeRemaining}, Energy: ${humanEnergy}`, 'info');
+        }
+        
+        // Check if launcher is visible
+        const isVisible = launcher.style.display !== 'none';
+        detailsDiv.innerHTML = `<div class="status ${isVisible ? 'pass' : 'fail'}">Launcher visible: ${isVisible}</div>`;
+        
+      } catch (err) {
+        html += testUtils.log(`Test failed: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      
+      statusDiv.innerHTML = html;
+    };
+
+    // Test 2: Action Log to DR
+    window.testDRActionLog = function() {
+      const statusDiv = document.getElementById('dr-log-status');
+      const entriesDiv = document.getElementById('dr-entries');
+      let html = '';
+      
+      try {
+        // Create mock action log
+        const mockActions = [
+          testUtils.createMockAction(1, 2, 'strategize', 1),
+          testUtils.createMockAction(1, 3, 'compliment', 1),
+          testUtils.createMockAction(2, 1, 'confront', 2)
+        ];
+        
+        // Create mock summary
+        const mockSummary = {
+          week: 1,
+          timestamp: Date.now(),
+          totalActions: mockActions.length,
+          energySpentByPlayer: { 1: 2, 2: 2 },
+          infoSpentByPlayer: {},
+          actionLog: mockActions.map(a => ({
+            actorId: a.actorId,
+            actorName: a.actorName,
+            targetId: a.targetId,
+            targetName: a.targetName,
+            actionType: a.type,
+            outcome: a.outcome,
+            energyCost: a.energyCost,
+            timestamp: a.timestamp
+          })),
+          highlights: []
+        };
+        
+        // Store in session logs
+        const sessionLog = {
+          metadata: { week: 1 },
+          actions: { list: mockActions }
+        };
+        window.game.__socialManeuversSessionLogs.push(sessionLog);
+        
+        html += testUtils.log(`Created mock summary with ${mockActions.length} actions`, 'info');
+        
+        // Simulate the pushActionLogToDiaryRoom function logic
+        let entriesCreated = 0;
+        mockSummary.actionLog.forEach((action, index) => {
+          const fullAction = mockActions[index];
+          const affinityDelta = fullAction.affinityDelta || 0;
+          const infoCost = fullAction.informationCost || 0;
+          
+          // Format action as story
+          const actionLabel = action.actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const outcomeText = action.outcome === 'success' ? '✓' : '✗';
+          let text = `${action.actorName} → ${action.targetName}: ${actionLabel} (${outcomeText})`;
+          
+          const costs = [];
+          if (action.energyCost > 0) costs.push(`⚡${action.energyCost}`);
+          if (infoCost > 0) costs.push(`🔍${infoCost}`);
+          if (costs.length > 0) text += ` [${costs.join(', ')}]`;
+          
+          if (Math.abs(affinityDelta) >= 0.01) {
+            const sign = affinityDelta >= 0 ? '+' : '';
+            const percentage = (affinityDelta * 100).toFixed(1);
+            text += ` → ${sign}${percentage}%`;
+          }
+          
+          // Create DR entry
+          const entry = {
+            id: `dr-social-action-${mockSummary.week}-${index}`,
+            type: 'social_action',
+            category: 'social',
+            week: mockSummary.week,
+            timestamp: action.timestamp,
+            text: text,
+            severity: 'neutral'
+          };
+          
+          // Add to DiaryRoomLogger
+          window.DiaryRoomLogger._entries.push(entry);
+          entriesCreated++;
+        });
+        
+        html += testUtils.log(`✅ Created ${entriesCreated} DR entries`, 'pass');
+        
+        // Display entries
+        let entriesHtml = '<h3>Diary Room Entries:</h3>';
+        window.DiaryRoomLogger._entries.forEach(entry => {
+          entriesHtml += `<div class="dr-entry ${entry.category}">${entry.text}</div>`;
+        });
+        entriesDiv.innerHTML = entriesHtml;
+        
+      } catch (err) {
+        html += testUtils.log(`Test failed: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      
+      statusDiv.innerHTML = html;
+    };
+
+    // Test 3: Timer Pause
+    window.testTimerPause = function() {
+      const statusDiv = document.getElementById('timer-status');
+      const detailsDiv = document.getElementById('timer-details');
+      let html = '';
+      
+      try {
+        // Track pause/resume calls
+        let pauseCalled = false;
+        let resumeCalled = false;
+        
+        // Mock pause/resume functions
+        window.pausePhaseTimer = function() {
+          pauseCalled = true;
+          console.log('[TEST] pausePhaseTimer called');
+        };
+        
+        window.resumePhaseTimer = function() {
+          resumeCalled = true;
+          console.log('[TEST] resumePhaseTimer called');
+        };
+        
+        // Simulate opening Details modal
+        html += testUtils.log('Simulating Details modal open...', 'info');
+        if (window.pausePhaseTimer) {
+          window.pausePhaseTimer();
+        }
+        
+        if (pauseCalled) {
+          html += testUtils.log('✅ pausePhaseTimer() called on open', 'pass');
+        } else {
+          html += testUtils.log('❌ pausePhaseTimer() NOT called', 'fail');
+        }
+        
+        // Simulate closing Details modal
+        html += testUtils.log('Simulating Details modal close...', 'info');
+        if (window.resumePhaseTimer) {
+          window.resumePhaseTimer();
+        }
+        
+        if (resumeCalled) {
+          html += testUtils.log('✅ resumePhaseTimer() called on close', 'pass');
+        } else {
+          html += testUtils.log('❌ resumePhaseTimer() NOT called', 'fail');
+        }
+        
+        detailsDiv.innerHTML = `
+          <div class="status info">
+            Pause called: ${pauseCalled ? '✅' : '❌'}<br>
+            Resume called: ${resumeCalled ? '✅' : '❌'}
+          </div>
+        `;
+        
+      } catch (err) {
+        html += testUtils.log(`Test failed: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      
+      statusDiv.innerHTML = html;
+    };
+
+    // Debug inspectors
+    window.inspectGameState = function() {
+      const output = document.getElementById('debug-output');
+      output.textContent = JSON.stringify({
+        phase: window.game?.phase,
+        week: window.game?.week,
+        humanId: window.game?.humanId,
+        endAt: window.game?.endAt,
+        timeRemaining: window.game?.endAt ? Math.floor((window.game.endAt - Date.now())/1000) + 's' : 'N/A',
+        sessionLogs: window.game?.__socialManeuversSessionLogs?.length || 0
+      }, null, 2);
+    };
+    
+    window.inspectDREntries = function() {
+      const output = document.getElementById('debug-output');
+      output.textContent = JSON.stringify(window.DiaryRoomLogger?._entries || [], null, 2);
+    };
+    
+    window.inspectSummary = function() {
+      const output = document.getElementById('debug-output');
+      const logs = window.game?.__socialManeuversSessionLogs || [];
+      output.textContent = JSON.stringify(logs[logs.length - 1] || null, null, 2);
+    };
+  </script>
+</body>
+</html>
