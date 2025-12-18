@@ -3663,6 +3663,13 @@
           deck.remove();
         }
         
+        // Remove backdrop when summary is dismissed
+        const backdrop = document.getElementById('socialSummaryBackdrop');
+        if(backdrop) {
+          backdrop.remove();
+          console.info('[social-maneuvers] ✓ Summary backdrop removed');
+        }
+        
         // Let the phase timer callback handle phase advance naturally
         // Don't try to advance manually here - it will happen via timer or explicit call
         console.info('[social-maneuvers] ✓ Summary dismissed - phase will advance via timer callback');
@@ -3687,14 +3694,45 @@
     const tv = document.querySelector('[data-sm-faux-tv], #tvViewport, .tvViewport, #fauxTv, #panel, #tv, .tv') ||
                document.body;
     
+    // Create dimmed backdrop with thematic emojis
+    const backdrop = document.createElement('div');
+    backdrop.id = 'socialSummaryBackdrop';
+    backdrop.className = 'social-summary-backdrop';
+    backdrop.setAttribute('data-social-summary-backdrop', '');
+    backdrop.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.7);z-index:11;pointer-events:auto;overflow:hidden;';
+    
+    // Add thematic emoji decorations to backdrop
+    const emojiContainer = document.createElement('div');
+    emojiContainer.className = 'social-summary-emoji-container';
+    emojiContainer.style.cssText = 'position:absolute;inset:0;pointer-events:none;opacity:0.15;';
+    
+    // Add floating emojis (people and loudspeaker)
+    const emojis = ['👥', '📢', '💬', '🗣️', '👥', '📢', '💬', '🗣️'];
+    emojis.forEach((emoji, i) => {
+      const emojiEl = document.createElement('div');
+      emojiEl.className = 'social-summary-emoji';
+      emojiEl.textContent = emoji;
+      emojiEl.style.cssText = `
+        position:absolute;
+        font-size:${40 + Math.random() * 40}px;
+        left:${Math.random() * 100}%;
+        top:${Math.random() * 100}%;
+        animation:float-emoji ${3 + Math.random() * 2}s ease-in-out infinite;
+        animation-delay:${Math.random() * 2}s;
+      `;
+      emojiContainer.appendChild(emojiEl);
+    });
+    
+    backdrop.appendChild(emojiContainer);
+    tv.appendChild(backdrop);
+    
     deck = document.createElement('div');
     deck.id = 'decisionDeck';
-    // Deck background is non-interactive to allow modal close buttons to remain clickable
-    // Individual cards inside should use pointer-events:auto for their interactive elements
+    // Deck is now on top of backdrop, allows interaction with cards
     deck.style.cssText = 'position:absolute;inset:var(--tv-safe-top,10%) var(--tv-safe-x,5%) var(--tv-safe-bottom,10%) var(--tv-safe-x,5%);display:grid;place-items:center;gap:8px;z-index:12;pointer-events:none;';
     tv.appendChild(deck);
     
-    console.info('[social-maneuvers] Summary deck anchored to:', tv.id || tv.className || 'body');
+    console.info('[social-maneuvers] Summary deck with dimmed backdrop and thematic emojis created');
     return deck;
   }
 
@@ -3795,7 +3833,11 @@
     closeBtn.className = 'btn small';
     closeBtn.textContent = 'Close';
     closeBtn.style.cssText = 'display:block;margin:1em auto 0;';
-    closeBtn.onclick = () => modal.remove();
+    closeBtn.onclick = () => {
+      modal.remove();
+      // Note: Don't remove backdrop here - it's owned by the summary card
+      // Backdrop will be cleaned up when user clicks Continue on the main summary
+    };
     panel.appendChild(closeBtn);
 
     modal.appendChild(panel);
@@ -3803,7 +3845,10 @@
 
     // Close on backdrop click
     modal.onclick = (e) => {
-      if(e.target === modal) modal.remove();
+      if(e.target === modal) {
+        modal.remove();
+        // Note: Don't remove backdrop here - it's owned by the summary card
+      }
     };
   }
 
