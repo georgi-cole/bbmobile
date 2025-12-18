@@ -3683,13 +3683,8 @@
     if(deck) return deck;
     
     // Priority selector chain for faux TV container (prefer data attributes, then classes, fallback to body)
-    const tv = document.querySelector('[data-sm-faux-tv]') ||
-               document.querySelector('#tvViewport') ||
-               document.querySelector('.tvViewport') ||
-               document.querySelector('#fauxTv') ||
-               document.querySelector('#panel') ||
-               document.getElementById('tv') ||
-               document.querySelector('.tv') ||
+    // Combined selector for efficiency - querySelector returns first match in order
+    const tv = document.querySelector('[data-sm-faux-tv], #tvViewport, .tvViewport, #fauxTv, #panel, #tv, .tv') ||
                document.body;
     
     deck = document.createElement('div');

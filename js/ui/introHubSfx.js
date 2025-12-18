@@ -200,7 +200,8 @@
         await ac.resume();
         console.info('[IntroHubSfx] AudioContext resumed after user gesture');
         
-        // Try to load buffer now if not already loaded
+        // Try to load buffer now if not already loaded (non-blocking - HTMLAudio fallback will play this click)
+        // Future clicks will use the loaded buffer once ready
         if (!clickBuffer) {
           tryLoadBuffer().catch(e => console.warn('[IntroHubSfx] Buffer load after resume failed:', e));
         }
