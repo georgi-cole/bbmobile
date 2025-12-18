@@ -3823,7 +3823,7 @@
     
     const card = document.createElement('div');
     card.className = 'revealCard social-summary-card';
-    card.style.cssText = 'max-width: min(84%, 680px); width: auto; box-sizing: border-box; pointer-events: auto; word-break: break-word; white-space: normal; hyphens: auto;';
+    card.style.cssText = 'max-width: 680px; pointer-events: auto;';
 
     const header = document.createElement('h3');
     header.textContent = '🎭 Social Phase Complete';
@@ -3946,28 +3946,11 @@
     let deck = document.getElementById('decisionDeck');
     if(deck) return deck;
     
-    // Try to find faux-TV container first, then fallback
-    const tv = document.querySelector('.tvViewport[data-sm-faux-tv]') ||
-               document.querySelector('[data-faux-tv]') ||
-               document.querySelector('.faux-tv') ||
-               document.querySelector('.tv-container') ||
-               document.getElementById('tv') ||
-               document.querySelector('.tv');
-    
-    if (!tv) {
-      console.warn('[social-maneuvers] Faux TV container not found; attaching summary to body');
-      deck = document.createElement('div');
-      deck.id = 'decisionDeck';
-      deck.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;gap:8px;z-index:12;pointer-events:none;';
-      document.body.appendChild(deck);
-      return deck;
-    }
-    
+    const tv = document.getElementById('tv') || document.querySelector('.tv') || document.body;
     deck = document.createElement('div');
     deck.id = 'decisionDeck';
     deck.style.cssText = 'position:absolute;inset:var(--tv-safe-top,10%) var(--tv-safe-x,5%) var(--tv-safe-bottom,10%) var(--tv-safe-x,5%);display:grid;place-items:center;gap:8px;z-index:12;pointer-events:none;';
     tv.appendChild(deck);
-    console.info('[social-maneuvers] ✓ Summary deck attached to faux TV container');
     return deck;
   }
 
