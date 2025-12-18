@@ -6,37 +6,38 @@
 
 /* Base: apply on small and medium screens, and also on laptop widths for a tighter footprint */
 @media (max-width: 1280px) {
-  /* Panel (blue area) */
+  /* Panel (blue area) - balanced spacing for optical centering */
   .lv2-overlay .lv2-panel,
   .lv2-overlay .lv2-panel .panel-content {
     max-height: 70svh !important; /* shorter footprint on mobile and laptop */
     height: auto !important;
     box-sizing: border-box !important;
-    padding: clamp(8px, 2.2dvh, 18px) !important;
+    padding: clamp(12px, 3dvh, 24px) clamp(10px, 2.5vw, 20px) !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: center !important; /* vertical centering */
+    justify-content: space-between !important; /* balanced vertical spacing */
     align-items: center !important;     /* horizontal centering */
-    gap: clamp(6px, 1.6dvh, 14px) !important;
+    gap: clamp(10px, 2.5dvh, 20px) !important;
   }
 
-  /* Center stage + avatar grid: compact + centered */
+  /* Center stage + avatar grid: compact + centered with balanced gaps */
   .lv2-overlay .lv2-stage,
   .lv2-overlay .lv2-grid {
     width: 100% !important;
-    max-width: 900px !important; /* constrain on laptops */
+    max-width: min(72vw, 520px) !important; /* tighter constraint for better centering */
     margin: 0 auto !important;
     display: flex !important;
     flex-wrap: wrap !important;
     justify-content: center !important;
     align-items: center !important;
-    gap: clamp(8px, 1.8dvh, 16px) !important;
+    gap: clamp(12px, 2.5dvh, 20px) !important;
     padding: 0 !important;
   }
 
   /* Reduce empty center-stage height so CTA isn't pushed down */
   .lv2-overlay .lv2-stage {
-    min-height: clamp(80px, 16dvh, 140px) !important;
+    min-height: clamp(60px, 12dvh, 100px) !important;
+    display: none !important; /* Hide stage in 2-nominee layout */
   }
 
   /* Contestant cells compact but tappable */
@@ -50,28 +51,28 @@
     align-items: center !important;
   }
 
-  /* Avatar sizing: slightly smaller to fit */
+  /* Avatar sizing: balanced for optical centering */
   .lv2-overlay .lv2-avatar,
   .lv2-overlay .lv2-contestant .lv2-avatar {
-    width: clamp(64px, 9dvw, 112px) !important;
-    height: clamp(64px, 9dvw, 112px) !important;
+    width: clamp(72px, 11dvw, 120px) !important;
+    height: clamp(72px, 11dvw, 120px) !important;
   }
 
-  /* Instructions compact and centered */
+  /* Instructions compact and centered with better spacing */
   .lv2-overlay .lv2-instructions {
     text-align: center !important;
-    margin: 6px 0 !important;
+    margin: clamp(8px, 2dvh, 16px) 0 !important;
     font-size: clamp(0.85rem, 2dvh, 1rem) !important;
-    line-height: 1.2 !important;
-    padding: 0 8px !important;
+    line-height: 1.3 !important;
+    padding: 0 clamp(10px, 2.5vw, 16px) !important;
   }
 
-  /* CTA (Evict) sits close to avatars and is centered; sticky to bottom of panel */
+  /* CTA (Evict) centered with sufficient gap below avatars */
   .lv2-overlay .lv2-cta-row,
   .lv-overlay .lv-overlay__confirm-container {
     position: sticky !important;
-    bottom: calc(env(safe-area-inset-bottom, 12px) + 8px) !important;
-    margin: 6px auto 0 auto !important;
+    bottom: calc(env(safe-area-inset-bottom, 12px) + clamp(10px, 2.5vh, 20px)) !important;
+    margin: clamp(12px, 3dvh, 24px) auto 0 auto !important;
     width: min(92%, 520px) !important;
     display: flex !important;
     justify-content: center !important;
@@ -80,11 +81,11 @@
     transform: translateZ(0); /* avoid clipping issues on iOS */
   }
 
-  /* Selected name-button / evict button compact but tappable */
+  /* Selected name-button / evict button compact but tappable with balanced sizing */
   .lv2-overlay .lv2-name-btn,
   .lv2-overlay .lv2-name-btn-selected {
-    min-height: clamp(40px, 6.5dvh, 52px) !important;
-    padding: clamp(8px, 1.4dvh, 14px) clamp(14px, 4vw, 24px) !important;
+    min-height: clamp(44px, 7dvh, 56px) !important;
+    padding: clamp(10px, 2dvh, 16px) clamp(18px, 4.5vw, 28px) !important;
     border-radius: 999px !important;
     font-size: clamp(0.95rem, 2.2dvh, 1.15rem) !important;
     box-shadow: none !important;
