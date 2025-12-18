@@ -51,11 +51,11 @@
     align-items: center !important;
   }
 
-  /* Avatar sizing: balanced for optical centering */
+  /* Avatar sizing: larger for better space usage */
   .lv2-overlay .lv2-avatar,
   .lv2-overlay .lv2-contestant .lv2-avatar {
-    width: clamp(72px, 11dvw, 120px) !important;
-    height: clamp(72px, 11dvw, 120px) !important;
+    width: clamp(80px, 13dvw, 140px) !important;
+    height: clamp(80px, 13dvw, 140px) !important;
   }
 
   /* Instructions compact and centered with better spacing */

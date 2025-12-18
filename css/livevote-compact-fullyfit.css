@@ -111,11 +111,11 @@
   width: 100% !important;
 }
 
-/* Responsive avatar sizing with reasonable bounds */
+/* Responsive avatar sizing with larger bounds for better space usage */
 #tv .lv2-avatar,
 #tv .lv2-contestant .lv2-avatar {
-  width: clamp(72px, 14vmin, 132px) !important;
-  height: clamp(72px, 14vmin, 132px) !important;
+  width: clamp(80px, 16vmin, 160px) !important;
+  height: clamp(80px, 16vmin, 160px) !important;
 }
 
 /* Defensive: prevent stage/panel from forcing page scroll */
