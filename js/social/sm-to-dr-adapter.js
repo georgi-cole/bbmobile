@@ -21,9 +21,10 @@
   
   const cfg = global.game?.cfg || {};
   
-  // Gate adapter installation - require explicit debug flag
-  if (!(cfg.debugSocialAI || cfg.aiSocialEmitDrEvents)) {
-    console.info('[sm-to-dr-adapter] Skipped (gate=false). Enable via window.game.cfg.debugSocialAI or .aiSocialEmitDrEvents');
+  // Gate adapter installation - production-safe with enableDrSocialLogs (default: true)
+  // Also accepts legacy debug flags for backwards compatibility
+  if (!(cfg.enableDrSocialLogs || cfg.debugSocialAI || cfg.aiSocialEmitDrEvents)) {
+    console.info('[sm-to-dr-adapter] Skipped (gate=false). Enable via window.game.cfg.enableDrSocialLogs');
     return;
   }
 

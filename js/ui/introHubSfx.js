@@ -17,16 +17,17 @@
   let initialized = false;
   let warnedClick = false;
   let useWebAudio = true;
+  let userGestureReceived = false; // Track if user has interacted
 
   /**
    * Initialize the SFX module
-   * Creates WebAudio context and attempts to load/decode audio buffer
+   * NOTE: AudioContext creation is deferred until first user gesture to avoid autoplay warnings
    */
   function init(){
     if(initialized) return;
     
-    // Create WebAudio context
-    ctx = getCtx();
+    // Do NOT create AudioContext here - defer until user gesture
+    // ctx will be created lazily in getCtx() when needed
     
     // Create HTMLAudio fallback
     clickEl = new Audio(CLICK_MP3);
@@ -46,20 +47,24 @@
     wireBridge();
     
     // Try to load and decode buffer proactively if consent already granted
+    // This will only create AudioContext if user has already interacted
     tryLoadBuffer();
     
     initialized = true;
-    console.info('[IntroHubSfx] Initialized (WebAudio-first, HTMLAudio fallback)');
+    console.info('[IntroHubSfx] Initialized (WebAudio deferred until user gesture, HTMLAudio fallback)');
   }
 
   /**
-   * Get or create WebAudio context
+   * Get or create WebAudio context (lazily, after user gesture)
+   * Returns null if no user gesture has been received yet
    */
   function getCtx(){
-    if (!ctx) {
+    if (!ctx && userGestureReceived) {
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
+        console.info('[IntroHubSfx] AudioContext created after user gesture');
       } catch(e) {
+        console.warn('[IntroHubSfx] Failed to create AudioContext:', e);
         ctx = null;
       }
     }
@@ -172,6 +177,12 @@
    */
   function playClick(){
     if (!enabled) return;
+    
+    // Mark that user has interacted (enables AudioContext creation)
+    if (!userGestureReceived) {
+      userGestureReceived = true;
+      console.info('[IntroHubSfx] User gesture received, AudioContext now permitted');
+    }
     
     const ac = getCtx();
     
