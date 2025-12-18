@@ -314,6 +314,10 @@
         // (removed updateSelectionFromCarousel() call)
       }, 50);
     }
+    
+    // CTA Guard: Ensure inline CTA is created for 2-nominee flows
+    // This guard addresses visibility issues where the CTA might not be created
+    ensureCtaForTwoNominees();
   }
 
   // Create contestant card (left or right)
@@ -844,6 +848,72 @@
       status.classList.remove('muted');
       status.classList.add('ok');
     }
+  }
+
+  // CTA Guard: Ensure inline CTA is properly initialized for 2-nominee flows
+  // Addresses issue where CTA might not be created, causing visibility problems
+  function ensureCtaForTwoNominees() {
+    // Only apply for 2-nominee flows
+    if (!state.leftId || !state.rightId || !state.leftName || !state.rightName) {
+      console.debug('[lv2] ensureCtaForTwoNominees: not a 2-nominee flow, skipping guard');
+      return;
+    }
+    
+    // Check if we already have a CTA callback registered
+    if (state.ctaBar && state.ctaBar.onVote) {
+      console.debug('[lv2] ensureCtaForTwoNominees: CTA already initialized');
+      return;
+    }
+    
+    console.debug('[lv2] ensureCtaForTwoNominees: Setting up CTA guard');
+    
+    // Setup MutationObserver fallback to detect if CTA is missing
+    setTimeout(() => {
+      const hasNameButtons = state.container?.querySelectorAll('.lv2-name-btn').length >= 2;
+      const hasSelectedButton = state.container?.querySelector('.lv2-name-btn-selected');
+      
+      if (!hasNameButtons) {
+        console.warn('[lv2] CTA Guard: Name buttons missing after render, this should not happen');
+      }
+      
+      // If CTA callback is still not registered after overlay mount, log warning
+      if (!state.ctaBar || !state.ctaBar.onVote) {
+        console.warn('[lv2] CTA Guard: No onVote callback registered. CTA may not work properly.');
+        
+        // Setup fallback: if user tries to interact with name buttons, provide guidance
+        const contestants = state.container?.querySelectorAll('.lv2-contestant');
+        contestants?.forEach(contestant => {
+          const nameBtn = contestant.querySelector('.lv2-name-btn');
+          if (nameBtn && !nameBtn.dataset.guardFallback) {
+            nameBtn.dataset.guardFallback = 'true';
+            const originalClick = nameBtn.onclick;
+            nameBtn.onclick = (e) => {
+              if (!state.ctaBar || !state.ctaBar.onVote) {
+                console.error('[lv2] CTA Guard Fallback: Cannot vote - no onVote handler registered');
+                // Try to find global vote handler as last resort
+                if (typeof global.handleHumanVote === 'function') {
+                  console.debug('[lv2] CTA Guard Fallback: Using global.handleHumanVote');
+                  const playerId = contestant.dataset.playerId;
+                  global.handleHumanVote(playerId);
+                } else if (global.lv2?.pushVote) {
+                  console.debug('[lv2] CTA Guard Fallback: Using lv2.pushVote');
+                  const playerId = contestant.dataset.playerId;
+                  // This is a fallback - not ideal but prevents complete failure
+                  global.lv2.pushVote({
+                    voterId: global.game?.humanId,
+                    voterName: 'You',
+                    pick: contestant.dataset.side,
+                    pickId: playerId
+                  });
+                }
+              } else if (originalClick) {
+                originalClick.call(nameBtn, e);
+              }
+            };
+          }
+        });
+      }
+    }, 300);
   }
 
   // Create voting CTA for 2-nominee flows (inline button pattern)
