@@ -412,6 +412,139 @@
   }
 
   // ============================================================================
+  // DIARY ROOM INTEGRATION (TASK 2)
+  // ============================================================================
+  
+  /**
+   * Push action log entries to Diary Room Social tab
+   * Creates story-like feed entries for each action
+   * @param {Object} summary - Summary object with actionLog
+   */
+  function pushActionLogToDiaryRoom(summary) {
+    const bus = getBus();
+    if (!bus) {
+      console.warn('[social-summary-bridge] No event bus for DR integration');
+      return;
+    }
+
+    const actionLog = summary.actionLog || [];
+    if (actionLog.length === 0) {
+      console.info('[social-summary-bridge] No actions to push to DR');
+      return;
+    }
+
+    // Get full action details from session logs if available
+    const g = global.game;
+    const sessionLogs = g?.__socialManeuversSessionLogs || [];
+    const latestSession = sessionLogs[sessionLogs.length - 1];
+    const fullActionList = latestSession?.actions?.list || [];
+
+    // Create diary entries for each action
+    let entriesCreated = 0;
+    actionLog.forEach((action, index) => {
+      // Find matching full action data (with affinity delta)
+      const fullAction = fullActionList.find(a => 
+        a.actorId === action.actorId && 
+        a.targetId === action.targetId && 
+        Math.abs(a.timestamp - action.timestamp) < 1000
+      );
+
+      const affinityDelta = fullAction?.affinityDelta || 0;
+      const infoCost = fullAction?.informationCost || 0;
+      
+      // Format action as story-like entry
+      const text = formatActionAsStory(action, affinityDelta, infoCost);
+      
+      // Create DR entry
+      const entry = {
+        id: `dr-social-action-${summary.week}-${index}`,
+        type: 'social_action',
+        category: 'social',
+        week: summary.week,
+        timestamp: action.timestamp,
+        text: text,
+        severity: determineSeverityFromAction(action, affinityDelta),
+        data: {
+          actorId: action.actorId,
+          actorName: action.actorName,
+          targetId: action.targetId,
+          targetName: action.targetName,
+          actionType: action.actionType,
+          outcome: action.outcome,
+          energyCost: action.energyCost,
+          infoCost: infoCost,
+          affinityDelta: affinityDelta
+        }
+      };
+
+      // Emit to diary room
+      bus.emit('dr:entry', { entry });
+      entriesCreated++;
+    });
+
+    console.info(`[social-summary-bridge] ✓ Pushed ${entriesCreated} action log entries to DR Social tab`);
+  }
+
+  /**
+   * Format action as story-like text for DR feed
+   * @param {Object} action - Action log entry
+   * @param {number} affinityDelta - Affinity change
+   * @param {number} infoCost - Information cost
+   * @returns {string} Formatted text
+   */
+  function formatActionAsStory(action, affinityDelta, infoCost) {
+    const { actorName, targetName, actionType, outcome, energyCost } = action;
+    
+    // Get action label (convert snake_case to readable)
+    const actionLabel = actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+    // Format outcome
+    const outcomeText = outcome === 'success' ? '✓' : outcome === 'failure' ? '✗' : outcome;
+    
+    // Build story text
+    let text = `${actorName} → ${targetName}: ${actionLabel} (${outcomeText})`;
+    
+    // Add costs
+    const costs = [];
+    if (energyCost > 0) costs.push(`⚡${energyCost}`);
+    if (infoCost > 0) costs.push(`🔍${infoCost}`);
+    if (costs.length > 0) {
+      text += ` [${costs.join(', ')}]`;
+    }
+    
+    // Add affinity delta if significant
+    if (Math.abs(affinityDelta) >= 0.01) {
+      const sign = affinityDelta >= 0 ? '+' : '';
+      const percentage = (affinityDelta * 100).toFixed(1);
+      text += ` → ${sign}${percentage}%`;
+    }
+    
+    return text;
+  }
+
+  /**
+   * Determine severity from action outcome and affinity delta
+   * @param {Object} action - Action data
+   * @param {number} affinityDelta - Affinity change
+   * @returns {string} Severity level
+   */
+  function determineSeverityFromAction(action, affinityDelta) {
+    // High severity for large negative changes
+    if (affinityDelta <= -0.08) return 'high';
+    
+    // Dramatic for large positive changes
+    if (affinityDelta >= 0.12) return 'dramatic';
+    
+    // High for certain action types
+    const highSeverityActions = ['betray', 'backstab', 'expose_secret', 'spread_rumor'];
+    if (highSeverityActions.some(a => action.actionType.includes(a))) {
+      return 'high';
+    }
+    
+    return 'neutral';
+  }
+
+  // ============================================================================
   // EVENT EMISSION
   // ============================================================================
   
@@ -429,6 +562,11 @@
     // Emit summary updated event
     bus.emit('social.summary:updated', summary);
     console.info('[social-summary-bridge] ✓ Emitted social.summary:updated event');
+
+    // TASK 2: Push action log entries to Diary Room Social tab
+    if (summary.actionLog && summary.actionLog.length > 0) {
+      pushActionLogToDiaryRoom(summary);
+    }
 
     // Emit diary room entry event
     const diaryEntry = {

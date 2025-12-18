@@ -3670,6 +3670,23 @@
           console.info('[social-maneuvers] ✓ Summary backdrop removed');
         }
         
+        // TASK 1: Restore social launcher if phase is still active and energy/time remain
+        const g = global.game;
+        const isPhaseStillActive = g?.phase === 'social_intermission';
+        const hasTimeRemaining = g?.endAt && g.endAt > Date.now();
+        const humanId = g?.humanId;
+        const humanEnergy = humanId ? SocialResources.get(humanId, 'energy') : 0;
+        
+        if (isPhaseStillActive && hasTimeRemaining && humanEnergy > 0) {
+          const socialLauncher = document.getElementById('socializeLauncher');
+          if (socialLauncher) {
+            socialLauncher.style.display = '';
+            console.info('[social-maneuvers] ✓ Social launcher restored (phase active, time/energy remain)');
+          }
+        } else {
+          console.info('[social-maneuvers] Social launcher not restored (phase ended or no energy/time)');
+        }
+        
         // Let the phase timer callback handle phase advance naturally
         // Don't try to advance manually here - it will happen via timer or explicit call
         console.info('[social-maneuvers] ✓ Summary dismissed - phase will advance via timer callback');
@@ -3742,6 +3759,10 @@
   }
 
   function showDetailedSummary(summary){
+    // TASK 3: Pause timer when Details modal opens
+    pausePhaseTimer();
+    console.info('[social-maneuvers] ⏸️ Timer paused for Details modal');
+    
     // Create detailed modal
     const modal = document.createElement('div');
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);';
@@ -3840,6 +3861,9 @@
     closeBtn.style.cssText = 'display:block;margin:1em auto 0;';
     closeBtn.onclick = () => {
       modal.remove();
+      // TASK 3: Resume timer when Details modal closes
+      resumePhaseTimer();
+      console.info('[social-maneuvers] ▶️ Timer resumed after Details modal closed');
       // Note: Don't remove backdrop here - it's owned by the summary card
       // Backdrop will be cleaned up when user clicks Continue on the main summary
     };
@@ -3852,6 +3876,9 @@
     modal.onclick = (e) => {
       if(e.target === modal) {
         modal.remove();
+        // TASK 3: Resume timer when Details modal closes via backdrop click
+        resumePhaseTimer();
+        console.info('[social-maneuvers] ▶️ Timer resumed after Details modal closed (backdrop click)');
         // Note: Don't remove backdrop here - it's owned by the summary card
       }
     };
