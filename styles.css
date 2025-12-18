@@ -8607,3 +8607,6 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
    Can be easily removed or adjusted by editing css/livevote-compact.css
    ============================================================================ */
 @import url('css/livevote-compact.css');
+
+/* LV2 compact fully-fit override — must load after main styles */
+@import url('css/livevote-compact-fullyfit.css');
