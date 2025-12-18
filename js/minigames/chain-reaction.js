@@ -33,6 +33,9 @@
     }
 
     function seedInitialFill(fillProb = 0.8) {
+      // Ensure grid is initialized
+      if (!grid || grid.length !== config.rows) createEmptyGrid();
+
       for (let r = 0; r < config.rows; r++) {
         for (let c = 0; c < config.cols; c++) {
           if (Math.random() < fillProb) {
@@ -63,7 +66,9 @@
     }
 
     function getGroup(r, c) {
-      const start = grid[r][c];
+      // Defensive: ensure starting cell is in bounds
+      if (!inBounds(r, c)) return [];
+      const start = grid[r] && grid[r][c];
       if (!start) return [];
       const color = start.color;
       const visited = new Set();
@@ -76,7 +81,7 @@
         if (visited.has(key)) continue;
         visited.add(key);
 
-        const cell = grid[rr][cc];
+        const cell = grid[rr] && grid[rr][cc];
         if (!cell || cell.color !== color) continue;
         group.push([rr, cc]);
 
@@ -99,9 +104,11 @@
 
     function anyGroupSizeGE2() {
       const seen = new Set();
-      for (let r = 0; r < config.rows; r++) {
-        for (let c = 0; c < config.cols; c++) {
-          const cell = grid[r][c];
+      // Iterate based on actual grid to be defensive
+      for (let r = 0; r < grid.length; r++) {
+        const row = grid[r] || [];
+        for (let c = 0; c < row.length; c++) {
+          const cell = row[c];
           if (!cell) continue;
           const key = r + ',' + c;
           if (seen.has(key)) continue;
@@ -115,7 +122,7 @@
 
     function removeGroup(group) {
       group.forEach(([r, c]) => {
-        grid[r][c] = null;
+        if (inBounds(r, c)) grid[r][c] = null;
       });
     }
 
@@ -123,7 +130,7 @@
       for (let c = 0; c < config.cols; c++) {
         let write = config.rows - 1;
         for (let r = config.rows - 1; r >= 0; r--) {
-          if (grid[r][c]) {
+          if (grid[r] && grid[r][c]) {
             if (r !== write) {
               grid[write][c] = grid[r][c];
               grid[r][c] = null;
@@ -132,6 +139,7 @@
           }
         }
         for (let r = write; r >= 0; r--) {
+          if (!grid[r]) grid[r] = new Array(config.cols).fill(null);
           grid[r][c] = null;
         }
       }
@@ -153,7 +161,7 @@
           cellEl.type = 'button';
           cellEl.dataset.r = String(r);
           cellEl.dataset.c = String(c);
-          const cell = grid[r][c];
+          const cell = grid[r] && grid[r][c];
           if (!cell) {
             cellEl.classList.add('cr-cell--empty');
             cellEl.style.background = 'transparent';
@@ -163,6 +171,7 @@
             cellEl.style.background = cell.color;
             cellEl.textContent = '';
           }
+          // Use an event handler that safely handles both direct calls and event-listener calls
           cellEl.addEventListener('click', onCellClick);
           rowEl.appendChild(cellEl);
         }
@@ -177,20 +186,27 @@
       setTimeout(() => cellEl.classList.remove('cr-illegal'), 250);
     }
 
-    function onCellClick() {
+    function onCellClick(e) {
+      // Support event.currentTarget (normal event), or fallback to this (legacy)
+      const el = (e && e.currentTarget) ? e.currentTarget : this;
+      if (!el) return;
       if (!running) return;
-      const r = Number(this.dataset.r);
-      const c = Number(this.dataset.c);
-      const cell = grid[r][c];
+      const r = Number(el.dataset.r);
+      const c = Number(el.dataset.c);
+      if (!inBounds(r, c)) {
+        flashIllegalClick(el);
+        return;
+      }
+      const cell = grid[r] && grid[r][c];
       if (!cell) {
-        flashIllegalClick(this);
+        flashIllegalClick(el);
         return;
       }
 
       const blocking = anyGroupSizeGE2();
       const group = getGroup(r, c);
       if (blocking && group.length < 2) {
-        flashIllegalClick(this);
+        flashIllegalClick(el);
         return;
       }
 
@@ -289,4 +305,4 @@
   }
   /* eslint-enable no-undef */
 
-})(typeof window !== 'undefined' ? window : this);
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
