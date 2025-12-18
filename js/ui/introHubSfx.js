@@ -17,16 +17,18 @@
   let initialized = false;
   let warnedClick = false;
   let useWebAudio = true;
+  let userGestureReceived = false; // Track if user has interacted
+  let bufferLoading = false; // Track if buffer is currently being loaded
 
   /**
    * Initialize the SFX module
-   * Creates WebAudio context and attempts to load/decode audio buffer
+   * NOTE: AudioContext creation is deferred until first user gesture to avoid autoplay warnings
    */
   function init(){
     if(initialized) return;
     
-    // Create WebAudio context
-    ctx = getCtx();
+    // Do NOT create AudioContext here - defer until user gesture
+    // ctx will be created lazily in getCtx() when needed
     
     // Create HTMLAudio fallback
     clickEl = new Audio(CLICK_MP3);
@@ -46,20 +48,25 @@
     wireBridge();
     
     // Try to load and decode buffer proactively if consent already granted
+    // This will only create AudioContext if user has already interacted
     tryLoadBuffer();
     
     initialized = true;
-    console.info('[IntroHubSfx] Initialized (WebAudio-first, HTMLAudio fallback)');
+    console.info('[IntroHubSfx] Initialized (WebAudio deferred until user gesture, HTMLAudio fallback)');
   }
 
   /**
    * Get or create WebAudio context
+   * Creates in suspended state initially to avoid autoplay warnings
+   * Will be resumed on first user gesture
    */
   function getCtx(){
     if (!ctx) {
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
+        console.info('[IntroHubSfx] AudioContext created (state: ' + ctx.state + ')');
       } catch(e) {
+        console.warn('[IntroHubSfx] Failed to create AudioContext:', e);
         ctx = null;
       }
     }
@@ -72,7 +79,9 @@
    */
   async function tryLoadBuffer(){
     const ac = getCtx();
-    if (!ac || clickBuffer) return; // Already loaded or no context
+    if (!ac || clickBuffer || bufferLoading) return; // Already loaded/loading or no context
+    
+    bufferLoading = true;
     
     // Check if consent granted
     let consentGranted = false;
@@ -85,6 +94,7 @@
     
     if (!consentGranted) {
       console.info('[IntroHubSfx] Consent not granted, deferring buffer load');
+      bufferLoading = false;
       return;
     }
     
@@ -96,6 +106,7 @@
         clickBuffer = await ac.decodeAudioData(arrayBuffer);
         console.info('[IntroHubSfx] WAV buffer loaded and decoded');
         useWebAudio = true;
+        bufferLoading = false;
         return;
       }
     } catch(e) {
@@ -110,12 +121,15 @@
         clickBuffer = await ac.decodeAudioData(arrayBuffer);
         console.info('[IntroHubSfx] MP3 buffer loaded and decoded');
         useWebAudio = true;
+        bufferLoading = false;
         return;
       }
     } catch(e) {
       console.warn('[IntroHubSfx] MP3 buffer decode failed, will use HTMLAudio fallback:', e.message);
       useWebAudio = false;
     }
+    
+    bufferLoading = false;
   }
 
   /**
@@ -170,10 +184,31 @@
   /**
    * Play click sound using WebAudio (low latency) or HTMLAudio fallback
    */
-  function playClick(){
+  async function playClick(){
     if (!enabled) return;
     
+    // Mark that user has interacted
+    if (!userGestureReceived) {
+      userGestureReceived = true;
+    }
+    
     const ac = getCtx();
+    
+    // Resume AudioContext if suspended (required after user gesture)
+    if (ac && ac.state === 'suspended') {
+      try {
+        await ac.resume();
+        console.info('[IntroHubSfx] AudioContext resumed after user gesture');
+        
+        // Try to load buffer now if not already loaded (non-blocking - HTMLAudio fallback will play this click)
+        // Future clicks will use the loaded buffer once ready
+        if (!clickBuffer) {
+          tryLoadBuffer().catch(e => console.warn('[IntroHubSfx] Buffer load after resume failed:', e));
+        }
+      } catch(e) {
+        console.warn('[IntroHubSfx] Failed to resume AudioContext:', e);
+      }
+    }
     
     // Try WebAudio first (low latency)
     if (useWebAudio && ac && clickBuffer) {

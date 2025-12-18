@@ -3682,11 +3682,19 @@
     let deck = document.getElementById('decisionDeck');
     if(deck) return deck;
     
-    const tv = document.getElementById('tv') || document.querySelector('.tv') || document.body;
+    // Priority selector chain for faux TV container (prefer data attributes, then classes, fallback to body)
+    // Combined selector for efficiency - querySelector returns first match in order
+    const tv = document.querySelector('[data-sm-faux-tv], #tvViewport, .tvViewport, #fauxTv, #panel, #tv, .tv') ||
+               document.body;
+    
     deck = document.createElement('div');
     deck.id = 'decisionDeck';
+    // Deck background is non-interactive to allow modal close buttons to remain clickable
+    // Individual cards inside should use pointer-events:auto for their interactive elements
     deck.style.cssText = 'position:absolute;inset:var(--tv-safe-top,10%) var(--tv-safe-x,5%) var(--tv-safe-bottom,10%) var(--tv-safe-x,5%);display:grid;place-items:center;gap:8px;z-index:12;pointer-events:none;';
     tv.appendChild(deck);
+    
+    console.info('[social-maneuvers] Summary deck anchored to:', tv.id || tv.className || 'body');
     return deck;
   }
 
