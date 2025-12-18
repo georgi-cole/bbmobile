@@ -1,0 +1,102 @@
+/* css/livevote-compact-fullyfit.css
+   Compact LV2 layout that fully fits inside the faux TV viewport
+   - Ensures lv2-panel fills #tv visible area and bottom edge matches faux TV bottom
+   - Avatars are centered in the middle of the faux TV
+   - CTA appears inside visible area beneath avatars when nominee selected
+   - Scoped to lv2 classes and #tv container
+*/
+
+#tv { position: relative !important; overflow: hidden !important; }
+
+/* Ensure overlay panel fills the whole faux TV visible area */
+#tv .lv2-overlay,
+#tv .lv-overlay {
+  position: absolute !important;
+  inset: 0 !important; /* top:0; left:0; right:0; bottom:0 */
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  pointer-events: auto !important;
+}
+
+/* Panel content becomes strict grid: avatars | stage | CTA */
+#tv .lv2-panel,
+#tv .lv2-panel .panel-content {
+  position: relative !important;
+  box-sizing: border-box !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  /* avatars: auto | stage: flexible but bounded | cta: auto */
+  grid-template-rows: auto minmax(0, 1fr) auto !important;
+  grid-template-areas:
+    "avatars"
+    "stage"
+    "cta" !important;
+  align-items: center !important;
+  justify-items: center !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+  padding: 8px 12px !important;
+}
+
+/* Avatar row centered at the top of the grid area, visually middle if stage small */
+#tv .lv2-grid {
+  grid-area: avatars !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: clamp(8px, 2vw, 20px) !important;
+  padding: 6px 12px !important;
+  box-sizing: border-box !important;
+}
+
+/* Stage occupies flexible middle row but is capped so it can't push CTA out */
+#tv .lv2-stage {
+  grid-area: stage !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  max-height: min(52vh, 520px) !important; /* bound the stage so CTA stays visible */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  padding: 6px !important;
+}
+
+/* CTA row pinned to bottom of panel grid (inside the faux TV) */
+#tv .lv2-cta-row,
+#tv .lv-overlay__confirm-container {
+  grid-area: cta !important;
+  width: min(92%, 520px) !important;
+  margin: 6px auto 0 auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative !important; /* keep inside the tv grid */
+  z-index: 50 !important;
+}
+
+/* Style tweaks for selected name/eVict button to ensure visibility */
+#tv .lv2-name-btn-selected {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
+  transform: translateY(0) !important;
+}
+
+/* Ensure avatars are slightly smaller on small viewports to fit */
+#tv .lv2-avatar,
+#tv .lv2-contestant .lv2-avatar {
+  width: clamp(60px, 12vmin, 120px) !important;
+  height: clamp(60px, 12vmin, 120px) !important;
+}
+
+/* Defensive: prevent stage/panel from forcing page scroll */
+html, body {
+  overscroll-behavior-y: contain !important;
+}
+
+/* Compatibility: if developers used explicit absolute positioning for CTA, lower z-index */
+#tv .lv2-overlay.above-cards { z-index: 14 !important; }
+#tv #tvOverlay, #tv .lv2-overlay { z-index: 12 !important; }

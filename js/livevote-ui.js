@@ -314,6 +314,9 @@
         // (removed updateSelectionFromCarousel() call)
       }, 50);
     }
+    
+    // Ensure inline CTA guard is installed
+    ensureInlineCtaGuard();
   }
 
   // Create contestant card (left or right)
@@ -537,6 +540,112 @@
     }
   }
   
+  // Ensure inline CTA exists + helper to reveal CTA inside the faux TV
+  function ensureInlineCtaGuard() {
+    try {
+      const overlay = document.querySelector('#tv .lv2-overlay') || document.querySelector('#tv .lv-overlay') || document.querySelector('#tvOverlay');
+      if (!overlay) return;
+      if (overlay.__inlineCtaGuardInstalled) return;
+      overlay.__inlineCtaGuardInstalled = true;
+
+      async function tryCreateCanonical() {
+        const ev = global.game?.eviction;
+        const noms = ev?.nominees || [];
+        if (!global.lv2 || typeof global.lv2.createCtaBar !== 'function') return false;
+        if (!noms || noms.length < 2) return false;
+        try {
+          global.lv2.createCtaBar({
+            enabled: true,
+            isTieBreak: !!ev.isTieBreak,
+            isFinal4: !!ev.isFinal4,
+            leftName: global.safeName ? global.safeName(noms[0]) : String(noms[0]),
+            rightName: global.safeName ? global.safeName(noms[1]) : String(noms[1]),
+            leftId: Number(noms[0]),
+            rightId: Number(noms[1]),
+            onVote: (playerId) => {
+              if (typeof global.handleHumanVote === 'function') return global.handleHumanVote(Number(playerId));
+              if (global.lv2 && typeof global.lv2.pushVote === 'function') {
+                const pick = (Number(playerId) === Number(noms[0])) ? 'left' : 'right';
+                global.lv2.pushVote({ voterId: global.game?.humanId || 0, voterName: global.safeName?.(global.game?.humanId) || 'You', pick });
+              }
+            }
+          });
+          if (typeof global.lv2.setTurn === 'function') global.lv2.setTurn(true);
+          return true;
+        } catch (e) {
+          console.warn('[lv2-guard] createCtaBar failed', e);
+          return false;
+        }
+      }
+
+      function insertDebugCta() {
+        if (overlay.querySelector('.debug-cta-row') || overlay.querySelector('.lv2-cta-row') || overlay.querySelector('.lv-overlay__confirm-container')) return;
+        const cta = document.createElement('div');
+        cta.className = 'debug-cta-row';
+        cta.style.cssText = 'display:flex;justify-content:center;margin:8px auto 0 auto;width:100%;z-index:9999;';
+        const btn = document.createElement('button');
+        btn.textContent = 'Evict';
+        btn.className = 'debug-evict-btn';
+        btn.style.cssText = 'background:linear-gradient(135deg,#e44,#c21);color:#fff;padding:12px 28px;border-radius:28px;border:none;font-weight:700;cursor:pointer;';
+        cta.appendChild(btn);
+        const panel = document.querySelector('#tv .lv2-panel .panel-content') || document.querySelector('#tv .lv2-panel');
+        if (panel) {
+          panel.appendChild(cta);
+        } else {
+          overlay.appendChild(cta);
+        }
+        btn.addEventListener('click', () => {
+          const selected = document.querySelector('.lv2-name-btn-selected')?.closest('.lv2-contestant')?.dataset?.playerId ||
+                           document.querySelector('.lv2-contestant.selected')?.dataset?.playerId;
+          if (!selected) { alert('Select a nominee first.'); return; }
+          if (typeof global.handleHumanVote === 'function') return global.handleHumanVote(Number(selected));
+          if (global.lv2 && typeof global.lv2.pushVote === 'function') {
+            const ev = global.game?.eviction; const noms = ev?.nominees || [];
+            const pick = (Number(selected) === Number(noms[0])) ? 'left' : 'right';
+            global.lv2.pushVote({ voterId: global.game?.humanId||0, voterName: global.safeName?.(global.game?.humanId)||'You', pick });
+          }
+        });
+      }
+
+      tryCreateCanonical().then(created => {
+        if (!created) {
+          setTimeout(() => tryCreateCanonical(), 200);
+          setTimeout(() => tryCreateCanonical(), 600);
+          setTimeout(() => {
+            const exists = overlay.querySelector('.lv2-cta-row, .lv-overlay__confirm-container, .debug-cta-row');
+            if (!exists) insertDebugCta();
+          }, 800);
+        }
+      });
+
+      const mo = new MutationObserver(() => {
+        const exists = overlay.querySelector('.lv2-cta-row, .lv-overlay__confirm-container, .debug-cta-row');
+        if (!exists) tryCreateCanonical().then(created => { if (!created) insertDebugCta(); });
+      });
+      mo.observe(overlay, { childList: true, subtree: true });
+
+    } catch (err) {
+      console.error('[lv2-guard] unexpected', err);
+    }
+  }
+
+  // Helper to ensure CTA is visible inside the faux TV after a selection
+  function revealCtaInView() {
+    const cta = document.querySelector('#tv .lv2-cta-row') || document.querySelector('#tv .lv-overlay__confirm-container') || document.querySelector('#tv .debug-cta-row');
+    if (!cta) return;
+    const tvEl = document.querySelector('#tv');
+    if (!tvEl) return;
+    const tvRect = tvEl.getBoundingClientRect();
+    const cRect = cta.getBoundingClientRect();
+    if (cRect.bottom > tvRect.bottom || cRect.top < tvRect.top) {
+      const panel = document.querySelector('#tv .lv2-panel .panel-content') || document.querySelector('#tv .lv2-panel');
+      if (panel) {
+        panel.appendChild(cta);
+        try { cta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) {}
+      }
+    }
+  }
+  
   // Select a nominee (transforms name button and updates instructions)
   function selectNominee(playerId, playerName) {
     state.selectedNominee = playerId;
@@ -602,6 +711,9 @@
         instructions.textContent = 'Tap on the photo of the person you want to evict.';
       }
     }
+    
+    // Reveal CTA inside faux TV after selection (with small delay for DOM updates)
+    setTimeout(() => { try { revealCtaInView(); } catch(e){} }, 60);
   }
   
   // Mobile Carousel 2.0: Update the CTA dock button (deprecated - no longer used)
