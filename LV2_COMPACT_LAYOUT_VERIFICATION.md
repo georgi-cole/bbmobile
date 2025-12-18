@@ -2,25 +2,34 @@
 
 ## Changes Made
 
-### 1. CSS Loading (index.html)
-**Problem**: The compact LV2 layout CSS files were loaded via `@import` in `styles.css`, which can have reliability issues on GitHub Pages (caching, sequential loading, browser compatibility).
+### 1. CSS Loading (index.html) - Cache-Busting Fix
+**Problem**: The compact LV2 layout CSS files were loaded without version query parameters, causing GitHub Pages to serve cached versions. This prevented the optical centering fixes from PR #899 from appearing on the live site.
 
-**Solution**: Added direct `<link>` tags in `index.html` (lines 35-36):
+**Solution**: Added cache-busting version parameters to direct `<link>` tags in `index.html` (lines 35-36):
 ```html
-<link rel="stylesheet" href="css/livevote-compact.css">
-<link rel="stylesheet" href="css/livevote-compact-fullyfit.css">
+<link rel="stylesheet" href="css/livevote-compact.css?v=compact-fix-1">
+<link rel="stylesheet" href="css/livevote-compact-fullyfit.css?v=compact-fix-1">
+```
+
+And to the JS file (line 519):
+```html
+<script defer src="js/livevote-ui.js?v=compact-fix-1"></script>
 ```
 
 **Benefits**:
+- Forces browsers and GitHub Pages to fetch fresh versions of the files
 - More reliable loading on GitHub Pages
-- Consistent with how other livevote CSS files are loaded
+- Consistent with how other critical CSS files are versioned (e.g., `styles.css?v=fixes-5`)
 - Proper load order maintained (after base styles, before other components)
-- Better browser caching behavior
+- Ensures the optical centering fixes are actually deployed
 
-### 2. styles.css Cleanup
-**Problem**: Duplicate CSS loading if both `@import` and direct `<link>` are present.
+### 2. Cache-Busting Strategy
+**Problem**: GitHub Pages was serving cached versions of the compact layout files, preventing users from seeing the optical centering fixes from PR #899.
 
-**Solution**: Removed `@import` statements from end of `styles.css`, replaced with comment explaining the new loading method.
+**Solution**: Added version query parameters (`?v=compact-fix-1`) to force browsers and CDN to fetch fresh versions:
+- Consistent with existing cache-busting strategy used for `styles.css?v=fixes-5`
+- Will increment version number for future updates (e.g., `?v=compact-fix-2`)
+- Simple and effective way to bypass browser and CDN caches
 
 ## Verification Steps for Production
 
@@ -52,8 +61,10 @@
 
 1. **Open DevTools** (F12) on the production site
 2. **Check Network tab**:
-   - Look for `livevote-compact.css` - should load with 200 status (not 404)
-   - Look for `livevote-compact-fullyfit.css` - should load with 200 status (not 404)
+   - Look for `livevote-compact.css?v=compact-fix-1` - should load with 200 status (not 304 or 404)
+   - Look for `livevote-compact-fullyfit.css?v=compact-fix-1` - should load with 200 status (not 304 or 404)
+   - Look for `livevote-ui.js?v=compact-fix-1` - should load with 200 status (not 304 or 404)
+   - **NOTE**: The version parameter `?v=compact-fix-1` is critical - if you see these files loading WITHOUT the version parameter, clear browser cache or do a hard refresh (Ctrl+Shift+R / Cmd+Shift+R)
 
 3. **Check Computed styles** on the LV2 panel:
    - Find element: `#tv .lv2-panel` or `#tv .lv2-overlay`
@@ -61,11 +72,13 @@
      - `position: absolute`
      - `inset: 0` (or equivalent top/left/right/bottom: 0)
      - `display: grid`
-     - `grid-template-rows: auto minmax(0, 1fr) auto`
+     - `grid-template-rows: auto 1fr auto` (with clamp() for gap)
+     - `padding: clamp(16px, 4vh, 32px) clamp(12px, 3vw, 24px)`
 
 4. **Check Console**:
    - Should not see 404 errors for compact CSS files
    - LV2 initialization logs should appear
+   - Look for messages like `[lv2] Entering...` or similar debug output
 
 ## Expected Behavior
 
