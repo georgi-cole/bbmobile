@@ -18,6 +18,7 @@
   let warnedClick = false;
   let useWebAudio = true;
   let userGestureReceived = false; // Track if user has interacted
+  let bufferLoading = false; // Track if buffer is currently being loaded
 
   /**
    * Initialize the SFX module
@@ -78,7 +79,9 @@
    */
   async function tryLoadBuffer(){
     const ac = getCtx();
-    if (!ac || clickBuffer) return; // Already loaded or no context
+    if (!ac || clickBuffer || bufferLoading) return; // Already loaded/loading or no context
+    
+    bufferLoading = true;
     
     // Check if consent granted
     let consentGranted = false;
@@ -91,6 +94,7 @@
     
     if (!consentGranted) {
       console.info('[IntroHubSfx] Consent not granted, deferring buffer load');
+      bufferLoading = false;
       return;
     }
     
@@ -102,6 +106,7 @@
         clickBuffer = await ac.decodeAudioData(arrayBuffer);
         console.info('[IntroHubSfx] WAV buffer loaded and decoded');
         useWebAudio = true;
+        bufferLoading = false;
         return;
       }
     } catch(e) {
@@ -116,12 +121,15 @@
         clickBuffer = await ac.decodeAudioData(arrayBuffer);
         console.info('[IntroHubSfx] MP3 buffer loaded and decoded');
         useWebAudio = true;
+        bufferLoading = false;
         return;
       }
     } catch(e) {
       console.warn('[IntroHubSfx] MP3 buffer decode failed, will use HTMLAudio fallback:', e.message);
       useWebAudio = false;
     }
+    
+    bufferLoading = false;
   }
 
   /**

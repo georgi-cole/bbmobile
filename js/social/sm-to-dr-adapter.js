@@ -23,7 +23,7 @@
   
   // Gate adapter installation - production-safe with enableDrSocialLogs (default: true if undefined)
   // Also accepts legacy debug flags for backwards compatibility
-  const enableDrSocialLogs = cfg.enableDrSocialLogs !== false; // Default to true if undefined
+  const enableDrSocialLogs = cfg.enableDrSocialLogs ?? true; // Default to true if undefined or null
   const legacyDebugFlags = cfg.debugSocialAI || cfg.aiSocialEmitDrEvents;
   
   if (!(enableDrSocialLogs || legacyDebugFlags)) {
