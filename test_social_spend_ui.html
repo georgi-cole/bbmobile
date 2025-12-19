@@ -176,6 +176,25 @@
     <div id="analyticsLog"></div>
   </div>
 
+  <!-- Initialize game object BEFORE loading modules -->
+  <script>
+    // Initialize game object early so modules can read it
+    if (!window.game) {
+      window.game = {
+        cfg: {},
+        localPlayerId: 1,
+        humanPlayerId: 1,
+        players: [
+          { id: 1, name: 'Alice', isHuman: true },
+          { id: 2, name: 'Bob', isHuman: false },
+          { id: 3, name: 'Charlie', isHuman: false }
+        ]
+      };
+    }
+    // Also set __localPlayerId for fallback
+    window.__localPlayerId = 1;
+  </script>
+
   <!-- Load dependencies -->
   <script src="js/config/defaults.js"></script>
   <script src="js/social/social-flavor.js"></script>
@@ -188,19 +207,6 @@
   <link rel="stylesheet" href="css/social-spend.css">
 
   <script>
-    // Initialize game object
-    if (!window.game) {
-      window.game = {
-        cfg: {},
-        localPlayerId: 1,
-        players: [
-          { id: 1, name: 'Alice', isHuman: true },
-          { id: 2, name: 'Bob', isHuman: false },
-          { id: 3, name: 'Charlie', isHuman: false }
-        ]
-      };
-    }
-
     // Helper function to display test results
     function showResult(containerId, message, passed) {
       const container = document.getElementById(containerId);
