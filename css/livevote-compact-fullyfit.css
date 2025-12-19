@@ -259,19 +259,61 @@
   width: 100% !important;
 }
 
-/* Responsive avatar sizing with limits to prevent overflow - compact for nucleus layout */
+/* Responsive avatar sizing with limits to prevent overflow - extra compact for nucleus layout */
 .tvViewport .lv2-avatar,
 .tvViewport .lv2-contestant .lv2-avatar,
 .tvViewport .votePanel .lv2-avatar,
-.tvViewport .votePanel .nomineeAvatar {
-  width: clamp(70px, 14vmin, 140px) !important;
-  height: clamp(70px, 14vmin, 140px) !important;
+.tvViewport .votePanel .nomineeAvatar,
+.tvViewport .lv-overlay__avatar {
+  width: clamp(60px, 12vmin, 120px) !important;
+  height: clamp(60px, 12vmin, 120px) !important;
   /* Ensure avatar never exceeds safe bounds as per spec */
-  max-width: min(60vw, 280px) !important;
-  max-height: min(30vh, 280px) !important;
+  max-width: min(50vw, 240px) !important;
+  max-height: min(25vh, 240px) !important;
   /* Ensure avatar is centered */
   margin: 0 auto !important;
   display: block !important;
+}
+
+/* Avatar containers for carousel overlay - extra compact */
+.tvViewport .lv-overlay__avatar-container {
+  width: clamp(60px, 12vmin, 120px) !important;
+  height: clamp(60px, 12vmin, 120px) !important;
+  max-width: min(50vw, 240px) !important;
+  max-height: min(25vh, 240px) !important;
+}
+
+/* Center avatar when selected - slightly larger but still compact */
+.tvViewport .lv-overlay__nominee.center .lv-overlay__avatar-container {
+  width: clamp(80px, 16vmin, 140px) !important;
+  height: clamp(80px, 16vmin, 140px) !important;
+  max-width: min(60vw, 280px) !important;
+  max-height: min(30vh, 280px) !important;
+}
+
+/* Nominee elements - compact spacing */
+.tvViewport .lv-overlay__nominee {
+  gap: clamp(4px, 1vw, 8px) !important;
+}
+
+/* Nominee names - compact text */
+.tvViewport .lv-overlay__nominee-name {
+  font-size: clamp(0.85rem, 2.5vw, 1rem) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Carousel track - compact gaps between avatars */
+.tvViewport .lv-overlay__track {
+  gap: clamp(8px, 2vw, 16px) !important;
+  padding: 0 clamp(12px, 3vw, 24px) !important;
+}
+
+/* Header text - compact size */
+.tvViewport .lv-overlay__header {
+  font-size: clamp(0.85rem, 2.5vw, 1.05rem) !important;
+  padding: clamp(4px, 1vh, 8px) clamp(12px, 2vw, 16px) !important;
+  margin: 0 !important;
 }
 
 /* Ensure all text elements are centered */
