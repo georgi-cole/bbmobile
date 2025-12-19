@@ -378,7 +378,46 @@
     }
   };
 
-  Registry.get = function(id){ return Registry._actions[id]; };
+  // ===== LEGACY ACTION ID ALIASES =====
+  // Maps legacy/social simulator/scheduler actionIds to canonical catalog ids
+  // Enables backward compatibility for existing code while mapping to spendable catalog actions
+  Registry._aliases = {
+    // Small talk variations -> secret_chat
+    small_talk: 'secret_chat',
+    compliment: 'secret_chat',
+    strategize: 'secret_chat',
+    
+    // Gossip/rumor variations -> plant_rumor
+    gossip: 'plant_rumor',
+    lie: 'plant_rumor',
+    
+    // Interrogation -> probe_hoh (best-effort mapping)
+    interrogate: 'probe_hoh',
+    
+    // Backstab -> betrayal_tease
+    backstab: 'betrayal_tease',
+    
+    // Insult -> rivalry_poke
+    insult: 'rivalry_poke'
+  };
+
+  Registry.get = function(id){ 
+    // First, try direct lookup
+    let action = Registry._actions[id];
+    
+    // If not found, check aliases
+    if (!action && Registry._aliases[id]) {
+      const canonicalId = Registry._aliases[id];
+      action = Registry._actions[canonicalId];
+      
+      if (action) {
+        console.debug('[social-actions-registry] Resolved legacy id "' + id + '" -> "' + canonicalId + '"');
+      }
+    }
+    
+    return action;
+  };
+  
   Registry.list = function(){ return Object.values(Registry._actions); };
   Registry.listByPhase = function(phaseTag){ 
     return Object.values(Registry._actions).filter(a => a.phaseTags.includes(phaseTag)); 
@@ -393,5 +432,5 @@
   };
 
   global.SocialActionsRegistry = Registry;
-  console.info('[social-actions-registry] loaded with', Object.keys(Registry._actions).length, 'actions');
+  console.info('[social-actions-registry] loaded with', Object.keys(Registry._actions).length, 'actions,', Object.keys(Registry._aliases).length, 'aliases');
 })(window);
