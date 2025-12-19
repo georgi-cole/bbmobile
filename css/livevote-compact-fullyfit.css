@@ -29,8 +29,17 @@
 }
 
 /* Ensure lv-overlay works properly inside #tv container */
-#tv .lv-overlay {
+#tv .lv-overlay,
+.tvViewport .lv-overlay {
   background: linear-gradient(135deg, rgba(5, 10, 18, 0.85), rgba(15, 25, 40, 0.88)) !important;
+  /* When lv-overlay is used directly (without intermission-card-container), it should also be a flex panel */
+  width: min(420px, 92%) !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 0 !important;
 }
 
 /* The panel controls internal layout - flex column with normal gaps */

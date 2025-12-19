@@ -9,6 +9,18 @@
   <link rel="stylesheet" href="css/livevote-compact-fullyfit.css">
   <link rel="stylesheet" href="css/eviction-layout-containment.css">
   <style>
+    /* DEBUG OUTLINES */
+    #tv .tvViewport { outline: 2px solid red !important; }
+    #tv .tv-intermission-overlay,
+    #tv .lv-overlay { outline: 2px solid lime !important; }
+    #tv .intermission-card-container,
+    #tv .votePanel { outline: 2px solid cyan !important; }
+    #tv .voteCTA,
+    #tv .lv-overlay__confirm-container { outline: 2px solid yellow !important; }
+    #tv .voteStage,
+    #tv .lv-overlay__carousel { outline: 2px solid magenta !important; }
+  </style>
+  <style>
     body {
       margin: 0;
       padding: 20px;
@@ -146,6 +158,39 @@
       overlay.appendChild(confirmContainer);
 
       viewport.appendChild(overlay);
+      
+      // DEBUG LOGGING
+      setTimeout(() => {
+        console.log("=== DEBUG: Vote UI State ===");
+        console.log("evictButtons", [...document.querySelectorAll("button")].filter(b => /evict/i.test(b.textContent)).map(b => b.outerHTML));
+        console.log("ctaContainer", document.querySelector(".voteCTA,.lv2-cta,.lv-overlay__confirm-container")?.outerHTML);
+        console.log("overlay", document.querySelector(".lv-overlay")?.outerHTML?.substring(0, 500));
+        
+        const btn = document.querySelector(".lv-overlay__evict-btn");
+        if (btn) {
+          const computed = window.getComputedStyle(btn);
+          console.log("Button computed styles:", {
+            display: computed.display,
+            visibility: computed.visibility,
+            opacity: computed.opacity,
+            position: computed.position
+          });
+          console.log("Button DOM path:", btn.parentElement?.className, "->", btn.parentElement?.parentElement?.className);
+        } else {
+          console.log("ERROR: Evict button not found in DOM!");
+        }
+        
+        const container = document.querySelector(".lv-overlay__confirm-container");
+        if (container) {
+          const computed = window.getComputedStyle(container);
+          console.log("CTA container computed:", {
+            display: computed.display,
+            overflow: computed.overflow,
+            maxHeight: computed.maxHeight,
+            height: computed.height
+          });
+        }
+      }, 100);
     }
 
     function hideVoteOverlay() {
