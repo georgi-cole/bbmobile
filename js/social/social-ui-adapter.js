@@ -63,10 +63,9 @@
    */
   function canAfford(playerId, cost) {
     // Try SocialManeuvers API first
-    if (global.SocialManeuvers?.SocialResources) {
-      const resources = global.SocialManeuvers.SocialResources.getAll?.(playerId) || 
-                       { energy: global.SocialManeuvers.SocialResources.get?.(playerId, 'energy') || 0 };
-      return resources.energy >= cost;
+    if (global.SocialManeuvers?.SocialResources?.get) {
+      const energy = global.SocialManeuvers.SocialResources.get(playerId, 'energy');
+      return energy >= cost;
     }
     
     // Fallback to mock bank for testing
@@ -422,14 +421,24 @@
       return;
     }
 
-    // Find the most recent entry (last child)
-    const entries = logContainer.querySelectorAll('.diary-entry, .log-entry');
-    if (entries.length === 0) {
-      console.warn('[social-ui-adapter] No diary entries found');
-      return;
+    // Find the entry by ID or timestamp to ensure correct matching
+    const entryId = payload.id;
+    let entryElement = null;
+    
+    if (entryId) {
+      // Try to find by data-entry-id first
+      entryElement = logContainer.querySelector(`[data-entry-id="${entryId}"]`);
     }
-
-    const entryElement = entries[entries.length - 1];
+    
+    // Fallback: Find most recent entry if ID matching fails
+    if (!entryElement) {
+      const entries = logContainer.querySelectorAll('.diary-entry, .log-entry');
+      if (entries.length === 0) {
+        console.warn('[social-ui-adapter] No diary entries found');
+        return;
+      }
+      entryElement = entries[entries.length - 1];
+    }
     
     // Check if already has CTA
     if (entryElement.querySelector('.social-spend-cta-container')) {

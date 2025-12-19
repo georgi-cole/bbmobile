@@ -293,6 +293,10 @@
       const timestamp = Date.now();
       const entryId = `test-entry-${timestamp}`;
       
+      const flavorText = 'Alice pulled Bob aside and floated a plan to target Charlie.';
+      const detailedText = 'Alice: "We should push to get Charlie out next week. It makes sense if we swing votes."\nBob: "I can be convinced, but I need something in return."';
+      const displayText = truthiness === 'true' ? flavorText : `${flavorText} (might be misdirection)`;
+      
       const payload = {
         id: entryId,
         timestamp: timestamp,
@@ -300,14 +304,14 @@
         category: 'social',
         severity: 'neutral',
         title: 'Alice → Strategize',
-        text: 'Alice pulled Bob aside and floated a plan to target Charlie. (might be misdirection)',
+        text: displayText,
         raw: {
           __enriched: true,
           actorId: 1,
           targetId: 2,
           actionId: 'strategize',
-          flavorText: 'Alice pulled Bob aside and floated a plan to target Charlie.',
-          detailedText: 'Alice: "We should push to get Charlie out next week. It makes sense if we swing votes."\nBob: "I can be convinced, but I need something in return."',
+          flavorText: flavorText,
+          detailedText: detailedText,
           truthiness: truthiness,
           spendPrompt: {
             cost: 3,
@@ -327,6 +331,8 @@
       const timestamp = Date.now();
       const entryId = `test-entry-${timestamp}`;
       
+      const eventText = 'Bob complimented Charlie\'s competition performance.';
+      
       const payload = {
         id: entryId,
         timestamp: timestamp,
@@ -334,13 +340,13 @@
         category: 'social',
         severity: 'neutral',
         title: 'Bob → Compliment',
-        text: 'Bob complimented Charlie\'s competition performance.',
+        text: eventText,
         raw: {
           __enriched: true,
           actorId: 2,
           targetId: 3,
           actionId: 'compliment',
-          flavorText: 'Bob complimented Charlie\'s competition performance.',
+          flavorText: eventText,
           truthiness: 'true',
           spendPrompt: null // No spend prompt
         }
