@@ -1,13 +1,21 @@
 // MODULE: minigames/hold-wall.js
-// Hold Wall - 10-minute endurance competition with responsive avatar displays
+// Hold Wall - Endurance competition with hidden timer (90-200s), deal mechanics, and fail-safe
 
 (function(g){
   'use strict';
 
-  // Constants
-  const AI_DROP_WINDOW_MS = 600000; // 10 minutes - upper bound for initial AI drop scheduling only
-  const MIN_DROP_MS = 8000; // 8 seconds minimum before first drop
-  const MAX_DROP_MS = AI_DROP_WINDOW_MS - 5000; // 5 seconds before window (for initial scheduling)
+  // Constants - Updated per requirements
+  const MIN_HIDDEN_DURATION_MS = 90000;  // 90 seconds minimum
+  const MAX_HIDDEN_DURATION_MS = 200000; // 200 seconds maximum
+  const MULTI_PARTICIPANT_CHECK_INTERVAL = 10000; // 10 seconds
+  const MULTI_PARTICIPANT_DROP_CHANCE = 0.44; // 44% chance
+  const DEAL_WINDOW_MS = 10000; // 10 seconds for deal decision
+  const POST_DEAL_CHECK_INTERVAL = 15000; // 15 seconds
+  const POST_DEAL_DROP_CHANCE = 0.30; // 30% chance
+  const DEAL_REOFFIER_INTERVAL = 60000; // 60 seconds
+  const FAIL_SAFE_BUFFER_MS = 20000; // Start acceleration 20s before end
+  const FINAL_FORCE_MS = 5000; // Force resolve in final 5s
+  const BASE_NO_NOMINATION_CHANCE = 0.65; // 65% base chance AI respects deal
   const MOVE_THRESHOLD = 15; // pixels
 
   /**
@@ -63,25 +71,98 @@
   }
 
   /**
-   * Hold Wall minigame - 10-minute endurance competition
+   * Detect competition type from game state
+   * @returns {string} 'hoh', 'pov', or 'unknown'
+   */
+  function detectCompetitionType(){
+    if(!g.game) return 'unknown';
+    const phase = g.game.phase || '';
+    
+    // Check for POV/veto phases
+    if(phase.includes('pov') || phase.includes('veto')) return 'pov';
+    
+    // Check for HOH phases
+    if(phase.includes('hoh') || phase === 'hoh') return 'hoh';
+    
+    return 'unknown';
+  }
+
+  /**
+   * Get eligible participants based on competition type
+   * @param {string} compType - Competition type ('hoh', 'pov', or 'unknown')
+   * @returns {Array} Array of player objects
+   */
+  function getEligibleParticipants(compType){
+    if(!g.game || !g.game.players || !Array.isArray(g.game.players)){
+      return [];
+    }
+    
+    const players = g.game.players;
+    
+    if(compType === 'pov'){
+      // POV: Only the 6 veto-selected players
+      // Check if we have povPlayers or vetoPlayers stored in game state
+      if(g.game.povPlayers && Array.isArray(g.game.povPlayers)){
+        const povPlayerIds = g.game.povPlayers;
+        return players.filter(p => povPlayerIds.includes(p.id) && !p.evicted);
+      }
+      
+      // Fallback: If no POV players specified, use HOH + nominees + 3 random
+      // This is a safety fallback - in real game this should be set by nominations phase
+      console.warn('[HoldWall] No POV players found in game state, using fallback selection');
+      const hohId = g.game.hohId;
+      const nominees = g.game.nominees || [];
+      const eligible = players.filter(p => !p.evicted);
+      
+      // Get HOH and nominees first
+      const povSet = new Set();
+      if(hohId) povSet.add(hohId);
+      nominees.forEach(id => povSet.add(id));
+      
+      // Fill remaining slots with random non-evicted players
+      const remaining = eligible.filter(p => !povSet.has(p.id));
+      while(povSet.size < 6 && remaining.length > 0){
+        const idx = Math.floor(Math.random() * remaining.length);
+        povSet.add(remaining[idx].id);
+        remaining.splice(idx, 1);
+      }
+      
+      return players.filter(p => povSet.has(p.id) && !p.evicted);
+    }
+    
+    // HOH or unknown: All non-evicted players
+    return players.filter(p => !p.evicted);
+  }
+
+  /**
+   * Hold Wall minigame - Endurance competition with hidden timer
    * 
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
    * @param {Object} options - Configuration options
    * @param {number} options.seed - Optional seed for deterministic AI behavior
    * @param {string} options.avatarMode - Manual override for avatar mode (strip/tiny/single)
+   * @param {string} options.competitionType - Type of competition ('hoh' or 'pov')
    */
   function render(container, onComplete, options = {}){
     container.innerHTML = '';
     
     const { 
       seed,
-      avatarMode: manualAvatarMode
+      avatarMode: manualAvatarMode,
+      competitionType
     } = options;
     
     // Determine avatar display mode
     const avatarMode = chooseAvatarMode(manualAvatarMode);
     const rng = seed !== undefined ? createSeededRNG(seed) : Math.random;
+    
+    // Determine hidden duration (90-200 seconds)
+    const hiddenDuration = MIN_HIDDEN_DURATION_MS + rng() * (MAX_HIDDEN_DURATION_MS - MIN_HIDDEN_DURATION_MS);
+    console.log(`[HoldWall] Hidden duration: ${(hiddenDuration/1000).toFixed(1)}s`);
+    
+    // Detect competition type from game state if not provided
+    const detectedCompType = competitionType || detectCompetitionType();
     
     // Main wrapper
     const wrapper = document.createElement('div');
@@ -97,10 +178,10 @@
     instructions.textContent = 'Hold the wall without moving for as long as possible!';
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
-    // Timer display
+    // Timer display - HIDDEN per requirements (no visible countdown)
     const timerDiv = document.createElement('div');
-    timerDiv.textContent = '0:00.0';
-    timerDiv.style.cssText = 'font-size:2.5rem;font-weight:bold;color:#83bfff;font-variant-numeric:tabular-nums;';
+    timerDiv.textContent = ''; // Empty - no visible timer
+    timerDiv.style.cssText = 'display:none;'; // Hidden
     
     // Status display
     const statusDiv = document.createElement('div');
@@ -167,7 +248,7 @@
     // Game state
     let startTime = null;
     let isHolding = false;
-    let timerInterval = null;
+    let timerInterval = null; // Not used for visible timer, but kept for internal tracking
     let initialPos = null;
     let pulsateInterval = null;
     let sheenInterval = null;
@@ -177,12 +258,19 @@
     let participants = [];
     // Track participant drops in chronological order for proper ranking: { name, timeMs }
     let eliminationLog = [];
-    let dropTimers = [];
+    
+    // Endurance engine state
+    let multiParticipantCheckInterval = null; // For >2 participants, check every 10s
+    let failSafeTimer = null; // Hidden timer end trigger
+    let acceleratedCheckInterval = null; // Fail-safe acceleration checks
     let dealWindowTimer = null;
     let dealCountdownInterval = null;
-    let postDealInterval = null;
+    let postDealCheckInterval = null;
+    let dealReofferTimer = null;
     let rivalName = null;
+    let rivalPlayer = null;
     let currentFocusedOpponent = null;
+    let isInDealWindow = false;
     
     /**
      * Add a message to the status feed
@@ -196,29 +284,35 @@
     }
     
     /**
-     * Initialize AI participants from game cast
+     * Initialize participants based on competition type
+     * Returns array of player objects (not just names)
      */
     function initializeParticipants(){
-      const names = [];
+      // Get eligible participants based on competition type
+      const eligiblePlayers = getEligibleParticipants(detectedCompType);
       
-      // Try to get cast from window.game
-      if(g.game && g.game.players && Array.isArray(g.game.players)){
-        const alivePlayers = g.game.players.filter(p => !p.evicted && !p.human);
-        alivePlayers.forEach(p => {
-          if(p.name) names.push(p.name);
-        });
+      if(eligiblePlayers.length > 0){
+        console.log(`[HoldWall] Using ${eligiblePlayers.length} eligible participants for ${detectedCompType} competition`);
+        return eligiblePlayers;
       }
       
       // Fallback if no game state available
-      if(names.length === 0){
-        const defaults = ['Finn', 'Mimi', 'Rae', 'Nova', 'Kai', 'Zed', 'Ivy', 'Ash', 'Lux', 'Remy'];
-        const count = Math.floor(rng() * 4) + 6; // 6-9 AI participants
-        for(let i = 0; i < count; i++){
-          names.push(defaults[i % defaults.length]);
-        }
+      console.warn('[HoldWall] No game state available, using fallback participants');
+      const defaults = ['Finn', 'Mimi', 'Rae', 'Nova', 'Kai', 'Zed', 'Ivy', 'Ash', 'Lux', 'Remy'];
+      const count = Math.floor(rng() * 4) + 6; // 6-9 AI participants
+      const fallbackPlayers = [];
+      
+      // Create mock player objects
+      for(let i = 0; i < count; i++){
+        fallbackPlayers.push({
+          name: defaults[i % defaults.length],
+          id: `fallback_${i}`,
+          human: false,
+          evicted: false
+        });
       }
       
-      return names;
+      return fallbackPlayers;
     }
     
     /**
@@ -390,125 +484,266 @@
     }
     
     /**
-     * Schedule AI opponent drops over 10-minute window
-     * Uses later-weighted distribution (power curve: tNorm^1.6)
-     * Note: This is initial scheduling only - post-deal checks can extend indefinitely
+     * Start the new endurance engine
+     * Implements periodic checks with hidden timer fail-safe
      */
-    function scheduleAIDrops(){
-      if(participants.length === 0) return;
+    function startEnduranceEngine(){
+      console.log(`[HoldWall] Starting endurance engine with hidden duration: ${(hiddenDuration/1000).toFixed(1)}s`);
       
-      const aiOnly = participants.filter(p => !p.isPlayer);
-      if(aiOnly.length === 0) return;
+      // Schedule fail-safe timer
+      failSafeTimer = setTimeout(() => {
+        handleFailSafeEnd();
+      }, hiddenDuration);
       
-      // Keep one AI for final two
-      const droppersCount = aiOnly.length - 1;
-      const dropTimes = [];
-      
-      // Generate later-weighted drop times within AI_DROP_WINDOW_MS
-      for(let i = 0; i < droppersCount; i++){
-        const tNorm = rng(); // 0-1
-        const easedT = Math.pow(tNorm, 1.6); // Power curve for later weighting
-        const dropTime = MIN_DROP_MS + easedT * (MAX_DROP_MS - MIN_DROP_MS);
-        dropTimes.push({ participant: aiOnly[i], time: dropTime });
+      // Schedule fail-safe acceleration (starts 20s before end)
+      const accelerationStart = hiddenDuration - FAIL_SAFE_BUFFER_MS;
+      if(accelerationStart > 0){
+        setTimeout(() => {
+          startFailSafeAcceleration();
+        }, accelerationStart);
       }
       
-      // Sort by time
-      dropTimes.sort((a, b) => a.time - b.time);
-      
-      // Schedule each drop
-      dropTimes.forEach((drop) => {
-        const timer = setTimeout(() => {
-          if(!isHolding || hasEnded) return;
-          
-          const dropTime = Date.now() - startTime;
-          drop.participant.dropTimeMs = dropTime;
-          
-          // Add to elimination log
-          eliminationLog.push({ name: drop.participant.name, timeMs: dropTime });
-          
-          fadeOutParticipant(drop.participant);
-          
-          const remaining = participants.filter(p => !p.dropTimeMs).length;
-          addFeedMessage(`${drop.participant.name} dropped. ${remaining} remaining.`, '#ff9966');
-          
-          // Check for final two
-          if(remaining === 2){
-            const rival = participants.find(p => !p.isPlayer && !p.dropTimeMs);
-            if(rival){
-              rivalName = rival.name;
-              // Add gold outline for rival
-              const img = rival.avatarEl.querySelector('img');
-              if(img) img.style.outline = '2px solid #ffd700';
-              startDealWindow();
-            }
-          }
-        }, drop.time);
-        
-        dropTimers.push(timer);
-      });
+      // Start multi-participant checks (>2 participants)
+      startMultiParticipantChecks();
     }
     
     /**
-     * Start the final-two deal window
+     * Multi-participant check: every 10s, each AI has 44% chance to drop
+     */
+    function startMultiParticipantChecks(){
+      multiParticipantCheckInterval = setInterval(() => {
+        if(!isHolding || hasEnded) {
+          clearInterval(multiParticipantCheckInterval);
+          return;
+        }
+        
+        const remaining = participants.filter(p => !p.dropTimeMs);
+        
+        if(remaining.length <= 2){
+          // Stop multi-participant checks, transition to final two
+          clearInterval(multiParticipantCheckInterval);
+          
+          if(remaining.length === 2){
+            handleFinalTwo(remaining);
+          } else if(remaining.length === 1 && remaining[0].isPlayer){
+            // Player won!
+            finalizeVictory();
+          }
+          return;
+        }
+        
+        // Roll for each AI participant
+        const aiParticipants = remaining.filter(p => !p.isPlayer);
+        aiParticipants.forEach(ai => {
+          if(rng() < MULTI_PARTICIPANT_DROP_CHANCE){
+            dropParticipant(ai, 'lost grip');
+          }
+        });
+        
+      }, MULTI_PARTICIPANT_CHECK_INTERVAL);
+    }
+    
+    /**
+     * Handle participant drop
+     */
+    function dropParticipant(participant, reason = 'dropped'){
+      if(participant.dropTimeMs) return; // Already dropped
+      
+      const dropTime = Date.now() - startTime;
+      participant.dropTimeMs = dropTime;
+      
+      // Add to elimination log
+      eliminationLog.push({ name: participant.name, timeMs: dropTime });
+      
+      fadeOutParticipant(participant);
+      
+      const remaining = participants.filter(p => !p.dropTimeMs).length;
+      addFeedMessage(`${participant.name} ${reason}. ${remaining} remaining.`, '#ff9966');
+      console.log(`[HoldWall] ${participant.name} dropped at ${(dropTime/1000).toFixed(1)}s, ${remaining} remaining`);
+    }
+    
+    /**
+     * Handle final two scenario
+     */
+    function handleFinalTwo(remaining){
+      const playerParticipant = remaining.find(p => p.isPlayer);
+      const aiParticipant = remaining.find(p => !p.isPlayer);
+      
+      if(!aiParticipant){
+        // Player already won
+        finalizeVictory();
+        return;
+      }
+      
+      rivalName = aiParticipant.name;
+      rivalPlayer = aiParticipant.player;
+      
+      // Add gold outline for rival
+      const img = aiParticipant.avatarEl.querySelector('img');
+      if(img) img.style.outline = '2px solid #ffd700';
+      
+      console.log(`[HoldWall] Final two: player vs ${rivalName}`);
+      startDealWindow();
+    }
+    
+    /**
+     * Start the final-two deal window (10 seconds)
      */
     function startDealWindow(){
-      if(!rivalName) return;
+      if(!rivalName || isInDealWindow) return;
       
+      isInDealWindow = true;
       addFeedMessage(`${rivalName}: "Release now and I won't nominate you!"`, '#ffcc00');
+      console.log(`[HoldWall] Deal offered by ${rivalName}`);
       
       let timeLeft = 10;
-      addFeedMessage(`Deal expires in ${timeLeft} seconds...`, '#ffcc00');
+      addFeedMessage(`Deal decision: ${timeLeft} seconds...`, '#ffcc00');
       
       dealCountdownInterval = setInterval(() => {
         timeLeft--;
         if(timeLeft > 0){
-          addFeedMessage(`Deal expires in ${timeLeft} seconds...`, '#ffcc00');
+          addFeedMessage(`Deal decision: ${timeLeft} seconds...`, '#ffcc00');
         }
       }, 1000);
       
       dealWindowTimer = setTimeout(() => {
         if(dealCountdownInterval) clearInterval(dealCountdownInterval);
-        addFeedMessage('Deal window expired. Competition continues...', '#95a9c0');
+        isInDealWindow = false;
+        addFeedMessage('Deal declined. Competition continues...', '#95a9c0');
+        console.log(`[HoldWall] Deal window expired, starting post-deal checks`);
         startPostDealChecks();
-      }, 10000);
+      }, DEAL_WINDOW_MS);
     }
     
     /**
-     * Start post-deal periodic checks
-     * These continue indefinitely until rival drops or player releases
+     * Start post-deal periodic checks (every 15s, 30% chance AI drops)
+     * Re-offer deal every 60s
      */
     function startPostDealChecks(){
-      postDealInterval = setInterval(() => {
+      postDealCheckInterval = setInterval(() => {
         if(!isHolding || hasEnded) {
-          clearInterval(postDealInterval);
+          clearInterval(postDealCheckInterval);
           return;
         }
         
-        const willDrop = rng() < 0.4; // 40% chance every 20s
-        
-        if(willDrop){
+        // 30% chance rival drops
+        if(rng() < POST_DEAL_DROP_CHANCE){
           const rival = participants.find(p => p.name === rivalName);
-          if(rival){
-            const dropTime = Date.now() - startTime;
-            rival.dropTimeMs = dropTime;
+          if(rival && !rival.dropTimeMs){
+            dropParticipant(rival, 'dropped');
+            addFeedMessage(`${rivalName} couldn't hold on! You win!`, '#66ff66');
+            clearInterval(postDealCheckInterval);
+            if(dealReofferTimer) clearTimeout(dealReofferTimer);
             
-            // Add to elimination log
-            eliminationLog.push({ name: rival.name, timeMs: dropTime });
-            
-            fadeOutParticipant(rival);
+            setTimeout(() => {
+              if(isHolding && !hasEnded){
+                finalizeVictory();
+              }
+            }, 1000);
           }
-          addFeedMessage(`${rivalName} dropped! You win!`, '#66ff66');
-          clearInterval(postDealInterval);
-          
-          setTimeout(() => {
-            if(isHolding && !hasEnded){
-              finalizeVictory(); // Player is last remaining
-            }
-          }, 1000);
         } else {
           addFeedMessage(`${rivalName} holds on...`, '#95a9c0');
         }
-      }, 20000);
+      }, POST_DEAL_CHECK_INTERVAL);
+      
+      // Re-offer deal every 60s
+      function scheduleNextDealOffer(){
+        dealReofferTimer = setTimeout(() => {
+          if(!isHolding || hasEnded) return;
+          
+          // Check if rival still active
+          const rival = participants.find(p => p.name === rivalName);
+          if(rival && !rival.dropTimeMs){
+            // Re-offer deal
+            isInDealWindow = false; // Reset flag
+            if(dealCountdownInterval) clearInterval(dealCountdownInterval);
+            if(dealWindowTimer) clearTimeout(dealWindowTimer);
+            
+            console.log(`[HoldWall] Re-offering deal to player`);
+            startDealWindow();
+            
+            // Schedule next offer
+            scheduleNextDealOffer();
+          }
+        }, DEAL_REOFFIER_INTERVAL);
+      }
+      
+      scheduleNextDealOffer();
+    }
+    
+    /**
+     * Start fail-safe acceleration in final 20 seconds
+     * Accelerate checks to every 5s and ramp up drop odds
+     */
+    function startFailSafeAcceleration(){
+      console.log(`[HoldWall] Starting fail-safe acceleration`);
+      addFeedMessage('Endurance test intensifying...', '#ffcc00');
+      
+      let checkCount = 0;
+      const maxChecks = 4; // ~20s / 5s = 4 checks
+      
+      acceleratedCheckInterval = setInterval(() => {
+        if(!isHolding || hasEnded){
+          clearInterval(acceleratedCheckInterval);
+          return;
+        }
+        
+        checkCount++;
+        
+        // Ramp up drop odds: 44% → 65% → 85%
+        const baseOdds = 0.44;
+        const rampFactor = checkCount / maxChecks;
+        const dropOdds = baseOdds + (0.41 * rampFactor); // 0.44 → 0.85
+        
+        console.log(`[HoldWall] Accelerated check ${checkCount}/${maxChecks}, drop odds: ${(dropOdds*100).toFixed(0)}%`);
+        
+        const remaining = participants.filter(p => !p.dropTimeMs && !p.isPlayer);
+        remaining.forEach(ai => {
+          if(rng() < dropOdds){
+            dropParticipant(ai, 'couldn\'t endure');
+          }
+        });
+        
+        // Check if we're down to final 2 or player won
+        const stillRemaining = participants.filter(p => !p.dropTimeMs);
+        if(stillRemaining.length === 2){
+          clearInterval(acceleratedCheckInterval);
+          handleFinalTwo(stillRemaining);
+        } else if(stillRemaining.length === 1 && stillRemaining[0].isPlayer){
+          clearInterval(acceleratedCheckInterval);
+          finalizeVictory();
+        }
+        
+      }, 5000); // Check every 5 seconds
+    }
+    
+    /**
+     * Force-resolve endurance at hidden timer expiry
+     * Ensure single winner in final 5 seconds
+     */
+    function handleFailSafeEnd(){
+      if(hasEnded) return;
+      
+      console.log(`[HoldWall] Fail-safe triggered at hidden timer expiry`);
+      
+      const remaining = participants.filter(p => !p.dropTimeMs);
+      
+      if(remaining.length > 1){
+        // Force drop all non-players
+        const aiRemaining = remaining.filter(p => !p.isPlayer);
+        aiRemaining.forEach(ai => {
+          dropParticipant(ai, 'exhausted');
+        });
+        
+        // Give a moment for logs, then finalize
+        setTimeout(() => {
+          if(!hasEnded && isHolding){
+            finalizeVictory();
+          }
+        }, 1000);
+      } else if(remaining.length === 1 && remaining[0].isPlayer){
+        finalizeVictory();
+      }
     }
     
     /**
@@ -518,11 +753,13 @@
       if(timerInterval) clearInterval(timerInterval);
       if(pulsateInterval) clearInterval(pulsateInterval);
       if(sheenInterval) clearInterval(sheenInterval);
-      dropTimers.forEach(t => clearTimeout(t));
-      dropTimers = [];
+      if(multiParticipantCheckInterval) clearInterval(multiParticipantCheckInterval);
+      if(acceleratedCheckInterval) clearInterval(acceleratedCheckInterval);
+      if(failSafeTimer) clearTimeout(failSafeTimer);
       if(dealWindowTimer) clearTimeout(dealWindowTimer);
       if(dealCountdownInterval) clearInterval(dealCountdownInterval);
-      if(postDealInterval) clearInterval(postDealInterval);
+      if(postDealCheckInterval) clearInterval(postDealCheckInterval);
+      if(dealReofferTimer) clearTimeout(dealReofferTimer);
     }
     
     /**
@@ -664,13 +901,13 @@
       startPulsating();
       
       // Initialize participants
-      const aiNames = initializeParticipants();
+      const eligiblePlayers = initializeParticipants();
       participants = [];
       eliminationLog = []; // Reset elimination log
       
-      // Get player data from game state
-      let humanPlayer = null;
-      if(g.game && g.game.players && Array.isArray(g.game.players)){
+      // Get human player
+      let humanPlayer = eligiblePlayers.find(p => p.human);
+      if(!humanPlayer && g.game && g.game.players){
         humanPlayer = g.game.players.find(p => p.human);
       }
       
@@ -684,15 +921,12 @@
         ...playerData
       });
       
-      // Create AI participants with player data
-      aiNames.forEach(name => {
-        let aiPlayer = null;
-        if(g.game && g.game.players && Array.isArray(g.game.players)){
-          aiPlayer = g.game.players.find(p => p.name === name);
-        }
-        const aiData = createAvatarElement(name, false, aiPlayer);
+      // Create AI participants from eligible players
+      const aiPlayers = eligiblePlayers.filter(p => !p.human);
+      aiPlayers.forEach(aiPlayer => {
+        const aiData = createAvatarElement(aiPlayer.name, false, aiPlayer);
         participants.push({
-          name: name,
+          name: aiPlayer.name,
           isPlayer: false,
           dropTimeMs: null,
           player: aiPlayer,
@@ -701,7 +935,8 @@
       });
       
       const totalCount = participants.length;
-      addFeedMessage(`Challenge started with ${totalCount} participants.`, '#83bfff');
+      addFeedMessage(`Challenge started with ${totalCount} participants (${detectedCompType.toUpperCase()} competition).`, '#83bfff');
+      console.log(`[HoldWall] Started with ${totalCount} participants for ${detectedCompType} competition`);
       
       // Initialize single mode focus
       if(avatarMode === 'single'){
@@ -710,13 +945,13 @@
         renderAvatars();
       }
       
-      // Schedule AI drops
-      scheduleAIDrops();
+      // Start new endurance engine
+      startEnduranceEngine();
       
-      // Start timer display
+      // Internal timer for tracking (not displayed)
       timerInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
-        timerDiv.textContent = formatTime(elapsed);
+        // No visible update, just internal tracking
       }, 100);
     }
     
@@ -763,7 +998,7 @@
       eliminationLog.push({ name: playerName, timeMs: holdDuration });
       
       // Check if during deal window
-      const duringDealWindow = rivalName && dealWindowTimer && postDealInterval === null;
+      const duringDealWindow = isInDealWindow && rivalName;
       
       // Player loses (score = 0)
       const finalScore = 0;
@@ -773,31 +1008,60 @@
         statusDiv.textContent = `You moved! Time: ${formatTime(holdDuration)}`;
         statusDiv.style.color = '#ff6b6b';
         addFeedMessage('You moved too much and lost grip!', '#ff6b6b');
+        console.log(`[HoldWall] Player moved, lost at ${(holdDuration/1000).toFixed(1)}s`);
       } else if(duringDealWindow){
-        // Deal accepted
-        const respected = rng() < 0.8;
+        // Deal accepted - calculate respect chance based on relationship
+        const baseChance = BASE_NO_NOMINATION_CHANCE; // 65%
+        let respectChance = baseChance;
+        
+        // Adjust based on relationship if available
+        if(rivalPlayer && g.game){
+          const humanPlayer = g.game.players?.find(p => p.human);
+          if(humanPlayer && g.game.relationships){
+            // Get relationship strength (-100 to +100)
+            const rel = g.game.relationships[rivalPlayer.id]?.[humanPlayer.id] || 0;
+            
+            // Strong allies (+80 to +100): add up to +20% (65% → 85%)
+            // Weak allies (+40 to +80): add up to +10% (65% → 75%)
+            // Neutral (-40 to +40): no change (stays 65%)
+            // Enemies (-100 to -40): reduce up to -30% (65% → 35%)
+            if(rel > 0){
+              respectChance = baseChance + (rel / 100) * 0.20; // Up to +20%
+            } else if(rel < 0){
+              respectChance = baseChance + (rel / 100) * 0.30; // Up to -30%
+            }
+            
+            console.log(`[HoldWall] Deal respect chance: ${(respectChance*100).toFixed(0)}% (base: ${(baseChance*100).toFixed(0)}%, relationship: ${rel})`);
+          }
+        }
+        
+        const respected = rng() < respectChance;
         
         if(respected){
           statusDiv.textContent = `Deal accepted! ${rivalName} keeps their promise.`;
           statusDiv.style.color = '#66ff66';
           addFeedMessage(`${rivalName}: "I'll keep my word. You're safe."`, '#66ff66');
+          console.log(`[HoldWall] Deal accepted and respected by ${rivalName}`);
         } else {
           statusDiv.textContent = `Deal accepted... but ${rivalName} breaks their promise!`;
           statusDiv.style.color = '#ffcc00';
           addFeedMessage(`${rivalName}: "Sorry, I lied. Game is game."`, '#ff9966');
+          console.log(`[HoldWall] Deal accepted but broken by ${rivalName}`);
         }
         
         // Emit deal outcome event
         if(g.bbGameBus && typeof g.bbGameBus.emit === 'function'){
           g.bbGameBus.emit('holdWall:dealOutcome', {
             rival: rivalName,
-            respected: respected
+            respected: respected,
+            respectChance: respectChance
           });
         }
       } else {
         // Player released early
         statusDiv.textContent = `Released! Time: ${formatTime(holdDuration)}`;
         addFeedMessage('You released from the wall.', '#95a9c0');
+        console.log(`[HoldWall] Player released at ${(holdDuration/1000).toFixed(1)}s`);
       }
       
       // Build final standings with player not as winner
