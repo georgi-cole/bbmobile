@@ -8,15 +8,31 @@
 
 #tv { position: relative !important; overflow: hidden !important; }
 
-/* Ensure overlay panel fills the whole faux TV visible area */
+/* Ensure tvHead stays visible above lv2-overlay */
+#tv .tvHead {
+  position: relative !important;
+  z-index: 100 !important;
+  background: linear-gradient(180deg, rgba(13,24,38,.85), rgba(7,14,24,.6)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* Ensure overlay panel fills the faux TV visible area */
+/* Position below tvHead to avoid covering timer/controls */
 #tv .lv2-overlay,
 #tv .lv-overlay {
   position: absolute !important;
-  inset: 0 !important; /* top:0; left:0; right:0; bottom:0 */
+  /* Position below tvHead (tvHead is ~45-60px tall) */
+  top: clamp(45px, 7vh, 65px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100% !important;
-  height: 100% !important;
+  /* Height is calculated from top to bottom */
+  height: auto !important;
   display: block !important;
   pointer-events: auto !important;
+  box-sizing: border-box !important;
 }
 
 /* Panel content becomes strict grid: header | avatars | cta with balanced spacing */
