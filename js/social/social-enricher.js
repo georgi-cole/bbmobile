@@ -66,9 +66,10 @@
 
       // Also emit a direct diary-friendly event for immediate consumption
       try{
+        const timestamp = Date.now();
         window.dispatchEvent(new CustomEvent('social.entry:story', { detail: {
-          id: `story-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-          timestamp: Date.now(),
+          id: `story-${timestamp}-${Math.floor(Math.random()*10000)}-${Math.floor(Math.random()*10000)}`,
+          timestamp: timestamp,
           type: 'social_action',
           category: 'social',
           severity: d.severity || 'neutral',
