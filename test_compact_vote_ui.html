@@ -190,6 +190,57 @@
             height: computed.height
           });
         }
+        
+        // === CENTERING VERIFICATION ===
+        console.log("\n=== CENTERING MEASUREMENT ===");
+        const tvViewport = document.querySelector("#tv .tvViewport");
+        const lvOverlay = document.querySelector(".lv-overlay");
+        
+        if (tvViewport && lvOverlay) {
+          const vpRect = tvViewport.getBoundingClientRect();
+          const overlayRect = lvOverlay.getBoundingClientRect();
+          
+          const vpMidpoint = vpRect.top + (vpRect.height / 2);
+          const overlayMidpoint = overlayRect.top + (overlayRect.height / 2);
+          const difference = Math.abs(vpMidpoint - overlayMidpoint);
+          const percentOff = (difference / vpRect.height) * 100;
+          
+          console.log("TV Viewport:", {
+            top: vpRect.top.toFixed(2),
+            height: vpRect.height.toFixed(2),
+            midpoint: vpMidpoint.toFixed(2)
+          });
+          
+          console.log("Content Stack (.lv-overlay):", {
+            top: overlayRect.top.toFixed(2),
+            height: overlayRect.height.toFixed(2),
+            midpoint: overlayMidpoint.toFixed(2)
+          });
+          
+          console.log("Centering Analysis:", {
+            difference: difference.toFixed(2) + "px",
+            percentOff: percentOff.toFixed(2) + "%",
+            status: percentOff < 5 ? "✅ WELL CENTERED" : percentOff < 10 ? "⚠️ SLIGHTLY OFF" : "❌ NOT CENTERED"
+          });
+          
+          // Visual indicator in UI
+          const indicator = document.createElement('div');
+          indicator.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: ${percentOff < 5 ? '#22c55e' : percentOff < 10 ? '#f59e0b' : '#ef4444'};
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+          `;
+          indicator.textContent = `Centering: ${percentOff.toFixed(1)}% off ${percentOff < 5 ? '✅' : percentOff < 10 ? '⚠️' : '❌'}`;
+          document.body.appendChild(indicator);
+        }
       }, 100);
     }
 
