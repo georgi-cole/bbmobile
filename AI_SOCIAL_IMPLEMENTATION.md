@@ -4,6 +4,8 @@
 
 This implementation adds background AI-to-AI social interactions during the Social phase and surfaces major highlights in Diary Room Social logs. The system creates a more dynamic and realistic social environment where AI houseguests interact with each other while the human player makes their own moves.
 
+**NEW (PR C)**: Full action catalog with 20+ actions, phase-aware weighting engine, truthiness system, and cooldown/decay management. See [SOCIAL_AI_CATALOG.md](docs/SOCIAL_AI_CATALOG.md) for comprehensive documentation.
+
 ## Features
 
 ### 1. AI-to-AI Social Interactions
@@ -77,9 +79,24 @@ All settings are in `game.cfg` with sensible defaults:
   aiSocialMaxPerPhase: 5,          // Soft cap on AI actions per AI per phase
   
   // Social Highlights (default: enabled)
-  socialHighlightsEnabled: true    // Show highlights in Diary Room logs
+  socialHighlightsEnabled: true,   // Show highlights in Diary Room logs
+  
+  // Spend-to-Reveal (default: enabled)
+  socialSpendingEnabled: true,     // Enable spend energy to reveal details
+  
+  // Flavor System (default: enabled)
+  socialSpicyLogs: true            // Enable flavor text and truthiness
 }
 ```
+
+### Tuning Parameters
+
+**NEW (PR C)**: See [SOCIAL_AI_CATALOG.md](docs/SOCIAL_AI_CATALOG.md) for detailed tuning documentation including:
+- Phase multipliers (pre-noms, pre-pov, post-noms)
+- Role multipliers (HOH, POV holder, nominee)
+- Relationship multipliers (ally, rival)
+- Cooldown bands and repetition decay
+- Truthiness formula parameters
 
 ### Adjusting AI Behavior
 
@@ -103,9 +120,9 @@ game.cfg.socialHighlightsEnabled = false;
 
 ## Implementation Details
 
-### Files Added
+### Files Added (PR A & B)
 
-1. **js/social-ai-scheduler.js** (373 lines)
+1. **js/social-ai-scheduler.js** (997 lines)
    - Core AI interaction scheduler
    - Target selection, action selection, execution
    - Burst mode for empty-energy scenarios
@@ -117,16 +134,59 @@ game.cfg.socialHighlightsEnabled = false;
    - Highlight card rendering
    - Event listeners for both AI and human actions
 
-3. **test_ai_social_interactions.html**
-   - Interactive test page for validation
-   - Module loading checks
-   - Configuration testing
-   - Mock game setup for isolated testing
+3. **js/social/social-flavor.js** (195 lines)
+   - Flavor text rendering
+   - Truthiness computation
+   - Partial reveal helpers
 
-4. **verify_ai_social_implementation.mjs**
-   - Automated verification script
-   - Checks file existence, module structure, integrations
-   - 39 test checks
+4. **js/social/social-enricher.js** (106 lines)
+   - Event enrichment with flavor and truthiness
+   - Re-emission for UI consumption
+
+5. **js/social/social-ui-adapter.js** (500 lines)
+   - Spend-to-reveal CTA rendering
+   - Truthiness handling in UI
+   - Energy deduction
+
+6. **js/social/social-actions-registry.js** (68 lines, minimal)
+   - Action registry skeleton
+   - Basic outcome generators
+
+### Files Added (PR C - This PR)
+
+7. **js/social/social-actions-registry.js** (expanded to 360 lines)
+   - Full catalog of 20+ actions
+   - Metadata: phaseTags, costs, cooldowns, spendable flags, aiBias
+   - Outcome generators with deltas and spread simulation
+
+8. **js/social/social-ai-weights.js** (NEW - 350 lines)
+   - Weight computation engine
+   - Phase multipliers (pre-noms, pre-pov, post-noms)
+   - Role multipliers (HOH, POV holder, nominee)
+   - Relationship multipliers (ally, rival)
+   - Cooldown and decay system
+
+9. **js/social/social-ai-integrator.js** (NEW - 430 lines)
+   - Adapter between scheduler and weights/registry
+   - Candidate building with phase filtering
+   - Target selection with relationship weighting
+   - Context building for intel actions
+   - Cooldown tracking and history management
+
+10. **test_e2e/test_social_ai_catalog.html** (NEW - 500 lines)
+    - Interactive test harness
+    - Phase-aware weighting tests
+    - Truthiness validation tests
+    - Cooldown and decay tests
+    - Deterministic RNG for reproducibility
+
+11. **docs/SOCIAL_AI_CATALOG.md** (NEW - 800 lines)
+    - Comprehensive action catalog documentation
+    - Weighting system details
+    - Truthiness formula
+    - Tuning parameters
+    - QA steps
+    - Integration notes
 
 ### Files Modified
 

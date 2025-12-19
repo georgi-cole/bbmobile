@@ -35,7 +35,7 @@
   // EVENT CLASSIFICATION
   // ============================================================================
   function isMajorEvent(eventData) {
-    const { outcome, deltas, actionId, success } = eventData;
+    const { outcome, deltas, actionId, success, truthiness } = eventData;
     
     // Alliance formed or protected
     if (outcome?.allianceFormed) return true;
@@ -49,8 +49,30 @@
     // Caught spreading rumor
     if (actionId === 'spread_rumor' && outcome?.caught) return true;
     
+    // Plant rumor (always interesting)
+    if (actionId === 'plant_rumor' && success) return true;
+    
     // Confront fails
     if (actionId === 'confront' && outcome?.type === 'failure') return true;
+    
+    // NEW: HOH probes (intel gathering)
+    if (actionId === 'probe_hoh' && success) return true;
+    
+    // NEW: Successful POV bargains
+    if (actionId === 'bargain_pov' && success) return true;
+    
+    // NEW: Lies exposed (low truthiness on intel actions)
+    if ((actionId === 'probe_hoh' || actionId === 'probe_pov') && truthiness === 'lie') return true;
+    
+    // NEW: Big favors
+    if (actionId === 'favor_grant' && (deltas?.affinity >= 0.08 || deltas?.influence >= 0.05)) return true;
+    
+    // NEW: Major betrayals
+    if (actionId === 'betrayal_tease' && success) return true;
+    if (actionId === 'public_callout' && success) return true;
+    
+    // NEW: Alliance invites (always significant)
+    if (actionId === 'alliance_invite' && success) return true;
     
     // Strong negative outcomes
     if ((deltas?.influence || 0) <= DEFAULT_THRESHOLDS.negativeThreshold) return true;
@@ -73,7 +95,7 @@
   }
 
   function createHighlightEntry(eventData) {
-    const { actorId, targetIds, actionId, outcome, deltas, success } = eventData;
+    const { actorId, targetIds, actionId, outcome, deltas, success, truthiness } = eventData;
     
     const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
     const targetNames = (targetIds || []).map(tid => 
@@ -81,13 +103,66 @@
     );
 
     let message = '';
+    let icon = '✨';
 
+    // NEW: HOH probes
+    if (actionId === 'probe_hoh') {
+      icon = '🔍';
+      const target = targetNames[0];
+      if (truthiness === 'lie') {
+        message = `${actorName} probed HOH ${target} but got misdirection.`;
+      } else {
+        message = `${actorName} successfully probed HOH ${target} for nomination intel.`;
+      }
+    }
+    // NEW: POV probes
+    else if (actionId === 'probe_pov') {
+      icon = '🔍';
+      const target = targetNames[0];
+      if (truthiness === 'lie') {
+        message = `${actorName} probed POV holder ${target} but got misdirection.`;
+      } else {
+        message = `${actorName} successfully probed POV holder ${target} for veto intel.`;
+      }
+    }
+    // NEW: Successful bargains
+    else if (actionId === 'bargain_pov' && success) {
+      icon = '🤝';
+      message = `${actorName} bargained with POV holder ${targetNames[0]}.`;
+    }
+    // NEW: Big favors
+    else if (actionId === 'favor_grant') {
+      icon = '🎁';
+      message = `${actorName} granted a major favor to ${targetNames[0]}.`;
+    }
+    // NEW: Alliance invites
+    else if (actionId === 'alliance_invite') {
+      icon = '🤝';
+      message = `${actorName} invited ${targetNames[0]} to form an alliance.`;
+    }
+    // NEW: Betrayal teases
+    else if (actionId === 'betrayal_tease') {
+      icon = '⚠️';
+      message = `${actorName} hinted at betraying ${targetNames[0]}.`;
+    }
+    // NEW: Public callouts
+    else if (actionId === 'public_callout') {
+      icon = '📢';
+      message = `${actorName} publicly called out ${targetNames[0]}.`;
+    }
+    // NEW: Plant rumor
+    else if (actionId === 'plant_rumor') {
+      icon = '💬';
+      message = `${actorName} planted a rumor about ${targetNames[0]}.`;
+    }
     // Alliance formed
-    if (outcome?.allianceFormed) {
+    else if (outcome?.allianceFormed) {
+      icon = '🤝';
       message = `${actorName} formed an alliance with ${targetNames[0]}.`;
     }
     // Betrayal/backlash
     else if (outcome?.betrayalRisk || outcome?.caught || outcome?.backlash) {
+      icon = '⚠️';
       if (outcome?.caught) {
         message = `${actorName} was caught spreading rumors about ${targetNames[0]}!`;
       } else {
@@ -96,13 +171,14 @@
     }
     // Expose secret success
     else if (actionId === 'expose_secret' && success) {
+      icon = '🔓';
       message = `${actorName} exposed a secret about ${targetNames[0]}.`;
     }
     // Confront
     else if (actionId === 'confront') {
-      const delta = Math.abs(deltas?.influence || 0) + Math.abs(deltas?.affinity || 0);
+      icon = '⚔️';
       if (outcome?.type === 'failure') {
-        message = `${actorName} confronted ${targetNames[0]} and it backfired (${deltas?.influence || 0}).`;
+        message = `${actorName} confronted ${targetNames[0]} and it backfired.`;
       } else {
         message = `${actorName} confronted ${targetNames[0]}.`;
       }
@@ -110,23 +186,28 @@
     // Strong negative
     else if ((deltas?.influence || 0) <= DEFAULT_THRESHOLDS.negativeThreshold ||
              (deltas?.affinity || 0) <= DEFAULT_THRESHOLDS.negativeThreshold) {
+      icon = '📉';
       const delta = Math.min(deltas?.influence || 0, deltas?.affinity || 0);
-      message = `${actorName}'s relationship with ${targetNames[0]} deteriorated significantly (${delta}).`;
+      message = `${actorName}'s relationship with ${targetNames[0]} deteriorated (${delta.toFixed(1)}).`;
     }
     // Major influence gain
     else if ((deltas?.influence || 0) >= DEFAULT_THRESHOLDS.majorInfluenceDelta) {
-      message = `${actorName} gained major influence with ${targetNames[0]} (+${deltas.influence}).`;
+      icon = '📈';
+      message = `${actorName} gained major influence with ${targetNames[0]} (+${deltas.influence.toFixed(1)}).`;
     }
     // Major affinity gain
     else if ((deltas?.affinity || 0) >= DEFAULT_THRESHOLDS.majorAffinityDelta) {
-      message = `${actorName} bonded strongly with ${targetNames[0]} (+${deltas.affinity}).`;
+      icon = '💖';
+      message = `${actorName} bonded strongly with ${targetNames[0]} (+${deltas.affinity.toFixed(1)}).`;
     }
     // Big information gain
     else if ((deltas?.information || 0) >= DEFAULT_THRESHOLDS.majorInformationGain) {
-      message = `${actorName} learned valuable information from ${targetNames[0]} (+${deltas.information}).`;
+      icon = '🔍';
+      message = `${actorName} learned valuable information from ${targetNames[0]}.`;
     }
     // Group events
     else if (outcome?.multiTarget || (outcome?.participants?.length > 2)) {
+      icon = '👥';
       const count = targetNames.length || outcome?.participants?.length || 2;
       message = `${actorName} had a positive group interaction with ${count} others.`;
     }
@@ -138,10 +219,12 @@
     return {
       timestamp: Date.now(),
       message,
+      icon,
       actorId,
       targetIds,
       actionId,
-      outcome
+      outcome,
+      truthiness
     };
   }
 
