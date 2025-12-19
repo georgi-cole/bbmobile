@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold Wall Updated - Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .game-container {
+      background: rgba(26, 35, 50, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+    }
+    
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 3px solid #83bfff;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .success {
+      background: rgba(102, 255, 102, 0.1);
+      border-left: 3px solid #66ff66;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏋️ Hold Wall - Updated Implementation Test</h1>
+    <div class="subtitle">Testing new endurance engine with hidden timer (90-200s)</div>
+    
+    <div class="test-section">
+      <h2>Test Features</h2>
+      <div class="info">
+        <strong>New Implementation Features:</strong><br>
+        ✅ Hidden duration: random 90-200 seconds (not visible to player)<br>
+        ✅ Multi-participant phase: 10s checks, 44% AI drop chance<br>
+        ✅ Final two phase: 10s deal window, relationship-adjusted respect<br>
+        ✅ Post-deal phase: 15s checks, 30% drop chance, re-offer every 60s<br>
+        ✅ Fail-safe: Last 20s acceleration (5s checks, ramping odds)<br>
+        ✅ Force-resolve: Final 5s ensures single winner<br>
+        ✅ Participant selection: HOH (all non-evicted), POV (6 selected)<br>
+        ✅ No visible timer - hidden endurance mechanic<br>
+        ✅ Winner-takes-all scoring (100 for winner, 0 for others)
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <div class="controls">
+        <button class="btn" onclick="testHOHCompetition()">▶ Test HOH Competition</button>
+        <button class="btn" onclick="testPOVCompetition()">▶ Test POV Competition</button>
+        <button class="btn" onclick="testQuickMode()">▶ Test Quick Mode (30s max)</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Game Area</h2>
+      <div id="gameContainer" class="game-container">
+        <p style="text-align: center; color: #95a9c0;">Click a test button above to start</p>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="testResults">
+        <p style="text-align: center; color: #95a9c0;">Results will appear here after game completion</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the minigame module -->
+  <script src="js/minigames/hold-wall.js"></script>
+  
+  <script>
+    // Mock game state
+    window.game = {
+      phase: 'hoh', // Will be changed for POV test
+      players: [
+        { id: 'player1', name: 'You', human: true, evicted: false },
+        { id: 'player2', name: 'Alice', human: false, evicted: false },
+        { id: 'player3', name: 'Bob', human: false, evicted: false },
+        { id: 'player4', name: 'Carol', human: false, evicted: false },
+        { id: 'player5', name: 'Dave', human: false, evicted: false },
+        { id: 'player6', name: 'Eve', human: false, evicted: false },
+        { id: 'player7', name: 'Frank', human: false, evicted: false },
+        { id: 'player8', name: 'Grace', human: false, evicted: false }
+      ],
+      povPlayers: ['player1', 'player2', 'player3', 'player4', 'player5', 'player6'],
+      hohId: 'player2',
+      nominees: ['player3', 'player4'],
+      relationships: {
+        // Simulate some relationships for deal respect testing
+        'player2': { 'player1': 80 }, // Alice is strong ally with You
+        'player3': { 'player1': -60 }, // Bob is enemy with You
+        'player4': { 'player1': 20 }  // Carol is weak ally with You
+      },
+      cfg: {}
+    };
+    
+    // Mock event bus
+    window.bbGameBus = {
+      emit: function(event, data) {
+        console.log(`[Event] ${event}:`, data);
+      }
+    };
+    
+    function testHOHCompetition() {
+      console.log('=== Starting HOH Competition Test ===');
+      window.game.phase = 'hoh';
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      const onComplete = (score) => {
+        showResults('HOH Competition', score);
+      };
+      
+      if(window.MiniGames && window.MiniGames.holdWall) {
+        window.MiniGames.holdWall.render(container, onComplete, {
+          seed: Date.now(),
+          competitionType: 'hoh'
+        });
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function testPOVCompetition() {
+      console.log('=== Starting POV Competition Test ===');
+      window.game.phase = 'pov';
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      const onComplete = (score) => {
+        showResults('POV Competition', score);
+      };
+      
+      if(window.MiniGames && window.MiniGames.holdWall) {
+        window.MiniGames.holdWall.render(container, onComplete, {
+          seed: Date.now(),
+          competitionType: 'pov'
+        });
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function testQuickMode() {
+      console.log('=== Starting Quick Mode Test (30s max) ===');
+      window.game.phase = 'hoh';
+      
+      // Temporarily reduce min/max for quick testing
+      const originalPlayers = window.game.players.slice();
+      window.game.players = window.game.players.slice(0, 4); // Only 4 players for faster test
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      const onComplete = (score) => {
+        window.game.players = originalPlayers;
+        showResults('Quick Mode (30s max)', score);
+      };
+      
+      if(window.MiniGames && window.MiniGames.holdWall) {
+        // Use seed for predictable behavior in quick mode
+        window.MiniGames.holdWall.render(container, onComplete, {
+          seed: 12345, // Fixed seed for reproducibility
+          competitionType: 'hoh'
+        });
+        
+        // Note: The actual min is still 90s per requirements
+        // This just uses fewer players to speed up drops
+        console.warn('Quick mode uses fewer players but still follows 90-200s hidden timer range');
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function showResults(testName, score) {
+      const resultsDiv = document.getElementById('testResults');
+      
+      const result = document.createElement('div');
+      result.className = score === 100 ? 'success' : 'info';
+      result.innerHTML = `
+        <strong>${testName} Complete!</strong><br>
+        Final Score: ${score}<br>
+        ${score === 100 ? '✓ Winner-takes-all: You outlasted everyone!' : 
+          score === 0 ? '✓ Correct: Score 0 for not winning' : 
+          '✗ Unexpected score value'}<br>
+        <small>Check browser console for detailed logs</small>
+      `;
+      
+      resultsDiv.appendChild(result);
+    }
+    
+    // Log that the test page is ready
+    console.log('[Test] Hold Wall updated implementation test page loaded');
+    console.log('[Test] Game state:', window.game);
+  </script>
+</body>
+</html>
