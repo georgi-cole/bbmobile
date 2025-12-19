@@ -66,8 +66,11 @@
       return null;
     }
 
-    // Find container (either provided or default to TV)
-    const targetContainer = container || document.querySelector('#tv');
+    // Find container (either provided or default to TV viewport for proper centering)
+    // Prefer .tvViewport inside #tv for proper layout integration
+    const targetContainer = container || 
+      document.querySelector('#tv .tvViewport') || 
+      document.querySelector('#tv');
     if (!targetContainer) {
       console.warn('[VoteOverlay] No container found');
       return null;

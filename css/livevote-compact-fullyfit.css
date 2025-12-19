@@ -15,6 +15,11 @@
   position: relative !important; 
 }
 
+/* When vote overlay is inside #tv, position it absolutely within the TV viewport */
+#tv .tvViewport { 
+  position: relative !important; 
+}
+
 /* Overlay fills the entire tvViewport and centers content using CSS Grid */
 .tvViewport .lv2-overlay,
 .tvViewport .lv-overlay,
@@ -27,12 +32,39 @@
   grid-auto-rows: max-content !important; /* Prevents stretching */
   justify-items: center !important; /* Centers children horizontally */
   align-content: center !important; /* Centers children vertically */
-  /* Responsive padding to leave room for controls */
-  padding: clamp(16px, 3vh, 32px) clamp(12px, 2vw, 24px) !important;
+  /* Responsive padding using px/vw clamps - NOT vh to avoid gaps */
+  padding: clamp(16px, 2.5vw, 28px) !important;
   pointer-events: auto !important;
   z-index: 5 !important;
   /* No scroll on overlay - only stage scrolls */
   overflow: visible !important;
+  /* Override any full-screen positioning */
+  min-height: auto !important;
+  max-height: 100% !important;
+  background: transparent !important; /* Background handled by TV */
+}
+
+/* Specific scoping for vote overlay inside #tv */
+#tv .tv-intermission-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-content: center !important;
+  justify-items: center !important;
+  padding: clamp(16px, 2.5vw, 28px) !important;
+}
+
+/* Ensure lv-overlay works properly inside #tv container */
+#tv .lv-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  min-height: auto !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background: linear-gradient(135deg, rgba(5, 10, 18, 0.85), rgba(15, 25, 40, 0.88)) !important;
 }
 
 /* Panel content: vertical stack that's centered within overlay (title + stage + hint + button) */
@@ -43,14 +75,14 @@
   position: relative !important;
   box-sizing: border-box !important;
   /* Width constraints as per spec */
-  width: min(92%, 420px) !important;
+  width: min(420px, 92%) !important;
   max-width: min(72vw, 520px) !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important; /* Horizontal centering of children */
   text-align: center !important;
   /* Responsive gaps between elements for balanced vertical spacing */
-  gap: clamp(8px, 1.5vh, 16px) !important;
+  gap: clamp(10px, 1.5vw, 16px) !important;
   /* CRITICAL: Remove any vertical anchoring */
   top: unset !important;
   bottom: unset !important;
@@ -61,6 +93,17 @@
   /* No scroll on panel - only stage scrolls */
   overflow: visible !important;
   max-height: 100% !important;
+}
+
+/* Specific scoping for intermission card container inside #tv */
+#tv .intermission-card-container {
+  width: min(420px, 92%);
+  max-height: 100%;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.5vw, 16px);
 }
 
 /* Header row at top (fixed, non-scrolling) */
@@ -89,6 +132,12 @@
   max-height: 60vh !important;
   padding: 0 !important;
   box-sizing: border-box !important;
+}
+
+/* Vote stage inside #tv - scrollable only */
+#tv .voteStage {
+  max-height: min(42vh, 320px);
+  overflow: auto;
 }
 
 /* Avatar row centered with responsive gap and sizing */
@@ -261,20 +310,20 @@ html, body {
 .tvViewport .lv2-overlay.above-cards { z-index: 14 !important; }
 .tvViewport #tvOverlay, .tvViewport .lv2-overlay { z-index: 12 !important; }
 
-/* Mobile viewport adjustments - responsive padding */
+/* Mobile viewport adjustments - responsive padding using px/vw NOT vh */
 @media (max-width: 640px), (max-height: 700px) {
   .tvViewport .lv2-overlay,
   .tvViewport .lv-overlay,
   .tvViewport .tv-intermission-overlay,
   .tvViewport .voteOverlay {
-    padding: clamp(12px, 2vh, 20px) clamp(8px, 1.5vw, 16px) !important;
+    padding: clamp(12px, 2vw, 20px) clamp(8px, 1.5vw, 16px) !important;
   }
   
   /* Tighter gaps on very small screens */
   .tvViewport .lv2-panel,
   .tvViewport .intermission-card-container,
   .tvViewport .votePanel {
-    gap: clamp(6px, 1vh, 12px) !important;
+    gap: clamp(6px, 1vw, 12px) !important;
   }
   
   /* Smaller stage max-height on mobile */
@@ -289,7 +338,7 @@ html, body {
   .tvViewport .lv-overlay,
   .tvViewport .tv-intermission-overlay,
   .tvViewport .voteOverlay {
-    padding: clamp(20px, 4vh, 40px) clamp(16px, 2.5vw, 32px) !important;
+    padding: clamp(20px, 3vw, 40px) clamp(16px, 2.5vw, 32px) !important;
   }
   
   /* Larger stage max-height on laptop */
