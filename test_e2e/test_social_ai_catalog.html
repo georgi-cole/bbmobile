@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social AI Catalog Test Harness</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      margin-top: 0;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #fafafa;
+      border-left: 4px solid #2196F3;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+    }
+    .test-pass {
+      background: #d4edda;
+      color: #155724;
+      border-left: 4px solid #28a745;
+    }
+    .test-fail {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+    .test-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border-left: 4px solid #17a2b8;
+    }
+    button {
+      padding: 10px 20px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1976D2;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2196F3;
+    }
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+      text-transform: uppercase;
+    }
+    .log-entry {
+      padding: 8px;
+      margin: 2px 0;
+      background: white;
+      border-left: 3px solid #ccc;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    #testLog {
+      max-height: 400px;
+      overflow-y: auto;
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Social AI Catalog Test Harness</h1>
+    <p>Test phase-aware action selection, truthiness, cooldowns, and relationship-based weighting.</p>
+    
+    <div class="test-section">
+      <h2>Quick Actions</h2>
+      <button onclick="runAllTests()">Run All Tests</button>
+      <button onclick="runPhaseTests()">Test Phase Weighting</button>
+      <button onclick="runTruthinessTests()">Test Truthiness</button>
+      <button onclick="runCooldownTests()">Test Cooldowns</button>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>📊 Test Results</h2>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="passCount">0</div>
+        <div class="stat-label">Passed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="failCount">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalCount">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="passRate">0%</div>
+        <div class="stat-label">Pass Rate</div>
+      </div>
+    </div>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="container">
+    <h2>📋 Test Log</h2>
+    <div id="testLog"></div>
+  </div>
+
+  <!-- Load modules -->
+  <script src="../js/social/social-actions-registry.js"></script>
+  <script src="../js/social/social-ai-weights.js"></script>
+  <script src="../js/social/social-ai-integrator.js"></script>
+  <script src="../js/social/social-flavor.js"></script>
+
+  <script>
+    // Test state
+    let testsPassed = 0;
+    let testsFailed = 0;
+    let testsTotal = 0;
+
+    // Deterministic RNG for testing
+    class DeterministicRNG {
+      constructor(seed = 12345) {
+        this.seed = seed;
+      }
+      random() {
+        const x = Math.sin(this.seed++) * 10000;
+        return x - Math.floor(x);
+      }
+    }
+
+    // Mock global game object
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', evicted: false },
+        { id: 2, name: 'Bob', evicted: false },
+        { id: 3, name: 'Carol', evicted: false },
+        { id: 4, name: 'Dave', evicted: false },
+        { id: 5, name: 'Eve', evicted: false },
+        { id: 6, name: 'Frank', evicted: false },
+        { id: 7, name: 'Grace', evicted: false },
+        { id: 8, name: 'Henry', evicted: false }
+      ],
+      currentHOH: 2,
+      vetoHolder: 4,
+      nominees: [3, 5],
+      week: 3,
+      humanId: 1,
+      __affinities: new Map([
+        ['1-2', 0.7],  // Alice-Bob (ally)
+        ['1-3', -0.5], // Alice-Carol (rival)
+        ['2-3', 0.6],  // Bob-Carol (ally)
+        ['4-5', -0.6]  // Dave-Eve (rival)
+      ])
+    };
+
+    // Helper functions
+    window.safeName = function(id) {
+      const p = window.game.players.find(p => p.id === id);
+      return p ? p.name : `Player ${id}`;
+    };
+
+    window.getAffinity = function(p1, p2) {
+      const key = [p1, p2].sort((a,b) => a-b).join('-');
+      return window.game.__affinities.get(key) || 0;
+    };
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.style.borderLeftColor = type === 'pass' ? '#28a745' : type === 'fail' ? '#dc3545' : '#2196F3';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function assert(condition, testName, details = '') {
+      testsTotal++;
+      const resultsDiv = document.getElementById('testResults');
+      const result = document.createElement('div');
+      
+      if (condition) {
+        testsPassed++;
+        result.className = 'test-result test-pass';
+        result.textContent = `✓ ${testName}`;
+        log(`✓ ${testName}`, 'pass');
+      } else {
+        testsFailed++;
+        result.className = 'test-result test-fail';
+        result.textContent = `✗ ${testName}${details ? ': ' + details : ''}`;
+        log(`✗ ${testName}: ${details}`, 'fail');
+      }
+      
+      resultsDiv.appendChild(result);
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('passCount').textContent = testsPassed;
+      document.getElementById('failCount').textContent = testsFailed;
+      document.getElementById('totalCount').textContent = testsTotal;
+      const rate = testsTotal > 0 ? Math.round(testsPassed / testsTotal * 100) : 0;
+      document.getElementById('passRate').textContent = rate + '%';
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+      document.getElementById('testResults').innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+      testsTotal = 0;
+      updateStats();
+    }
+
+    // ============================================================================
+    // TEST SUITES
+    // ============================================================================
+
+    function runPhaseTests() {
+      log('=== Phase-Aware Weighting Tests ===');
+      
+      // Test 1: Pre-noms phase favors probe_hoh
+      const preNomsCtx = { phase: 'pre-noms', currentHOH: 2, nominees: [], week: 3 };
+      const registry = window.SocialActionsRegistry;
+      const candidates = registry.list().filter(a => a.phaseTags.includes('pre-noms'));
+      
+      const weights = window.SocialAIWeights.computeActionWeights(1, candidates, preNomsCtx, null);
+      const probeHohWeight = weights.get('probe_hoh') || 0;
+      const avgWeight = Array.from(weights.values()).reduce((a,b) => a+b, 0) / weights.size;
+      
+      assert(probeHohWeight > avgWeight * 2, 
+        'Pre-noms: probe_hoh weight > 2x average', 
+        `probe_hoh: ${probeHohWeight.toFixed(2)}, avg: ${avgWeight.toFixed(2)}`);
+      
+      // Test 2: Pre-pov phase favors bargain_pov
+      const prePovCtx = { phase: 'pre-pov', currentHOH: 2, vetoHolder: 4, nominees: [3,5], week: 3 };
+      const prePovCandidates = registry.list().filter(a => a.phaseTags.includes('pre-pov'));
+      const prePovWeights = window.SocialAIWeights.computeActionWeights(3, prePovCandidates, prePovCtx, null);
+      
+      const bargainWeight = prePovWeights.get('bargain_pov') || 0;
+      const prePovAvg = Array.from(prePovWeights.values()).reduce((a,b) => a+b, 0) / prePovWeights.size;
+      
+      assert(bargainWeight > prePovAvg * 1.5, 
+        'Pre-pov: bargain_pov weight > 1.5x average', 
+        `bargain_pov: ${bargainWeight.toFixed(2)}, avg: ${prePovAvg.toFixed(2)}`);
+      
+      // Test 3: Post-noms favors sympathy_visit and vote_rally
+      const postNomsCtx = { phase: 'post-noms', currentHOH: 2, nominees: [3,5], week: 3 };
+      const postNomsCandidates = registry.list().filter(a => a.phaseTags.includes('post-noms'));
+      const postNomsWeights = window.SocialAIWeights.computeActionWeights(6, postNomsCandidates, postNomsCtx, null);
+      
+      const sympathyWeight = postNomsWeights.get('sympathy_visit') || 0;
+      const rallyWeight = postNomsWeights.get('vote_rally') || 0;
+      const postNomsAvg = Array.from(postNomsWeights.values()).reduce((a,b) => a+b, 0) / postNomsWeights.size;
+      
+      assert(sympathyWeight > postNomsAvg || rallyWeight > postNomsAvg, 
+        'Post-noms: sympathy_visit or vote_rally elevated', 
+        `sympathy: ${sympathyWeight.toFixed(2)}, rally: ${rallyWeight.toFixed(2)}, avg: ${postNomsAvg.toFixed(2)}`);
+      
+      log('Phase tests complete');
+    }
+
+    function runTruthinessTests() {
+      log('=== Truthiness Tests ===');
+      
+      // Test 1: High trust increases truthiness
+      let trueCount = 0;
+      for (let i = 0; i < 100; i++) {
+        const result = window.SocialFlavor.computeTruthiness({
+          actorId: 1,
+          targetId: 2,
+          actorTrust: 0.9,  // High trust
+          actorRivalry: 0.1,
+          roleIncentive: 0
+        });
+        if (result === 'true') trueCount++;
+      }
+      
+      assert(trueCount > 60, 
+        'High trust (0.9) → >60% truthful', 
+        `Got ${trueCount}% truthful`);
+      
+      // Test 2: High rivalry decreases truthiness
+      let lieCount = 0;
+      for (let i = 0; i < 100; i++) {
+        const result = window.SocialFlavor.computeTruthiness({
+          actorId: 1,
+          targetId: 3,
+          actorTrust: 0.1,
+          actorRivalry: 0.9,  // High rivalry
+          roleIncentive: 0
+        });
+        if (result === 'lie') lieCount++;
+      }
+      
+      assert(lieCount > 40, 
+        'High rivalry (0.9) → >40% lies', 
+        `Got ${lieCount}% lies`);
+      
+      // Test 3: Role incentive increases truthiness
+      let roleBoostTrue = 0;
+      for (let i = 0; i < 100; i++) {
+        const result = window.SocialFlavor.computeTruthiness({
+          actorId: 2,
+          targetId: 1,
+          actorTrust: 0.5,
+          actorRivalry: 0.2,
+          roleIncentive: 0.2  // HOH has incentive to be truthful
+        });
+        if (result === 'true') roleBoostTrue++;
+      }
+      
+      assert(roleBoostTrue > 50, 
+        'Role incentive (0.2) → >50% truthful', 
+        `Got ${roleBoostTrue}% truthful`);
+      
+      log('Truthiness tests complete');
+    }
+
+    function runCooldownTests() {
+      log('=== Cooldown Tests ===');
+      
+      const cooldownStore = new Map();
+      const now = Date.now();
+      
+      // Test 1: Action on cooldown has zero weight
+      cooldownStore.set('secret_chat', now - 1000);  // Used 1 second ago, 2s cooldown
+      
+      const weights = new Map([
+        ['secret_chat', 1.0],
+        ['probe_hoh', 1.0]
+      ]);
+      
+      const adjusted = window.SocialAIWeights.applyCooldownsAndDecay(weights, cooldownStore, []);
+      
+      assert(adjusted.get('secret_chat') === 0, 
+        'Cooldown zeroes out weight', 
+        `Weight: ${adjusted.get('secret_chat')}`);
+      
+      // Test 2: Action off cooldown retains weight
+      cooldownStore.set('probe_hoh', now - 5000);  // Used 5 seconds ago, 3s cooldown
+      
+      assert(adjusted.get('probe_hoh') > 0, 
+        'Off cooldown retains weight', 
+        `Weight: ${adjusted.get('probe_hoh')}`);
+      
+      // Test 3: Repetition decay
+      const history = [
+        { actionId: 'secret_chat', timestamp: now - 30000 },
+        { actionId: 'secret_chat', timestamp: now - 20000 }
+      ];
+      
+      const weights2 = new Map([['secret_chat', 1.0], ['probe_hoh', 1.0]]);
+      const decayed = window.SocialAIWeights.applyCooldownsAndDecay(weights2, new Map(), history);
+      
+      const secretChatWeight = decayed.get('secret_chat');
+      const probeHohWeight = decayed.get('probe_hoh');
+      
+      assert(secretChatWeight < probeHohWeight, 
+        'Repeated action has lower weight', 
+        `secret_chat: ${secretChatWeight.toFixed(2)}, probe_hoh: ${probeHohWeight.toFixed(2)}`);
+      
+      log('Cooldown tests complete');
+    }
+
+    function runIntegratorTests() {
+      log('=== Integrator Tests ===');
+      
+      // Test 1: Integrator returns valid action
+      const phaseCtx = { phase: 'pre-noms', currentHOH: 2, nominees: [], week: 3 };
+      const selection = window.SocialAIIntegrator.selectActionForActor(1, phaseCtx, { budget: 5 });
+      
+      assert(selection !== null, 
+        'Integrator returns valid selection', 
+        selection ? `action: ${selection.action.id}` : 'null');
+      
+      if (selection) {
+        assert(selection.action && selection.targetId && selection.context, 
+          'Selection has required fields', 
+          `action: ${!!selection.action}, target: ${!!selection.targetId}, context: ${!!selection.context}`);
+      }
+      
+      // Test 2: Budget constraint respected
+      const lowBudgetSelection = window.SocialAIIntegrator.selectActionForActor(1, phaseCtx, { budget: 1 });
+      
+      if (lowBudgetSelection) {
+        assert(lowBudgetSelection.action.cost <= 1, 
+          'Low budget filters expensive actions', 
+          `cost: ${lowBudgetSelection.action.cost}`);
+      } else {
+        log('✓ Low budget correctly returns no valid actions');
+      }
+      
+      log('Integrator tests complete');
+    }
+
+    function runAllTests() {
+      clearLog();
+      log('Starting comprehensive test suite...');
+      log('');
+      
+      runPhaseTests();
+      log('');
+      runTruthinessTests();
+      log('');
+      runCooldownTests();
+      log('');
+      runIntegratorTests();
+      log('');
+      log('=== All tests complete ===');
+    }
+
+    // Auto-run on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test harness loaded');
+      log('Click "Run All Tests" to begin');
+    });
+  </script>
+</body>
+</html>
