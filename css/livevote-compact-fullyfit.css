@@ -8,62 +8,74 @@
 
 #tv { position: relative !important; overflow: hidden !important; }
 
-/* Ensure overlay panel fills the whole faux TV visible area */
+/* Ensure tvHead stays visible above lv2-overlay */
+#tv .tvHead {
+  position: relative !important;
+  z-index: 100 !important;
+  background: linear-gradient(180deg, rgba(13,24,38,.85), rgba(7,14,24,.6)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* Position overlay as a compact card at the bottom of the TV */
+/* This ensures timer/controls at top remain visible and layout is clean */
 #tv .lv2-overlay,
 #tv .lv-overlay {
   position: absolute !important;
-  inset: 0 !important; /* top:0; left:0; right:0; bottom:0 */
-  width: 100% !important;
-  height: 100% !important;
+  /* Bottom-aligned compact card positioning - adjusted to prevent roster overlap */
+  top: auto !important;
+  left: 50% !important;
+  bottom: clamp(12px, 3vh, 24px) !important;
+  transform: translateX(-50%) !important;
+  /* Compact card dimensions */
+  width: min(92%, 500px) !important;
+  max-width: 500px !important;
+  height: auto !important;
+  max-height: 55vh !important;
+  /* Card styling */
   display: block !important;
   pointer-events: auto !important;
+  box-sizing: border-box !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
 }
 
-/* Panel content becomes strict grid: header | avatars | cta with balanced spacing */
+/* Panel content as compact card: vertical stack with minimal gaps */
 #tv .lv2-panel,
 #tv .lv2-panel .panel-content {
   position: relative !important;
   box-sizing: border-box !important;
-  height: 100% !important;
+  height: auto !important;
   max-height: 100% !important;
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  /* Balanced 3-row layout: header | avatars | cta with optical centering */
-  grid-template-rows: auto 1fr auto !important;
-  grid-template-areas:
-    "header"
-    "avatars"
-    "cta" !important;
+  display: flex !important;
+  flex-direction: column !important;
   align-items: center !important;
-  justify-items: center !important;
-  justify-content: space-between !important;
-  /* Responsive gaps for balanced vertical spacing */
-  gap: clamp(12px, 3vh, 24px) !important;
-  overflow: hidden !important;
-  /* Responsive padding for breathing room from faux TV edges */
-  padding: clamp(16px, 4vh, 32px) clamp(12px, 3vw, 24px) clamp(16px, 4vh, 32px) clamp(12px, 3vw, 24px) !important;
+  justify-content: center !important;
+  /* Compact gaps for bottom card layout */
+  gap: clamp(12px, 2vh, 16px) !important;
+  overflow: auto !important;
+  /* Compact padding for bottom card */
+  padding: clamp(20px, 3vh, 28px) clamp(16px, 3vw, 24px) !important;
+  /* Card background */
+  background: linear-gradient(135deg, rgba(20, 35, 55, 0.95), rgba(14, 23, 40, 0.98)) !important;
 }
 
-/* Header row at top */
+/* Header hidden for compact card - text in instructions instead */
 #tv .lv2-header {
-  grid-area: header !important;
-  width: 100% !important;
-  text-align: center !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  display: none !important;
 }
 
-/* Avatar row centered in middle with responsive gap */
+/* Avatar row as compact horizontal display */
 #tv .lv2-grid {
-  grid-area: avatars !important;
   width: 100% !important;
-  max-width: min(72vw, 320px) !important; /* Constrain width for better centering */
+  max-width: 100% !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  gap: clamp(12px, 3vw, 24px) !important;
+  gap: clamp(16px, 4vw, 24px) !important;
   padding: 0 !important;
   box-sizing: border-box !important;
+  flex-shrink: 0 !important;
 }
 
 /* Stage is hidden in 2-nominee layout but keep defensive bounds if shown */
@@ -79,25 +91,69 @@
   padding: 0 !important;
 }
 
-/* CTA row at bottom with sufficient gap */
+/* Instructions element serves as header text for compact card */
+#tv .lv2-instructions {
+  display: block !important;
+  text-align: center !important;
+  font-size: clamp(1rem, 3vw, 1.15rem) !important;
+  font-weight: 600 !important;
+  color: #ffd96b !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  order: -1 !important; /* Show at top */
+  flex-shrink: 0 !important;
+}
+
+/* Voter feed - hide to maintain compact 3-row layout */
+#tv .lv2-voter-feed {
+  display: none !important;
+}
+
+/* Status text - hide to maintain compact 3-row layout */
+#tv .lv2-status {
+  display: none !important;
+}
+
+/* Status row (carousel mode) - hide to maintain compact 3-row layout */
+#tv .lv2-status-row {
+  display: none !important;
+}
+
+/* CTA row in flex layout */
 #tv .lv2-cta-row,
 #tv .lv-overlay__confirm-container {
-  grid-area: cta !important;
-  width: min(92%, 520px) !important;
+  width: 100% !important;
+  max-width: 280px !important;
   margin: 0 auto !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  position: relative !important; /* keep inside the tv grid */
+  position: relative !important;
   z-index: 50 !important;
+  flex-shrink: 0 !important;
 }
 
 /* Style tweaks for selected name/evict button to ensure visibility and spacing */
+#tv .lv2-name-btn,
 #tv .lv2-name-btn-selected {
   box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
   transform: translateY(0) !important;
   min-height: clamp(44px, 6vh, 56px) !important;
   padding: clamp(10px, 2vh, 16px) clamp(20px, 4vw, 32px) !important;
+  margin-top: clamp(8px, 2vh, 16px) !important;
+  /* Ensure button is visible and stands out */
+  background: linear-gradient(135deg, #ff3366, #ff1744) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease !important;
+}
+
+#tv .lv2-name-btn-selected:hover,
+#tv .lv2-name-btn:hover {
+  transform: translateY(-2px) !important;
 }
 
 /* Ensure text centering within contestant cards */
