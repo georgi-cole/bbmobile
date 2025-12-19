@@ -124,7 +124,8 @@
   box-sizing: border-box !important;
 }
 
-/* Vote stage inside #tv - scrollable only, compact for nucleus layout */
+/* Vote stage inside #tv - scrollable only, compact for nucleus layout
+ * Reduced max-height ensures button stays visible; overflow:auto handles content that exceeds height */
 #tv .voteStage {
   max-height: min(35vh, 280px);
   overflow: auto;
@@ -187,7 +188,9 @@
   line-height: 1.3 !important;
 }
 
-/* CTA buttons specifically - ensure they're always visible and centered (fixed, non-scrolling) - compact spacing */
+/* CTA buttons specifically - ensure they're always visible and centered (fixed, non-scrolling) - compact spacing
+ * NOTE: Using flex-direction: column to stack status message above button for compact nucleus layout
+ * This ensures both elements are visible and properly spaced within the limited TV viewport */
 .tvViewport .lv2-cta-row,
 .tvViewport .lv-overlay__confirm-container,
 .tvViewport .debug-cta-row,
@@ -323,7 +326,7 @@ html, body {
     gap: clamp(4px, 0.8vw, 8px) !important;
   }
   
-  /* Smaller stage max-height on mobile */
+  /* Smaller stage max-height on mobile - content scrolls if needed */
   .tvViewport .lv2-stage {
     max-height: 45vh !important;
   }
