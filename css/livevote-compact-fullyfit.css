@@ -22,16 +22,16 @@
 #tv .lv2-overlay,
 #tv .lv-overlay {
   position: absolute !important;
-  /* Bottom-aligned compact card positioning - positioned lower per user feedback */
+  /* Bottom-aligned compact card positioning - adjusted to prevent roster overlap */
   top: auto !important;
   left: 50% !important;
-  bottom: clamp(8px, 2vh, 16px) !important;
+  bottom: clamp(12px, 3vh, 24px) !important;
   transform: translateX(-50%) !important;
   /* Compact card dimensions */
   width: min(92%, 500px) !important;
   max-width: 500px !important;
   height: auto !important;
-  max-height: 60vh !important;
+  max-height: 55vh !important;
   /* Card styling */
   display: block !important;
   pointer-events: auto !important;
