@@ -79,7 +79,9 @@
 
     #tv {
       position: relative;
-      height: 520px;
+      height: 560px;
+      display: flex;
+      flex-direction: column;
       background:
         linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
       background-color: #0e1730;
@@ -87,6 +89,50 @@
       border-radius: 18px;
       overflow: hidden;
       box-shadow: 0 16px 36px -22px rgba(0,0,0,.75);
+    }
+
+    .tvHead {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(120,210,255,.07);
+      background: linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+    }
+
+    .tvTitle {
+      font-weight: 600;
+      letter-spacing: .6px;
+      font-size: .75rem;
+      color: #c7d7eb;
+    }
+
+    .tvTimer {
+      font-size: .95rem;
+      font-weight: 600;
+      color: #e2edf8;
+      text-align: right;
+    }
+
+    .tvViewport {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tvNow {
+      color: rgba(255,255,255,0.6);
+      font-size: 0.9rem;
+    }
+
+    .tvOverlay {
+      position: absolute;
+      z-index: 12;
     }
 
     /* Visual test markers */
@@ -138,7 +184,16 @@
 </div>
 
 <div class="tv-container">
-  <div id="tv"></div>
+  <div id="tv" class="tv tv-screen">
+    <div class="tvHead">
+      <div class="tvTitle">House Network Live</div>
+      <div class="tvTimer" id="tvTimer">00:00</div>
+    </div>
+    <div class="tvViewport" data-sm-faux-tv>
+      <div id="tvNow" class="tvNow">Welcome to the season.</div>
+      <div id="tvOverlay" class="tvOverlay"></div>
+    </div>
+  </div>
 </div>
 
 <script>
