@@ -9,31 +9,53 @@
   // CONFIGURATION & CONSTANTS
   // ============================================================================
   
+  /**
+   * Phase multipliers - adjust action weights based on current phase
+   * Higher multipliers = more likely to be selected
+   * 
+   * Tuning guide:
+   * - Use 2.5-3.0x for heavily favored actions (e.g., probe_hoh in pre-noms)
+   * - Use 1.3-1.8x for moderately favored actions
+   * - Use 0.5-0.8x to discourage actions in certain phases
+   * - Default 1.0x if not specified
+   * 
+   * These multipliers stack with role and relationship multipliers.
+   */
   const PHASE_MULTIPLIERS = {
     'pre-noms': {
-      'probe_hoh': 3.0,
-      'alliance_invite': 1.5,
-      'favor_request': 1.3,
-      'plant_rumor': 0.8
+      'probe_hoh': 3.0,          // Heavily favor HOH intel gathering before noms
+      'alliance_invite': 1.5,    // Good time to form alliances
+      'favor_request': 1.3,      // Request favors before HOH decides
+      'plant_rumor': 0.8         // Discourage risky rumors before noms
     },
     'pre-pov': {
-      'probe_pov': 3.0,
-      'bargain_pov': 2.5,
-      'eavesdrop': 1.5,
-      'sympathy_visit': 0.8
+      'probe_pov': 3.0,          // Heavily favor POV intel gathering
+      'bargain_pov': 2.5,        // Prime time for veto bargaining
+      'eavesdrop': 1.5,          // Listen for POV plans
+      'sympathy_visit': 0.8      // Not ideal timing for sympathy
     },
     'post-noms': {
-      'sympathy_visit': 2.5,
-      'vote_rally': 2.0,
-      'bargain_pov': 1.8,
-      'alliance_renew': 1.3,
-      'deescalate': 1.2
+      'sympathy_visit': 2.5,     // Visit nominees after noms announced
+      'vote_rally': 2.0,         // Rally votes while nominations are fresh
+      'bargain_pov': 1.8,        // Still good for bargaining
+      'alliance_renew': 1.3,     // Reaffirm alliances
+      'deescalate': 1.2          // De-escalate tensions
     },
     'general': {
       // Default multipliers for general phase (all actions available)
     }
   };
 
+  /**
+   * Role multipliers - adjust action weights based on actor's current role
+   * Lower multipliers (<1.0) discourage inappropriate actions
+   * Higher multipliers (>1.0) encourage role-appropriate actions
+   * 
+   * Tuning guide:
+   * - Use 0.1-0.2x to prevent nonsensical actions (e.g., HOH probing themselves)
+   * - Use 1.3-1.8x to encourage role-appropriate actions
+   * - Use 2.5-2.8x for critical role actions (e.g., nominees bargaining for veto)
+   */
   const ROLE_MULTIPLIERS = {
     hoh: {
       'probe_hoh': 0.2,  // Don't probe yourself
@@ -143,7 +165,7 @@
       // Relationship multipliers (averaged across typical targets)
       if (relationGraph && action.targetsRequired === 1) {
         // For single-target actions, consider relationship context
-        const relationMultiplier = estimateRelationshipMultiplier(action, relationGraph, actorId);
+        const relationMultiplier = estimateRelationshipMultiplier(action);
         weight *= relationMultiplier;
       }
       
@@ -295,8 +317,18 @@
 
   /**
    * Estimate relationship multiplier for action
+   * 
+   * Note: This is a simplified placeholder implementation that averages multipliers
+   * across relationship types. In a future enhancement, this could be made more
+   * sophisticated by:
+   * - Querying actual relationship distribution for the actor
+   * - Weighting by likely target selection based on relationship strength
+   * - Considering persona biases and strategic objectives
+   * 
+   * For now, we return a simple average to provide reasonable default behavior
+   * without introducing complex dependencies.
    */
-  function estimateRelationshipMultiplier(action, _relationGraph, _actorId) {
+  function estimateRelationshipMultiplier(action) {
     // Get typical relationship types for this action
     const actionId = action.id;
     
@@ -305,8 +337,7 @@
     const rivalMult = RELATIONSHIP_MULTIPLIERS.rival[actionId] || 1.0;
     const neutralMult = 1.0;
     
-    // Weighted average based on likely target selection
-    // For now, assume equal distribution (can be refined with actual target selection logic)
+    // Simple average (future: could weight by actual relationship distribution)
     return (allyMult + rivalMult + neutralMult) / 3;
   }
 

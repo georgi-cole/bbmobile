@@ -368,6 +368,13 @@
   // UTILITIES
   // ============================================================================
 
+  /**
+   * Get player name from ID
+   * 
+   * Note: This duplicates logic from other modules to keep social-ai-integrator
+   * self-contained and reduce cross-module dependencies. This allows the integrator
+   * to function independently if needed for testing or alternative contexts.
+   */
   function getPlayerName(playerId) {
     if (typeof global.safeName === 'function') {
       return global.safeName(playerId);
