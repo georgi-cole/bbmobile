@@ -116,11 +116,18 @@
     return isResponsive;
   }
 
-  // Render the modern panel inside #tv with fixed canvas and ResizeObserver scaling
+  // Render the modern panel inside .tvViewport with fixed canvas and ResizeObserver scaling
   function renderPanel() {
     const tv = document.querySelector('#tv');
     if (!tv) {
       console.warn('[lv2] #tv element not found');
+      return;
+    }
+    
+    // Find the tvViewport which is the positioning context
+    const tvViewport = tv.querySelector('.tvViewport');
+    if (!tvViewport) {
+      console.warn('[lv2] .tvViewport element not found');
       return;
     }
     
@@ -138,7 +145,7 @@
     }
 
     // Remove any existing lv2 overlays before creating new one
-    const existingLv2 = tv.querySelector('.lv2-overlay');
+    const existingLv2 = tvViewport.querySelector('.lv2-overlay');
     if (existingLv2) {
       existingLv2.remove();
       console.debug('[lv2] Removed existing lv2 overlay');
@@ -176,17 +183,25 @@
     const fitWrapper = document.createElement('div');
     fitWrapper.className = 'lv2-fit';
 
-    // Create main grid container
+    // Create main container - single stack: title + stage + hint + button
     const container = document.createElement('div');
     container.className = 'lv2-panel votePanel';
 
-    // Header
+    // Header/Title (fixed at top)
     const header = document.createElement('div');
     header.className = 'lv2-header';
     header.innerHTML = '<h3>Live Vote</h3>';
     container.appendChild(header);
 
-    // Main content grid (left contestant | right contestant) - V2.2.1: Removed center stage
+    // Stage area (scrollable container for nominees and vote feed)
+    const stage = document.createElement('div');
+    stage.className = 'lv2-stage';
+    stage.setAttribute('role', 'log');
+    stage.setAttribute('aria-live', 'polite');
+    stage.setAttribute('aria-atomic', 'false');
+    stage.setAttribute('aria-label', 'Vote stage');
+    
+    // Main content grid (left contestant | right contestant) - inside stage
     const grid = document.createElement('div');
     grid.className = 'lv2-grid';
     
@@ -203,7 +218,7 @@
     const rightSide = createContestant('right', state.rightName, state.rightId);
     grid.appendChild(rightSide);
     
-    container.appendChild(grid);
+    stage.appendChild(grid);
     
     // Mobile Carousel 2.0: Add arrows hugging the portrait (inside grid)
     if (state.useCarousel) {
@@ -228,17 +243,17 @@
       grid.appendChild(nextArrow);
     }
     
-    // Hidden stage for vote announcements (only for ARIA)
-    const stage = document.createElement('div');
-    stage.className = 'lv2-stage';
-    stage.setAttribute('role', 'log');
-    stage.setAttribute('aria-live', 'polite');
-    stage.setAttribute('aria-atomic', 'false');
-    stage.setAttribute('aria-label', 'Vote announcements');
-    stage.style.display = 'none'; // Hidden, only for ARIA
+    // V2.2.1: Voter feed area - inside stage (scrollable with nominees)
+    const voterFeed = document.createElement('div');
+    voterFeed.className = 'lv2-voter-feed';
+    voterFeed.setAttribute('role', 'log');
+    voterFeed.setAttribute('aria-live', 'polite');
+    voterFeed.setAttribute('aria-label', 'Voter feed');
+    stage.appendChild(voterFeed);
+    
     container.appendChild(stage);
     
-    // Inline CTA: Instruction element below grid (for all 2-nominee flows)
+    // Inline CTA: Instruction/hint element (fixed below stage)
     const instructions = document.createElement('div');
     instructions.className = 'lv2-instructions';
     instructions.textContent = 'Tap on the photo of the person you want to evict.';
@@ -274,25 +289,9 @@
       container.appendChild(statusRow);
     }
     
-    // Legacy CTA dock removed for 2-nominee flows
-    // All 2-nominee flows now use inline evict button on nominee tile
-
-    // V2.2.1: Voter feed area - centered below the two photos
-    const voterFeed = document.createElement('div');
-    voterFeed.className = 'lv2-voter-feed';
-    voterFeed.setAttribute('role', 'log');
-    voterFeed.setAttribute('aria-live', 'polite');
-    voterFeed.setAttribute('aria-label', 'Voter feed');
-    container.appendChild(voterFeed);
-
-    // Status text area
-    const status = document.createElement('div');
-    status.className = 'lv2-status tiny muted';
-    status.textContent = 'Waiting for votes...';
-    container.appendChild(status);
-
-    // Legacy CTA footer row removed for 2-nominee flows
-    // All 2-nominee flows now use inline evict button on nominee tile
+    // Evict button (inline, transforms from name button when nominee selected)
+    // The button is created inside the contestant card and shown when selected
+    // No separate CTA row needed - kept inline with nominee name
 
     fitWrapper.appendChild(container);
     overlay.appendChild(fitWrapper);
@@ -300,11 +299,11 @@
     state.container = container;
     state.stage = stage;
     
-    // Append to TV (existing lv2 already removed at start of renderPanel)
-    tv.appendChild(overlay);
+    // Append to tvViewport (positioning context)
+    tvViewport.appendChild(overlay);
 
     // Setup ResizeObserver for responsive scaling
-    setupResizeObserver(tv, fitWrapper);
+    setupResizeObserver(tvViewport, fitWrapper);
     
     // Initialize carousel view if in carousel mode
     if (state.useCarousel) {
@@ -330,15 +329,15 @@
   
   // Helper: Remove duplicate evict buttons and ensure only one exists in the panel
   function removeDuplicateEvictButtons() {
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
+    const tvViewport = document.querySelector('.tvViewport');
+    if (!tvViewport) return;
     
     // Find the main panel (prefer .votePanel or .intermission-card-container)
-    const panel = tv.querySelector('.votePanel, .intermission-card-container, .lv2-panel');
+    const panel = tvViewport.querySelector('.votePanel, .intermission-card-container, .lv2-panel');
     if (!panel) return;
     
     // Find all elements that could be evict buttons
-    const possibleButtons = tv.querySelectorAll(
+    const possibleButtons = tvViewport.querySelectorAll(
       '.evictBtn, .lv2-cta-btn, .lv-overlay__evict-btn, .debug-evict-btn, button[data-action="evict"]'
     );
     
@@ -365,7 +364,7 @@
     }
     
     // Also remove any orphaned CTA rows that might have been created
-    const ctaRows = tv.querySelectorAll('.lv2-cta-row, .debug-cta-row');
+    const ctaRows = tvViewport.querySelectorAll('.lv2-cta-row, .debug-cta-row');
     ctaRows.forEach((row, index) => {
       if (index > 0) { // Keep only the first one (if any)
         row.remove();
@@ -382,11 +381,11 @@
   
   // Helper: Ensure all vote UI elements are inside the panel (not scattered)
   function ensureElementsInPanel() {
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
+    const tvViewport = document.querySelector('.tvViewport');
+    if (!tvViewport) return;
     
-    const overlay = tv.querySelector('.lv2-overlay, .voteOverlay, .tv-intermission-overlay');
-    const panel = tv.querySelector('.votePanel, .intermission-card-container, .lv2-panel');
+    const overlay = tvViewport.querySelector('.lv2-overlay, .voteOverlay, .tv-intermission-overlay');
+    const panel = tvViewport.querySelector('.votePanel, .intermission-card-container, .lv2-panel');
     
     if (!overlay || !panel) return;
     
@@ -415,11 +414,11 @@
   
   // Helper: Remove inline styles that include vertical anchoring
   function removeVerticalAnchoringStyles() {
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
+    const tvViewport = document.querySelector('.tvViewport');
+    if (!tvViewport) return;
     
-    const overlay = tv.querySelector('.lv2-overlay, .voteOverlay, .tv-intermission-overlay');
-    const panel = tv.querySelector('.lv2-panel, .votePanel, .intermission-card-container');
+    const overlay = tvViewport.querySelector('.lv2-overlay, .voteOverlay, .tv-intermission-overlay');
+    const panel = tvViewport.querySelector('.lv2-panel, .votePanel, .intermission-card-container');
     
     if (!overlay && !panel) return;
     
@@ -486,8 +485,8 @@
       layoutObserver = null;
     }
     
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
+    const tvViewport = document.querySelector('.tvViewport');
+    if (!tvViewport) return;
     
     // Debounce function to avoid excessive re-runs
     let debounceTimer = null;
@@ -505,8 +504,8 @@
       for (const mutation of mutations) {
         if (mutation.type === 'childList' || mutation.type === 'attributes') {
           const target = mutation.target;
-          // Only react to changes in TV or overlay
-          if (target.id === 'tv' || 
+          // Only react to changes in tvViewport or overlay
+          if (target.classList?.contains('tvViewport') || 
               target.classList?.contains('lv2-overlay') || 
               target.classList?.contains('voteOverlay') ||
               target.classList?.contains('lv2-panel') || 
@@ -518,7 +517,7 @@
       }
     });
     
-    layoutObserver.observe(tv, {
+    layoutObserver.observe(tvViewport, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -749,10 +748,13 @@
     }
   }
   
-  // Ensure inline CTA exists + helper to reveal CTA inside the faux TV
+  // Ensure inline CTA exists + helper to reveal CTA inside the tvViewport
   function ensureInlineCtaGuard() {
     try {
-      const overlay = document.querySelector('#tv .lv2-overlay') || document.querySelector('#tv .lv-overlay') || document.querySelector('#tvOverlay');
+      const tvViewport = document.querySelector('.tvViewport');
+      if (!tvViewport) return;
+      
+      const overlay = tvViewport.querySelector('.lv2-overlay, .lv-overlay') || document.querySelector('#tvOverlay');
       if (!overlay) return;
       if (overlay.__inlineCtaGuardInstalled) return;
       overlay.__inlineCtaGuardInstalled = true;
@@ -788,10 +790,8 @@
       }
 
       function insertDebugCta() {
-        // STRONG GUARD: Check for any existing CTA buttons in entire TV container
-        const existingCta = document.querySelector('#tv .debug-cta-row') || 
-                           document.querySelector('#tv .lv2-cta-row') || 
-                           document.querySelector('#tv .lv-overlay__confirm-container');
+        // STRONG GUARD: Check for any existing CTA buttons in tvViewport
+        const existingCta = tvViewport.querySelector('.debug-cta-row, .lv2-cta-row, .lv-overlay__confirm-container');
         if (existingCta) {
           console.debug('[lv2-guard] CTA already exists, skipping debug CTA insertion');
           return;
@@ -806,15 +806,15 @@
         btn.className = 'debug-evict-btn';
         btn.style.cssText = 'background:linear-gradient(135deg,#e44,#c21);color:#fff;padding:12px 28px;border-radius:28px;border:none;font-weight:700;cursor:pointer;';
         cta.appendChild(btn);
-        const panel = document.querySelector('#tv .lv2-panel .panel-content') || document.querySelector('#tv .lv2-panel');
+        const panel = tvViewport.querySelector('.lv2-panel .panel-content, .lv2-panel');
         if (panel) {
           panel.appendChild(cta);
         } else {
           overlay.appendChild(cta);
         }
         btn.addEventListener('click', () => {
-          const selected = document.querySelector('.lv2-name-btn-selected')?.closest('.lv2-contestant')?.dataset?.playerId ||
-                           document.querySelector('.lv2-contestant.selected')?.dataset?.playerId;
+          const selected = tvViewport.querySelector('.lv2-name-btn-selected')?.closest('.lv2-contestant')?.dataset?.playerId ||
+                           tvViewport.querySelector('.lv2-contestant.selected')?.dataset?.playerId;
           if (!selected) { alert('Select a nominee first.'); return; }
           if (typeof global.handleHumanVote === 'function') return global.handleHumanVote(Number(selected));
           if (global.lv2 && typeof global.lv2.pushVote === 'function') {
@@ -848,16 +848,18 @@
     }
   }
 
-  // Helper to ensure CTA is visible inside the faux TV after a selection
+  // Helper to ensure CTA is visible inside the tvViewport after a selection
   function revealCtaInView() {
-    const cta = document.querySelector('#tv .lv2-cta-row') || document.querySelector('#tv .lv-overlay__confirm-container') || document.querySelector('#tv .debug-cta-row');
+    const tvViewport = document.querySelector('.tvViewport');
+    if (!tvViewport) return;
+    
+    const cta = tvViewport.querySelector('.lv2-cta-row, .lv-overlay__confirm-container, .debug-cta-row');
     if (!cta) return;
-    const tvEl = document.querySelector('#tv');
-    if (!tvEl) return;
-    const tvRect = tvEl.getBoundingClientRect();
+    
+    const tvRect = tvViewport.getBoundingClientRect();
     const cRect = cta.getBoundingClientRect();
     if (cRect.bottom > tvRect.bottom || cRect.top < tvRect.top) {
-      const panel = document.querySelector('#tv .lv2-panel .panel-content') || document.querySelector('#tv .lv2-panel');
+      const panel = tvViewport.querySelector('.lv2-panel .panel-content, .lv2-panel');
       if (panel) {
         panel.appendChild(cta);
         try { cta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) { /* scrollIntoView may not be supported */ }
@@ -1268,11 +1270,11 @@
     }
     
     // Legacy mode: show turn tag at top
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
+    const tvViewport = document.querySelector('.tvViewport');
+    if (!tvViewport) return;
 
     // Remove existing tag
-    const existing = tv.querySelector('.lv2-turn-tag');
+    const existing = tvViewport.querySelector('.lv2-turn-tag');
     if (existing) existing.remove();
 
     const tag = document.createElement('div');
@@ -1282,7 +1284,7 @@
     tag.setAttribute('aria-live', 'polite');
     tag.setAttribute('aria-label', 'It is your turn to vote');
 
-    tv.appendChild(tag);
+    tvViewport.appendChild(tag);
   }
 
   // V2.1: Hide turn tag (or YOUR TURN pill in carousel mode)
@@ -1300,8 +1302,8 @@
     }
     
     // Legacy mode: remove turn tag
-    const tv = document.querySelector('#tv');
-    const tag = tv?.querySelector('.lv2-turn-tag');
+    const tvViewport = document.querySelector('.tvViewport');
+    const tag = tvViewport?.querySelector('.lv2-turn-tag');
     if (tag) tag.remove();
   }
 
@@ -1354,21 +1356,21 @@
       console.debug('[lv2] MutationObserver disconnected');
     }
 
-    // Remove lv2 UI from TV
-    const tv = document.querySelector('#tv');
-    const existingOverlay = tv?.querySelector('.lv2-overlay');
+    // Remove lv2 UI from tvViewport
+    const tvViewport = document.querySelector('.tvViewport');
+    const existingOverlay = tvViewport?.querySelector('.lv2-overlay');
     if (existingOverlay) existingOverlay.remove();
 
     // Remove turn indicator (legacy)
-    const existingIndicator = tv?.querySelector('.lv2-turn-indicator');
+    const existingIndicator = tvViewport?.querySelector('.lv2-turn-indicator');
     if (existingIndicator) existingIndicator.remove();
     
     // V2.1: Remove turn tag
-    const existingTag = tv?.querySelector('.lv2-turn-tag');
+    const existingTag = tvViewport?.querySelector('.lv2-turn-tag');
     if (existingTag) existingTag.remove();
 
     // Remove any evictee visuals
-    const evicteeVisuals = tv?.querySelectorAll('.lv2-evictee');
+    const evicteeVisuals = tvViewport?.querySelectorAll('.lv2-evictee');
     evicteeVisuals?.forEach(el => el.remove());
 
     // Restore panel visibility

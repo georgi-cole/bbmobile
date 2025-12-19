@@ -10,18 +10,16 @@
    - UPDATED: v6 - Pure Grid centering, overflow visible for buttons, no vertical anchoring
 */
 
-/* Ensure #tv (fauxTv) is the positioning context */
-#tv,
-.fauxTv { 
+/* Ensure .tvViewport is the positioning context for LV2 overlay */
+.tvViewport { 
   position: relative !important; 
-  overflow: hidden !important; 
 }
 
-/* Overlay fills the entire faux TV viewport and centers content using CSS Grid */
-#tv .lv2-overlay,
-#tv .lv-overlay,
-#tv .tv-intermission-overlay,
-.voteOverlay {
+/* Overlay fills the entire tvViewport and centers content using CSS Grid */
+.tvViewport .lv2-overlay,
+.tvViewport .lv-overlay,
+.tvViewport .tv-intermission-overlay,
+.tvViewport .voteOverlay {
   position: absolute !important;
   inset: 0 !important; /* top:0; left:0; right:0; bottom:0 */
   display: grid !important;
@@ -29,23 +27,19 @@
   grid-auto-rows: max-content !important; /* Prevents stretching */
   justify-items: center !important; /* Centers children horizontally */
   align-content: center !important; /* Centers children vertically */
-  /* Responsive padding to leave room for timer/controls and avoid overlaps */
-  padding: clamp(20px, 4vh, 48px) clamp(16px, 3vw, 32px) !important;
-  /* Increase top padding on small viewports for timer visibility */
-  padding-top: clamp(32px, 7vh, 72px) !important;
+  /* Responsive padding to leave room for controls */
+  padding: clamp(16px, 3vh, 32px) clamp(12px, 2vw, 24px) !important;
   pointer-events: auto !important;
   z-index: 5 !important;
-  /* CRITICAL: Prefer visible overflow so buttons aren't clipped, but allow scroll if needed */
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
+  /* No scroll on overlay - only stage scrolls */
+  overflow: visible !important;
 }
 
-/* Panel content: vertical stack that's centered within overlay */
-#tv .lv2-panel,
-#tv .lv2-panel .panel-content,
-#tv .intermission-card-container,
-.votePanel {
+/* Panel content: vertical stack that's centered within overlay (title + stage + hint + button) */
+.tvViewport .lv2-panel,
+.tvViewport .lv2-panel .panel-content,
+.tvViewport .intermission-card-container,
+.tvViewport .votePanel {
   position: relative !important;
   box-sizing: border-box !important;
   /* Width constraints as per spec */
@@ -54,11 +48,9 @@
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important; /* Horizontal centering of children */
-  justify-content: center !important; /* Vertical spacing between elements */
   text-align: center !important;
   /* Responsive gaps between elements for balanced vertical spacing */
-  gap: clamp(12px, 2.5vh, 20px) !important;
-  row-gap: clamp(12px, 2.5vh, 20px) !important; /* Explicit row gap for vertical spacing */
+  gap: clamp(8px, 1.5vh, 16px) !important;
   /* CRITICAL: Remove any vertical anchoring */
   top: unset !important;
   bottom: unset !important;
@@ -66,58 +58,65 @@
   right: unset !important;
   transform: none !important;
   margin: 0 auto !important; /* Center horizontally within grid cell */
-  /* Allow scroll if content exceeds viewport, but prevent forcing page scroll */
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  max-height: 85vh !important;
+  /* No scroll on panel - only stage scrolls */
+  overflow: visible !important;
+  max-height: 100% !important;
 }
 
-/* Header row at top */
-#tv .lv2-header {
+/* Header row at top (fixed, non-scrolling) */
+.tvViewport .lv2-header {
   flex: 0 0 auto !important;
   width: 100% !important;
   text-align: center !important;
   margin: 0 !important;
+  padding: 0 0 clamp(8px, 1.5vh, 12px) 0 !important;
+}
+
+/* Stage area - scrollable container for nominees and vote feed */
+.tvViewport .lv2-stage {
+  flex: 1 1 auto !important; /* Can grow and shrink to fill available space */
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: clamp(12px, 2vh, 20px) !important;
+  /* CRITICAL: Only the stage scrolls, not the whole panel */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  /* Max height to ensure CTA button stays visible */
+  max-height: 60vh !important;
   padding: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* Avatar row centered with responsive gap and sizing */
-#tv .lv2-grid {
-  flex: 0 1 auto !important; /* Don't grow, shrink if needed, auto size */
+.tvViewport .lv2-grid {
+  flex: 0 0 auto !important; /* Fixed size, don't grow or shrink */
   width: 100% !important;
-  max-width: min(80vw, 400px) !important; /* Larger max width for better space usage */
+  max-width: min(80vw, 400px) !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
   gap: clamp(12px, 3vw, 24px) !important;
   padding: 0 !important;
   box-sizing: border-box !important;
-  min-height: 0 !important; /* Prevent flex item overflow */
 }
 
-/* Stage is hidden in 2-nominee layout */
-#tv .lv2-stage {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* Footer elements: instructions, status-row, voter-feed, status, and optional CTA */
-#tv .lv2-instructions {
+/* Instructions/hint element (fixed below stage, non-scrolling) */
+.tvViewport .lv2-instructions {
   flex: 0 0 auto !important;
   width: 100% !important;
   max-width: min(92%, 520px) !important;
   margin: 0 auto !important;
+  padding: clamp(8px, 1.5vh, 12px) 0 0 0 !important;
   text-align: center !important;
   font-size: clamp(0.85rem, 2dvh, 1rem) !important;
   line-height: 1.3 !important;
 }
 
-#tv .lv2-status-row {
+.tvViewport .lv2-status-row {
   flex: 0 0 auto !important;
   width: 100% !important;
   max-width: min(92%, 520px) !important;
@@ -128,7 +127,8 @@
   gap: 12px !important;
 }
 
-#tv .lv2-voter-feed {
+/* Voter feed inside stage (scrolls with nominees) */
+.tvViewport .lv2-voter-feed {
   flex: 0 0 auto !important;
   width: 100% !important;
   max-width: min(92%, 520px) !important;
@@ -136,7 +136,7 @@
   text-align: center !important;
 }
 
-#tv .lv2-status {
+.tvViewport .lv2-status {
   flex: 0 0 auto !important;
   width: 100% !important;
   max-width: min(92%, 520px) !important;
@@ -144,11 +144,11 @@
   text-align: center !important;
 }
 
-/* CTA buttons specifically - ensure they're always visible and centered */
-#tv .lv2-cta-row,
-#tv .lv-overlay__confirm-container,
-#tv .debug-cta-row,
-.votePanel .evictBtn {
+/* CTA buttons specifically - ensure they're always visible and centered (fixed, non-scrolling) */
+.tvViewport .lv2-cta-row,
+.tvViewport .lv-overlay__confirm-container,
+.tvViewport .debug-cta-row,
+.tvViewport .votePanel .evictBtn {
   flex: 0 0 auto !important;
   width: 100% !important;
   max-width: min(92%, 520px) !important;
@@ -161,14 +161,14 @@
 }
 
 /* Hide duplicate CTA buttons - only show the first one */
-#tv .lv2-cta-row:not(:first-of-type),
-#tv .debug-cta-row:not(:first-of-type),
-.votePanel .evictBtn ~ .evictBtn {
+.tvViewport .lv2-cta-row:not(:first-of-type),
+.tvViewport .debug-cta-row:not(:first-of-type),
+.tvViewport .votePanel .evictBtn ~ .evictBtn {
   display: none !important;
 }
 
 /* Ensure single evict button styling */
-.votePanel .evictBtn {
+.tvViewport .votePanel .evictBtn {
   background: linear-gradient(135deg, #ff6b6b, #d63031) !important;
   border: none !important;
   border-radius: 999px !important;
@@ -182,7 +182,7 @@
 }
 
 /* Style tweaks for selected name/evict button to ensure visibility and spacing */
-#tv .lv2-name-btn-selected {
+.tvViewport .lv2-name-btn-selected {
   box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
   transform: translateY(0) !important;
   min-height: clamp(44px, 6vh, 56px) !important;
@@ -193,28 +193,28 @@
 }
 
 /* Deduplication: ensure only one selected name button at a time */
-#tv .lv2-name-btn-selected ~ .lv2-contestant .lv2-name-btn-selected {
+.tvViewport .lv2-name-btn-selected ~ .lv2-contestant .lv2-name-btn-selected {
   /* This shouldn't happen, but if multiple are selected, hide subsequent ones */
   opacity: 0.5 !important;
   pointer-events: none !important;
 }
 
 /* Ensure text centering within contestant cards */
-#tv .lv2-contestant {
+.tvViewport .lv2-contestant {
   text-align: center !important;
 }
 
-#tv .lv2-name,
-#tv .lv2-name-btn {
+.tvViewport .lv2-name,
+.tvViewport .lv2-name-btn {
   text-align: center !important;
   width: 100% !important;
 }
 
 /* Responsive avatar sizing with limits to prevent overflow */
-#tv .lv2-avatar,
-#tv .lv2-contestant .lv2-avatar,
-.votePanel .lv2-avatar,
-.votePanel .nomineeAvatar {
+.tvViewport .lv2-avatar,
+.tvViewport .lv2-contestant .lv2-avatar,
+.tvViewport .votePanel .lv2-avatar,
+.tvViewport .votePanel .nomineeAvatar {
   width: clamp(80px, 16vmin, 160px) !important;
   height: clamp(80px, 16vmin, 160px) !important;
   /* Ensure avatar never exceeds safe bounds as per spec */
@@ -226,15 +226,15 @@
 }
 
 /* Ensure all text elements are centered */
-#tv .lv2-header,
-.votePanel .voteTitle {
+.tvViewport .lv2-header,
+.tvViewport .votePanel .voteTitle {
   text-align: center !important;
   width: 100% !important;
   margin: 0 !important;
 }
 
 /* Name element styling */
-.votePanel .nomineeName {
+.tvViewport .votePanel .nomineeName {
   text-align: center !important;
   width: 100% !important;
   margin: 0 !important;
@@ -242,7 +242,7 @@
 }
 
 /* Helper text styling */
-.votePanel .voteHint {
+.tvViewport .votePanel .voteHint {
   text-align: center !important;
   width: 100% !important;
   max-width: min(92%, 520px) !important;
@@ -258,34 +258,42 @@ html, body {
 }
 
 /* Compatibility: if developers used explicit absolute positioning for CTA, lower z-index */
-#tv .lv2-overlay.above-cards { z-index: 14 !important; }
-#tv #tvOverlay, #tv .lv2-overlay { z-index: 12 !important; }
+.tvViewport .lv2-overlay.above-cards { z-index: 14 !important; }
+.tvViewport #tvOverlay, .tvViewport .lv2-overlay { z-index: 12 !important; }
 
-/* Mobile viewport adjustments - extra padding for timer */
+/* Mobile viewport adjustments - responsive padding */
 @media (max-width: 640px), (max-height: 700px) {
-  #tv .lv2-overlay,
-  #tv .lv-overlay,
-  #tv .tv-intermission-overlay,
-  .voteOverlay {
-    padding-top: clamp(40px, 9vh, 80px) !important;
-    padding-bottom: clamp(24px, 5vh, 48px) !important;
+  .tvViewport .lv2-overlay,
+  .tvViewport .lv-overlay,
+  .tvViewport .tv-intermission-overlay,
+  .tvViewport .voteOverlay {
+    padding: clamp(12px, 2vh, 20px) clamp(8px, 1.5vw, 16px) !important;
   }
   
   /* Tighter gaps on very small screens */
-  #tv .lv2-panel,
-  #tv .intermission-card-container,
-  .votePanel {
-    gap: clamp(10px, 2vh, 16px) !important;
-    row-gap: clamp(10px, 2vh, 16px) !important;
+  .tvViewport .lv2-panel,
+  .tvViewport .intermission-card-container,
+  .tvViewport .votePanel {
+    gap: clamp(6px, 1vh, 12px) !important;
+  }
+  
+  /* Smaller stage max-height on mobile */
+  .tvViewport .lv2-stage {
+    max-height: 55vh !important;
   }
 }
 
 /* Laptop viewport - ensure proper centering */
 @media (min-width: 1024px) {
-  #tv .lv2-overlay,
-  #tv .lv-overlay,
-  #tv .tv-intermission-overlay,
-  .voteOverlay {
-    padding-top: clamp(48px, 8vh, 72px) !important;
+  .tvViewport .lv2-overlay,
+  .tvViewport .lv-overlay,
+  .tvViewport .tv-intermission-overlay,
+  .tvViewport .voteOverlay {
+    padding: clamp(20px, 4vh, 40px) clamp(16px, 2.5vw, 32px) !important;
+  }
+  
+  /* Larger stage max-height on laptop */
+  .tvViewport .lv2-stage {
+    max-height: 65vh !important;
   }
 }
