@@ -1,23 +1,18 @@
 /* css/livevote-compact-fullyfit.css
-   3-Zone Grid Layout for Vote UI
-   - Uses CSS Grid with 3 rows: title (auto) / stage (1fr) / CTA (auto)
-   - Stage is bounded and scrolls if needed
-   - CTA always visible at bottom
-   - Normal spacing (8-16px), not cramped
-   - Works on mobile and laptop
+   Centered Panel Layout for Vote UI
+   - One centered panel containing title, stage, and CTA together
+   - Only stage can shrink/scroll if space is limited
+   - CTA always visible at bottom of panel
+   - Normal spacing (10-16px)
 */
 
-/* Ensure .tvViewport is the positioning context for vote overlay */
-.tvViewport { 
-  position: relative !important; 
-}
-
-/* When vote overlay is inside #tv, position it absolutely within the TV viewport */
+/* Ensure .tvViewport is the positioning context */
 #tv .tvViewport { 
-  position: relative !important; 
+  position: relative !important;
+  overflow: hidden !important;
 }
 
-/* 3-Zone Grid Layout: Overlay covers TV viewport with title/stage/CTA rows */
+/* Center ONE panel as a block using place-items: center */
 #tv .tv-intermission-overlay,
 #tv .voteOverlay,
 .tvViewport .lv-overlay,
@@ -27,13 +22,10 @@
   position: absolute !important;
   inset: 0 !important;
   display: grid !important;
-  grid-template-rows: auto 1fr auto !important; /* title, stage (flexible), CTA */
-  align-items: center !important;
-  justify-items: center !important;
+  place-items: center !important; /* Center the whole panel block */
   padding: clamp(14px, 2.2vw, 26px) !important;
   pointer-events: auto !important;
   z-index: 5 !important;
-  overflow: hidden !important; /* Clip to TV bounds */
 }
 
 /* Ensure lv-overlay works properly inside #tv container */
@@ -41,56 +33,57 @@
   background: linear-gradient(135deg, rgba(5, 10, 18, 0.85), rgba(15, 25, 40, 0.88)) !important;
 }
 
-/* Title stays near top of overlay (row 1) */
-#tv .voteTitle,
-.tvViewport .lv-overlay__header,
-.tvViewport .lv2-header {
-  grid-row: 1 !important;
-  align-self: start !important;
-  margin-top: 0 !important;
-  padding: 0 0 clamp(8px, 1.5vh, 12px) 0 !important;
-  text-align: center !important;
-  width: 100% !important;
-  font-size: clamp(0.9rem, 3vw, 1.15rem) !important;
-}
-
-/* Stage gets the flexible space (row 2) and can be bounded */
-#tv .voteStage,
-.tvViewport .lv-overlay__carousel,
-.tvViewport .lv2-stage {
-  grid-row: 2 !important;
-  width: min(520px, 96%) !important;
-  max-width: 100% !important;
+/* The panel controls internal layout - flex column with normal gaps */
+#tv .intermission-card-container,
+#tv .votePanel,
+.tvViewport .lv2-panel,
+.tvViewport .intermission-card-container,
+.tvViewport .votePanel {
+  width: min(420px, 92%) !important;
   max-height: 100% !important;
-  display: grid !important;
-  place-items: center !important;
-  overflow-y: auto !important; /* Stage scrolls if content exceeds */
-  overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  padding: clamp(8px, 1.5vh, 12px) 0 !important;
-}
-
-/* CTA is anchored to bottom within overlay padding (row 3) */
-#tv .voteCTA,
-.tvViewport .lv-overlay__confirm-container,
-.tvViewport .lv2-cta-row {
-  grid-row: 3 !important;
-  align-self: end !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  gap: clamp(8px, 1.5vh, 12px) !important;
-  padding-top: clamp(8px, 1.5vh, 12px) !important;
-  width: 100% !important;
-  max-width: min(92%, 520px) !important;
+  gap: 12px !important;
+  min-height: 0 !important; /* Critical for flex overflow */
 }
 
-/* Panel content uses display: contents to let grid control layout directly */
-.tvViewport .lv2-panel,
-.tvViewport .intermission-card-container,
-.tvViewport .votePanel,
-#tv .intermission-card-container {
-  display: contents !important;
+/* Title at top of panel */
+#tv .voteTitle,
+.tvViewport .lv-overlay__header,
+.tvViewport .lv2-header {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: clamp(0.9rem, 3vw, 1.15rem) !important;
+}
+
+/* Stage can shrink and scroll if needed */
+#tv .voteStage,
+.tvViewport .lv-overlay__carousel,
+.tvViewport .lv2-stage {
+  flex: 0 1 auto !important; /* Can shrink */
+  min-height: 0 !important;
+  max-height: min(46vh, 340px) !important; /* Bounded */
+  width: 100% !important;
+  overflow: auto !important; /* Scrolls if needed */
+  display: grid !important;
+  place-items: center !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* CTA always visible at bottom of panel (outside scrollable stage) */
+#tv .voteCTA,
+.tvViewport .lv-overlay__confirm-container,
+.tvViewport .lv2-cta-row {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 10px !important;
 }
 
 /* Avatar styling with normal sizing */
@@ -141,7 +134,7 @@
   align-items: center !important;
   justify-content: center !important;
   gap: clamp(12px, 2.5vw, 20px) !important;
-  padding: clamp(8px, 1.5vh, 12px) clamp(12px, 3vw, 50px) !important;
+  padding: clamp(8px, 1.5vh, 12px) clamp(12px, 3vw, 24px) !important;
 }
 
 /* Evict button styling with normal padding */
@@ -217,11 +210,20 @@
     padding: clamp(12px, 2vw, 20px) !important;
   }
   
-  /* CTA spacing on mobile */
+  /* Panel gap on mobile */
+  #tv .intermission-card-container,
+  #tv .votePanel,
+  .tvViewport .lv2-panel,
+  .tvViewport .intermission-card-container,
+  .tvViewport .votePanel {
+    gap: 10px !important;
+  }
+  
+  /* CTA gap on mobile */
   #tv .voteCTA,
   .tvViewport .lv-overlay__confirm-container,
   .tvViewport .lv2-cta-row {
-    gap: clamp(6px, 1vh, 10px) !important;
+    gap: 8px !important;
   }
 }
 
