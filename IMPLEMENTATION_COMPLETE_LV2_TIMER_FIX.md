@@ -135,17 +135,19 @@ Incremented version to force fresh load on GitHub Pages:
 ```
 ┌─────────────────────────────────────┐
 │  .tvHead (z-index: 100)             │ ← ✅ VISIBLE!
-├─────────────────────────────────────┤
-│  .lv2-overlay (top: clamp(...))     │ ← Below tvHead
-│  ┌─────────────────────────────┐   │
-│  │ 📺 Live Vote                 │   │ Header
-│  │      ┌───┐  ┌───┐            │   │ Avatars
-│  │      │ A │  │ B │ (centered) │   │ (centered)
-│  │      └───┘  └───┘            │   │
-│  │  [🔴 Evict Alice]            │   │ CTA
-│  └─────────────────────────────┘   │
+│                                      │
+│  [Player Grid / Houseguests]        │ ← ✅ Fully visible
+│                                      │
+│         ┌────────────────┐          │
+│         │ Cast your vote │          │ ← Compact card
+│         │  ┌──┐   ┌──┐  │          │   (bottom-aligned)
+│         │  │A │   │B │  │          │
+│         │  └──┘   └──┘  │          │
+│         │  [🔴 Evict]   │          │
+│         └────────────────┘          │
+│  .lv2-overlay (bottom: 20-40px)     │
 └─────────────────────────────────────┘
-✅ Timer visible  ✅ Clean grid  ✅ CTA visible
+✅ Timer visible  ✅ Player grid visible  ✅ Compact card at bottom
 ```
 
 ## Expected Behavior on Live Site

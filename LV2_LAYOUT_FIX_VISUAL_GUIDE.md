@@ -32,7 +32,7 @@
      ❌ CTA can be off-screen
 ```
 
-## After Fix: Clean 3-Row Layout
+## After Fix: Bottom-Aligned Compact Card
 
 ```
 ┌─────────────────────────────────────┐
@@ -43,26 +43,23 @@
 │  │ ⏱ Timer: 00:42 | Title | DR  │  │
 │  └───────────────────────────────┘  │
 ├─────────────────────────────────────┤
-│  .lv2-overlay                        │
-│  (top: clamp(45px, 7vh, 65px))      │ ✅ Starts below tvHead
-│  ┌──────────────────────────────┐  │
-│  │ ┌────────────────────────┐   │  │ Grid Row 1: Header
-│  │ │    📺 Live Vote         │   │  │
-│  │ └────────────────────────┘   │  │
-│  │                               │  │
-│  │      ┌────┐      ┌────┐      │  │ Grid Row 2: Avatars (centered)
-│  │      │ A  │      │ B  │      │  │
-│  │      └────┘      └────┘      │  │ ← Centered with clamp() gaps
-│  │                               │  │
-│  │  ┌─────────────────────────┐ │  │ Grid Row 3: CTA
-│  │  │  🔴 Evict Alice         │ │  │
-│  │  └─────────────────────────┘ │  │ ← Prominent, always visible
-│  └──────────────────────────────┘  │
+│                                      │
+│  [Player Grid / Houseguests]        │ ✅ Fully visible above card
+│                                      │
+│         ┌────────────────┐          │
+│         │ Cast your vote │          │ Compact card text
+│         │  ┌──┐   ┌──┐  │          │ Avatars
+│         │  │A │   │B │  │          │ (horizontal)
+│         │  └──┘   └──┘  │          │
+│         │  [🔴 Evict]   │          │ CTA button
+│         └────────────────┘          │
+│  .lv2-overlay (bottom-aligned)      │ ✅ Compact card at bottom
+│  (bottom: clamp(20px, 4vh, 40px))   │
 └─────────────────────────────────────┘
      ✅ Timer visible at top
-     ✅ Clean 3-row grid layout
-     ✅ Centered avatars
-     ✅ CTA always visible
+     ✅ Player grid visible in middle
+     ✅ Compact card at bottom
+     ✅ Clean, centered layout
 ```
 
 ## CSS Grid Layout
