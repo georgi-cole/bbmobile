@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Legacy ActionID Integration Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0d151f;
+      color: #fff;
+    }
+    h1 {
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      background: rgba(0, 255, 0, 0.1);
+      border-left: 4px solid #0f0;
+    }
+    .fail {
+      background: rgba(255, 0, 0, 0.1);
+      border-left: 4px solid #f00;
+    }
+    .info {
+      background: rgba(102, 126, 234, 0.1);
+      border-left: 4px solid #667eea;
+      color: #aaa;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔗 Legacy ActionID Integration Test</h1>
+  <p>This test verifies that legacy actionIds (strategize, gossip, etc.) are enriched with spendPrompt via the enricher using the alias mapping.</p>
+
+  <div class="test-section">
+    <h2>Test: Enricher Resolves Legacy ActionIDs</h2>
+    <p>The enricher should use SocialActionsRegistry.get() which now resolves aliases.</p>
+    <button onclick="runEnricherTest()">Run Enricher Test</button>
+    <div id="enricherResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test: End-to-End Event Flow</h2>
+    <p>Emit raw social events with legacy actionIds and verify enrichment + CTA appearance.</p>
+    <button onclick="testLegacyActionFlow('strategize')">Test: strategize</button>
+    <button onclick="testLegacyActionFlow('gossip')">Test: gossip</button>
+    <button onclick="testLegacyActionFlow('backstab')">Test: backstab</button>
+    <div id="e2eResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <div id="eventLog"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Mock game object
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {};
+    window.game.cfg.socialSpendingEnabled = true;
+    window.game.cfg.socialSpicyLogs = true;
+    window.game.cfg.enableDrSocialLogs = true;
+    window.game.cfg.aiSocialEmitDrEvents = true;
+    
+    // Mock players
+    window.game.players = [
+      { id: 1, name: 'Alice', isHuman: true },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' }
+    ];
+    window.game.localPlayerId = 1;
+    
+    // Mock SocialFlavor
+    window.SocialFlavor = {
+      renderFlavor: function(opts) {
+        return `${opts.actorName} performed ${opts.actionId} with ${opts.targetName}`;
+      },
+      renderDetailed: function(opts) {
+        return `Detailed conversation for ${opts.actionId} between ${opts.actorName} and ${opts.targetName}`;
+      }
+    };
+  </script>
+  
+  <script src="js/social/social-actions-registry.js"></script>
+  <script src="js/social/social-enricher.js"></script>
+
+  <script>
+    function log(message, className = 'info') {
+      const logEl = document.getElementById('eventLog');
+      const div = document.createElement('div');
+      div.className = `test-result ${className}`;
+      div.innerHTML = message;
+      logEl.appendChild(div);
+    }
+
+    function showResult(containerId, message, passed) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      div.innerHTML = `${passed ? '✅' : '❌'} ${message}`;
+      container.appendChild(div);
+      return passed;
+    }
+
+    // Test that the enricher can resolve legacy actionIds
+    function runEnricherTest() {
+      const resultsEl = document.getElementById('enricherResults');
+      resultsEl.innerHTML = '<p>Running tests...</p>';
+      
+      const legacyActions = [
+        { id: 'strategize', expectedCanonical: 'secret_chat' },
+        { id: 'gossip', expectedCanonical: 'plant_rumor' },
+        { id: 'backstab', expectedCanonical: 'betrayal_tease' },
+        { id: 'interrogate', expectedCanonical: 'probe_hoh' },
+        { id: 'insult', expectedCanonical: 'rivalry_poke' }
+      ];
+      
+      let passed = 0;
+      let failed = 0;
+      
+      legacyActions.forEach(test => {
+        const action = window.SocialActionsRegistry.get(test.id);
+        
+        if (!action) {
+          showResult('enricherResults', 
+            `${test.id}: Failed to resolve`, 
+            false);
+          failed++;
+          return;
+        }
+        
+        if (action.id !== test.expectedCanonical) {
+          showResult('enricherResults', 
+            `${test.id}: Expected ${test.expectedCanonical}, got ${action.id}`, 
+            false);
+          failed++;
+          return;
+        }
+        
+        // Check if action has spendPrompt capability
+        const hasSpendable = action.spendable !== undefined;
+        const hasCost = action.cost !== undefined;
+        
+        showResult('enricherResults', 
+          `${test.id} → ${action.id} (${action.label})<br>` +
+          `&nbsp;&nbsp;Spendable: ${action.spendable}, Cost: ${action.cost}`, 
+          true);
+        passed++;
+      });
+      
+      showResult('enricherResults', 
+        `<strong>Summary: ${passed} passed, ${failed} failed</strong>`, 
+        failed === 0);
+    }
+
+    // Test end-to-end flow with legacy actionIds
+    function testLegacyActionFlow(legacyActionId) {
+      const resultsEl = document.getElementById('e2eResults');
+      
+      // Create a raw social event (as if emitted by scheduler/simulator)
+      const rawEvent = {
+        actorId: 1,
+        targetId: 2,
+        actionId: legacyActionId,
+        outcome: {
+          deltas: { affinity: 0.05 }
+        },
+        timestamp: Date.now()
+      };
+      
+      log(`Emitting raw event with actionId: <code>${legacyActionId}</code>`);
+      
+      // Simulate what the enricher does
+      const action = window.SocialActionsRegistry.get(legacyActionId);
+      
+      if (!action) {
+        showResult('e2eResults', 
+          `❌ ${legacyActionId}: Registry.get() returned null`, 
+          false);
+        log(`❌ Failed to resolve ${legacyActionId}`, 'fail');
+        return;
+      }
+      
+      log(`✓ Resolved to canonical: <code>${action.id}</code> (${action.label})`);
+      
+      // Check if enriched payload would have spendPrompt
+      const hasSpendPrompt = action.spendable === true;
+      
+      if (hasSpendPrompt) {
+        const spendPrompt = {
+          cost: action.cost,
+          label: `Spend ${action.cost} energy to reveal`
+        };
+        
+        log(`✓ SpendPrompt generated: <code>${JSON.stringify(spendPrompt)}</code>`, 'pass');
+        showResult('e2eResults', 
+          `✅ ${legacyActionId}: Would show CTA (cost: ${action.cost})`, 
+          true);
+      } else {
+        log(`ℹ No spendPrompt (action is not spendable)`, 'info');
+        showResult('e2eResults', 
+          `✅ ${legacyActionId}: No CTA expected (not spendable)`, 
+          true);
+      }
+      
+      // Show the full enrichment result
+      const enrichedExample = {
+        actorId: rawEvent.actorId,
+        targetId: rawEvent.targetId,
+        actionId: action.id,
+        actionLabel: action.label,
+        flavorText: window.SocialFlavor?.renderFlavor({ 
+          actorName: 'Alice', 
+          targetName: 'Bob', 
+          actionId: action.id 
+        }),
+        detailedText: action.spendable ? window.SocialFlavor?.renderDetailed({
+          actorName: 'Alice',
+          targetName: 'Bob',
+          actionId: action.id
+        }) : null,
+        spendPrompt: hasSpendPrompt ? {
+          cost: action.cost,
+          label: `Spend ${action.cost} energy to reveal`
+        } : null
+      };
+      
+      log(`<strong>Enriched payload example:</strong><pre>${JSON.stringify(enrichedExample, null, 2)}</pre>`, 'info');
+    }
+
+    // Setup event listener for social.action:result
+    window.addEventListener('social.action:result', (e) => {
+      log(`<strong>Event received: social.action:result</strong><pre>${JSON.stringify(e.detail, null, 2)}</pre>`, 'info');
+    });
+
+    // Auto-run on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('🎯 Registry loaded with ' + 
+          window.SocialActionsRegistry.list().length + ' actions and ' +
+          Object.keys(window.SocialActionsRegistry._aliases).length + ' aliases');
+      log('📋 Configuration flags: socialSpendingEnabled=' + window.game.cfg.socialSpendingEnabled + 
+          ', enableDrSocialLogs=' + window.game.cfg.enableDrSocialLogs + 
+          ', aiSocialEmitDrEvents=' + window.game.cfg.aiSocialEmitDrEvents);
+    });
+  </script>
+</body>
+</html>
