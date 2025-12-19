@@ -1,8 +1,10 @@
 /* css/livevote-compact-fullyfit.css
    Compact LV2 layout that fully fits inside the faux TV viewport
    - Ensures lv2-panel fills #tv visible area and bottom edge matches faux TV bottom
+   - Uses flexbox with space-evenly for optical centering
    - Avatars are centered in the middle of the faux TV
-   - CTA appears inside visible area beneath avatars when nominee selected
+   - Single Evict CTA (inline on name button) with optional debug CTA
+   - All elements (header, avatars, instructions, CTA) centered and evenly spaced
    - Scoped to lv2 classes and #tv container
 */
 
@@ -19,24 +21,17 @@
   pointer-events: auto !important;
 }
 
-/* Panel content becomes strict grid: header | avatars | cta with balanced spacing */
+/* Panel content: flexbox layout for simpler vertical stacking with centering */
 #tv .lv2-panel,
 #tv .lv2-panel .panel-content {
   position: relative !important;
   box-sizing: border-box !important;
   height: 100% !important;
   max-height: 100% !important;
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  /* Balanced 3-row layout: header | avatars | cta with optical centering */
-  grid-template-rows: auto 1fr auto !important;
-  grid-template-areas:
-    "header"
-    "avatars"
-    "cta" !important;
+  display: flex !important;
+  flex-direction: column !important;
   align-items: center !important;
-  justify-items: center !important;
-  justify-content: space-between !important;
+  justify-content: space-evenly !important; /* evenly distributes space for optical centering */
   /* Responsive gaps for balanced vertical spacing */
   gap: clamp(12px, 3vh, 24px) !important;
   overflow: hidden !important;
@@ -46,7 +41,7 @@
 
 /* Header row at top */
 #tv .lv2-header {
-  grid-area: header !important;
+  flex: 0 0 auto !important;
   width: 100% !important;
   text-align: center !important;
   margin: 0 !important;
@@ -55,7 +50,7 @@
 
 /* Avatar row centered in middle with responsive gap */
 #tv .lv2-grid {
-  grid-area: avatars !important;
+  flex: 1 1 auto !important; /* Grow to fill available space but don't overflow */
   width: 100% !important;
   max-width: min(72vw, 320px) !important; /* Constrain width for better centering */
   display: flex !important;
@@ -64,31 +59,70 @@
   gap: clamp(12px, 3vw, 24px) !important;
   padding: 0 !important;
   box-sizing: border-box !important;
+  min-height: 0 !important; /* Prevent flex item overflow */
 }
 
-/* Stage is hidden in 2-nominee layout but keep defensive bounds if shown */
+/* Stage is hidden in 2-nominee layout */
 #tv .lv2-stage {
   display: none !important;
-  grid-area: avatars !important; /* Place in same area as avatars if visible */
-  width: 100% !important;
+  width: 0 !important;
+  height: 0 !important;
   min-height: 0 !important;
-  max-height: min(40vh, 320px) !important; /* tighter bound to prevent CTA overflow */
-  align-items: center !important;
-  justify-content: center !important;
   overflow: hidden !important;
   padding: 0 !important;
+  margin: 0 !important;
 }
 
-/* CTA row at bottom with sufficient gap */
-#tv .lv2-cta-row,
-#tv .lv-overlay__confirm-container {
-  grid-area: cta !important;
-  width: min(92%, 520px) !important;
+/* Footer elements: instructions, status-row, voter-feed, status, and optional CTA */
+#tv .lv2-instructions {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
+  margin: 0 auto !important;
+  text-align: center !important;
+  font-size: clamp(0.85rem, 2dvh, 1rem) !important;
+  line-height: 1.3 !important;
+}
+
+#tv .lv2-status-row {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
   margin: 0 auto !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  position: relative !important; /* keep inside the tv grid */
+  gap: 12px !important;
+}
+
+#tv .lv2-voter-feed {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
+  margin: clamp(8px, 2vh, 16px) auto 0 auto !important;
+  text-align: center !important;
+}
+
+#tv .lv2-status {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
+  margin: clamp(4px, 1vh, 8px) auto 0 auto !important;
+  text-align: center !important;
+}
+
+/* CTA buttons specifically - ensure they're always visible */
+#tv .lv2-cta-row,
+#tv .lv-overlay__confirm-container,
+#tv .debug-cta-row {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
+  margin: clamp(8px, 2vh, 16px) auto 0 auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative !important;
   z-index: 50 !important;
 }
 
