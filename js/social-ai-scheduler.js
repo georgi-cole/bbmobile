@@ -381,6 +381,254 @@
   }
 
   // ============================================================================
+  // INTEGRATOR HELPERS
+  // ============================================================================
+
+  /**
+   * Build phase context for integrator
+   */
+  function buildPhaseContext() {
+    const g = global.game;
+    if (!g) return {};
+    
+    return {
+      phase: phaseContext?.phase || 'general',
+      currentPhase: phaseContext?.phase || 'general',
+      currentHOH: g.currentHOH,
+      nominees: g.nominees || [],
+      vetoHolder: g.vetoHolder,
+      povHolder: g.vetoHolder,
+      week: g.week || 1
+    };
+  }
+
+  /**
+   * Build relation graph helper
+   */
+  function buildRelationGraph() {
+    return {
+      getRelation(actorId, targetId) {
+        // Get affinity/trust from game state
+        const affinity = getAffinity(actorId, targetId);
+        
+        // Classify as ally, rival, or neutral
+        if (affinity >= 0.6) return 'ally';
+        if (affinity <= -0.4) return 'rival';
+        return 'neutral';
+      },
+      getTrust(actorId, targetId) {
+        // Could query SocialManeuvers trust values
+        return 0.5;
+      },
+      getRivalry(actorId, targetId) {
+        const affinity = getAffinity(actorId, targetId);
+        return Math.max(0, -affinity);
+      }
+    };
+  }
+
+  /**
+   * Get affinity between two players
+   */
+  function getAffinity(playerId1, playerId2) {
+    if (global.getAffinity) {
+      return global.getAffinity(playerId1, playerId2) || 0;
+    }
+    
+    const g = global.game;
+    if (g && g.__affinities) {
+      const key = [playerId1, playerId2].sort((a, b) => a - b).join('-');
+      return g.__affinities.get(key) || 0;
+    }
+    
+    return 0;
+  }
+
+  /**
+   * Execute action with enriched context for registry-based actions
+   */
+  function executeAIActionWithContext(actorId, targetIds, action, context) {
+    const SM = global.SocialManeuvers;
+    if (!SM) return null;
+
+    try {
+      // Check if this is a registry action
+      const registry = global.SocialActionsRegistry;
+      const registryAction = registry ? registry.get(action.id) : null;
+      
+      if (registryAction) {
+        // Use registry outcome with enriched context
+        return executeRegistryAction(actorId, targetIds, registryAction, context);
+      } else {
+        // Fallback to standard execution
+        return executeAIAction(actorId, targetIds, action);
+      }
+    } catch (e) {
+      errorLog('executeAIActionWithContext failed:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Execute registry-based action with outcome generation
+   */
+  function executeRegistryAction(actorId, targetIds, action, context) {
+    const SM = global.SocialManeuvers;
+    if (!SM) return null;
+
+    try {
+      // Compute cost
+      const costCalc = SM.computeActionCost?.(action.id, targetIds) || { total: action.cost || 0 };
+      const fullCosts = {
+        energy: costCalc?.total ?? action.cost ?? 0,
+        influence: action.costs?.influence ?? 0,
+        information: action.costs?.information ?? 0
+      };
+
+      // Verify affordability
+      if (!SM.SocialResources?.canAfford(actorId, fullCosts)) {
+        return { success: false, reason: 'insufficient_resources' };
+      }
+
+      // Generate outcome via registry
+      const outcome = action.outcome(context);
+      
+      // Compute truthiness if intel action
+      const truthiness = computeActionTruthiness(actorId, targetIds[0], context);
+      
+      // Deduct resources
+      const deducted = SM.SocialResources?.spend(actorId, fullCosts);
+      if (!deducted || !deducted.success) {
+        return { success: false, reason: 'deduction_failed' };
+      }
+
+      // Apply deltas
+      applyOutcomeDeltas(actorId, targetIds, outcome.deltas);
+
+      // Track action count
+      incrementActionCount(actorId);
+      markPairing(actorId, targetIds);
+
+      // Emit enriched event
+      emitEnrichedInteractionEvent({
+        actorId,
+        targetIds,
+        actionId: action.id,
+        success: true,
+        outcome,
+        deltas: outcome.deltas,
+        truthiness,
+        context
+      });
+
+      return {
+        success: true,
+        action,
+        outcome,
+        truthiness,
+        energyCost: fullCosts.energy
+      };
+    } catch (e) {
+      errorLog('executeRegistryAction failed:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Compute truthiness for intel actions
+   */
+  function computeActionTruthiness(actorId, targetId, context) {
+    if (!global.SocialFlavor || !global.SocialFlavor.computeTruthiness) {
+      return 'true';
+    }
+    
+    // Get affinity as proxy for trust
+    const affinity = getAffinity(actorId, targetId);
+    const trust = Math.max(0, Math.min(1, (affinity + 1) / 2)); // Normalize to 0-1
+    const rivalry = Math.max(0, -affinity);
+    
+    // Determine role incentive
+    let roleIncentive = 0;
+    if (context.hohName && targetId === context.hohName) {
+      roleIncentive = 0.1; // HOH has slight incentive to be truthful
+    }
+    
+    return global.SocialFlavor.computeTruthiness({
+      actorId,
+      targetId,
+      actorTrust: trust,
+      actorRivalry: rivalry,
+      roleIncentive
+    });
+  }
+
+  /**
+   * Apply outcome deltas to relationships
+   */
+  function applyOutcomeDeltas(actorId, targetIds, deltas) {
+    if (!deltas) return;
+    
+    // Apply affinity changes
+    if (deltas.affinity) {
+      for (const targetId of targetIds) {
+        adjustAffinity(actorId, targetId, deltas.affinity);
+      }
+    }
+    
+    // Trust, rivalry, influence deltas would be applied here
+    // (Implementation depends on game's relationship system)
+  }
+
+  /**
+   * Adjust affinity between two players
+   */
+  function adjustAffinity(playerId1, playerId2, delta) {
+    const g = global.game;
+    if (!g) return;
+    
+    if (!g.__affinities) {
+      g.__affinities = new Map();
+    }
+    
+    const key = [playerId1, playerId2].sort((a, b) => a - b).join('-');
+    const current = g.__affinities.get(key) || 0;
+    const newValue = Math.max(-1, Math.min(1, current + delta));
+    g.__affinities.set(key, newValue);
+  }
+
+  /**
+   * Emit enriched interaction event (for enricher)
+   */
+  function emitEnrichedInteractionEvent(data) {
+    try {
+      // Emit standard sm-ai-interaction
+      emitAIInteractionEvent(data);
+      
+      // Also emit social.action:result for enricher
+      const enrichedEvent = new CustomEvent('social.action:result', { 
+        detail: {
+          actorId: data.actorId,
+          targetId: data.targetIds[0],
+          actionId: data.actionId,
+          success: data.success,
+          outcome: data.outcome,
+          deltas: data.deltas,
+          truthiness: data.truthiness,
+          actorTrust: data.context?.actorTrust,
+          actorRivalry: data.context?.actorRivalry,
+          roleIncentive: data.context?.roleIncentive,
+          hohTarget: data.context?.hohTarget,
+          hohName: data.context?.hohName,
+          suggestedTarget: data.outcome?.suggestedTarget
+        }
+      });
+      window.dispatchEvent(enrichedEvent);
+    } catch (e) {
+      errorLog('Failed to emit enriched event:', e);
+    }
+  }
+
+  // ============================================================================
   // PHASE DETECTION
   // ============================================================================
   /**
@@ -553,7 +801,7 @@
   }
 
   function performSingleInteraction() {
-    const config = getConfig(); // eslint-disable-line no-unused-vars
+    const config = getConfig();
     
     // Select actor (with soft cap check)
     let attempts = 0;
@@ -573,43 +821,115 @@
 
     if (!actor) return false;
 
+    // Try new integrator-based selection if available
+    if (global.SocialAIIntegrator && config.enabled) {
+      return performIntegratedInteraction(actor.id);
+    }
+
+    // Fallback to legacy selection (for backward compatibility)
+    return performLegacyInteraction(actor.id);
+  }
+
+  /**
+   * Perform interaction using new integrator system
+   */
+  function performIntegratedInteraction(actorId) {
+    try {
+      // Build phase context
+      const phaseCtx = buildPhaseContext();
+      
+      // Get actor's budget
+      const SM = global.SocialManeuvers;
+      const budget = SM?.SocialResources?.get(actorId, 'energy') || 0;
+      
+      // Build relation graph helper
+      const relationGraph = buildRelationGraph();
+      
+      // Select action via integrator
+      const selection = global.SocialAIIntegrator.selectActionForActor(actorId, phaseCtx, {
+        budget,
+        relationGraph
+      });
+      
+      if (!selection) {
+        return false;
+      }
+      
+      const { action, targetId, context } = selection;
+      
+      // Convert single targetId to array for executeAIAction
+      const targetIds = [targetId];
+      
+      // Skip if recently paired
+      if (wasRecentlyPaired(actorId, targetIds)) {
+        return false;
+      }
+      
+      // Execute action with enriched context
+      const result = executeAIActionWithContext(actorId, targetIds, action, context);
+      
+      if (result && result.success) {
+        const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
+        const targetNames = targetIds.map(tid => 
+          global.safeName?.(tid) || `Player ${tid}`
+        ).join(', ');
+        
+        const outcomeType = result.outcome?.type || 'unknown';
+        
+        debugLog(`${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`);
+        return true;
+      } else if (result && !result.success) {
+        const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
+        debugLog(`${actorName} → ${action.label}: failed (${result.reason || 'unknown'})`);
+        return false;
+      }
+      
+      return false;
+    } catch (err) {
+      errorLog('Error in integrated interaction:', err);
+      // Fallback to legacy
+      return performLegacyInteraction(actorId);
+    }
+  }
+
+  /**
+   * Legacy interaction logic (pre-integrator)
+   */
+  function performLegacyInteraction(actorId) {
     // Decide if multi-target (group action) - 20% chance
     const isMultiTarget = Math.random() < 0.2;
     
     // Select targets
-    const targetIds = selectRandomTarget(actor.id, isMultiTarget);
+    const targetIds = selectRandomTarget(actorId, isMultiTarget);
     if (!targetIds || targetIds.length === 0) return false;
 
     // Skip if recently paired
-    if (wasRecentlyPaired(actor.id, targetIds)) return false;
+    if (wasRecentlyPaired(actorId, targetIds)) return false;
 
     // Select action
-    const action = selectAction(actor.id, targetIds);
+    const action = selectAction(actorId, targetIds);
     if (!action) return false;
 
     // Execute
-    const result = executeAIAction(actor.id, targetIds, action);
+    const result = executeAIAction(actorId, targetIds, action);
     
     if (result && result.success) {
-      const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
+      const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
       const targetNames = targetIds.map(tid => 
         global.safeName?.(tid) || `Player ${tid}`
       ).join(', ');
       
-      // Use safe navigation for outcome type (already normalized in executeAIAction)
       const outcomeType = result.outcome?.type || 'unknown';
       
-      // Only log individual actions if debug is enabled (respects compact mode)
       debugLog(`${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`);
-      return true; // Action executed successfully
+      return true;
     } else if (result && !result.success) {
-      // Action failed (e.g., insufficient resources) - log at debug level
-      const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
+      const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
       debugLog(`${actorName} → ${action.label}: failed (${result.reason || 'unknown'})`);
-      return false; // Action failed
+      return false;
     }
     
-    return false; // No result or execution failed
+    return false;
   }
 
   // ============================================================================
