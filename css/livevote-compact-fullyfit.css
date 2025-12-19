@@ -32,8 +32,8 @@
   grid-auto-rows: max-content !important; /* Prevents stretching */
   justify-items: center !important; /* Centers children horizontally */
   align-content: center !important; /* Centers children vertically */
-  /* Minimal padding for compact nucleus layout */
-  padding: clamp(8px, 1.5vw, 16px) !important;
+  /* Ultra-minimal padding for compact nucleus layout */
+  padding: clamp(4px, 0.8vw, 8px) !important;
   pointer-events: auto !important;
   z-index: 5 !important;
   /* No scroll on overlay - only stage scrolls */
@@ -51,7 +51,7 @@
   display: grid !important;
   place-content: center !important;
   justify-items: center !important;
-  padding: clamp(8px, 1.5vw, 16px) !important;
+  padding: clamp(4px, 0.8vw, 8px) !important;
 }
 
 /* Ensure lv-overlay works properly inside #tv container */
@@ -82,8 +82,8 @@
   flex-direction: column !important;
   align-items: center !important; /* Horizontal centering of children */
   text-align: center !important;
-  /* Tight gaps for compact nucleus layout - minimal spacing between elements */
-  gap: clamp(6px, 1vw, 10px) !important;
+  /* Ultra-tight gaps for compact nucleus layout - elements almost touching */
+  gap: clamp(2px, 0.4vw, 4px) !important;
   /* CRITICAL: Remove any vertical anchoring */
   top: unset !important;
   bottom: unset !important;
@@ -203,7 +203,7 @@
   flex-direction: column !important;
   justify-content: center !important;
   align-items: center !important;
-  gap: clamp(4px, 0.8vw, 8px) !important;
+  gap: clamp(2px, 0.4vw, 4px) !important;
   position: relative !important;
   z-index: 50 !important;
 }
@@ -291,9 +291,9 @@
   max-height: min(30vh, 280px) !important;
 }
 
-/* Nominee elements - compact spacing */
+/* Nominee elements - ultra-compact spacing */
 .tvViewport .lv-overlay__nominee {
-  gap: clamp(4px, 1vw, 8px) !important;
+  gap: clamp(2px, 0.4vw, 4px) !important;
 }
 
 /* Nominee names - compact text */
@@ -303,16 +303,16 @@
   padding: 0 !important;
 }
 
-/* Carousel track - compact gaps between avatars */
+/* Carousel track - ultra-compact gaps between avatars */
 .tvViewport .lv-overlay__track {
-  gap: clamp(8px, 2vw, 16px) !important;
-  padding: 0 clamp(12px, 3vw, 24px) !important;
+  gap: clamp(4px, 1vw, 8px) !important;
+  padding: 0 clamp(8px, 2vw, 16px) !important;
 }
 
-/* Header text - compact size */
+/* Header text - ultra-compact size and padding */
 .tvViewport .lv-overlay__header {
-  font-size: clamp(0.85rem, 2.5vw, 1.05rem) !important;
-  padding: clamp(4px, 1vh, 8px) clamp(12px, 2vw, 16px) !important;
+  font-size: clamp(0.8rem, 2.2vw, 0.95rem) !important;
+  padding: clamp(2px, 0.5vh, 4px) clamp(8px, 1.5vw, 12px) !important;
   margin: 0 !important;
 }
 
@@ -352,20 +352,20 @@ html, body {
 .tvViewport .lv2-overlay.above-cards { z-index: 14 !important; }
 .tvViewport #tvOverlay, .tvViewport .lv2-overlay { z-index: 12 !important; }
 
-/* Mobile viewport adjustments - responsive padding using px/vw NOT vh - extra compact */
+/* Mobile viewport adjustments - responsive padding using px/vw NOT vh - ultra-compact */
 @media (max-width: 640px), (max-height: 700px) {
   .tvViewport .lv2-overlay,
   .tvViewport .lv-overlay,
   .tvViewport .tv-intermission-overlay,
   .tvViewport .voteOverlay {
-    padding: clamp(6px, 1.5vw, 12px) !important;
+    padding: clamp(2px, 0.8vw, 6px) !important;
   }
   
-  /* Tighter gaps on very small screens for compact nucleus */
+  /* Ultra-tight gaps on very small screens for compact nucleus */
   .tvViewport .lv2-panel,
   .tvViewport .intermission-card-container,
   .tvViewport .votePanel {
-    gap: clamp(4px, 0.8vw, 8px) !important;
+    gap: clamp(2px, 0.4vw, 4px) !important;
   }
   
   /* Smaller stage max-height on mobile - content scrolls if needed */
