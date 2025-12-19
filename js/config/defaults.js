@@ -76,8 +76,10 @@
     social_cadence_enabled: true,  // Enable social decision popup cadence system
     social_inter_delay: 800,  // Inter-popup delay for social decisions (ms)
     
-    // AI Social Interactions (feature-flagged, on by default)
-    aiSocialEnabled: true,  // Enable AI-to-AI background social interactions during Social phase
+    // AI Social Interactions
+    socialSpendingEnabled: true,     // Master switch for spend-to-reveal features
+    socialSpicyLogs: true,           // Emit flavored lines and truthiness
+    aiSocialEnabled: true,         // Master switch
     aiSocialAggression: 'low',  // AI action selection aggression: 'low' | 'medium'
     aiSocialMaxPerPhase: 5,  // Soft cap on AI actions per AI per phase
     socialHighlightsEnabled: true,  // Show Social Highlights in Diary Room logs
