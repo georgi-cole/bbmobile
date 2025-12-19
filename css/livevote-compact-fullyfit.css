@@ -78,9 +78,12 @@
   max-height: min(46vh, 340px) !important; /* Bounded */
   width: 100% !important;
   overflow: auto !important; /* Scrolls if needed */
-  display: grid !important;
-  place-items: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   -webkit-overflow-scrolling: touch !important;
+  padding: 0 !important; /* Remove any padding that creates visual offset */
+  margin: 0 !important; /* Remove any margin that creates visual offset */
 }
 
 /* CTA always visible at bottom of panel (outside scrollable stage) */
@@ -122,6 +125,15 @@
   height: clamp(110px, 26vw, 200px) !important;
 }
 
+/* Ensure center nominee stands out and is visually centered */
+.tvViewport .lv-overlay__nominee.center {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(8px, 1.5vw, 12px) !important;
+}
+
 /* Nominee elements - normal spacing */
 .tvViewport .lv-overlay__nominee {
   display: flex !important;
@@ -143,7 +155,9 @@
   align-items: center !important;
   justify-content: center !important;
   gap: clamp(12px, 2.5vw, 20px) !important;
-  padding: clamp(8px, 1.5vh, 12px) clamp(12px, 3vw, 24px) !important;
+  padding: 0 clamp(12px, 3vw, 24px) !important; /* Horizontal padding only, remove vertical padding */
+  margin: 0 auto !important; /* Center the track horizontally */
+  width: 100% !important; /* Full width for proper centering */
 }
 
 /* Evict button styling with normal padding */
