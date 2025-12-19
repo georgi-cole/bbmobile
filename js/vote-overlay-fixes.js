@@ -20,21 +20,21 @@
     const panel = document.querySelector('#tv .tv-intermission-overlay .intermission-card-container');
     if (!panel) return;
 
-    const allBtns = Array.from(document.querySelectorAll('.evictBtn'));
+    // Search for all possible evict button class variations
+    const allBtns = Array.from(document.querySelectorAll('.lv-overlay__evict-btn, .evictBtn, .lv2-cta-btn'));
     const inPanel = allBtns.filter(btn => panel.contains(btn));
     const outsidePanel = allBtns.filter(btn => !panel.contains(btn));
 
     // If no buttons in panel, move the first outside button into panel
-    if (inPanel.length === 0) {
-      if (outsidePanel[0]) {
-        panel.appendChild(outsidePanel[0]);
-      }
+    if (inPanel.length === 0 && outsidePanel.length > 0) {
+      const btnToMove = outsidePanel.shift(); // Remove from outsidePanel array
+      panel.appendChild(btnToMove);
     } else if (inPanel.length > 1) {
       // If multiple buttons in panel, remove extras
       inPanel.slice(1).forEach(btn => btn.remove());
     }
 
-    // Remove all buttons outside the panel
+    // Remove all remaining buttons outside the panel
     outsidePanel.forEach(btn => btn.remove());
   }
 
