@@ -79,6 +79,26 @@
   padding: 0 !important;
 }
 
+/* Instructions element - hide or position as overlay on avatars */
+#tv .lv2-instructions {
+  display: none !important; /* Hide instructions to declutter the compact layout */
+}
+
+/* Voter feed - hide to maintain compact 3-row layout */
+#tv .lv2-voter-feed {
+  display: none !important;
+}
+
+/* Status text - hide to maintain compact 3-row layout */
+#tv .lv2-status {
+  display: none !important;
+}
+
+/* Status row (carousel mode) - hide to maintain compact 3-row layout */
+#tv .lv2-status-row {
+  display: none !important;
+}
+
 /* CTA row at bottom with sufficient gap */
 #tv .lv2-cta-row,
 #tv .lv-overlay__confirm-container {
@@ -93,11 +113,26 @@
 }
 
 /* Style tweaks for selected name/evict button to ensure visibility and spacing */
+#tv .lv2-name-btn,
 #tv .lv2-name-btn-selected {
   box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
   transform: translateY(0) !important;
   min-height: clamp(44px, 6vh, 56px) !important;
   padding: clamp(10px, 2vh, 16px) clamp(20px, 4vw, 32px) !important;
+  margin-top: clamp(8px, 2vh, 16px) !important;
+  /* Ensure button is visible and stands out */
+  background: linear-gradient(135deg, #ff3366, #ff1744) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease !important;
+}
+
+#tv .lv2-name-btn-selected:hover,
+#tv .lv2-name-btn:hover {
+  transform: translateY(-2px) !important;
 }
 
 /* Ensure text centering within contestant cards */
