@@ -323,6 +323,9 @@
     
     // Remove any duplicate evict buttons to ensure only one exists
     removeDuplicateEvictButtons();
+    
+    // Install MutationObserver to handle dynamic re-renders
+    installLayoutObserver();
   }
   
   // Helper: Remove duplicate evict buttons and ensure only one exists in the panel
@@ -386,17 +389,78 @@
         if (el.classList.contains('lv2-overlay') || el.classList.contains('voteOverlay') ||
             el.classList.contains('lv2-panel') || el.classList.contains('votePanel') ||
             el.classList.contains('lv2-cta-row')) {
-          if (style.top) {
+          if (style.top && style.top !== 'unset' && style.top !== 'auto') {
             console.debug('[lv2] Removed top from inline style:', el.className);
             style.top = '';
           }
-          if (style.bottom) {
+          if (style.bottom && style.bottom !== 'unset' && style.bottom !== 'auto') {
             console.debug('[lv2] Removed bottom from inline style:', el.className);
             style.bottom = '';
+          }
+          // Also remove margin-top: auto which can push content down
+          if (style.marginTop === 'auto') {
+            console.debug('[lv2] Removed margin-top:auto from inline style:', el.className);
+            style.marginTop = '';
+          }
+          // Remove justify-content: flex-end which pushes content to bottom
+          if (style.justifyContent === 'flex-end') {
+            console.debug('[lv2] Removed justify-content:flex-end from inline style:', el.className);
+            style.justifyContent = '';
           }
         }
       });
     });
+  }
+  
+  // Install MutationObserver to re-apply fixes when DOM changes
+  let layoutObserver = null;
+  function installLayoutObserver() {
+    // Don't install multiple observers
+    if (layoutObserver) {
+      layoutObserver.disconnect();
+      layoutObserver = null;
+    }
+    
+    const tv = document.querySelector('#tv');
+    if (!tv) return;
+    
+    // Debounce function to avoid excessive re-runs
+    let debounceTimer = null;
+    function debouncedFix() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        console.debug('[lv2] MutationObserver detected changes, re-applying fixes');
+        removeVerticalAnchoringStyles();
+        removeDuplicateEvictButtons();
+      }, 100);
+    }
+    
+    layoutObserver = new MutationObserver((mutations) => {
+      // Check if mutations affect our vote UI
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList' || mutation.type === 'attributes') {
+          const target = mutation.target;
+          // Only react to changes in TV or overlay
+          if (target.id === 'tv' || 
+              target.classList?.contains('lv2-overlay') || 
+              target.classList?.contains('voteOverlay') ||
+              target.classList?.contains('lv2-panel') || 
+              target.classList?.contains('votePanel')) {
+            debouncedFix();
+            break;
+          }
+        }
+      }
+    });
+    
+    layoutObserver.observe(tv, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+    
+    console.debug('[lv2] MutationObserver installed for layout fixes');
   }
 
   // Create contestant card (left or right)
@@ -1216,6 +1280,13 @@
     if (state.resizeObserver) {
       state.resizeObserver.disconnect();
       state.resizeObserver = null;
+    }
+    
+    // Disconnect MutationObserver
+    if (layoutObserver) {
+      layoutObserver.disconnect();
+      layoutObserver = null;
+      console.debug('[lv2] MutationObserver disconnected');
     }
 
     // Remove lv2 UI from TV
