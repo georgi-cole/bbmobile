@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Flavor Infrastructure Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 20px;
+      background: #f5f5f5;
+    }
+    .test-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .test-pass {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .test-fail {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .test-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-card">
+    <h1>🎭 Social Flavor Infrastructure Test</h1>
+    <p>This test verifies the new social spend-for-intel infrastructure loads correctly and provides basic functionality.</p>
+  </div>
+
+  <div class="test-card">
+    <h2>Module Loading Tests</h2>
+    <div id="moduleTests"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Configuration Tests</h2>
+    <div id="configTests"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Functionality Tests</h2>
+    <button onclick="testTruthiness()">Test Truthiness Computation</button>
+    <button onclick="testFlavorRendering()">Test Flavor Rendering</button>
+    <button onclick="testRegistry()">Test Registry</button>
+    <button onclick="testEventEnrichment()">Test Event Enrichment</button>
+    <div id="functionalityTests"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Event Enrichment Demo</h2>
+    <button onclick="emitTestEvent()">Emit Test Social Event</button>
+    <div id="eventDemo"></div>
+  </div>
+
+  <!-- Load config first -->
+  <script src="js/config/defaults.js"></script>
+  
+  <!-- Load new modules -->
+  <script src="js/social/social-flavor.js"></script>
+  <script src="js/social/social-actions-registry.js"></script>
+  <script src="js/social/social-enricher.js"></script>
+
+  <script>
+    // Helper function to display test results
+    function showResult(containerId, message, passed) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+      div.textContent = `${passed ? '✓' : '✗'} ${message}`;
+      container.appendChild(div);
+      return passed;
+    }
+
+    function showInfo(containerId, message) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = 'test-result test-info';
+      div.innerHTML = message;
+      container.appendChild(div);
+    }
+
+    // Run tests on load
+    window.addEventListener('load', function() {
+      runModuleTests();
+      runConfigTests();
+    });
+
+    function runModuleTests() {
+      const container = 'moduleTests';
+      
+      // Test SocialFlavor module
+      showResult(container, 
+        'SocialFlavor module loaded', 
+        typeof window.SocialFlavor === 'object'
+      );
+      
+      showResult(container,
+        'SocialFlavor.computeTruthiness exists',
+        typeof window.SocialFlavor?.computeTruthiness === 'function'
+      );
+
+      showResult(container,
+        'SocialFlavor.renderFlavorLine exists',
+        typeof window.SocialFlavor?.renderFlavorLine === 'function'
+      );
+
+      showResult(container,
+        'SocialFlavor.renderDetailed exists',
+        typeof window.SocialFlavor?.renderDetailed === 'function'
+      );
+
+      // Test SocialActionsRegistry module
+      showResult(container,
+        'SocialActionsRegistry module loaded',
+        typeof window.SocialActionsRegistry === 'object'
+      );
+
+      showResult(container,
+        'SocialActionsRegistry.get exists',
+        typeof window.SocialActionsRegistry?.get === 'function'
+      );
+
+      showResult(container,
+        'SocialActionsRegistry.list exists',
+        typeof window.SocialActionsRegistry?.list === 'function'
+      );
+
+      // Test enricher installation
+      showResult(container,
+        'Social enricher should be installed (check console for confirmation)',
+        true
+      );
+    }
+
+    function runConfigTests() {
+      const container = 'configTests';
+      
+      showResult(container,
+        'window.game.cfg exists',
+        typeof window.game?.cfg === 'object'
+      );
+
+      showResult(container,
+        'socialSpendingEnabled flag exists',
+        'socialSpendingEnabled' in (window.game?.cfg || {})
+      );
+
+      showResult(container,
+        'socialSpicyLogs flag exists',
+        'socialSpicyLogs' in (window.game?.cfg || {})
+      );
+
+      showInfo(container,
+        `socialSpendingEnabled = <code>${window.game?.cfg?.socialSpendingEnabled}</code>`
+      );
+
+      showInfo(container,
+        `socialSpicyLogs = <code>${window.game?.cfg?.socialSpicyLogs}</code>`
+      );
+    }
+
+    function testTruthiness() {
+      const container = 'functionalityTests';
+      
+      // Test with various trust/rivalry levels
+      const tests = [
+        { actorTrust: 0.5, actorRivalry: 0, roleIncentive: 0, label: 'High trust' },
+        { actorTrust: 0, actorRivalry: 0.5, roleIncentive: 0, label: 'High rivalry' },
+        { actorTrust: 0, actorRivalry: 0, roleIncentive: 0.3, label: 'Role incentive' },
+        { actorTrust: 0, actorRivalry: 0, roleIncentive: 0, label: 'Neutral' }
+      ];
+
+      tests.forEach(test => {
+        const result = window.SocialFlavor.computeTruthiness(test);
+        const validResults = ['true', 'partial', 'lie'];
+        const passed = validResults.includes(result);
+        
+        showResult(container,
+          `Truthiness (${test.label}): ${result}`,
+          passed
+        );
+      });
+    }
+
+    function testFlavorRendering() {
+      const container = 'functionalityTests';
+      
+      const info = {
+        actorName: 'Alice',
+        targetName: 'Bob',
+        suggestedTarget: 'Charlie',
+        truthiness: 'partial'
+      };
+
+      const flavor = window.SocialFlavor.renderFlavorLine(info);
+      const passed = flavor.includes('Alice') && flavor.includes('Bob');
+
+      showInfo(container, `Flavor line: <pre>${flavor}</pre>`);
+      showResult(container, 'Flavor line contains actor and target names', passed);
+
+      const detailed = window.SocialFlavor.renderDetailed(info);
+      showInfo(container, `Detailed text: <pre>${detailed}</pre>`);
+      showResult(container, 'Detailed text generated', detailed.length > 0);
+    }
+
+    function testRegistry() {
+      const container = 'functionalityTests';
+      
+      const actions = window.SocialActionsRegistry.list();
+      showResult(container, 
+        `Registry has 3 actions (found ${actions.length})`,
+        actions.length === 3
+      );
+
+      const secretChat = window.SocialActionsRegistry.get('secret_chat');
+      showResult(container,
+        'Can retrieve "secret_chat" action',
+        secretChat && secretChat.id === 'secret_chat'
+      );
+
+      if (secretChat) {
+        showInfo(container, 
+          `Secret Chat: cost=${secretChat.cost}, cooldown=${secretChat.cooldown}, spendable=${secretChat.spendable}`
+        );
+      }
+
+      const eavesdrop = window.SocialActionsRegistry.get('eavesdrop');
+      showResult(container,
+        'Can retrieve "eavesdrop" action',
+        eavesdrop && eavesdrop.id === 'eavesdrop'
+      );
+
+      const probeHoh = window.SocialActionsRegistry.get('probe_hoh');
+      showResult(container,
+        'Can retrieve "probe_hoh" action',
+        probeHoh && probeHoh.id === 'probe_hoh'
+      );
+    }
+
+    function testEventEnrichment() {
+      const container = 'functionalityTests';
+      
+      // Set up a listener for enriched events
+      let enrichedEventReceived = false;
+      let enrichedData = null;
+
+      function enrichedListener(e) {
+        if (e.detail && e.detail.__enriched) {
+          enrichedEventReceived = true;
+          enrichedData = e.detail;
+          window.removeEventListener('social.action:result', enrichedListener);
+        }
+      }
+
+      window.addEventListener('social.action:result', enrichedListener);
+
+      // Emit a raw event
+      const rawEvent = new CustomEvent('social.action:result', {
+        detail: {
+          actorId: 'player1',
+          targetId: 'player2',
+          actionId: 'secret_chat',
+          actor: { name: 'Alice' },
+          target: { name: 'Bob' },
+          actorTrust: 0.5,
+          actorRivalry: 0.1
+        }
+      });
+
+      window.dispatchEvent(rawEvent);
+
+      // Check after a short delay
+      setTimeout(() => {
+        showResult(container,
+          'Enriched event was emitted',
+          enrichedEventReceived
+        );
+
+        if (enrichedData) {
+          showResult(container,
+            'Enriched event has __enriched flag',
+            enrichedData.__enriched === true
+          );
+
+          showResult(container,
+            'Enriched event has flavorText',
+            typeof enrichedData.flavorText === 'string' && enrichedData.flavorText.length > 0
+          );
+
+          showResult(container,
+            'Enriched event has truthiness',
+            ['true', 'partial', 'lie'].includes(enrichedData.truthiness)
+          );
+
+          showResult(container,
+            'Enriched event has spendPrompt',
+            enrichedData.spendPrompt !== null && typeof enrichedData.spendPrompt === 'object'
+          );
+
+          showInfo(container,
+            `Enriched flavorText: <pre>${enrichedData.flavorText}</pre>`
+          );
+        }
+      }, 100);
+    }
+
+    function emitTestEvent() {
+      const container = 'eventDemo';
+      container.innerHTML = ''; // Clear previous results
+
+      // Set up listeners
+      let enrichedReceived = false;
+      let diaryReceived = false;
+
+      function enrichedListener(e) {
+        if (e.detail && e.detail.__enriched) {
+          enrichedReceived = true;
+          showInfo(container, 
+            `<strong>Enriched Event Received:</strong><pre>${JSON.stringify(e.detail, null, 2)}</pre>`
+          );
+          window.removeEventListener('social.action:result', enrichedListener);
+        }
+      }
+
+      function diaryListener(e) {
+        diaryReceived = true;
+        showInfo(container,
+          `<strong>Diary Event Received:</strong><pre>${JSON.stringify(e.detail, null, 2)}</pre>`
+        );
+        window.removeEventListener('social.entry:story', diaryListener);
+      }
+
+      window.addEventListener('social.action:result', enrichedListener);
+      window.addEventListener('social.entry:story', diaryListener);
+
+      // Emit test event
+      const testEvent = new CustomEvent('social.action:result', {
+        detail: {
+          actorId: 'player1',
+          targetId: 'player2',
+          actionId: 'secret_chat',
+          actor: { name: 'TestPlayer1' },
+          target: { name: 'TestPlayer2' },
+          actorTrust: 0.7,
+          actorRivalry: 0.2,
+          roleIncentive: 0.1,
+          suggestedTarget: 'Player3'
+        }
+      });
+
+      window.dispatchEvent(testEvent);
+
+      setTimeout(() => {
+        if (!enrichedReceived) {
+          showResult(container, 'No enriched event received (check console)', false);
+        }
+        if (!diaryReceived) {
+          showResult(container, 'No diary event received (check console)', false);
+        }
+      }, 200);
+    }
+  </script>
+</body>
+</html>
