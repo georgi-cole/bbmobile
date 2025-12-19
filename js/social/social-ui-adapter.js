@@ -1,8 +1,9 @@
 // MODULE: social/social-ui-adapter.js
-// UI adapter for spend-to-reveal feature in Diary Room
+// ROBUST UI adapter for spend-to-reveal feature in Diary Room
 // Listens for enriched social.action:result and social.entry:story events
 // Adds inline CTAs for spending Social Energy to reveal hidden details
 // Gated by: game.cfg.socialSpendingEnabled
+// Debug HUD gated by: game.cfg.debugSocialAI
 
 (function(global) {
   'use strict';
@@ -26,7 +27,38 @@
   }
   global.__socialUiAdapterInstalled = true;
 
-  console.info('[social-ui-adapter] ✓ Installed (socialSpendingEnabled=true)');
+  console.info('[social-ui-adapter] ✓ Installed (robust, socialSpendingEnabled=true)');
+
+  // ============================================================================
+  // CONFIGURATION - RETRY & SELECTORS
+  // ============================================================================
+  
+  const RETRY_CONFIG = {
+    maxRetries: 5,           // Number of retry attempts
+    retryIntervalMs: 200,    // Time between retries
+    totalWindowMs: 2000      // Total retry window (expanded from 100ms)
+  };
+
+  // Expanded selectors for Diary Room container
+  const DR_CONTAINER_SELECTORS = [
+    '#logSocial',                          // Primary
+    '.diary-log',                          // Common class
+    '[data-category="social"]',            // Data attribute
+    '.dr-container',                       // Alternative class
+    '#diaryRoom .log-container',           // Nested selector
+    '.social-log-container',               // Alternative naming
+    '[data-log-type="social"]'             // Additional data attribute
+  ];
+
+  // Expanded selectors for Diary Room entries
+  const DR_ENTRY_SELECTORS = [
+    '.diary-entry',                        // Primary
+    '.log-entry',                          // Alternative
+    '.dr-entry',                           // Short form
+    '[data-entry-id]',                     // Any with entry ID
+    '.social-entry',                       // Social-specific
+    '[data-log-entry]'                     // Generic entry marker
+  ];
 
   // ============================================================================
   // STATE & TRACKING
@@ -35,12 +67,18 @@
   // Track which entries have been revealed to prevent duplicate spending
   const revealedEntries = new Set();
   
+  // Track recent spendable events for debug HUD
+  const recentSpendables = [];
+  
   // Mock bank for testing when SocialManeuvers not available
   if (!global.__smDebug) {
     global.__smDebug = {};
   }
   if (!global.__smDebug.fakeBank) {
     global.__smDebug.fakeBank = new Map();
+  }
+  if (!global.__smDebug.recentSpendables) {
+    global.__smDebug.recentSpendables = recentSpendables;
   }
 
   // ============================================================================
@@ -160,6 +198,150 @@
       content: detailedText,
       annotation: null
     };
+  }
+
+  /**
+   * Find Diary Room container with expanded selectors
+   */
+  function findDRContainer() {
+    for (const selector of DR_CONTAINER_SELECTORS) {
+      const container = document.querySelector(selector);
+      if (container) {
+        return container;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find all Diary Room entries with expanded selectors
+   */
+  function findDREntries(container) {
+    const allEntries = [];
+    for (const selector of DR_ENTRY_SELECTORS) {
+      const entries = container.querySelectorAll(selector);
+      entries.forEach(entry => {
+        if (!allEntries.includes(entry)) {
+          allEntries.push(entry);
+        }
+      });
+    }
+    return allEntries;
+  }
+
+  /**
+   * Create a fallback DR-style entry when real entry not found
+   */
+  function createFallbackEntry(container, payload) {
+    console.info('[social-ui-adapter] Creating fallback DR entry for:', payload.id);
+    
+    const entryElement = document.createElement('div');
+    entryElement.className = 'diary-entry fallback-entry';
+    entryElement.dataset.entryId = payload.id;
+    entryElement.dataset.fallback = 'true';
+    
+    // Create entry text
+    const textDiv = document.createElement('div');
+    textDiv.className = 'entry-text';
+    textDiv.textContent = payload.text || payload.raw?.flavorText || 'Social interaction recorded';
+    entryElement.appendChild(textDiv);
+    
+    // Create metadata
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'entry-meta';
+    metaDiv.textContent = `Entry ${payload.id} • Fallback`;
+    entryElement.appendChild(metaDiv);
+    
+    // Append to container
+    container.appendChild(entryElement);
+    
+    return entryElement;
+  }
+
+  /**
+   * Attach CTA to entry with retry mechanism
+   */
+  async function attachCTAToEntryWithRetry(payload) {
+    const entryId = payload.id || `entry-${Date.now()}`;
+    let retryCount = 0;
+    let entryElement = null;
+    let logContainer = null;
+    
+    while (retryCount < RETRY_CONFIG.maxRetries) {
+      // Find container
+      logContainer = findDRContainer();
+      
+      if (logContainer) {
+        // Try to find the entry by ID first
+        if (entryId) {
+          entryElement = logContainer.querySelector(`[data-entry-id="${entryId}"]`);
+        }
+        
+        // Fallback: Find most recent entry
+        if (!entryElement) {
+          const entries = findDREntries(logContainer);
+          if (entries.length > 0) {
+            entryElement = entries[entries.length - 1];
+            console.info('[social-ui-adapter] Using most recent entry as fallback');
+          }
+        }
+        
+        if (entryElement) {
+          break; // Found it!
+        }
+      }
+      
+      // Wait and retry
+      retryCount++;
+      if (retryCount < RETRY_CONFIG.maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.retryIntervalMs));
+      }
+    }
+    
+    // If still no container after retries, can't proceed
+    if (!logContainer) {
+      console.warn('[social-ui-adapter] No DR container found after retries');
+      emitAnalytics('social.cta:fail', {
+        entryId,
+        reason: 'no_container',
+        retriesAttempted: retryCount,
+        timestamp: Date.now()
+      });
+      return;
+    }
+    
+    // If no entry found after retries, create fallback
+    if (!entryElement) {
+      console.info('[social-ui-adapter] No entry found after retries, creating fallback');
+      entryElement = createFallbackEntry(logContainer, payload);
+      emitAnalytics('social.cta:fallback_created', {
+        entryId,
+        retriesAttempted: retryCount,
+        timestamp: Date.now()
+      });
+    } else {
+      console.info(`[social-ui-adapter] ✓ Found entry after ${retryCount} retries`);
+    }
+    
+    // Check if already has CTA
+    if (entryElement.querySelector('.social-spend-cta-container')) {
+      console.info('[social-ui-adapter] Entry already has CTA, skipping');
+      return;
+    }
+
+    // Create and append CTA
+    const cta = createSpendCTA(entryElement, payload);
+    if (cta) {
+      entryElement.appendChild(cta);
+      console.info('[social-ui-adapter] ✓ Attached CTA to entry');
+      
+      emitAnalytics('social.cta:attached', {
+        entryId,
+        retriesAttempted: retryCount,
+        isFallback: entryElement.dataset.fallback === 'true',
+        timestamp: Date.now()
+      });
+    }
   }
 
   // ============================================================================
@@ -397,60 +579,200 @@
       const spendPrompt = payload.raw?.spendPrompt || payload.spendPrompt;
       if (!spendPrompt) return;
 
-      // Wait a bit for DiaryRoomLogger to create the entry DOM
+      // Track in debug list
+      const spendableItem = {
+        id: payload.id,
+        timestamp: Date.now(),
+        cost: spendPrompt.cost,
+        label: spendPrompt.label || `Spend ${spendPrompt.cost} energy`,
+        payload: payload
+      };
+      recentSpendables.unshift(spendableItem);
+      if (recentSpendables.length > 10) {
+        recentSpendables.pop(); // Keep last 10
+      }
+
+      // Update debug HUD if visible
+      updateDebugHUD();
+
+      // Use new retry mechanism (wait slightly longer for DR to render)
       setTimeout(() => {
-        attachCTAToEntry(payload);
-      }, 100);
+        attachCTAToEntryWithRetry(payload);
+      }, 150);
 
     } catch (err) {
       console.error('[social-ui-adapter] Error handling story entry:', err);
     }
   }
 
+  // ============================================================================
+  // DEBUG HUD (gated by debugSocialAI flag)
+  // ============================================================================
+
+  let debugHUDElement = null;
+
   /**
-   * Attach CTA to diary entry
+   * Create debug HUD element
    */
-  function attachCTAToEntry(payload) {
-    // Find the entry element in the diary log
-    const logContainer = document.querySelector('#logSocial') || 
-                        document.querySelector('.diary-log') ||
-                        document.querySelector('[data-category="social"]');
-    
-    if (!logContainer) {
-      console.warn('[social-ui-adapter] No diary log container found');
-      return;
-    }
+  function createDebugHUD() {
+    if (debugHUDElement) return debugHUDElement;
 
-    // Find the entry by ID or timestamp to ensure correct matching
-    const entryId = payload.id;
-    let entryElement = null;
-    
-    if (entryId) {
-      // Try to find by data-entry-id first
-      entryElement = logContainer.querySelector(`[data-entry-id="${entryId}"]`);
-    }
-    
-    // Fallback: Find most recent entry if ID matching fails
-    if (!entryElement) {
-      const entries = logContainer.querySelectorAll('.diary-entry, .log-entry');
-      if (entries.length === 0) {
-        console.warn('[social-ui-adapter] No diary entries found');
-        return;
+    const hud = document.createElement('div');
+    hud.id = 'social-spend-debug-hud';
+    hud.style.cssText = `
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 999999;
+      max-width: 350px;
+      max-height: 400px;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = `
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #667eea;
+      border-bottom: 1px solid #667eea;
+      padding-bottom: 4px;
+    `;
+    header.textContent = '🎭 Social Spend Debug HUD';
+    hud.appendChild(header);
+
+    const content = document.createElement('div');
+    content.id = 'debug-hud-content';
+    hud.appendChild(content);
+
+    debugHUDElement = hud;
+    document.body.appendChild(hud);
+
+    return hud;
+  }
+
+  /**
+   * Update debug HUD content
+   */
+  function updateDebugHUD() {
+    if (!global.game?.cfg?.debugSocialAI) {
+      // Remove HUD if debug flag is off
+      if (debugHUDElement) {
+        debugHUDElement.remove();
+        debugHUDElement = null;
       }
-      entryElement = entries[entries.length - 1];
-    }
-    
-    // Check if already has CTA
-    if (entryElement.querySelector('.social-spend-cta-container')) {
       return;
     }
 
-    // Create and append CTA
-    const cta = createSpendCTA(entryElement, payload);
-    if (cta) {
-      entryElement.appendChild(cta);
-      console.info('[social-ui-adapter] ✓ Attached CTA to entry');
+    // Create HUD if needed
+    if (!debugHUDElement) {
+      createDebugHUD();
     }
+
+    const content = document.getElementById('debug-hud-content');
+    if (!content) return;
+
+    // Clear content
+    content.innerHTML = '';
+
+    // Show current energy
+    const playerId = getLocalPlayerId();
+    const energy = playerId ? getPlayerEnergy(playerId) : 0;
+    const energyDiv = document.createElement('div');
+    energyDiv.style.cssText = 'margin-bottom: 8px; color: #90caf9;';
+    energyDiv.textContent = `⚡ Energy: ${energy}`;
+    content.appendChild(energyDiv);
+
+    // Show recent spendables
+    if (recentSpendables.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.style.cssText = 'color: #999; font-style: italic;';
+      emptyDiv.textContent = 'No recent spendable events';
+      content.appendChild(emptyDiv);
+    } else {
+      const listTitle = document.createElement('div');
+      listTitle.style.cssText = 'margin-top: 8px; margin-bottom: 4px; color: #a5d6a7;';
+      listTitle.textContent = `Recent Spendables (${recentSpendables.length}):`;
+      content.appendChild(listTitle);
+
+      recentSpendables.forEach((item, idx) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.style.cssText = `
+          background: rgba(102, 126, 234, 0.1);
+          border-left: 3px solid #667eea;
+          padding: 6px;
+          margin-bottom: 4px;
+          border-radius: 3px;
+        `;
+
+        const itemHeader = document.createElement('div');
+        itemHeader.style.cssText = 'color: #90caf9; margin-bottom: 2px;';
+        itemHeader.textContent = `#${idx + 1} - Cost: ${item.cost} ⚡`;
+        itemDiv.appendChild(itemHeader);
+
+        const itemTime = document.createElement('div');
+        itemTime.style.cssText = 'color: #999; font-size: 10px;';
+        const elapsed = Math.round((Date.now() - item.timestamp) / 1000);
+        itemTime.textContent = `${elapsed}s ago • ID: ${item.id}`;
+        itemDiv.appendChild(itemTime);
+
+        // Debug spend button
+        const spendBtn = document.createElement('button');
+        spendBtn.style.cssText = `
+          background: #667eea;
+          color: white;
+          border: none;
+          padding: 4px 8px;
+          margin-top: 4px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-size: 10px;
+        `;
+        spendBtn.textContent = 'Debug Spend';
+        spendBtn.onclick = async () => {
+          if (!playerId) {
+            alert('No player ID found');
+            return;
+          }
+          
+          const canPay = canAfford(playerId, item.cost);
+          if (!canPay) {
+            alert(`Not enough energy! Have: ${energy}, Need: ${item.cost}`);
+            return;
+          }
+
+          const success = spendEnergy(playerId, item.cost);
+          if (success) {
+            alert(`✓ Spent ${item.cost} energy (Debug mode)`);
+            revealedEntries.add(item.id);
+            updateDebugHUD();
+          } else {
+            alert('Failed to spend energy');
+          }
+        };
+        itemDiv.appendChild(spendBtn);
+
+        content.appendChild(itemDiv);
+      });
+    }
+
+    // Add revealed count
+    const revealedDiv = document.createElement('div');
+    revealedDiv.style.cssText = 'margin-top: 8px; color: #a5d6a7; border-top: 1px solid #444; padding-top: 4px;';
+    revealedDiv.textContent = `✓ Revealed: ${revealedEntries.size}`;
+    content.appendChild(revealedDiv);
+  }
+
+  // Initialize debug HUD if flag is enabled
+  if (global.game?.cfg?.debugSocialAI) {
+    setTimeout(() => updateDebugHUD(), 500);
   }
 
   // ============================================================================
@@ -485,12 +807,38 @@
     // Test helpers
     reset() {
       revealedEntries.clear();
+      recentSpendables.length = 0;
+      if (debugHUDElement) {
+        updateDebugHUD();
+      }
       console.info('[social-ui-adapter] State reset');
     },
     
     setMockEnergy(playerId, amount) {
       global.__smDebug.fakeBank.set(playerId, amount);
+      if (debugHUDElement) {
+        updateDebugHUD();
+      }
       console.info(`[social-ui-adapter] Mock energy set: ${playerId} = ${amount}`);
+    },
+    
+    getRevealed() {
+      return Array.from(revealedEntries);
+    },
+    
+    // Debug HUD controls
+    showDebugHUD() {
+      if (!debugHUDElement) {
+        createDebugHUD();
+      }
+      updateDebugHUD();
+    },
+    
+    hideDebugHUD() {
+      if (debugHUDElement) {
+        debugHUDElement.remove();
+        debugHUDElement = null;
+      }
     }
   };
 
