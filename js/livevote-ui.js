@@ -401,6 +401,18 @@
     });
   }
   
+  // Vote element class names for style sanitization
+  const VOTE_ELEMENT_CLASSES = [
+    'lv2-overlay', 'voteOverlay', 'tv-intermission-overlay',
+    'lv2-panel', 'votePanel', 'intermission-card-container',
+    'lv2-cta-row'
+  ];
+  
+  // Helper: Check if a style property has a non-default value
+  function hasNonDefaultStyleValue(value) {
+    return value && value !== 'unset' && value !== 'auto' && value !== '';
+  }
+  
   // Helper: Remove inline styles that include vertical anchoring
   function removeVerticalAnchoringStyles() {
     const tv = document.querySelector('#tv');
@@ -428,43 +440,34 @@
           style.transform = transforms.join(' ') || '';
         }
         
-        // Remove explicit top/bottom positioning if found on vote elements
-        const isVoteElement = el.classList.contains('lv2-overlay') || 
-                             el.classList.contains('voteOverlay') ||
-                             el.classList.contains('tv-intermission-overlay') ||
-                             el.classList.contains('lv2-panel') || 
-                             el.classList.contains('votePanel') ||
-                             el.classList.contains('intermission-card-container') ||
-                             el.classList.contains('lv2-cta-row');
+        // Check if element is a vote UI element
+        const isVoteElement = VOTE_ELEMENT_CLASSES.some(cls => el.classList.contains(cls));
         
         if (isVoteElement) {
-          if (style.top && style.top !== 'unset' && style.top !== 'auto' && style.top !== '') {
-            console.debug('[lv2] Removed top from inline style:', el.className);
-            style.top = '';
-          }
-          if (style.bottom && style.bottom !== 'unset' && style.bottom !== 'auto' && style.bottom !== '') {
-            console.debug('[lv2] Removed bottom from inline style:', el.className);
-            style.bottom = '';
-          }
-          if (style.left && style.left !== 'unset' && style.left !== 'auto' && style.left !== '') {
-            console.debug('[lv2] Removed left from inline style:', el.className);
-            style.left = '';
-          }
-          if (style.right && style.right !== 'unset' && style.right !== 'auto' && style.right !== '') {
-            console.debug('[lv2] Removed right from inline style:', el.className);
-            style.right = '';
-          }
-          // Also remove margin-top: auto which can push content down
+          // Remove positioning properties that interfere with Grid centering
+          const positionProps = [
+            { name: 'top', prop: 'top' },
+            { name: 'bottom', prop: 'bottom' },
+            { name: 'left', prop: 'left' },
+            { name: 'right', prop: 'right' }
+          ];
+          
+          positionProps.forEach(({ name, prop }) => {
+            if (hasNonDefaultStyleValue(style[prop])) {
+              console.debug(`[lv2] Removed ${name} from inline style:`, el.className);
+              style[prop] = '';
+            }
+          });
+          
+          // Remove layout properties that push content
           if (style.marginTop === 'auto') {
             console.debug('[lv2] Removed margin-top:auto from inline style:', el.className);
             style.marginTop = '';
           }
-          // Remove justify-content: flex-end which pushes content to bottom
           if (style.justifyContent === 'flex-end') {
             console.debug('[lv2] Removed justify-content:flex-end from inline style:', el.className);
             style.justifyContent = '';
           }
-          // Remove align-items: flex-end which can affect positioning
           if (style.alignItems === 'flex-end') {
             console.debug('[lv2] Removed align-items:flex-end from inline style:', el.className);
             style.alignItems = '';

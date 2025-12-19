@@ -35,9 +35,7 @@
   padding-top: clamp(32px, 7vh, 72px) !important;
   pointer-events: auto !important;
   z-index: 5 !important;
-  /* CRITICAL: Use visible overflow so buttons aren't clipped */
-  overflow: visible !important;
-  /* Fallback for browsers that don't support overflow:visible on grid */
+  /* CRITICAL: Prefer visible overflow so buttons aren't clipped, but allow scroll if needed */
   overflow-y: auto !important;
   overflow-x: hidden !important;
   -webkit-overflow-scrolling: touch !important;
@@ -68,9 +66,9 @@
   right: unset !important;
   transform: none !important;
   margin: 0 auto !important; /* Center horizontally within grid cell */
-  /* CRITICAL: Use visible overflow so Evict button isn't clipped */
-  overflow: visible !important;
-  /* Prevent content from forcing page scroll */
+  /* Allow scroll if content exceeds viewport, but prevent forcing page scroll */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   max-height: 85vh !important;
 }
 
