@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Compact LV2 Layout Test - Fully Fit in Faux TV</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="css/livevote-compact.css">
-  <link rel="stylesheet" href="css/livevote-compact-fullyfit.css">
+  <link rel="stylesheet" href="css/livevote-compact.css?v=compact-fix-2">
+  <link rel="stylesheet" href="css/livevote-compact-fullyfit.css?v=compact-fix-2">
+  <script src="js/livevote-ui.js?v=compact-fix-2"></script>
   <style>
     body {
       background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
@@ -176,14 +177,15 @@
     document.getElementById('status').textContent = msg;
   }
 
-  window.startLiveVote = async () => {
+  window.startLiveVote = () => {
     updateStatus('Initializing Live Vote 2.0...');
     
-    // Import and initialize livevote-ui module
-    const lv2Module = await import('./js/livevote-ui.js');
-    window.lv2 = lv2Module.default || lv2Module;
+    // Initialize LV2 (already loaded via script tag)
+    if (!window.lv2) {
+      updateStatus('❌ Error: window.lv2 not found. Make sure livevote-ui.js is loaded.');
+      return;
+    }
 
-    // Initialize LV2
     window.lv2.init({
       leftName: 'Alice',
       rightName: 'Bob',
