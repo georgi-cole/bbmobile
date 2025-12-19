@@ -10,16 +10,25 @@ This document provides a comprehensive audit of the LV2 (Live Vote 2) eviction o
 1. ✅ GitHub Pages serves from **root directory** (`/`) on `main` branch
 2. ✅ CSS and JS assets exist in repository at correct paths
 3. ⚠️ Service worker may cache stale versions (requires version bump)
-4. ⚠️ No feature flags preventing layout, but CSS/JS may need refinement
+4. ⚠️ No feature flags preventing layout, but CSS/JS needed refinement
 5. ✅ Assets are referenced in index.html with cache-busting parameters
 6. ✅ No docs/ directory publishing required - direct root serving
 
-**Required Actions:**
-1. Refine CSS to use pure CSS Grid centering (no flex hacks)
-2. Update JS to ensure single-column layout with proper DOM structure
-3. Bump service worker cache version to force reload
-4. Add cache-busting version to CSS/JS links
-5. Test on mobile and laptop viewports
+**Why Previous Changes May Not Have Appeared on Pages:**
+1. **Service Worker Caching**: The service worker (`sw.js`) caches CSS/JS files and serves cached versions even after deployment
+2. **Browser Caching**: Browsers aggressively cache static assets; users need hard reload (Ctrl+Shift+R)
+3. **Stale Cache-Busting Parameters**: Version numbers in URLs weren't bumped consistently
+4. **Incomplete CSS Implementation**: Previous CSS used flex with vertical anchoring hacks instead of pure Grid centering
+5. **JS Re-renders**: App dynamic re-renders overrode CSS fixes with inline styles
+
+**Actions Taken in This PR:**
+1. ✅ Refined CSS to use pure CSS Grid centering with `place-content: center`
+2. ✅ Updated JS to ensure proper DOM structure and remove vertical anchoring
+3. ✅ Added `ensureElementsInPanel()` helper to reparent scattered elements
+4. ✅ Strengthened `removeVerticalAnchoringStyles()` to sanitize inline styles
+5. ✅ Enhanced MutationObserver to re-apply fixes on dynamic changes
+6. ✅ Changed overflow from `auto` to `visible` to prevent button clipping
+7. ✅ Bumped cache-busting version to `?v=compact-fix-6`
 
 ---
 
