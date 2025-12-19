@@ -1,7 +1,7 @@
 /* css/livevote-compact-fullyfit.css
    Compact LV2 layout that fully fits inside the faux TV viewport
    - Ensures overlay fills #tv visible area with perfect centering
-   - Uses flexbox with center alignment for horizontal and vertical centering
+   - Uses CSS Grid with place-items:center for horizontal and vertical centering
    - Vote panel stack (title → avatar → name → helper → button) is centered inside TV
    - Responsive padding with clamp() for balanced spacing
    - Leaves room for timer/controls at top
@@ -9,43 +9,44 @@
    - Scoped to lv2 classes and #tv container
 */
 
-/* Ensure #tv is the positioning context */
-#tv { 
+/* Ensure #tv (fauxTv) is the positioning context */
+#tv,
+.fauxTv { 
   position: relative !important; 
   overflow: hidden !important; 
 }
 
-/* Overlay fills the entire faux TV viewport and centers content */
+/* Overlay fills the entire faux TV viewport and centers content using CSS Grid */
 #tv .lv2-overlay,
-#tv .lv-overlay {
+#tv .lv-overlay,
+.voteOverlay {
   position: absolute !important;
   inset: 0 !important; /* top:0; left:0; right:0; bottom:0 */
-  display: flex !important;
-  align-items: center !important; /* Vertical centering */
-  justify-content: center !important; /* Horizontal centering */
+  display: grid !important;
+  place-items: center !important; /* Centers panel in TV both horizontally and vertically */
   /* Responsive padding to leave room for timer/controls and avoid overlaps */
-  padding: clamp(16px, 4vh, 32px) clamp(12px, 3vw, 24px) !important;
+  padding: clamp(18px, 3vw, 36px) !important;
   pointer-events: auto !important;
+  z-index: 5 !important;
 }
 
 /* Panel content: vertical stack that's centered within overlay */
 #tv .lv2-panel,
-#tv .lv2-panel .panel-content {
+#tv .lv2-panel .panel-content,
+.votePanel {
   position: relative !important;
   box-sizing: border-box !important;
-  width: 100% !important;
-  max-width: min(600px, 100%) !important; /* Constrain width for better centering */
+  width: min(420px, 92%) !important; /* Constrain width as per spec */
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important; /* Horizontal centering of children */
-  justify-content: center !important; /* Vertical centering when content is shorter than container */
+  justify-content: center !important; /* Vertical spacing between elements */
+  text-align: center !important;
   /* Responsive gaps between elements for balanced vertical spacing */
-  gap: clamp(12px, 3vh, 24px) !important;
+  gap: clamp(10px, 1.5vw, 16px) !important;
   /* Prevent overflow while allowing scrolling if needed */
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  /* Internal padding for breathing room */
-  padding: clamp(8px, 2vh, 16px) clamp(8px, 2vw, 16px) !important;
 }
 
 /* Header row at top */
@@ -123,7 +124,8 @@
 /* CTA buttons specifically - ensure they're always visible and centered */
 #tv .lv2-cta-row,
 #tv .lv-overlay__confirm-container,
-#tv .debug-cta-row {
+#tv .debug-cta-row,
+.votePanel .evictBtn {
   flex: 0 0 auto !important;
   width: 100% !important;
   max-width: min(92%, 520px) !important;
@@ -137,8 +139,23 @@
 
 /* Hide duplicate CTA buttons - only show the first one */
 #tv .lv2-cta-row:not(:first-of-type),
-#tv .debug-cta-row:not(:first-of-type) {
+#tv .debug-cta-row:not(:first-of-type),
+.votePanel .evictBtn ~ .evictBtn {
   display: none !important;
+}
+
+/* Ensure single evict button styling */
+.votePanel .evictBtn {
+  background: linear-gradient(135deg, #ff6b6b, #d63031) !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: clamp(10px, 2vh, 16px) clamp(20px, 4vw, 32px) !important;
+  font-size: clamp(0.95rem, 2.2vh, 1.15rem) !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  min-height: clamp(44px, 6vh, 56px) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
 }
 
 /* Style tweaks for selected name/evict button to ensure visibility and spacing */
@@ -172,10 +189,11 @@
 
 /* Responsive avatar sizing with limits to prevent overflow */
 #tv .lv2-avatar,
-#tv .lv2-contestant .lv2-avatar {
+#tv .lv2-contestant .lv2-avatar,
+.votePanel .lv2-avatar {
   width: clamp(80px, 16vmin, 160px) !important;
   height: clamp(80px, 16vmin, 160px) !important;
-  /* Ensure avatar never exceeds safe bounds */
+  /* Ensure avatar never exceeds safe bounds as per spec */
   max-width: min(72vw, 320px) !important;
   max-height: min(35vh, 320px) !important;
 }
