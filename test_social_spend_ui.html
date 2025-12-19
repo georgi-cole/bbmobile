@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Spend-to-Reveal UI Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 0 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-card {
+      background: #252547;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .test-pass {
+      background: #1e4620;
+      color: #a5d6a7;
+      border: 1px solid #4caf50;
+    }
+    .test-fail {
+      background: #5c1c1c;
+      color: #ef9a9a;
+      border: 1px solid #f44336;
+    }
+    .test-info {
+      background: #1e3a5f;
+      color: #90caf9;
+      border: 1px solid #2196f3;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    code {
+      background: #1a1a2e;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #90caf9;
+    }
+    pre {
+      background: #1a1a2e;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ccc;
+    }
+    .diary-log {
+      background: #1a1a2e;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 10px;
+      min-height: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .diary-entry {
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid #667eea;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    .diary-entry .entry-text {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+    .diary-entry .entry-meta {
+      font-size: 11px;
+      opacity: 0.6;
+    }
+    .energy-display {
+      background: rgba(102, 126, 234, 0.2);
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      padding: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .energy-value {
+      color: #667eea;
+      font-size: 20px;
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    h2 {
+      color: #90caf9;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-card">
+    <h1>🎭 Social Spend-to-Reveal UI Test</h1>
+    <p>Test harness for the social spend-for-intel feature. Emits enriched social events and validates CTA rendering and spend flow.</p>
+    <div class="test-info" style="margin-top: 10px;">
+      <strong>Feature Flag:</strong> <code id="featureFlag">...</code>
+    </div>
+  </div>
+
+  <div class="test-card">
+    <h2>Module Loading Tests</h2>
+    <div id="moduleTests"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Player Energy (Mock)</h2>
+    <div class="energy-display">
+      <span>⚡ Energy:</span>
+      <span class="energy-value" id="energyDisplay">10</span>
+    </div>
+    <div class="controls">
+      <button onclick="setEnergy(5)">Set to 5</button>
+      <button onclick="setEnergy(10)">Set to 10</button>
+      <button onclick="setEnergy(15)">Set to 15</button>
+      <button onclick="setEnergy(0)">Set to 0</button>
+    </div>
+  </div>
+
+  <div class="test-card">
+    <h2>Diary Room Log</h2>
+    <div class="controls">
+      <button onclick="emitSpendableEvent('true')">Emit Event (True)</button>
+      <button onclick="emitSpendableEvent('partial')">Emit Event (Partial)</button>
+      <button onclick="emitSpendableEvent('lie')">Emit Event (Lie)</button>
+      <button onclick="emitNonSpendableEvent()">Emit Non-Spendable</button>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+    <div id="logSocial" class="diary-log"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Analytics Events</h2>
+    <div id="analyticsLog"></div>
+  </div>
+
+  <!-- Initialize game object BEFORE loading modules -->
+  <script>
+    // Initialize game object early so modules can read it
+    if (!window.game) {
+      window.game = {
+        cfg: {},
+        localPlayerId: 1,
+        humanPlayerId: 1,
+        players: [
+          { id: 1, name: 'Alice', isHuman: true },
+          { id: 2, name: 'Bob', isHuman: false },
+          { id: 3, name: 'Charlie', isHuman: false }
+        ]
+      };
+    }
+    // Also set __localPlayerId for fallback
+    window.__localPlayerId = 1;
+  </script>
+
+  <!-- Load dependencies -->
+  <script src="js/config/defaults.js"></script>
+  <script src="js/social/social-flavor.js"></script>
+  <script src="js/social/social-actions-registry.js"></script>
+  <script src="js/social/social-enricher.js"></script>
+  <script src="js/dr/diaryRoomLogger.js"></script>
+  <script src="js/social/social-ui-adapter.js"></script>
+  
+  <!-- Load CSS -->
+  <link rel="stylesheet" href="css/social-spend.css">
+
+  <script>
+    // Helper function to display test results
+    function showResult(containerId, message, passed) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+      div.textContent = `${passed ? '✓' : '✗'} ${message}`;
+      container.appendChild(div);
+      return passed;
+    }
+
+    function showInfo(containerId, message) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = 'test-result test-info';
+      div.innerHTML = message;
+      container.appendChild(div);
+    }
+
+    // Run tests on load
+    window.addEventListener('load', function() {
+      runModuleTests();
+      updateFeatureFlag();
+      updateEnergyDisplay();
+      setupAnalyticsListener();
+    });
+
+    function runModuleTests() {
+      const container = 'moduleTests';
+      
+      showResult(container, 
+        'SocialUIAdapter module loaded', 
+        typeof window.SocialUIAdapter === 'object'
+      );
+      
+      showResult(container,
+        'SocialUIAdapter.createSpendCTA exists',
+        typeof window.SocialUIAdapter?.createSpendCTA === 'function'
+      );
+
+      showResult(container,
+        'SocialUIAdapter.canAfford exists',
+        typeof window.SocialUIAdapter?.canAfford === 'function'
+      );
+
+      showResult(container,
+        'SocialUIAdapter.spendEnergy exists',
+        typeof window.SocialUIAdapter?.spendEnergy === 'function'
+      );
+
+      showResult(container,
+        'SocialFlavor module loaded',
+        typeof window.SocialFlavor === 'object'
+      );
+
+      showResult(container,
+        'DiaryRoomLogger.attachEntryHook exists',
+        typeof window.DiaryRoomLogger?.attachEntryHook === 'function'
+      );
+    }
+
+    function updateFeatureFlag() {
+      const flag = window.game?.cfg?.socialSpendingEnabled;
+      const el = document.getElementById('featureFlag');
+      el.textContent = `socialSpendingEnabled = ${flag}`;
+      el.style.color = flag ? '#a5d6a7' : '#ef9a9a';
+    }
+
+    function updateEnergyDisplay() {
+      const playerId = window.game?.localPlayerId || 1;
+      const energy = window.SocialUIAdapter?.getPlayerEnergy(playerId) || 0;
+      document.getElementById('energyDisplay').textContent = energy;
+    }
+
+    function setEnergy(amount) {
+      const playerId = window.game?.localPlayerId || 1;
+      if (window.SocialUIAdapter?.setMockEnergy) {
+        window.SocialUIAdapter.setMockEnergy(playerId, amount);
+        updateEnergyDisplay();
+        showInfo('moduleTests', `Energy set to ${amount}`);
+      }
+    }
+
+    function emitSpendableEvent(truthiness) {
+      const timestamp = Date.now();
+      const entryId = `test-entry-${timestamp}`;
+      
+      const flavorText = 'Alice pulled Bob aside and floated a plan to target Charlie.';
+      const detailedText = 'Alice: "We should push to get Charlie out next week. It makes sense if we swing votes."\nBob: "I can be convinced, but I need something in return."';
+      const displayText = truthiness === 'true' ? flavorText : `${flavorText} (might be misdirection)`;
+      
+      const payload = {
+        id: entryId,
+        timestamp: timestamp,
+        type: 'social_action',
+        category: 'social',
+        severity: 'neutral',
+        title: 'Alice → Strategize',
+        text: displayText,
+        raw: {
+          __enriched: true,
+          actorId: 1,
+          targetId: 2,
+          actionId: 'strategize',
+          flavorText: flavorText,
+          detailedText: detailedText,
+          truthiness: truthiness,
+          spendPrompt: {
+            cost: 3,
+            label: `Spend 3 energy to reveal ▶`
+          }
+        }
+      };
+
+      // Emit event
+      window.dispatchEvent(new CustomEvent('social.entry:story', { detail: payload }));
+
+      // Also create manual entry in log for visual testing
+      createLogEntry(payload);
+    }
+
+    function emitNonSpendableEvent() {
+      const timestamp = Date.now();
+      const entryId = `test-entry-${timestamp}`;
+      
+      const eventText = 'Bob complimented Charlie\'s competition performance.';
+      
+      const payload = {
+        id: entryId,
+        timestamp: timestamp,
+        type: 'social_action',
+        category: 'social',
+        severity: 'neutral',
+        title: 'Bob → Compliment',
+        text: eventText,
+        raw: {
+          __enriched: true,
+          actorId: 2,
+          targetId: 3,
+          actionId: 'compliment',
+          flavorText: eventText,
+          truthiness: 'true',
+          spendPrompt: null // No spend prompt
+        }
+      };
+
+      // Emit event
+      window.dispatchEvent(new CustomEvent('social.entry:story', { detail: payload }));
+
+      // Also create manual entry in log
+      createLogEntry(payload);
+    }
+
+    function createLogEntry(payload) {
+      const log = document.getElementById('logSocial');
+      
+      const entry = document.createElement('div');
+      entry.className = 'diary-entry';
+      entry.dataset.entryId = payload.id;
+      
+      const text = document.createElement('div');
+      text.className = 'entry-text';
+      text.textContent = payload.text;
+      entry.appendChild(text);
+      
+      const meta = document.createElement('div');
+      meta.className = 'entry-meta';
+      meta.textContent = new Date(payload.timestamp).toLocaleTimeString();
+      entry.appendChild(meta);
+      
+      log.appendChild(entry);
+      
+      // Scroll to bottom
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      const log = document.getElementById('logSocial');
+      log.innerHTML = '';
+      
+      // Reset adapter state
+      if (window.SocialUIAdapter?.reset) {
+        window.SocialUIAdapter.reset();
+      }
+    }
+
+    function setupAnalyticsListener() {
+      const analyticsLog = document.getElementById('analyticsLog');
+      
+      // Listen for analytics events
+      ['social.spend:attempt', 'social.spend:success', 'social.spend:fail', 'social.reveal:exposed'].forEach(eventName => {
+        window.addEventListener(eventName, (e) => {
+          const div = document.createElement('div');
+          div.className = 'test-result test-info';
+          div.innerHTML = `<strong>${eventName}</strong>: <code>${JSON.stringify(e.detail, null, 2)}</code>`;
+          analyticsLog.appendChild(div);
+          
+          // Keep only last 10 events
+          while (analyticsLog.children.length > 10) {
+            analyticsLog.removeChild(analyticsLog.firstChild);
+          }
+
+          // Update energy display after spend events
+          if (eventName === 'social.spend:success') {
+            setTimeout(updateEnergyDisplay, 100);
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>

@@ -559,11 +559,52 @@
   }
 
   // ============================================================================
+  // ENTRY HOOK SYSTEM (for external adapters like social-ui-adapter)
+  // ============================================================================
+
+  let entryHooks = [];
+
+  /**
+   * Register a hook function to be called after entry creation
+   * Hook receives (entry, entryElement) and can modify DOM
+   * @param {Function} hookFn - Function to call: hookFn(entry, entryElement)
+   */
+  function attachEntryHook(hookFn) {
+    if (typeof hookFn !== 'function') {
+      console.warn('[DiaryRoomLogger] attachEntryHook: Invalid hook function');
+      return;
+    }
+    
+    entryHooks.push(hookFn);
+    console.info('[DiaryRoomLogger] Entry hook attached');
+  }
+
+  /**
+   * Call all registered entry hooks (internal use)
+   */
+  function callEntryHooks(entry, entryElement) {
+    if (entryHooks.length === 0) return;
+    
+    entryHooks.forEach((hookFn, index) => {
+      try {
+        hookFn(entry, entryElement);
+      } catch (err) {
+        console.error(`[DiaryRoomLogger] Entry hook ${index} failed:`, err);
+      }
+    });
+  }
+
+  // Note: Hook invocation would need to be added to the actual DOM creation
+  // logic when diary entries are rendered. For now, the hooks are registered
+  // and available for future integration when the UI rendering is implemented.
+
+  // ============================================================================
   // PUBLIC API
   // ============================================================================
 
   DiaryRoomLogger.init = init;
   DiaryRoomLogger.cleanup = cleanup;
+  DiaryRoomLogger.attachEntryHook = attachEntryHook;
   
   // Expose handlers for testing
   DiaryRoomLogger.handleSocialAction = handleSocialAction;

@@ -1,0 +1,225 @@
+/* social-spend.css
+ * Styles for social spend-to-reveal UI feature
+ * Includes CTA buttons, reveal content, and truthiness indicators
+ */
+
+/* ============================================================================
+ * CTA Button Container
+ * ============================================================================ */
+
+.social-spend-cta-container {
+  margin-top: 8px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================================================
+ * CTA Button
+ * ============================================================================ */
+
+.social-spend-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  min-height: 36px;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.social-spend-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #7c92f0 0%, #8659b0 100%);
+}
+
+.social-spend-cta:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.social-spend-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #555 0%, #666 100%);
+}
+
+.social-spend-cta.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #888 0%, #999 100%);
+}
+
+.social-spend-cta.loading {
+  cursor: wait;
+  opacity: 0.8;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.social-spend-cta .energy-status {
+  font-size: 11px;
+  opacity: 0.9;
+  margin-left: 4px;
+}
+
+/* ============================================================================
+ * Reveal Content
+ * ============================================================================ */
+
+.social-reveal-content {
+  margin-top: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid #667eea;
+  border-radius: 4px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all 0.3s ease;
+}
+
+.social-reveal-content.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.social-reveal-content .reveal-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: pre-line;
+  margin-bottom: 8px;
+}
+
+/* ============================================================================
+ * Truthiness Annotations
+ * ============================================================================ */
+
+.social-reveal-content .reveal-annotation {
+  font-size: 11px;
+  font-style: italic;
+  padding: 4px 8px;
+  border-radius: 3px;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.reveal-annotation.truthiness-partial {
+  color: #ffc107;
+  background: rgba(255, 193, 7, 0.15);
+  border-left: 2px solid #ffc107;
+}
+
+.reveal-annotation.truthiness-lie {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+  border-left: 2px solid #ff6b6b;
+}
+
+/* ============================================================================
+ * Mobile Responsiveness
+ * ============================================================================ */
+
+@media (max-width: 768px) {
+  .social-spend-cta {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .social-reveal-content {
+    padding: 10px;
+  }
+
+  .social-reveal-content .reveal-text {
+    font-size: 14px;
+  }
+}
+
+/* ============================================================================
+ * Accessibility
+ * ============================================================================ */
+
+.social-spend-cta:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+.social-spend-cta:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .social-spend-cta {
+    border: 2px solid currentColor;
+  }
+
+  .social-reveal-content {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .social-spend-cta,
+  .social-reveal-content {
+    transition: none;
+    animation: none;
+  }
+
+  .social-spend-cta:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ============================================================================
+ * Theme Support (Light/Dark)
+ * ============================================================================ */
+
+/* Dark theme (default) - already styled above */
+
+/* Light theme overrides */
+body.light-theme .social-spend-cta-container {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .social-reveal-content {
+  background: rgba(0, 0, 0, 0.03);
+  border-left-color: #667eea;
+}
+
+body.light-theme .social-reveal-content .reveal-text {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+body.light-theme .reveal-annotation.truthiness-partial {
+  color: #ff8f00;
+  background: rgba(255, 143, 0, 0.1);
+  border-left-color: #ff8f00;
+}
+
+body.light-theme .reveal-annotation.truthiness-lie {
+  color: #d32f2f;
+  background: rgba(211, 47, 47, 0.1);
+  border-left-color: #d32f2f;
+}
