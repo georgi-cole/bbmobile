@@ -731,7 +731,7 @@
       const panel = document.querySelector('#tv .lv2-panel .panel-content') || document.querySelector('#tv .lv2-panel');
       if (panel) {
         panel.appendChild(cta);
-        try { cta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) {}
+        try { cta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) { /* scrollIntoView may not be supported */ }
       }
     }
   }
@@ -814,7 +814,7 @@
     }
     
     // Reveal CTA inside faux TV after selection (with small delay for DOM updates)
-    setTimeout(() => { try { revealCtaInView(); } catch(e){} }, 60);
+    setTimeout(() => { try { revealCtaInView(); } catch(e){ /* ignore */ } }, 60);
   }
   
   // Mobile Carousel 2.0: Update the CTA dock button (deprecated - no longer used)
