@@ -123,6 +123,9 @@
       console.warn('[lv2] #tv element not found');
       return;
     }
+    
+    // Ensure TV element has fauxTv class for proper styling
+    tv.classList.add('fauxTv');
 
     // Clean up any existing rollout overlay before rendering lv2 UI
     try {
@@ -149,7 +152,7 @@
 
     // Create overlay wrapper with overflow:hidden
     const overlay = document.createElement('div');
-    overlay.className = 'lv2-overlay';
+    overlay.className = 'lv2-overlay voteOverlay';
     
     // Add responsive class if needed
     if (state.isResponsive) {
@@ -175,7 +178,7 @@
 
     // Create main grid container
     const container = document.createElement('div');
-    container.className = 'lv2-panel';
+    container.className = 'lv2-panel votePanel';
 
     // Header
     const header = document.createElement('div');
@@ -317,6 +320,83 @@
     
     // Ensure inline CTA guard is installed
     ensureInlineCtaGuard();
+    
+    // Remove any duplicate evict buttons to ensure only one exists
+    removeDuplicateEvictButtons();
+  }
+  
+  // Helper: Remove duplicate evict buttons and ensure only one exists in the panel
+  function removeDuplicateEvictButtons() {
+    const panel = document.querySelector('#tv .lv2-panel, #tv .votePanel');
+    if (!panel) return;
+    
+    // Find all elements that could be evict buttons
+    const possibleButtons = panel.querySelectorAll(
+      '.evictBtn, .lv2-cta-btn, .lv-overlay__evict-btn, .debug-evict-btn, button[data-action="evict"]'
+    );
+    
+    // Remove standalone evict buttons (not inline name buttons)
+    // Keep only inline name buttons which transform into evict buttons on selection
+    possibleButtons.forEach(btn => {
+      if (!btn.classList.contains('lv2-name-btn') && !btn.classList.contains('lv2-name-btn-selected')) {
+        // This is a standalone button, remove it
+        btn.remove();
+        console.debug('[lv2] Removed duplicate standalone evict button');
+      }
+    });
+    
+    // Also remove any orphaned CTA rows that might have been created
+    const ctaRows = panel.querySelectorAll('.lv2-cta-row, .debug-cta-row');
+    ctaRows.forEach((row, index) => {
+      if (index > 0) { // Keep only the first one (if any)
+        row.remove();
+        console.debug('[lv2] Removed duplicate CTA row');
+      }
+    });
+    
+    // Remove problematic inline styles with vertical anchoring
+    removeVerticalAnchoringStyles();
+  }
+  
+  // Helper: Remove inline styles that include vertical anchoring
+  function removeVerticalAnchoringStyles() {
+    const overlay = document.querySelector('#tv .lv2-overlay, #tv .voteOverlay');
+    const panel = document.querySelector('#tv .lv2-panel, #tv .votePanel');
+    
+    if (!overlay && !panel) return;
+    
+    const elements = [overlay, panel].filter(Boolean);
+    
+    // Also check all children
+    elements.forEach(parent => {
+      const allChildren = parent?.querySelectorAll('*') || [];
+      [parent, ...allChildren].forEach(el => {
+        if (!el) return;
+        
+        // Remove problematic inline transform/positioning styles
+        const style = el.style;
+        if (style.transform && style.transform.includes('translateY')) {
+          console.debug('[lv2] Removed translateY from inline style:', el.className);
+          // Keep other transforms, just remove translateY
+          const transforms = style.transform.split(/\s+/).filter(t => !t.includes('translateY'));
+          style.transform = transforms.join(' ') || '';
+        }
+        
+        // Remove explicit top/bottom positioning if found on vote elements
+        if (el.classList.contains('lv2-overlay') || el.classList.contains('voteOverlay') ||
+            el.classList.contains('lv2-panel') || el.classList.contains('votePanel') ||
+            el.classList.contains('lv2-cta-row')) {
+          if (style.top) {
+            console.debug('[lv2] Removed top from inline style:', el.className);
+            style.top = '';
+          }
+          if (style.bottom) {
+            console.debug('[lv2] Removed bottom from inline style:', el.className);
+            style.bottom = '';
+          }
+        }
+      });
+    });
   }
 
   // Create contestant card (left or right)
@@ -651,7 +731,7 @@
       const panel = document.querySelector('#tv .lv2-panel .panel-content') || document.querySelector('#tv .lv2-panel');
       if (panel) {
         panel.appendChild(cta);
-        try { cta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) {}
+        try { cta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) { /* scrollIntoView may not be supported */ }
       }
     }
   }
@@ -734,7 +814,7 @@
     }
     
     // Reveal CTA inside faux TV after selection (with small delay for DOM updates)
-    setTimeout(() => { try { revealCtaInView(); } catch(e){} }, 60);
+    setTimeout(() => { try { revealCtaInView(); } catch(e){ /* ignore */ } }, 60);
   }
   
   // Mobile Carousel 2.0: Update the CTA dock button (deprecated - no longer used)
