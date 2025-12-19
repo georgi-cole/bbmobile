@@ -141,37 +141,40 @@
   <div id="tv"></div>
 </div>
 
-<script type="module">
-  // Mock game state
-  window.game = {
-    humanId: 1,
-    eviction: {
-      nominees: [2, 3],
-      isTieBreak: false,
-      isFinal4: false
-    },
-    cfg: {}
-  };
+<script>
+  // Wait for DOM and scripts to load
+  document.addEventListener('DOMContentLoaded', () => {
+    // Mock game state
+    window.game = {
+      humanId: 1,
+      eviction: {
+        nominees: [2, 3],
+        isTieBreak: false,
+        isFinal4: false
+      },
+      cfg: {}
+    };
 
-  // Mock player data
-  const mockPlayers = {
-    1: { id: 1, name: 'You', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=You' },
-    2: { id: 2, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
-    3: { id: 3, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
-    4: { id: 4, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
-    5: { id: 5, name: 'Dana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Dana' }
-  };
+    // Mock player data
+    const mockPlayers = {
+      1: { id: 1, name: 'You', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=You' },
+      2: { id: 2, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+      3: { id: 3, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+      4: { id: 4, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+      5: { id: 5, name: 'Dana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Dana' }
+    };
 
-  window.getP = (id) => mockPlayers[id];
-  window.safeName = (id) => mockPlayers[id]?.name || 'Unknown';
-  window.resolveAvatar = (player) => player?.avatar;
+    window.getP = (id) => mockPlayers[id];
+    window.safeName = (id) => mockPlayers[id]?.name || 'Unknown';
+    window.resolveAvatar = (player) => player?.avatar;
 
-  // Mock handleHumanVote
-  window.handleHumanVote = (playerId) => {
-    const playerName = window.safeName(playerId);
-    updateStatus(`✅ Vote cast for ${playerName}!`);
-    console.log('[Test] Human voted for:', playerId, playerName);
-  };
+    // Mock handleHumanVote
+    window.handleHumanVote = (playerId) => {
+      const playerName = window.safeName(playerId);
+      updateStatus(`✅ Vote cast for ${playerName}!`);
+      console.log('[Test] Human voted for:', playerId, playerName);
+    };
+  });
 
   function updateStatus(msg) {
     document.getElementById('status').textContent = msg;
