@@ -173,7 +173,7 @@
     const now = Date.now();
     
     // Apply cooldowns (zero out weight if on cooldown)
-    for (const [actionId, weight] of adjustedWeights) {
+    for (const [actionId] of adjustedWeights) {
       const lastUsed = cooldownStore.get(actionId) || 0;
       const registry = global.SocialActionsRegistry;
       const action = registry ? registry.get(actionId) : null;
@@ -296,7 +296,7 @@
   /**
    * Estimate relationship multiplier for action
    */
-  function estimateRelationshipMultiplier(action, relationGraph, actorId) {
+  function estimateRelationshipMultiplier(action, _relationGraph, _actorId) {
     // Get typical relationship types for this action
     const actionId = action.id;
     
@@ -331,6 +331,7 @@
   };
 
   // Export
+  /* global module */
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = SocialAIWeights;
   }

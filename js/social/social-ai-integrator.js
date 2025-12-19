@@ -180,7 +180,7 @@
   /**
    * Get eligible targets for action
    */
-  function getEligibleTargets(actorId, action, phaseContext) {
+  function getEligibleTargets(actorId, _action, _phaseContext) {
     const g = global.game;
     if (!g) return [];
     
@@ -246,7 +246,7 @@
   /**
    * Build execution context for action
    */
-  function buildExecutionContext(actorId, targetId, action, phaseContext) {
+  function buildExecutionContext(actorId, targetId, action, _phaseContext) {
     const ctx = {
       actorId,
       targetId,
@@ -257,18 +257,18 @@
     
     // Add phase-specific context
     if (action.id === 'probe_hoh') {
-      ctx.hohName = getPlayerName(phaseContext.currentHOH);
-      ctx.hohTarget = getSuggestedHOHTarget(phaseContext);
+      ctx.hohName = getPlayerName(global.game.currentHOH);
+      ctx.hohTarget = getSuggestedHOHTarget(global.game);
     }
     
     if (action.id === 'probe_pov' || action.id === 'bargain_pov') {
-      const povHolder = phaseContext.vetoHolder || phaseContext.povHolder;
+      const povHolder = global.game.vetoHolder || global.game.povHolder;
       ctx.povHolderName = getPlayerName(povHolder);
-      ctx.povIntention = getSuggestedPOVIntention(phaseContext);
+      ctx.povIntention = getSuggestedPOVIntention(global.game);
     }
     
     if (action.id === 'vote_rally') {
-      ctx.voteTarget = getSuggestedVoteTarget(phaseContext);
+      ctx.voteTarget = getSuggestedVoteTarget(global.game);
     }
     
     return ctx;
@@ -277,10 +277,11 @@
   /**
    * Get suggested HOH target (for probe_hoh)
    */
-  function getSuggestedHOHTarget(phaseContext) {
+  function getSuggestedHOHTarget(_phaseContext) {
     // In a real implementation, this would query game state for HOH's likely target
     // For now, return a nominee or null
-    const nominees = phaseContext.nominees || [];
+    const g = global.game;
+    const nominees = (g && g.nominees) || [];
     if (nominees.length > 0) {
       return getPlayerName(nominees[Math.floor(Math.random() * nominees.length)]);
     }
@@ -290,7 +291,7 @@
   /**
    * Get suggested POV intention (for probe_pov)
    */
-  function getSuggestedPOVIntention(phaseContext) {
+  function getSuggestedPOVIntention(_phaseContext) {
     // Return 'use' or 'not use' or nominee name
     const intentions = ['use', 'not use'];
     return intentions[Math.floor(Math.random() * intentions.length)];
@@ -299,8 +300,9 @@
   /**
    * Get suggested vote target (for vote_rally)
    */
-  function getSuggestedVoteTarget(phaseContext) {
-    const nominees = phaseContext.nominees || [];
+  function getSuggestedVoteTarget(_phaseContext) {
+    const g = global.game;
+    const nominees = (g && g.nominees) || [];
     if (nominees.length > 0) {
       return getPlayerName(nominees[Math.floor(Math.random() * nominees.length)]);
     }
@@ -400,6 +402,7 @@
   };
 
   // Export
+  /* global module */
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = SocialAIIntegrator;
   }
