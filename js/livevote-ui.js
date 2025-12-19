@@ -196,9 +196,7 @@
     // Stage area (scrollable container for nominees and vote feed)
     const stage = document.createElement('div');
     stage.className = 'lv2-stage';
-    stage.setAttribute('role', 'log');
-    stage.setAttribute('aria-live', 'polite');
-    stage.setAttribute('aria-atomic', 'false');
+    stage.setAttribute('role', 'region');
     stage.setAttribute('aria-label', 'Vote stage');
     
     // Main content grid (left contestant | right contestant) - inside stage
