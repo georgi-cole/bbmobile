@@ -579,9 +579,18 @@
       }
 
       function insertDebugCta() {
-        if (overlay.querySelector('.debug-cta-row') || overlay.querySelector('.lv2-cta-row') || overlay.querySelector('.lv-overlay__confirm-container')) return;
+        // STRONG GUARD: Check for any existing CTA buttons in entire TV container
+        const existingCta = document.querySelector('#tv .debug-cta-row') || 
+                           document.querySelector('#tv .lv2-cta-row') || 
+                           document.querySelector('#tv .lv-overlay__confirm-container');
+        if (existingCta) {
+          console.debug('[lv2-guard] CTA already exists, skipping debug CTA insertion');
+          return;
+        }
+        
         const cta = document.createElement('div');
         cta.className = 'debug-cta-row';
+        cta.dataset.guardInstalled = 'true'; // Mark as guard-created
         cta.style.cssText = 'display:flex;justify-content:center;margin:8px auto 0 auto;width:100%;z-index:9999;';
         const btn = document.createElement('button');
         btn.textContent = 'Evict';
@@ -605,6 +614,7 @@
             global.lv2.pushVote({ voterId: global.game?.humanId||0, voterName: global.safeName?.(global.game?.humanId)||'You', pick });
           }
         });
+        console.debug('[lv2-guard] Debug CTA inserted as fallback');
       }
 
       tryCreateCanonical().then(created => {
@@ -649,6 +659,17 @@
   // Select a nominee (transforms name button and updates instructions)
   function selectNominee(playerId, playerName) {
     state.selectedNominee = playerId;
+    
+    // GUARD: Remove all existing selected states first to prevent duplicates
+    const allContestants = state.container?.querySelectorAll('.lv2-contestant');
+    allContestants?.forEach(c => {
+      c.classList.remove('selected');
+      const btn = c.querySelector('.lv2-name-btn');
+      if (btn) {
+        btn.classList.remove('lv2-name-btn-selected');
+        delete btn.dataset.action;
+      }
+    });
     
     // Add visual selection indicator and transform name button
     const contestants = state.container?.querySelectorAll('.lv2-contestant');
