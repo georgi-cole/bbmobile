@@ -22,10 +22,10 @@
 #tv .lv2-overlay,
 #tv .lv-overlay {
   position: absolute !important;
-  /* Bottom-aligned compact card positioning */
+  /* Bottom-aligned compact card positioning - positioned lower per user feedback */
   top: auto !important;
   left: 50% !important;
-  bottom: clamp(20px, 4vh, 40px) !important;
+  bottom: clamp(8px, 2vh, 16px) !important;
   transform: translateX(-50%) !important;
   /* Compact card dimensions */
   width: min(92%, 500px) !important;
