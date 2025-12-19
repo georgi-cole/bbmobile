@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compact Vote UI Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/livevote-compact-fullyfit.css">
+  <link rel="stylesheet" href="css/eviction-layout-containment.css">
+  <style>
+    /* DEBUG OUTLINES */
+    #tv .tvViewport { outline: 2px solid red !important; }
+    #tv .tv-intermission-overlay,
+    #tv .lv-overlay { outline: 2px solid lime !important; }
+    #tv .intermission-card-container,
+    #tv .votePanel { outline: 2px solid cyan !important; }
+    #tv .voteCTA,
+    #tv .lv-overlay__confirm-container { outline: 2px solid yellow !important; }
+    #tv .voteStage,
+    #tv .lv-overlay__carousel { outline: 2px solid magenta !important; }
+  </style>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    #tv {
+      max-width: 414px;
+      margin: 0 auto;
+      background: #1a2332;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .tvViewport {
+      width: 100%;
+      height: 600px;
+      position: relative;
+      background: linear-gradient(135deg, #142337 0%, #0f1a2a 100%);
+    }
+    
+    .test-controls {
+      max-width: 414px;
+      margin: 0 auto 20px;
+      padding: 15px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 8px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>Compact Vote UI Test</h2>
+    <button onclick="showVoteOverlay()">Show Vote Overlay</button>
+    <button onclick="hideVoteOverlay()">Hide Vote Overlay</button>
+  </div>
+
+  <div id="tv">
+    <div class="tvViewport">
+      <!-- Vote overlay will be inserted here -->
+    </div>
+  </div>
+
+  <script>
+    // Mock global functions
+    window.game = { cfg: {} };
+    window.getP = (id) => ({ 
+      id, 
+      name: id === 1 ? 'Bob' : id === 2 ? 'Charlie' : 'Alice',
+      avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}`
+    });
+    window.safeName = (id) => window.getP(id)?.name || 'Unknown';
+
+    function showVoteOverlay() {
+      const viewport = document.querySelector('#tv .tvViewport');
+      
+      // Clear existing overlay
+      const existing = viewport.querySelector('.lv-overlay');
+      if (existing) existing.remove();
+
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'lv-overlay';
+      
+      // Header
+      const header = document.createElement('div');
+      header.className = 'lv-overlay__header';
+      header.textContent = 'Cast your vote to evict.';
+      overlay.appendChild(header);
+
+      // Carousel
+      const carousel = document.createElement('div');
+      carousel.className = 'lv-overlay__carousel';
+      
+      const track = document.createElement('div');
+      track.className = 'lv-overlay__track';
+      
+      // Create nominees
+      [1, 2].forEach((id, index) => {
+        const player = window.getP(id);
+        const nominee = document.createElement('div');
+        nominee.className = 'lv-overlay__nominee' + (index === 0 ? ' center' : '');
+        
+        const avatarContainer = document.createElement('div');
+        avatarContainer.className = 'lv-overlay__avatar-container';
+        
+        const avatar = document.createElement('img');
+        avatar.className = 'lv-overlay__avatar';
+        avatar.src = player.avatar;
+        avatar.alt = player.name;
+        avatarContainer.appendChild(avatar);
+        nominee.appendChild(avatarContainer);
+        
+        const name = document.createElement('div');
+        name.className = 'lv-overlay__nominee-name';
+        name.textContent = player.name;
+        nominee.appendChild(name);
+        
+        track.appendChild(nominee);
+      });
+      
+      carousel.appendChild(track);
+      overlay.appendChild(carousel);
+
+      // Confirmation container (status + button)
+      const confirmContainer = document.createElement('div');
+      confirmContainer.className = 'lv-overlay__confirm-container';
+      confirmContainer.style.display = 'flex';
+      
+      const status = document.createElement('div');
+      status.className = 'lv-overlay__status';
+      status.textContent = 'Bob selected. Press Evict to confirm.';
+      confirmContainer.appendChild(status);
+      
+      const evictBtn = document.createElement('button');
+      evictBtn.className = 'lv-overlay__evict-btn';
+      evictBtn.textContent = 'Evict';
+      confirmContainer.appendChild(evictBtn);
+      
+      overlay.appendChild(confirmContainer);
+
+      viewport.appendChild(overlay);
+      
+      // DEBUG LOGGING
+      setTimeout(() => {
+        console.log("=== DEBUG: Vote UI State ===");
+        console.log("evictButtons", [...document.querySelectorAll("button")].filter(b => /evict/i.test(b.textContent)).map(b => b.outerHTML));
+        console.log("ctaContainer", document.querySelector(".voteCTA,.lv2-cta,.lv-overlay__confirm-container")?.outerHTML);
+        console.log("overlay", document.querySelector(".lv-overlay")?.outerHTML?.substring(0, 500));
+        
+        const btn = document.querySelector(".lv-overlay__evict-btn");
+        if (btn) {
+          const computed = window.getComputedStyle(btn);
+          console.log("Button computed styles:", {
+            display: computed.display,
+            visibility: computed.visibility,
+            opacity: computed.opacity,
+            position: computed.position
+          });
+          console.log("Button DOM path:", btn.parentElement?.className, "->", btn.parentElement?.parentElement?.className);
+        } else {
+          console.log("ERROR: Evict button not found in DOM!");
+        }
+        
+        const container = document.querySelector(".lv-overlay__confirm-container");
+        if (container) {
+          const computed = window.getComputedStyle(container);
+          console.log("CTA container computed:", {
+            display: computed.display,
+            overflow: computed.overflow,
+            maxHeight: computed.maxHeight,
+            height: computed.height
+          });
+        }
+        
+        // === CENTERING VERIFICATION ===
+        console.log("\n=== CENTERING MEASUREMENT ===");
+        const tvViewport = document.querySelector("#tv .tvViewport");
+        const lvOverlay = document.querySelector(".lv-overlay");
+        
+        if (tvViewport && lvOverlay) {
+          const vpRect = tvViewport.getBoundingClientRect();
+          const overlayRect = lvOverlay.getBoundingClientRect();
+          
+          const vpMidpoint = vpRect.top + (vpRect.height / 2);
+          const overlayMidpoint = overlayRect.top + (overlayRect.height / 2);
+          const difference = Math.abs(vpMidpoint - overlayMidpoint);
+          const percentOff = (difference / vpRect.height) * 100;
+          
+          console.log("TV Viewport:", {
+            top: vpRect.top.toFixed(2),
+            height: vpRect.height.toFixed(2),
+            midpoint: vpMidpoint.toFixed(2)
+          });
+          
+          console.log("Content Stack (.lv-overlay):", {
+            top: overlayRect.top.toFixed(2),
+            height: overlayRect.height.toFixed(2),
+            midpoint: overlayMidpoint.toFixed(2)
+          });
+          
+          console.log("Centering Analysis:", {
+            difference: difference.toFixed(2) + "px",
+            percentOff: percentOff.toFixed(2) + "%",
+            status: percentOff < 5 ? "✅ WELL CENTERED" : percentOff < 10 ? "⚠️ SLIGHTLY OFF" : "❌ NOT CENTERED"
+          });
+          
+          // Visual indicator in UI
+          const indicator = document.createElement('div');
+          indicator.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: ${percentOff < 5 ? '#22c55e' : percentOff < 10 ? '#f59e0b' : '#ef4444'};
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+          `;
+          indicator.textContent = `Centering: ${percentOff.toFixed(1)}% off ${percentOff < 5 ? '✅' : percentOff < 10 ? '⚠️' : '❌'}`;
+          document.body.appendChild(indicator);
+        }
+      }, 100);
+    }
+
+    function hideVoteOverlay() {
+      const overlay = document.querySelector('.lv-overlay');
+      if (overlay) overlay.remove();
+    }
+
+    // Auto-show on load for demonstration
+    setTimeout(showVoteOverlay, 500);
+  </script>
+</body>
+</html>
