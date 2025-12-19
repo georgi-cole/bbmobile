@@ -23,12 +23,14 @@
     // Search for all possible evict button class variations
     const allBtns = Array.from(document.querySelectorAll('.lv-overlay__evict-btn, .evictBtn, .lv2-cta-btn'));
     const inPanel = allBtns.filter(btn => panel.contains(btn));
-    const outsidePanel = allBtns.filter(btn => !panel.contains(btn));
+    let outsidePanel = allBtns.filter(btn => !panel.contains(btn));
 
     // If no buttons in panel, move the first outside button into panel
     if (inPanel.length === 0 && outsidePanel.length > 0) {
-      const btnToMove = outsidePanel.shift(); // Remove from outsidePanel array
+      const btnToMove = outsidePanel[0];
       panel.appendChild(btnToMove);
+      // Update outsidePanel array to exclude the moved button
+      outsidePanel = outsidePanel.slice(1);
     } else if (inPanel.length > 1) {
       // If multiple buttons in panel, remove extras
       inPanel.slice(1).forEach(btn => btn.remove());
@@ -76,8 +78,8 @@
     
     const onShow = () => {
       requestAnimationFrame(() => {
-        mountVoteStageIntoPanel();
-        removeDuplicateEvictButtons();
+        removeDuplicateEvictButtons(); // Clean up buttons first
+        mountVoteStageIntoPanel();     // Then mount components
       });
     };
 
