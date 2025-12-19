@@ -330,26 +330,42 @@
   
   // Helper: Remove duplicate evict buttons and ensure only one exists in the panel
   function removeDuplicateEvictButtons() {
-    const panel = document.querySelector('#tv .lv2-panel, #tv .votePanel');
+    const tv = document.querySelector('#tv');
+    if (!tv) return;
+    
+    // Find the main panel (prefer .votePanel or .intermission-card-container)
+    const panel = tv.querySelector('.votePanel, .intermission-card-container, .lv2-panel');
     if (!panel) return;
     
     // Find all elements that could be evict buttons
-    const possibleButtons = panel.querySelectorAll(
+    const possibleButtons = tv.querySelectorAll(
       '.evictBtn, .lv2-cta-btn, .lv-overlay__evict-btn, .debug-evict-btn, button[data-action="evict"]'
     );
     
-    // Remove standalone evict buttons (not inline name buttons)
-    // Keep only inline name buttons which transform into evict buttons on selection
+    // Count visible buttons to ensure we don't remove the only one
+    let visibleButtons = [];
     possibleButtons.forEach(btn => {
-      if (!btn.classList.contains('lv2-name-btn') && !btn.classList.contains('lv2-name-btn-selected')) {
-        // This is a standalone button, remove it
-        btn.remove();
-        console.debug('[lv2] Removed duplicate standalone evict button');
+      const isVisible = btn.offsetParent !== null && 
+                       !btn.classList.contains('lv2-name-btn') && 
+                       !btn.classList.contains('lv2-name-btn-selected');
+      if (isVisible) {
+        visibleButtons.push(btn);
       }
     });
     
+    // If there are multiple visible standalone buttons, keep only the first one inside panel
+    if (visibleButtons.length > 1) {
+      const buttonInPanel = visibleButtons.find(btn => panel.contains(btn));
+      visibleButtons.forEach(btn => {
+        if (btn !== buttonInPanel) {
+          btn.remove();
+          console.debug('[lv2] Removed duplicate standalone evict button');
+        }
+      });
+    }
+    
     // Also remove any orphaned CTA rows that might have been created
-    const ctaRows = panel.querySelectorAll('.lv2-cta-row, .debug-cta-row');
+    const ctaRows = tv.querySelectorAll('.lv2-cta-row, .debug-cta-row');
     ctaRows.forEach((row, index) => {
       if (index > 0) { // Keep only the first one (if any)
         row.remove();
@@ -357,14 +373,41 @@
       }
     });
     
+    // Ensure all vote elements are inside the panel
+    ensureElementsInPanel();
+    
     // Remove problematic inline styles with vertical anchoring
     removeVerticalAnchoringStyles();
   }
   
+  // Helper: Ensure all vote UI elements are inside the panel (not scattered)
+  function ensureElementsInPanel() {
+    const tv = document.querySelector('#tv');
+    if (!tv) return;
+    
+    const overlay = tv.querySelector('.lv2-overlay, .voteOverlay, .tv-intermission-overlay');
+    const panel = tv.querySelector('.votePanel, .intermission-card-container, .lv2-panel');
+    
+    if (!overlay || !panel) return;
+    
+    // Find any vote elements that are direct children of overlay but should be in panel
+    const elementsToMove = overlay.querySelectorAll(':scope > .lv2-header, :scope > .lv2-grid, :scope > .lv2-instructions, :scope > .lv2-cta-row, :scope > .evictBtn');
+    
+    elementsToMove.forEach(el => {
+      if (!panel.contains(el)) {
+        console.debug('[lv2] Moving element into panel:', el.className);
+        panel.appendChild(el);
+      }
+    });
+  }
+  
   // Helper: Remove inline styles that include vertical anchoring
   function removeVerticalAnchoringStyles() {
-    const overlay = document.querySelector('#tv .lv2-overlay, #tv .voteOverlay');
-    const panel = document.querySelector('#tv .lv2-panel, #tv .votePanel');
+    const tv = document.querySelector('#tv');
+    if (!tv) return;
+    
+    const overlay = tv.querySelector('.lv2-overlay, .voteOverlay, .tv-intermission-overlay');
+    const panel = tv.querySelector('.lv2-panel, .votePanel, .intermission-card-container');
     
     if (!overlay && !panel) return;
     
@@ -386,16 +429,30 @@
         }
         
         // Remove explicit top/bottom positioning if found on vote elements
-        if (el.classList.contains('lv2-overlay') || el.classList.contains('voteOverlay') ||
-            el.classList.contains('lv2-panel') || el.classList.contains('votePanel') ||
-            el.classList.contains('lv2-cta-row')) {
-          if (style.top && style.top !== 'unset' && style.top !== 'auto') {
+        const isVoteElement = el.classList.contains('lv2-overlay') || 
+                             el.classList.contains('voteOverlay') ||
+                             el.classList.contains('tv-intermission-overlay') ||
+                             el.classList.contains('lv2-panel') || 
+                             el.classList.contains('votePanel') ||
+                             el.classList.contains('intermission-card-container') ||
+                             el.classList.contains('lv2-cta-row');
+        
+        if (isVoteElement) {
+          if (style.top && style.top !== 'unset' && style.top !== 'auto' && style.top !== '') {
             console.debug('[lv2] Removed top from inline style:', el.className);
             style.top = '';
           }
-          if (style.bottom && style.bottom !== 'unset' && style.bottom !== 'auto') {
+          if (style.bottom && style.bottom !== 'unset' && style.bottom !== 'auto' && style.bottom !== '') {
             console.debug('[lv2] Removed bottom from inline style:', el.className);
             style.bottom = '';
+          }
+          if (style.left && style.left !== 'unset' && style.left !== 'auto' && style.left !== '') {
+            console.debug('[lv2] Removed left from inline style:', el.className);
+            style.left = '';
+          }
+          if (style.right && style.right !== 'unset' && style.right !== 'auto' && style.right !== '') {
+            console.debug('[lv2] Removed right from inline style:', el.className);
+            style.right = '';
           }
           // Also remove margin-top: auto which can push content down
           if (style.marginTop === 'auto') {
@@ -406,6 +463,11 @@
           if (style.justifyContent === 'flex-end') {
             console.debug('[lv2] Removed justify-content:flex-end from inline style:', el.className);
             style.justifyContent = '';
+          }
+          // Remove align-items: flex-end which can affect positioning
+          if (style.alignItems === 'flex-end') {
+            console.debug('[lv2] Removed align-items:flex-end from inline style:', el.className);
+            style.alignItems = '';
           }
         }
       });

@@ -7,7 +7,7 @@
    - Leaves room for timer/controls at top
    - Single Evict CTA (inline on name button) with deduplication guards
    - Scoped to lv2 classes and #tv container
-   - UPDATED: v5 - Pure Grid centering, no flex conflicts, proper button handling
+   - UPDATED: v6 - Pure Grid centering, overflow visible for buttons, no vertical anchoring
 */
 
 /* Ensure #tv (fauxTv) is the positioning context */
@@ -20,6 +20,7 @@
 /* Overlay fills the entire faux TV viewport and centers content using CSS Grid */
 #tv .lv2-overlay,
 #tv .lv-overlay,
+#tv .tv-intermission-overlay,
 .voteOverlay {
   position: absolute !important;
   inset: 0 !important; /* top:0; left:0; right:0; bottom:0 */
@@ -31,10 +32,12 @@
   /* Responsive padding to leave room for timer/controls and avoid overlaps */
   padding: clamp(20px, 4vh, 48px) clamp(16px, 3vw, 32px) !important;
   /* Increase top padding on small viewports for timer visibility */
-  padding-top: clamp(28px, 6vh, 60px) !important;
+  padding-top: clamp(32px, 7vh, 72px) !important;
   pointer-events: auto !important;
   z-index: 5 !important;
-  /* Ensure content doesn't overflow */
+  /* CRITICAL: Use visible overflow so buttons aren't clipped */
+  overflow: visible !important;
+  /* Fallback for browsers that don't support overflow:visible on grid */
   overflow-y: auto !important;
   overflow-x: hidden !important;
   -webkit-overflow-scrolling: touch !important;
@@ -43,6 +46,7 @@
 /* Panel content: vertical stack that's centered within overlay */
 #tv .lv2-panel,
 #tv .lv2-panel .panel-content,
+#tv .intermission-card-container,
 .votePanel {
   position: relative !important;
   box-sizing: border-box !important;
@@ -60,12 +64,14 @@
   /* CRITICAL: Remove any vertical anchoring */
   top: unset !important;
   bottom: unset !important;
+  left: unset !important;
+  right: unset !important;
   transform: none !important;
   margin: 0 auto !important; /* Center horizontally within grid cell */
-  /* Prevent overflow */
-  max-height: 90vh !important;
-  overflow-y: visible !important;
-  overflow-x: hidden !important;
+  /* CRITICAL: Use visible overflow so Evict button isn't clipped */
+  overflow: visible !important;
+  /* Prevent content from forcing page scroll */
+  max-height: 85vh !important;
 }
 
 /* Header row at top */
@@ -261,15 +267,27 @@ html, body {
 @media (max-width: 640px), (max-height: 700px) {
   #tv .lv2-overlay,
   #tv .lv-overlay,
+  #tv .tv-intermission-overlay,
   .voteOverlay {
-    padding-top: clamp(36px, 8vh, 72px) !important;
-    padding-bottom: clamp(20px, 4vh, 40px) !important;
+    padding-top: clamp(40px, 9vh, 80px) !important;
+    padding-bottom: clamp(24px, 5vh, 48px) !important;
   }
   
   /* Tighter gaps on very small screens */
   #tv .lv2-panel,
+  #tv .intermission-card-container,
   .votePanel {
     gap: clamp(10px, 2vh, 16px) !important;
     row-gap: clamp(10px, 2vh, 16px) !important;
+  }
+}
+
+/* Laptop viewport - ensure proper centering */
+@media (min-width: 1024px) {
+  #tv .lv2-overlay,
+  #tv .lv-overlay,
+  #tv .tv-intermission-overlay,
+  .voteOverlay {
+    padding-top: clamp(48px, 8vh, 72px) !important;
   }
 }
