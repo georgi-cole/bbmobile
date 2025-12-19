@@ -84,6 +84,7 @@
     aiSocialMaxPerPhase: 5,  // Soft cap on AI actions per AI per phase
     socialHighlightsEnabled: true,  // Show Social Highlights in Diary Room logs
     enableDrSocialLogs: true,  // Enable sm-to-dr-adapter for Diary Room narratives from social actions (production-safe)
+    aiSocialEmitDrEvents: true,  // Enable DR adapter emission for AI interactions (used by hotfix docs)
     
     // Final 4 Eviction (feature-flagged, on by default)
     final4CombinedPower: true,  // When HOH === POV holder, allow eviction of any of the other 3 players (not just nominees)

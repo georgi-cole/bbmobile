@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Action Alias Mapping Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0d151f;
+      color: #fff;
+    }
+    h1 {
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      background: rgba(0, 255, 0, 0.1);
+      border-left: 4px solid #0f0;
+    }
+    .fail {
+      background: rgba(255, 0, 0, 0.1);
+      border-left: 4px solid #f00;
+    }
+    .info {
+      background: rgba(102, 126, 234, 0.1);
+      border-left: 4px solid #667eea;
+      color: #aaa;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Social Action Alias Mapping Test</h1>
+  <p>This test verifies that legacy actionIds correctly resolve to canonical catalog actions.</p>
+  
+  <div class="test-section">
+    <h2>Test Configuration</h2>
+    <div id="configResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Alias Resolution Tests</h2>
+    <button onclick="runTests()">Run Tests</button>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Listener (for manual testing)</h2>
+    <p>Open the console and trigger social actions to see enriched payloads with spendPrompt.</p>
+    <button onclick="setupListener()">Setup Event Listener</button>
+    <div id="listenerStatus"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Mock game object
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {};
+    
+    // Mock SocialFlavor for testing
+    window.SocialFlavor = {
+      renderDetailed: function(opts) {
+        return `Detailed text for ${opts.actionId}`;
+      }
+    };
+  </script>
+  
+  <script src="js/social/social-actions-registry.js"></script>
+
+  <script>
+    function displayConfigResults() {
+      const cfg = window.game?.cfg || {};
+      const resultsDiv = document.getElementById('configResults');
+      
+      const flags = [
+        { name: 'socialSpendingEnabled', value: cfg.socialSpendingEnabled },
+        { name: 'socialSpicyLogs', value: cfg.socialSpicyLogs },
+        { name: 'enableDrSocialLogs', value: cfg.enableDrSocialLogs },
+        { name: 'aiSocialEmitDrEvents', value: cfg.aiSocialEmitDrEvents }
+      ];
+      
+      let html = '';
+      flags.forEach(flag => {
+        const status = flag.value === true ? 'pass' : 
+                      flag.value === undefined ? 'info' : 'fail';
+        const display = flag.value === undefined ? 'undefined' : String(flag.value);
+        html += `<div class="test-result ${status}">
+          ${flag.name}: ${display}
+        </div>`;
+      });
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    function runTests() {
+      const resultsDiv = document.getElementById('testResults');
+      resultsDiv.innerHTML = '<p>Running tests...</p>';
+      
+      const tests = [
+        // Test direct lookups (should work)
+        { 
+          name: 'Direct lookup: secret_chat',
+          actionId: 'secret_chat',
+          expectedId: 'secret_chat',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Direct lookup: plant_rumor',
+          actionId: 'plant_rumor',
+          expectedId: 'plant_rumor',
+          shouldHaveSpendPrompt: true
+        },
+        
+        // Test alias mappings
+        { 
+          name: 'Alias: small_talk -> secret_chat',
+          actionId: 'small_talk',
+          expectedId: 'secret_chat',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Alias: compliment -> secret_chat',
+          actionId: 'compliment',
+          expectedId: 'secret_chat',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Alias: strategize -> secret_chat',
+          actionId: 'strategize',
+          expectedId: 'secret_chat',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Alias: gossip -> plant_rumor',
+          actionId: 'gossip',
+          expectedId: 'plant_rumor',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Alias: lie -> plant_rumor',
+          actionId: 'lie',
+          expectedId: 'plant_rumor',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Alias: interrogate -> probe_hoh',
+          actionId: 'interrogate',
+          expectedId: 'probe_hoh',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Alias: backstab -> betrayal_tease',
+          actionId: 'backstab',
+          expectedId: 'betrayal_tease',
+          shouldHaveSpendPrompt: true
+        },
+        { 
+          name: 'Alias: insult -> rivalry_poke',
+          actionId: 'insult',
+          expectedId: 'rivalry_poke',
+          shouldHaveSpendPrompt: false // rivalry_poke is not spendable
+        },
+        
+        // Test non-existent action
+        { 
+          name: 'Non-existent action should return undefined',
+          actionId: 'fake_action_id',
+          expectedId: null,
+          shouldHaveSpendPrompt: false
+        }
+      ];
+      
+      let html = '';
+      let passed = 0;
+      let failed = 0;
+      
+      tests.forEach(test => {
+        const action = window.SocialActionsRegistry.get(test.actionId);
+        
+        // Check if action exists
+        const actionExists = action !== undefined && action !== null;
+        const expectedExists = test.expectedId !== null;
+        
+        if (actionExists !== expectedExists) {
+          html += `<div class="test-result fail">
+            ❌ ${test.name}<br>
+            Expected: ${expectedExists ? 'action found' : 'action not found'}<br>
+            Got: ${actionExists ? 'action found' : 'action not found'}
+          </div>`;
+          failed++;
+          return;
+        }
+        
+        if (!actionExists) {
+          html += `<div class="test-result pass">
+            ✓ ${test.name}<br>
+            Result: undefined (as expected)
+          </div>`;
+          passed++;
+          return;
+        }
+        
+        // Check if resolved to correct action
+        const correctId = action.id === test.expectedId;
+        const hasSpendPrompt = action.spendable === true;
+        const spendPromptCorrect = hasSpendPrompt === test.shouldHaveSpendPrompt;
+        
+        if (correctId && spendPromptCorrect) {
+          html += `<div class="test-result pass">
+            ✓ ${test.name}<br>
+            Resolved to: ${action.id} (${action.label})<br>
+            Spendable: ${action.spendable} ✓<br>
+            Cost: ${action.cost || 'N/A'}
+          </div>`;
+          passed++;
+        } else {
+          html += `<div class="test-result fail">
+            ❌ ${test.name}<br>
+            Expected ID: ${test.expectedId}<br>
+            Got ID: ${action.id}<br>
+            Expected spendable: ${test.shouldHaveSpendPrompt}<br>
+            Got spendable: ${action.spendable}
+          </div>`;
+          failed++;
+        }
+      });
+      
+      html = `<div class="test-result info">
+        Results: ${passed} passed, ${failed} failed (${passed + failed} total)
+      </div>` + html;
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    function setupListener() {
+      const statusDiv = document.getElementById('listenerStatus');
+      
+      window.addEventListener('social.action:result', (e) => {
+        console.group('🎭 social.action:result');
+        console.log('Event detail:', e.detail);
+        
+        if (e.detail.spendPrompt) {
+          console.log('✓ spendPrompt:', e.detail.spendPrompt);
+        } else {
+          console.warn('✗ No spendPrompt in payload');
+        }
+        
+        if (e.detail.flavorText) {
+          console.log('✓ flavorText:', e.detail.flavorText);
+        }
+        
+        if (e.detail.detailedText) {
+          console.log('✓ detailedText:', e.detail.detailedText);
+        }
+        
+        if (e.detail.truthiness !== undefined) {
+          console.log('✓ truthiness:', e.detail.truthiness);
+        }
+        
+        console.groupEnd();
+      });
+      
+      statusDiv.innerHTML = `<div class="test-result pass">
+        ✓ Event listener installed. Check console for social.action:result events.
+      </div>`;
+    }
+
+    // Run on load
+    window.addEventListener('DOMContentLoaded', () => {
+      displayConfigResults();
+      console.log('🎯 Social Actions Registry loaded');
+      console.log('Total actions:', window.SocialActionsRegistry.list().length);
+      console.log('Aliases:', Object.keys(window.SocialActionsRegistry._aliases));
+    });
+  </script>
+</body>
+</html>
