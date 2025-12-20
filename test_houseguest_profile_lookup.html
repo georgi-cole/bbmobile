@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Houseguest Profile Lookup Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    
+    .roster .item {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 5px;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .roster .item:hover {
+      background: #e0e0e0;
+    }
+    
+    #roster-hover {
+      position: fixed;
+      top: 50px;
+      right: 20px;
+      background: white;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 15px;
+      min-width: 200px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    #roster-hover.hidden {
+      display: none;
+    }
+    
+    #houseguest-sheet {
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 2px solid #333;
+      border-radius: 16px 16px 0 0;
+      padding: 20px;
+      max-height: 70vh;
+      overflow-y: auto;
+      transition: bottom 0.3s ease;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+    }
+    
+    #houseguest-sheet.open {
+      bottom: 0;
+    }
+    
+    .close-btn {
+      float: right;
+      padding: 5px 10px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .ally {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    
+    .allies, .enemies {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .allies li, .enemies li {
+      padding: 5px 0;
+    }
+    
+    .none {
+      color: #999;
+      font-style: italic;
+    }
+    
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: #1976D2;
+    }
+    
+    .log {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Houseguest Profile Lookup Test</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Lookup Utility</h2>
+    <p>Test the canonical lookup utility with various keys</p>
+    <button onclick="testLookup('finn')">Lookup by ID: 'finn'</button>
+    <button onclick="testLookup('Finn')">Lookup by Name: 'Finn'</button>
+    <button onclick="testLookup('Lia')">Lookup by Name: 'Lia'</button>
+    <button onclick="testLookup('Kian')">Lookup by Name: 'Kian'</button>
+    <button onclick="testLookup('Noa')">Lookup by Name: 'Noa'</button>
+    <button onclick="testLookup(1)">Lookup by ID: 1</button>
+    <div id="lookup-result" class="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Desktop Hover (Roster)</h2>
+    <p>Hover over houseguest names to see profile:</p>
+    <div class="roster">
+      <div class="item" data-houseguest-name="Finn">Finn</div>
+      <div class="item" data-houseguest-name="Mimi">Mimi</div>
+      <div class="item" data-houseguest-name="Rae">Rae</div>
+      <div class="item" data-houseguest-name="Lia">Lia</div>
+      <div class="item" data-houseguest-name="Kian">Kian</div>
+      <div class="item" data-houseguest-name="Noa">Noa</div>
+    </div>
+    <div id="roster-hover" class="hidden"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: Mobile Bottom Sheet</h2>
+    <p>Click to open profile in bottom sheet:</p>
+    <button onclick="openSheet('Finn')">Open Finn</button>
+    <button onclick="openSheet('Lia')">Open Lia</button>
+    <button onclick="openSheet('Kian')">Open Kian</button>
+    <button onclick="openSheet('Noa')">Open Noa</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 4: Social Relationships</h2>
+    <p>Simulate social relationship updates:</p>
+    <button onclick="createAlliance(1, 2)">Create alliance: Player 1 ↔ Player 2</button>
+    <button onclick="createAlliance(1, 3)">Create alliance: Player 1 ↔ Player 3</button>
+    <button onclick="emitSocialUpdate()">Emit social:updated event</button>
+    <div id="social-log" class="log"></div>
+  </div>
+  
+  <!-- Bottom Sheet -->
+  <div id="houseguest-sheet">
+    <button class="close-btn" onclick="closeSheet()">Close</button>
+    <div class="content"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/data/houseguests.js"></script>
+  
+  <!-- Mock game structure -->
+  <script>
+    // Initialize game structure
+    window.game = window.game || {};
+    window.game.bus = window.game.bus || new BBGameBus();
+    window.game.players = window.game.players || [];
+    
+    // Create mock players from houseguests
+    const houseguests = window.Houseguests.getAll();
+    window.game.players = houseguests.slice(0, 6).map((h, i) => ({
+      id: i + 1,
+      name: h.name,
+      age: h.age,
+      location: h.location,
+      bio: h.story,
+      motto: h.motto,
+      funFact: h.funFact,
+      allies: [],
+      enemies: [],
+      evicted: false
+    }));
+    
+    console.info('[Test] Initialized game with', window.game.players.length, 'players');
+  </script>
+  
+  <!-- Load modules -->
+  <script type="module">
+    import { getProfileByKey } from './js/utils/houseguestLookup.js';
+    import { HouseguestSheet } from './js/ui/houseguestSheet.js';
+    import { RosterHover } from './js/ui/rosterHover.js';
+    
+    // Make available globally for test buttons
+    window.getProfileByKey = getProfileByKey;
+    window.HouseguestSheet = HouseguestSheet;
+    window.RosterHover = RosterHover;
+    
+    // Attach roster hover
+    RosterHover.attach('.roster .item');
+    
+    console.info('[Test] Modules loaded successfully');
+  </script>
+  
+  <script>
+    function testLookup(key) {
+      const result = window.getProfileByKey(key);
+      const resultDiv = document.getElementById('lookup-result');
+      if (result) {
+        resultDiv.innerHTML = `<strong>Found:</strong> ${result.name} (id: ${result.id})<br>` +
+          `Bio: ${(result.bio || result.story || 'N/A').substring(0, 100)}...<br>` +
+          `Allies: ${result.allies ? result.allies.join(', ') : 'None'}<br>` +
+          `Enemies: ${result.enemies ? result.enemies.join(', ') : 'None'}`;
+      } else {
+        resultDiv.innerHTML = `<strong style="color: red;">Not found:</strong> ${key}`;
+      }
+    }
+    
+    function openSheet(key) {
+      window.HouseguestSheet.open(key);
+    }
+    
+    function closeSheet() {
+      window.HouseguestSheet.close();
+    }
+    
+    function createAlliance(playerId1, playerId2) {
+      const player1 = window.game.players.find(p => p.id === playerId1);
+      const player2 = window.game.players.find(p => p.id === playerId2);
+      
+      if (player1 && player2) {
+        if (!player1.allies.includes(playerId2)) {
+          player1.allies.push(playerId2);
+        }
+        if (!player2.allies.includes(playerId1)) {
+          player2.allies.push(playerId1);
+        }
+        
+        const log = document.getElementById('social-log');
+        log.innerHTML += `Alliance created: ${player1.name} ↔ ${player2.name}<br>`;
+        
+        console.info('[Test] Created alliance:', player1.name, '↔', player2.name);
+      }
+    }
+    
+    function emitSocialUpdate() {
+      if (window.game.bus && typeof window.game.bus.emit === 'function') {
+        window.game.bus.emit('social:updated', {});
+        window.game.bus.emit('social.relation.changed', {});
+        
+        const log = document.getElementById('social-log');
+        log.innerHTML += 'Emitted social update events<br>';
+        
+        console.info('[Test] Emitted social update events');
+      }
+    }
+  </script>
+</body>
+</html>
