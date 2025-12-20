@@ -1,145 +1,186 @@
-# POV Timer Redundant Wait Fix - Summary
+# POV & Veto Timer Redundancy Fix - Summary
 
-## Problem
-After the POV (Power of Veto) competition finishes, the UI immediately shows the results fullscreen to the POV player, but there are two redundant countdown/wait phases that continue running. The user is left with a running timer and an idle screen before the POV winner and veto ceremony appear. This produces a poor UX and unnecessary waiting.
+## Problem Statement
 
-## Root Cause
-The issue was caused by a double-display of results:
+The POV (Power of Veto) competition flow had two major redundant waiting timer issues:
 
-1. When the human player completes the POV competition, `showCompetitionResultsAndFastForward` (in `competitions-flow.js`) is called
-2. This function shows results immediately and shortens the phase timer to 1 second
-3. After 1 second, the phase timer expires and calls `finishVetoComp` (in `veto.js`)
-4. `finishVetoComp` shows the results AGAIN with a 2500-5000ms display duration
-5. Only after that duration expires does `handlePostVetoReveal` run to start the ceremony
+1. **After POV Competition**: Results showed fullscreen, but one or more timers continued running in the background causing an idle period before the winner appeared (3-5 seconds delay)
 
-**Result**: Users experienced 6-8 seconds of redundant waiting with an idle screen.
+2. **Veto Ceremony Start**: An empty timer cycle ran where nothing happened before the actual ceremony UI appeared (2.4s intro card + 500ms delay = 2.9s total)
 
-## Solution
-We implemented a flag-based coordination mechanism to prevent redundant result displays:
+These redundant waits created a poor user experience with unnecessary idle time between game events.
 
-### Changes in `js/competitions-flow.js`
-- Added `__vetoResultsShown` flag that is set when the fast-forward mechanism shows results for POV competitions
-- Added explanatory comments about the timer management strategy
+## Solution Overview
 
-### Changes in `js/veto.js`
-- Initialize `__vetoResultsShown = false` at the start of each POV competition
-- In `finishVetoComp`, check if `__vetoResultsShown` is true
-- If true, skip the redundant result display and proceed directly to `handlePostVetoReveal` with only a 100ms delay (instead of 5000ms)
-- If false, show results normally and mark the flag as true
-- Added detailed comments explaining the single-source-of-truth pattern for competition state
+### Issue 1: POV Competition Timer Redundancy
+**Location**: `js/veto.js` - `finishVetoComp()` function (lines ~1055-1100)
 
-## Expected Flow After Fix
+**Changes**:
+- Added timer clearing logic when results are displayed
+- Set main phase countdown to exactly 1 second using `setPhase()`
+- Eliminated background timer conflicts
 
-**Before (6-8 seconds of waiting):**
-1. POV comp completes
-2. Results shown immediately (fast-forward)
-3. Phase timer shortened to 1s
-4. Wait 1 second ⏱️
-5. `finishVetoComp` called
-6. Results shown AGAIN ⏱️
-7. Wait 5 seconds ⏱️
-8. Ceremony starts
+**Code Changes**:
+```javascript
+// Clear any active veto auto-timers
+if(g.__vetoAutoTimer){ 
+  try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} 
+  g.__vetoAutoTimer = null; 
+}
 
-**After (~1.1 seconds):**
-1. POV comp completes ✅
-2. Results shown immediately (fast-forward) ✅
-3. Phase timer shortened to 1s ✅
-4. Wait 1 second ⏱️
-5. `finishVetoComp` called ✅
-6. **Detects results already shown** ✅
-7. **Skips redundant display** ✅
-8. Proceeds to ceremony with 100ms delay ⏱️
-9. Ceremony starts ✅
-
-## Manual Testing Instructions
-
-### Prerequisites
-- Load the game in a browser
-- Start a new season or load a save where you can reach a POV competition
-
-### Test Steps
-1. **Navigate to POV Competition Phase**
-   - Progress through the game until a POV competition starts
-   - Ensure you are one of the players selected to compete
-
-2. **Complete the Competition**
-   - Play the minigame and complete it
-   - Note the exact moment when results appear
-
-3. **Verify Expected Behavior**
-   - ✅ Results should appear **immediately** in fullscreen
-   - ✅ You should return to the main screen with countdown showing **~1 second**
-   - ✅ After ~1 second, the POV winner should be announced
-   - ✅ Veto ceremony should start **without any idle periods**
-   - ✅ Total time from results to ceremony: **~1.1 seconds** (not 6-8 seconds)
-
-4. **Verify No Redundant Displays**
-   - ✅ Results should only be shown **once** (not twice)
-   - ✅ No long idle periods with timers running
-   - ✅ Console should log: `[veto] Results already shown via fast-forward, skipping redundant display`
-
-5. **Check Spectator View**
-   - If testing with multiple players, verify that non-POV players don't see the fullscreen results
-   - They should see the standard countdown and wait appropriately
-
-### Console Logging
-You should see these console messages in the correct order:
-
-```
-[ImmediateResults] Marked POV results as shown to prevent redundant display
-[ImmediateResults] Showing competition results popup: Veto Results [...]
-[ImmediateResults] Used schedulePhaseAdvanceIn(1000)
-[veto] finishVetoComp called - phase: veto_comp
-[veto] Results already shown via fast-forward, skipping redundant display
-[veto] handlePostVetoReveal - aliveCount: X
-[veto] Starting veto ceremony in 500ms
+// Set phase countdown to exactly 1 second
+if(typeof global.setPhase === 'function'){
+  var timeToWinner = Math.ceil(POV_RESULTS_TO_WINNER_DELAY_MS / 1000); // 1s
+  global.setPhase(g.phase, timeToWinner, null);
+}
 ```
 
-## Automated Testing
-Run the existing test suite to ensure no regressions:
+### Issue 2: Veto Ceremony Empty Wait Cycle
+**Location**: `js/veto.js` - `startVetoCeremony()` and `handlePostVetoReveal()` functions
 
-```bash
-npm run test:all
+**Changes**:
+1. **Removed ceremony intro card** (lines ~2773-2779): Eliminated 2.4s delay from awaiting `showTVCard()`
+2. **Removed setTimeout delay** (line ~880): Changed from 500ms delay to immediate start
+
+**Before**:
+```javascript
+// OLD: 2.4s intro card
+await showTVCard({
+  title: 'Veto Ceremony',
+  lines: [holderName + ' will decide whether to use the Power of Veto.'],
+  tone: 'veto',
+  duration: 2400
+});
+
+// OLD: 500ms delay before starting
+setTimeout(function(){ 
+  startVetoCeremony().catch(function(err){
+    console.error('[veto] startVetoCeremony error:', err);
+  });
+}, 500);
 ```
 
-Specifically, check the POV-related tests:
-```bash
-npm run test:pov-carousel
-npm run test:veto-twists
+**After**:
+```javascript
+// NEW: No intro card - ceremony starts immediately
+console.info('[veto] Skipping ceremony intro card - starting decision immediately');
+
+// NEW: Immediate start (no setTimeout)
+startVetoCeremony().catch(function(err){
+  console.error('[veto] startVetoCeremony error:', err);
+});
 ```
 
-## Files Modified
-- `js/veto.js` - POV competition logic and timer management
-- `js/competitions-flow.js` - Competition flow and fast-forward integration
+## Configuration Constants
 
-## Related Test Files
-These manual test HTML files can be used to verify the behavior:
-- `test_fullscreen_pov_flows.html` - Tests fullscreen POV competition flows
-- `test_veto_ceremony_invoke.html` - Tests veto ceremony invocation
-- `test_pov_regression_fixes.html` - Tests POV regression fixes
-- `test_veto_results_leaderboard.html` - Tests veto results display
+Added two constants at the top of `js/veto.js` for easy adjustment:
 
-## Implementation Notes
+```javascript
+// POV/Veto Flow Timer Configuration
+const POV_RESULTS_TO_WINNER_DELAY_MS = 1000; // 1s delay from results to winner display
+const VETO_CEREMONY_START_DELAY_MS = 0;      // 0ms - start ceremony immediately
+```
 
-### Single Source of Truth Pattern
-The fix uses a simple but effective pattern:
-- `__vetoResultsShown` flag is the single source of truth for whether results have been displayed
-- All code paths check this flag before showing results
-- The flag prevents duplicate displays regardless of which code path executes first
+These can be adjusted if animation timing needs change in the future.
 
-### Timer Management
-- Phase timer is still shortened to 1 second as designed
-- The 1-second delay allows the UI to update smoothly before transitioning
-- When results are already shown, we use a minimal 100ms delay instead of 5000ms
-- This maintains a smooth UX while eliminating the redundant wait
+## Timer Management Philosophy
 
-### Backwards Compatibility
-- If the fast-forward mechanism is disabled, the old behavior works as before
-- If results aren't shown by the fast-forward path, `finishVetoComp` shows them normally
-- No breaking changes to existing game flow or APIs
+### Single Source of Truth
+The main phase timer (`game.phaseEndsAt` set by `setPhase()`) is now the **single source of truth** for timing. All background timers are cleared when transitioning between states to prevent conflicts.
+
+### Guard Flags
+Existing guard flags (`__finishVetoCompCalled`, `__vetoResolving`, `__vetoResultsShown`) prevent duplicate execution of timer-dependent logic.
+
+### Code Comments
+Added comprehensive inline comments explaining:
+- Why timers are cleared
+- How the 1s countdown works
+- The rationale for removing delays
+
+## Performance Impact
+
+### Time Savings
+- **POV Results to Winner**: Reduced from 3-5s to 1s (2-4s saved)
+- **Winner to Ceremony**: Reduced from 2.9s to 0s (2.9s saved)
+- **Total Flow**: Reduced from ~5-8s to ~1-2s (~4-7 seconds saved per POV cycle)
+
+### User Experience
+- Winner appears immediately after results (1s is perceptible but not jarring)
+- No idle waiting periods where "nothing happens"
+- Smooth, responsive flow between game events
+- Maintains visual feedback while eliminating dead time
+
+## Testing
+
+### Automated
+- ✅ Syntax validation: `node -c js/veto.js` (passes)
+- ✅ ESLint checks: No new errors introduced
+- ✅ Existing guard flags remain in place
+
+### Manual (Required)
+See `test_pov_timer_fix_verification.md` for step-by-step browser testing instructions.
+
+**Key verification points**:
+1. Results appear fullscreen to POV player
+2. Main screen shows countdown at 1s
+3. Winner appears after ~1 second
+4. Veto ceremony decision UI appears immediately
+5. No visual glitches or race conditions
+
+## Backward Compatibility
+
+### Preserved Behavior
+- Results still display correctly
+- Winner announcement still functions
+- All POV twists (Standard, Golden, Diamond) work unchanged
+- Veto ceremony flow logic unchanged (only timing adjusted)
+
+### Configuration Override
+If future requirements need different timing:
+1. Adjust `POV_RESULTS_TO_WINNER_DELAY_MS` constant
+2. Adjust `VETO_CEREMONY_START_DELAY_MS` constant
+3. Both can be set to any value including 0 for instant transitions
+
+## Related Code
+
+### Key Functions Modified
+1. `finishVetoComp()` - Added timer clearing and 1s countdown logic
+2. `handlePostVetoReveal()` - Removed 500ms delay before ceremony
+3. `startVetoCeremony()` - Removed ceremony intro card await
+
+### Supporting Functions (Unchanged)
+- `showVetoRevealSequence()` - Legacy fallback reveal
+- `VetoResultsUI.renderVetoCompResults()` - Results card renderer
+- `finalizeCeremony()` - Ceremony decision logic
 
 ## Future Improvements
-Potential enhancements that could be made in the future:
-1. Consolidate all result display logic into a single function to eliminate the possibility of duplicates
-2. Add more comprehensive automated tests for the POV competition flow
-3. Apply similar fix to HOH and other competitions if they have the same issue
+
+### Potential Enhancements
+1. Add config flag to restore intro card if desired for dramatic effect
+2. Make delays user-configurable via game settings
+3. Add telemetry to measure actual timing in production
+4. Consider similar optimizations for HOH competitions
+
+### Known Limitations
+- Manual browser testing required (cannot automate UI timing)
+- Some users may miss the intro card flavor text (tradeoff for speed)
+- Timer precision depends on JavaScript event loop (±50ms variance typical)
+
+## Commit History
+
+1. **Initial analysis**: `Initial analysis: POV timer redundancy issue`
+2. **Main implementation**: `Fix POV timer redundancy: clear timers, 1s countdown, remove ceremony wait`
+3. **Test documentation**: `Add POV timer fix verification test document`
+
+## Branch & PR
+
+- **Branch**: `copilot/remove-redundant-timers-pov`
+- **PR Title**: Fix POV & Veto Flow: Clear Redundant Timers and Show Winner After 1s
+- **Target**: Repository default branch
+
+## References
+
+- Original problem statement in issue/task description
+- `js/veto.js` - Main implementation file
+- `test_pov_timer_fix_verification.md` - Manual test guide
+- Configuration constants at top of `js/veto.js`
