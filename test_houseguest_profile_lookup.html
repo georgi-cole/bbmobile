@@ -183,7 +183,12 @@
   <script>
     // Initialize game structure
     window.game = window.game || {};
-    window.game.bus = window.game.bus || new BBGameBus();
+    window.game.bus = window.game.bus || window.bbGameBus || {
+      on: function() {},
+      emit: function() {},
+      once: function() {},
+      off: function() {}
+    };
     window.game.players = window.game.players || [];
     
     // Create mock players from houseguests
