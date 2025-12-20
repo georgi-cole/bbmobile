@@ -78,23 +78,20 @@
           const allSame = states.every(s => s === states[0]);
           
           if(allSame){
-            const rawScore = Math.min(100, Math.max(30, 100 - moves * 3));
+            // Calculate raw score based on moves (less moves = better score)
+            const rawScore = Math.max(30, 100 - moves * 3);
             
-            // Determine if player succeeded
-            const playerSucceeded = rawScore >= 60; // 60% threshold for success
+            // Use MinigameScoring to normalize to 0-1000 scale
+            const finalScore = g.MinigameScoring ? 
+              g.MinigameScoring.calculateFinalScore({
+                rawScore: rawScore,
+                minScore: 30,
+                maxScore: 100,
+                compBeast: 0.5
+              }) :
+              rawScore * 10; // Fallback: scale to 0-1000
             
-            // Apply win probability logic
-            let finalScore = rawScore;
-            if(g.GameUtils && !debugMode && competitionMode){
-              const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-              if(!shouldWin && playerSucceeded){
-                // Force loss despite success (25% win rate)
-                finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
-                console.log('[GridLock] Win probability applied: success forced to loss');
-              }
-            }
-            
-            if(onComplete) onComplete(finalScore);
+            if(onComplete) onComplete(Math.round(finalScore));
           }
         }, 100);
       });
