@@ -405,12 +405,25 @@
     // First, try direct lookup
     let action = Registry._actions[id];
     
-    // If not found, check aliases
-    if (!action && Registry._aliases[id]) {
-      const canonicalId = Registry._aliases[id];
-      action = Registry._actions[canonicalId];
+    // If not found, check aliases (prefer external alias file if available)
+    if (!action) {
+      let canonicalId = null;
       
-      if (action) {
+      // Try external alias file first (if loaded)
+      if (global.SocialRegistryAliases && typeof global.SocialRegistryAliases.resolve === 'function') {
+        canonicalId = global.SocialRegistryAliases.resolve(id);
+        if (canonicalId !== id) {
+          action = Registry._actions[canonicalId];
+        }
+      }
+      
+      // Fallback to internal aliases
+      if (!action && Registry._aliases[id]) {
+        canonicalId = Registry._aliases[id];
+        action = Registry._actions[canonicalId];
+      }
+      
+      if (action && canonicalId) {
         console.debug('[social-actions-registry] Resolved legacy id "' + id + '" -> "' + canonicalId + '"');
       }
     }
