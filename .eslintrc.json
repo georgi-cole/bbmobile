@@ -77,6 +77,12 @@
       "globals": {
         "g": "readonly"
       }
+    },
+    {
+      "files": ["js/utils/houseguestLookup.js", "js/ui/houseguestSheet.js", "js/ui/rosterHover.js"],
+      "parserOptions": {
+        "sourceType": "module"
+      }
     }
   ]
 }

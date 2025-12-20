@@ -22,7 +22,7 @@ export const RosterHover = (() => {
     return alliesIds.map(targetId => {
       const ally = getProfileByKey(targetId);
       return ally ? ally.name : `Player ${targetId}`;
-    }).filter(name => name != null);
+    }).filter(name => name !== null && name !== undefined);
   }
 
   /**

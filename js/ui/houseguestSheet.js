@@ -27,7 +27,7 @@ export const HouseguestSheet = (() => {
         id: ally ? ally.id : targetId,
         name: ally ? ally.name : `Player ${targetId}`
       };
-    }).filter(a => a.id != null);
+    }).filter(a => a.id !== null && a.id !== undefined);
   }
 
   /**
@@ -47,7 +47,7 @@ export const HouseguestSheet = (() => {
         id: enemy ? enemy.id : targetId,
         name: enemy ? enemy.name : `Player ${targetId}`
       };
-    }).filter(e => e.id != null);
+    }).filter(e => e.id !== null && e.id !== undefined);
   }
 
   /**

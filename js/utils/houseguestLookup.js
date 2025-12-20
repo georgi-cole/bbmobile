@@ -14,7 +14,7 @@
  * @returns {object|null} Player/houseguest object or null if not found
  */
 export function getProfileByKey(key) {
-  if (key == null) return null;
+  if (key === null || key === undefined) return null;
   
   const strKey = String(key);
   
