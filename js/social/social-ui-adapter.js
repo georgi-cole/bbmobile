@@ -273,7 +273,7 @@
     
     if (!container) {
       console.warn('[social-ui-adapter] Cannot create fallback - no DR container found');
-      updateHUDMessage('⚠️ No Diary Room container found');
+      if (hudElement) updateHUDMessage('⚠️ No Diary Room container found');
       return;
     }
     
@@ -283,12 +283,21 @@
     fallback.dataset.entryId = entryId;
     fallback.dataset.fallback = 'true';
     
-    fallback.innerHTML = `
-      <div class="entry-content">
-        <span class="entry-icon">🔒</span>
-        <span class="entry-text">Hidden social interaction (entry not found in standard location)</span>
-      </div>
-    `;
+    // Create content using DOM methods (safer than innerHTML)
+    const content = document.createElement('div');
+    content.className = 'entry-content';
+    
+    const icon = document.createElement('span');
+    icon.className = 'entry-icon';
+    icon.textContent = '🔒';
+    
+    const text = document.createElement('span');
+    text.className = 'entry-text';
+    text.textContent = 'Hidden social interaction (entry not found in standard location)';
+    
+    content.appendChild(icon);
+    content.appendChild(text);
+    fallback.appendChild(content);
     
     // Add CTA
     attachCTAToEntry(fallback, entryId, spendPrompt, detailedText);
@@ -297,7 +306,7 @@
     container.appendChild(fallback);
     
     console.info('[social-ui-adapter] Created fallback entry for', entryId);
-    updateHUDMessage(`✓ Created fallback entry: ${entryId}`);
+    if (hudElement) updateHUDMessage(`✓ Created fallback entry: ${entryId}`);
   }
 
   /**
@@ -309,7 +318,7 @@
     
     if (!playerId) {
       console.warn('[social-ui-adapter] No local player ID found');
-      updateHUDMessage('⚠️ No local player ID');
+      if (hudElement) updateHUDMessage('⚠️ No local player ID');
       return;
     }
     
@@ -325,7 +334,7 @@
     // Check affordability
     if (!canAfford(playerId, cost)) {
       console.warn('[social-ui-adapter] Cannot afford:', cost, 'energy');
-      updateHUDMessage(`⚠️ Not enough energy (need ${cost})`);
+      if (hudElement) updateHUDMessage(`⚠️ Not enough energy (need ${cost})`);
       emitEvent('social.spend:fail', { entryId, playerId, cost, reason: 'insufficient_funds' });
       
       // Visual feedback
@@ -346,7 +355,7 @@
     
     if (!success) {
       console.error('[social-ui-adapter] Failed to deduct energy');
-      updateHUDMessage('⚠️ Deduction failed');
+      if (hudElement) updateHUDMessage('⚠️ Deduction failed');
       emitEvent('social.spend:fail', { entryId, playerId, cost, reason: 'deduction_failed' });
       return;
     }
@@ -361,7 +370,7 @@
     revealDetailedText(entryEl, detailedText);
     
     // Update HUD
-    updateHUDMessage(`✅ Revealed: ${entryId} (-${cost} energy)`);
+    if (hudElement) updateHUDMessage(`✅ Revealed: ${entryId} (-${cost} energy)`);
     
     console.info('[social-ui-adapter] ✓ Spent', cost, 'energy to reveal', entryId);
   }
@@ -376,13 +385,20 @@
       cta.remove();
     }
     
-    // Create revealed content container
+    // Create revealed content container using DOM methods
     const revealedDiv = document.createElement('div');
     revealedDiv.className = 'social-revealed-content';
-    revealedDiv.innerHTML = `
-      <div class="revealed-label">💎 Revealed Details:</div>
-      <div class="revealed-text">${detailedText || 'No additional details available.'}</div>
-    `;
+    
+    const label = document.createElement('div');
+    label.className = 'revealed-label';
+    label.textContent = '💎 Revealed Details:';
+    
+    const text = document.createElement('div');
+    text.className = 'revealed-text';
+    text.textContent = detailedText || 'No additional details available.';
+    
+    revealedDiv.appendChild(label);
+    revealedDiv.appendChild(text);
     
     // Style
     revealedDiv.style.cssText = `
@@ -395,22 +411,16 @@
       line-height: 1.4;
     `;
     
-    const label = revealedDiv.querySelector('.revealed-label');
-    if (label) {
-      label.style.cssText = `
-        font-weight: 600;
-        color: #667eea;
-        margin-bottom: 4px;
-      `;
-    }
+    label.style.cssText = `
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 4px;
+    `;
     
-    const text = revealedDiv.querySelector('.revealed-text');
-    if (text) {
-      text.style.cssText = `
-        white-space: pre-wrap;
-        color: var(--ink, #333);
-      `;
-    }
+    text.style.cssText = `
+      white-space: pre-wrap;
+      color: var(--ink, #333);
+    `;
     
     // Append to entry
     entryEl.appendChild(revealedDiv);
@@ -505,7 +515,7 @@
     attachCTAToEntryWithRetry(entryId, spendPrompt, detailedText);
     
     // Update HUD
-    updateHUDMessage(`🔔 New spendable: ${entryId}`);
+    if (hudElement) updateHUDMessage(`🔔 New spendable: ${entryId}`);
   }
 
   /**
@@ -540,7 +550,7 @@
     attachCTAToEntryWithRetry(entryId, spendPrompt, detailedText);
     
     // Update HUD
-    updateHUDMessage(`🔔 New story entry: ${entryId}`);
+    if (hudElement) updateHUDMessage(`🔔 New story entry: ${entryId}`);
   }
 
   // ============================================================================
@@ -739,14 +749,26 @@
       msgEl.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
     }
     
-    // Update spendables list
+    // Update spendables list using DOM methods to avoid XSS
     const spendablesEl = hudElement.querySelector('#hudSpendables');
     if (spendablesEl) {
-      spendablesEl.innerHTML = recentSpendables.map((s, i) => `
-        <div style="padding: 4px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-          ${i + 1}. ${s.entryId} - ${s.spendPrompt.text || 'Reveal'} (${s.spendPrompt.cost || 1} energy)
-        </div>
-      `).join('') || '<div style="padding: 4px; opacity: 0.5;">No recent spendables</div>';
+      // Clear existing content
+      spendablesEl.innerHTML = '';
+      
+      if (recentSpendables.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.style.cssText = 'padding: 4px; opacity: 0.5;';
+        emptyDiv.textContent = 'No recent spendables';
+        spendablesEl.appendChild(emptyDiv);
+      } else {
+        recentSpendables.forEach((s, i) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.style.cssText = 'padding: 4px; border-bottom: 1px solid rgba(255,255,255,0.1);';
+          // Use textContent to safely render user data
+          itemDiv.textContent = `${i + 1}. ${s.entryId} - ${s.spendPrompt.text || 'Reveal'} (${s.spendPrompt.cost || 1} energy)`;
+          spendablesEl.appendChild(itemDiv);
+        });
+      }
     }
   }
 
@@ -756,7 +778,7 @@
   function refreshHUD() {
     if (cfg.debugSocialHUD) {
       createDebugHUD();
-      updateHUDMessage('🔄 HUD refreshed');
+      if (hudElement) updateHUDMessage('🔄 HUD refreshed');
     } else {
       if (hudElement) {
         hudElement.remove();
@@ -787,7 +809,7 @@
     setMockEnergy(playerId, amount) {
       global.__smDebug.fakeBank.set(playerId, amount);
       console.info('[social-ui-adapter] Set mock energy:', playerId, '=', amount);
-      updateHUDMessage(`✓ Mock energy: ${playerId} = ${amount}`);
+      if (hudElement) updateHUDMessage(`✓ Mock energy: ${playerId} = ${amount}`);
     },
     
     /**
@@ -827,7 +849,7 @@
     // Delay HUD creation slightly to ensure DOM is ready
     setTimeout(() => {
       createDebugHUD();
-      updateHUDMessage('✓ Social UI Adapter ready');
+      if (hudElement) updateHUDMessage('✓ Social UI Adapter ready');
     }, 500);
   }
 
