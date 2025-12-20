@@ -44,7 +44,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow: visible; /* Allow avatars to render fully without clipping */
+  overflow: visible !important; /* Allow avatars to render fully without clipping */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
   padding: 2px 16px; /* COMPACT MODE: Further reduced padding for ultra-tight layout */
@@ -67,6 +67,7 @@
   overflow: auto; /* Enable scrolling on the track, not the stage container */
   max-height: min(46vh, 340px); /* Bounded height for scrolling */
   scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
+  overflow-y: visible !important; /* Allow vertical overflow for avatar circles */
 }
 
 .lv-overlay__nominee {
@@ -83,6 +84,8 @@
   filter: blur(2px);
   cursor: pointer;
   scroll-snap-align: center; /* Snap to center of carousel */
+  padding: 8px; /* Breathing room for avatar circle */
+  min-width: 0; /* Allow shrinking if needed */
 }
 
 .lv-overlay__nominee.center {
@@ -103,8 +106,8 @@
   height: var(--avatarSize);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
               height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden; /* Critical: ensures true circle crop without edge clipping */
-  border-radius: 50%; /* Ensures container is circular */
+  overflow: hidden !important; /* Critical: ensures true circle crop without edge clipping */
+  border-radius: 50% !important; /* Ensures container is circular */
   flex: 0 0 auto;
   box-sizing: border-box;
 }
@@ -120,8 +123,8 @@
   height: 100%;
   border-radius: 50%;
   border: 3px solid rgba(255, 107, 107, 0.5);
-  object-fit: cover; /* Prevents stretching/cut weirdness */
-  display: block; /* Removes inline spacing issues */
+  object-fit: cover !important; /* Prevents stretching/cut weirdness */
+  display: block !important; /* Removes inline spacing issues */
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   background: rgba(20, 35, 55, 0.8);
   transition: all 0.3s ease;
@@ -155,10 +158,15 @@
 
 /* Legacy stage navigation arrows - hidden in favor of CTA row nav buttons */
 /* Keep in DOM for backwards compatibility but hide visually and disable interaction */
-.lv-overlay__arrow {
+/* Scope to vote overlay only to avoid breaking other screens */
+.lv-overlay .lv-overlay__arrow,
+.lv-overlay .lv-overlay__carousel .lv-overlay__arrow,
+.lv-overlay__carousel button.prev,
+.lv-overlay__carousel button.next {
   opacity: 0 !important;
   pointer-events: none !important;
   display: none !important;
+  visibility: hidden !important;
 }
 
 /* Confirmation container - positioned close to selected avatar (directly below, 8-12px gap) */

@@ -93,6 +93,7 @@
     <h2>Compact Vote UI Test - Nav Arrows & Avatar Reflow</h2>
     <button onclick="showVoteOverlay(2)">Show Vote Overlay (2 nominees)</button>
     <button onclick="showVoteOverlay(3)">Show Vote Overlay (3 nominees)</button>
+    <button onclick="showVoteOverlay(5)">Show Vote Overlay (5 nominees)</button>
     <button onclick="showVoteOverlay(1)">Show Vote Overlay (1 nominee)</button>
     <button onclick="hideVoteOverlay()">Hide Vote Overlay</button>
   </div>
@@ -135,7 +136,7 @@
     window.game = { cfg: {} };
     window.getP = (id) => ({ 
       id, 
-      name: id === 1 ? 'Alice' : id === 2 ? 'Bob' : id === 3 ? 'Charlie' : 'Player ' + id,
+      name: id === 1 ? 'Alice' : id === 2 ? 'Bob' : id === 3 ? 'Charlie' : id === 4 ? 'Diana' : id === 5 ? 'Eve' : 'Player ' + id,
       avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}`
     });
     window.safeName = (id) => window.getP(id)?.name || 'Unknown';
