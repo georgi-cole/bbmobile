@@ -17,6 +17,11 @@
   const FINAL_FORCE_MS = 5000; // Force resolve in final 5s
   const BASE_NO_NOMINATION_CHANCE = 0.65; // 65% base chance AI respects deal
   const MOVE_THRESHOLD = 15; // pixels
+  const POV_MAX_DROPS_PER_TICK = 1; // POV: max 1 drop per tick
+  const HOH_MAX_DROPS_PER_TICK = 2; // HOH: max 2 drops per tick
+  const DROP_STAGGER_MIN_MS = 800; // Minimum delay between sequential drops
+  const DROP_STAGGER_MAX_MS = 1200; // Maximum delay between sequential drops
+  const DROP_COMPLETION_BUFFER_MS = 1500; // Buffer for drop sequence completion checks
 
   /**
    * Simple Linear Congruential Generator for seeded random numbers
@@ -179,6 +184,7 @@
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
     // Timer display - HIDDEN per requirements (no visible countdown)
+    // NOTE: timerDiv is intentionally hidden and never updated for Hold the Wall
     const timerDiv = document.createElement('div');
     timerDiv.textContent = ''; // Empty - no visible timer
     timerDiv.style.cssText = 'display:none;'; // Hidden
@@ -248,11 +254,11 @@
     // Game state
     let startTime = null;
     let isHolding = false;
-    let timerInterval = null; // Not used for visible timer, but kept for internal tracking
     let initialPos = null;
     let pulsateInterval = null;
     let sheenInterval = null;
     let hasEnded = false; // Guard to prevent duplicate end calls
+    let isProcessingDrops = false; // Lock to prevent overlapping drop sequences during tick processing
     
     // Participant tracking: { name, isPlayer, dropTimeMs, avatarEl, img, badge, player }
     let participants = [];
@@ -508,12 +514,16 @@
     }
     
     /**
-     * Multi-participant check: every 10s, each AI has 44% chance to drop
+     * Multi-participant check: every 10s, select candidates to drop based on competition type
+     * POV: max 1 drop per tick
+     * HOH: max 2 drops per tick
      */
     function startMultiParticipantChecks(){
       multiParticipantCheckInterval = setInterval(() => {
-        if(!isHolding || hasEnded) {
-          clearInterval(multiParticipantCheckInterval);
+        if(!isHolding || hasEnded || isProcessingDrops) {
+          if(!isHolding || hasEnded) {
+            clearInterval(multiParticipantCheckInterval);
+          }
           return;
         }
         
@@ -532,13 +542,8 @@
           return;
         }
         
-        // Roll for each AI participant
-        const aiParticipants = remaining.filter(p => !p.isPlayer);
-        aiParticipants.forEach(ai => {
-          if(rng() < MULTI_PARTICIPANT_DROP_CHANCE){
-            dropParticipant(ai, 'lost grip');
-          }
-        });
+        // Select candidates to drop based on competition type
+        selectAndDropCandidates(MULTI_PARTICIPANT_DROP_CHANCE, 'lost grip');
         
       }, MULTI_PARTICIPANT_CHECK_INTERVAL);
     }
@@ -563,10 +568,76 @@
     }
     
     /**
+     * Select and drop candidates based on probability and competition type limits
+     * POV: max 1 drop per tick
+     * HOH: max 2 drops per tick
+     * @param {number} dropProbability - Probability for each candidate (0-1)
+     * @param {string} reason - Reason for dropping
+     */
+    function selectAndDropCandidates(dropProbability, reason = 'dropped'){
+      if(isProcessingDrops) return; // Already processing drops
+      
+      // Get AI participants who haven't dropped yet
+      const aiParticipants = participants.filter(p => !p.isPlayer && !p.dropTimeMs);
+      if(aiParticipants.length === 0) return;
+      
+      // Determine max drops for this tick based on competition type
+      const maxDropsPerTick = detectedCompType === 'pov' ? POV_MAX_DROPS_PER_TICK : HOH_MAX_DROPS_PER_TICK;
+      
+      // Roll for each candidate and collect those who should drop
+      const candidatesToDrop = [];
+      for(const ai of aiParticipants){
+        if(rng() < dropProbability){
+          candidatesToDrop.push(ai);
+        }
+      }
+      
+      // Limit to max drops per tick
+      const selectedToDrop = candidatesToDrop.slice(0, maxDropsPerTick);
+      
+      if(selectedToDrop.length === 0) return;
+      
+      // Process drops sequentially with stagger
+      isProcessingDrops = true;
+      processSequentialDrops(selectedToDrop, reason, () => {
+        isProcessingDrops = false;
+      });
+    }
+    
+    /**
+     * Process drops sequentially with visual stagger
+     * @param {Array} dropList - Array of participants to drop
+     * @param {string} reason - Reason for dropping
+     * @param {Function} callback - Called when all drops are processed
+     */
+    function processSequentialDrops(dropList, reason, callback){
+      if(dropList.length === 0){
+        if(callback) callback();
+        return;
+      }
+      
+      const participant = dropList[0];
+      const remaining = dropList.slice(1);
+      
+      // Drop this participant
+      dropParticipant(participant, reason);
+      
+      // If more drops to process, wait before next drop
+      if(remaining.length > 0){
+        const staggerDelay = DROP_STAGGER_MIN_MS + Math.floor(rng() * (DROP_STAGGER_MAX_MS - DROP_STAGGER_MIN_MS));
+        setTimeout(() => {
+          processSequentialDrops(remaining, reason, callback);
+        }, staggerDelay);
+      } else {
+        // All drops processed
+        if(callback) callback();
+      }
+    }
+    
+    /**
      * Handle final two scenario
      */
     function handleFinalTwo(remaining){
-      const playerParticipant = remaining.find(p => p.isPlayer);
       const aiParticipant = remaining.find(p => !p.isPlayer);
       
       if(!aiParticipant){
@@ -683,8 +754,10 @@
       const maxChecks = 4; // ~20s / 5s = 4 checks
       
       acceleratedCheckInterval = setInterval(() => {
-        if(!isHolding || hasEnded){
-          clearInterval(acceleratedCheckInterval);
+        if(!isHolding || hasEnded || isProcessingDrops){
+          if(!isHolding || hasEnded){
+            clearInterval(acceleratedCheckInterval);
+          }
           return;
         }
         
@@ -697,22 +770,23 @@
         
         console.log(`[HoldWall] Accelerated check ${checkCount}/${maxChecks}, drop odds: ${(dropOdds*100).toFixed(0)}%`);
         
-        const remaining = participants.filter(p => !p.dropTimeMs && !p.isPlayer);
-        remaining.forEach(ai => {
-          if(rng() < dropOdds){
-            dropParticipant(ai, 'couldn\'t endure');
-          }
-        });
+        // Use sequential drop logic respecting max-per-tick rules
+        selectAndDropCandidates(dropOdds, 'couldn\'t endure');
         
-        // Check if we're down to final 2 or player won
-        const stillRemaining = participants.filter(p => !p.dropTimeMs);
-        if(stillRemaining.length === 2){
-          clearInterval(acceleratedCheckInterval);
-          handleFinalTwo(stillRemaining);
-        } else if(stillRemaining.length === 1 && stillRemaining[0].isPlayer){
-          clearInterval(acceleratedCheckInterval);
-          finalizeVictory();
-        }
+        // Check game state after drop sequence completes
+        // Note: DROP_COMPLETION_BUFFER_MS allows time for sequential drops to finish.
+        // Worst case: 2 drops with DROP_STAGGER_MAX_MS delay = ~DROP_STAGGER_MAX_MS total.
+        // The buffer ensures all drops are processed before checking final state.
+        setTimeout(() => {
+          const stillRemaining = participants.filter(p => !p.dropTimeMs);
+          if(stillRemaining.length === 2){
+            clearInterval(acceleratedCheckInterval);
+            handleFinalTwo(stillRemaining);
+          } else if(stillRemaining.length === 1 && stillRemaining[0].isPlayer){
+            clearInterval(acceleratedCheckInterval);
+            finalizeVictory();
+          }
+        }, DROP_COMPLETION_BUFFER_MS);
         
       }, 5000); // Check every 5 seconds
     }
@@ -750,7 +824,6 @@
      * Clean up all timers and intervals
      */
     function cleanupTimers(){
-      if(timerInterval) clearInterval(timerInterval);
       if(pulsateInterval) clearInterval(pulsateInterval);
       if(sheenInterval) clearInterval(sheenInterval);
       if(multiParticipantCheckInterval) clearInterval(multiParticipantCheckInterval);
@@ -947,12 +1020,6 @@
       
       // Start new endurance engine
       startEnduranceEngine();
-      
-      // Internal timer for tracking (not displayed)
-      timerInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        // No visible update, just internal tracking
-      }, 100);
     }
     
     function checkMove(e){
