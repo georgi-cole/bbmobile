@@ -1658,6 +1658,10 @@
   }
 
   function shortenPhaseToOneSecond(){
+    // This function shortens the phase timer to 1 second when results are shown
+    // It tries multiple timer APIs in order of preference to ensure compatibility
+    // After shortening, the phase will advance to the next state (e.g., veto ceremony)
+    // The 1-second delay allows the UI to update before transitioning
     try{
       const ONE_SECOND = 1000;
       const now = Date.now();
@@ -1755,6 +1759,14 @@
       return;
     }
     const phase = g.phase;
+    
+    // Mark that results have been shown for POV competitions to prevent redundant display
+    // This flag is checked in veto.js finishVetoComp to skip duplicate reveal
+    if(phase === 'pov' || phase === 'veto_comp' || phase === 'veto'){
+      g.__vetoResultsShown = true;
+      console.info('[ImmediateResults] Marked POV results as shown to prevent redundant display');
+    }
+    
     let topThree = buildTopThree();
     if(topThree.length === 0){
       const humanId = g.humanId;
