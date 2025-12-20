@@ -215,10 +215,10 @@
         without relying on the full game infrastructure. It validates:
         <ul>
           <li>Phase timer is disabled when the minigame starts</li>
-          <li><strong>NEW: No visible on-screen timer is shown to players</strong></li>
-          <li><strong>NEW: Drops occur sequentially, not simultaneously</strong></li>
-          <li><strong>NEW: POV competitions allow max 1 drop per tick</strong></li>
-          <li><strong>NEW: HOH competitions allow max 2 drops per tick</strong></li>
+          <li>No visible on-screen timer is shown to players</li>
+          <li>Drops occur sequentially, not simultaneously</li>
+          <li>POV competitions allow max 1 drop per tick</li>
+          <li>HOH competitions allow max 2 drops per tick</li>
           <li>Players can drop and receive 0 points</li>
           <li>Results are computed from non-dropped players only</li>
           <li>Results are published exactly once</li>
@@ -304,12 +304,12 @@
         <strong>Verify these behaviors during testing:</strong>
         <ul>
           <li>✓ When "Start Game" is clicked, phase timer should be paused (check console)</li>
-          <li>✓ <strong>No visible timer should appear on screen (timerDiv is hidden)</strong></li>
+          <li>✓ No visible timer should appear on screen (timerDiv is hidden)</li>
           <li>✓ When a player drops, they should be removed from holding list</li>
           <li>✓ Dropped players should emit "minigame.playerDropped" event with points: 0</li>
-          <li>✓ <strong>In POV mode: Only 1 player drops per tick (check timestamps)</strong></li>
-          <li>✓ <strong>In HOH mode: Max 2 players drop per tick (check timestamps)</strong></li>
-          <li>✓ <strong>Sequential drops show 800-1200ms stagger between each drop</strong></li>
+          <li>✓ In POV mode: Only 1 player drops per tick (check timestamps)</li>
+          <li>✓ In HOH mode: Max 2 players drop per tick (check timestamps)</li>
+          <li>✓ Sequential drops show 800-1200ms stagger between each drop</li>
           <li>✓ Winners should only include players who haven't dropped</li>
           <li>✓ "Return to Main Screen" should publish results exactly once</li>
           <li>✓ Phase should advance to "results" after return to main screen</li>

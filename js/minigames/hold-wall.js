@@ -17,6 +17,11 @@
   const FINAL_FORCE_MS = 5000; // Force resolve in final 5s
   const BASE_NO_NOMINATION_CHANCE = 0.65; // 65% base chance AI respects deal
   const MOVE_THRESHOLD = 15; // pixels
+  const POV_MAX_DROPS_PER_TICK = 1; // POV: max 1 drop per tick
+  const HOH_MAX_DROPS_PER_TICK = 2; // HOH: max 2 drops per tick
+  const DROP_STAGGER_MIN_MS = 800; // Minimum delay between sequential drops
+  const DROP_STAGGER_MAX_MS = 1200; // Maximum delay between sequential drops
+  const DROP_COMPLETION_BUFFER_MS = 1500; // Buffer for drop sequence completion checks
 
   /**
    * Simple Linear Congruential Generator for seeded random numbers
@@ -577,7 +582,7 @@
       if(aiParticipants.length === 0) return;
       
       // Determine max drops for this tick based on competition type
-      const maxDropsPerTick = detectedCompType === 'pov' ? 1 : 2;
+      const maxDropsPerTick = detectedCompType === 'pov' ? POV_MAX_DROPS_PER_TICK : HOH_MAX_DROPS_PER_TICK;
       
       // Roll for each candidate and collect those who should drop
       const candidatesToDrop = [];
@@ -617,9 +622,9 @@
       // Drop this participant
       dropParticipant(participant, reason);
       
-      // If more drops to process, wait 800-1200ms before next drop
+      // If more drops to process, wait before next drop
       if(remaining.length > 0){
-        const staggerDelay = 800 + Math.floor(rng() * 400); // 800-1200ms
+        const staggerDelay = DROP_STAGGER_MIN_MS + Math.floor(rng() * (DROP_STAGGER_MAX_MS - DROP_STAGGER_MIN_MS));
         setTimeout(() => {
           processSequentialDrops(remaining, reason, callback);
         }, staggerDelay);
@@ -768,9 +773,10 @@
         // Use sequential drop logic respecting max-per-tick rules
         selectAndDropCandidates(dropOdds, 'couldn\'t endure');
         
-        // Check if we're down to final 2 or player won (after drops complete)
-        // Note: This check happens immediately, but drops are processed async
-        // We'll need to check again after drop sequence completes
+        // Check game state after drop sequence completes
+        // Note: We use DROP_COMPLETION_BUFFER_MS (1500ms) to allow time for sequential drops
+        // to finish. Worst case: 2 drops with 1200ms stagger = ~1200ms total.
+        // The 1500ms buffer ensures all drops are processed before checking final state.
         setTimeout(() => {
           const stillRemaining = participants.filter(p => !p.dropTimeMs);
           if(stillRemaining.length === 2){
@@ -780,7 +786,7 @@
             clearInterval(acceleratedCheckInterval);
             finalizeVictory();
           }
-        }, 1500); // Wait for drops to complete (max 1200ms stagger + buffer)
+        }, DROP_COMPLETION_BUFFER_MS);
         
       }, 5000); // Check every 5 seconds
     }
