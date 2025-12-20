@@ -145,8 +145,8 @@
       const nominees = Array.from({ length: numNominees }, (_, i) => i + 1);
       
       // Show overlay using the module
-      if (window.VoteOverlay && window.VoteOverlay.show) {
-        window.VoteOverlay.show({
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.show) {
+        window.LiveVoteOverlay.show({
           nominees: nominees,
           onSubmit: (nomineeId) => {
             console.log('Vote submitted for nominee:', nomineeId);
@@ -159,13 +159,13 @@
           }
         });
       } else {
-        console.error('VoteOverlay module not loaded');
+        console.error('LiveVoteOverlay module not loaded');
       }
     }
 
     function hideVoteOverlay() {
-      if (window.VoteOverlay && window.VoteOverlay.hide) {
-        window.VoteOverlay.hide();
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.hide) {
+        window.LiveVoteOverlay.hide();
       }
     }
 
