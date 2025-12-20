@@ -1,24 +1,28 @@
 # Game System Enhancements
 
-This document describes the comprehensive game system enhancements including debug capabilities, unified win probability logic, game hardening, and anti-cheat measures.
+This document describes the comprehensive game system enhancements including debug capabilities, unified win probability logic, centralized scoring (SCALE=1000), opponent synthesis, and anti-cheat measures.
 
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [Core Components](#core-components)
-4. [Win Probability System](#win-probability-system)
-5. [Anti-Cheat System](#anti-cheat-system)
-6. [Debug Mode](#debug-mode)
-7. [Adding New Games](#adding-new-games)
-8. [Usage Examples](#usage-examples)
+4. [Centralized Scoring System](#centralized-scoring-system)
+5. [Win Probability System](#win-probability-system)
+6. [Opponent Synthesis](#opponent-synthesis)
+7. [Anti-Cheat System](#anti-cheat-system)
+8. [Debug Mode](#debug-mode)
+9. [Adding New Games](#adding-new-games)
+10. [Usage Examples](#usage-examples)
 
 ## Overview
 
 The game system has been enhanced with the following features:
 
+- **Centralized Scoring**: SCALE=1000 for higher precision (v2.0)
+- **Opponent Synthesis**: Realistic AI scores based on human performance
+- **Phase-Specific Win Rates**: HOH (20%), POV (30%) - configurable
 - **Debug Mode**: Test games in isolation with win probability bias disabled
-- **Win Probability Logic**: 25% human win rate when player succeeds (configurable)
 - **Anti-Cheat Measures**: Copy/paste prevention, app backgrounding detection
 - **Game Hardening**: Randomized patterns, timed reveals, difficulty scaling
 - **Unified Architecture**: Reusable utilities and components
@@ -30,23 +34,59 @@ The game system has been enhanced with the following features:
 ```
 js/
 ├── minigames/
-│   ├── gameUtils.js           # Core utilities for win logic & anti-cheat
-│   ├── GameConfig.js          # Game registry and configuration
+│   ├── central-scoring.js      # Centralized scoring SCALE=1000 (v2.0)
+│   ├── gameUtils.js            # Core utilities for win logic & anti-cheat
+│   ├── opponent-synth.js       # Synthetic opponent generation
+│   ├── scoring.js              # Legacy scoring wrapper (backward compat)
+│   ├── GameConfig.js           # Game registry and configuration
 │   ├── components/
-│   │   └── AntiCheatWrapper.js  # Anti-cheat wrapper component
-│   ├── memory-match.js        # Enhanced memory game
-│   ├── pattern-match.js       # Enhanced pattern game
+│   │   └── AntiCheatWrapper.js # Anti-cheat wrapper component
+│   ├── memory-match.js         # Enhanced memory game
+│   ├── pattern-match.js        # Enhanced pattern game
 │   └── ...
 ├── debug/
-│   └── GameSelector.js        # Debug game selector UI
+│   └── GameSelector.js         # Debug game selector UI
 └── ...
 ```
 
 ### Key Constants
 
-- `PLAYER_WIN_CHANCE = 0.25` - Human players win ~25% of time when they succeed
+- `MinigameScoring.SCALE = 1000` - New scoring scale (was 100)
+- `DEFAULT_WIN_CHANCES = {hoh: 0.20, pov: 0.30}` - Phase-specific win rates
 - Configurable difficulty levels: `easy`, `medium`, `hard`
 - Auto-hide timers, allowed mistakes, pattern lengths per difficulty
+
+## Centralized Scoring System
+
+### Overview
+
+All minigames now use `central-scoring.js` which provides:
+
+1. **MinigameScoring**: Score normalization with SCALE=1000
+2. **GameUtils**: Phase-aware win determination  
+3. **OpponentSynth**: Realistic AI opponent score generation
+
+### MinigameScoring API
+
+```javascript
+// Calculate final score (SCALE=1000)
+const finalScore = MinigameScoring.calculateFinalScore({
+  rawScore: rawScore,        // Raw score 0-100
+  minScore: 0,               // Min possible
+  maxScore: 100,             // Max possible
+  compBeast: 0.5,            // Player skill 0-1
+  difficultyMultiplier: 1.0  // Optional adjustment
+});
+// Returns: 0-1000 (or up to 1500 for exceptional performance)
+
+// Normalize specific scoring types
+const timeScore = MinigameScoring.normalizeTime(timeMs, targetMs, maxMs);
+const accuracyScore = MinigameScoring.normalizeAccuracy(correct, total);
+const hybridScore = MinigameScoring.normalizeHybrid({
+  correct, total, timeMs, targetTimeMs, accuracyWeight: 0.6
+});
+const enduranceScore = MinigameScoring.normalizeEndurance(durationMs, targetMs, minMs);
+```
 
 ## Core Components
 
