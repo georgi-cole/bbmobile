@@ -1,0 +1,399 @@
+/* ============================================================================
+   DRAMATIC EVICTION MODAL
+   
+   Purpose: Provides rich, animated eviction results display with particles,
+            gradients, and accessibility support
+   
+   Features:
+   - Darkened overlay with radial spotlight effect
+   - Animated vote counting
+   - Dramatic name reveal with scale and glow
+   - Particle burst animation
+   - Accent color theming (red for eviction, green for safe)
+   - Reduced motion support
+   - Mobile-friendly responsive design
+   - Screen reader announcements
+   ============================================================================ */
+
+/* Body scroll lock */
+body.eviction-modal-open {
+  overflow: hidden;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Modal overlay - full viewport */
+.eviction-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: eviction-fade-in 0.4s ease-out;
+}
+
+@keyframes eviction-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Leaving animation */
+.eviction-modal-overlay.leaving {
+  animation: eviction-fade-out 0.3s ease-in forwards;
+}
+
+@keyframes eviction-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Backdrop with darkening and radial spotlight */
+.eviction-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Modal card */
+.eviction-modal-card {
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 500px;
+  padding: 48px 32px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.95) 0%,
+    rgba(30, 41, 59, 0.95) 100%
+  );
+  border: 2px solid var(--accent, #ef4444);
+  box-shadow: 
+    0 0 60px rgba(0, 0, 0, 0.8),
+    0 0 120px var(--accent, #ef4444),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: eviction-card-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+  overflow: visible;
+}
+
+@keyframes eviction-card-enter {
+  from {
+    transform: scale(0.8) translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Spotlight effect inside card */
+.eviction-modal-spotlight {
+  position: absolute;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  animation: spotlight-pulse 2s ease-in-out infinite;
+}
+
+@keyframes spotlight-pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Title */
+.eviction-modal-title {
+  margin: 0 0 32px;
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  color: #f1f5f9;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Vote counts container */
+.eviction-modal-votes {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.eviction-modal-vote-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.eviction-modal-vote-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.eviction-modal-vote-count {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 20px rgba(255, 255, 255, 0.3);
+}
+
+/* Name reveal container */
+.eviction-modal-name-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  transition: opacity 0.5s ease;
+}
+
+.eviction-modal-name-reveal.revealed .eviction-modal-name {
+  animation: name-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes name-reveal {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Evicted player name */
+.eviction-modal-name {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: var(--accent, #ef4444);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 
+    0 0 20px var(--accent, #ef4444),
+    0 0 40px var(--accent, #ef4444),
+    0 2px 10px rgba(0, 0, 0, 0.8);
+  filter: drop-shadow(0 0 30px var(--accent, #ef4444));
+}
+
+/* Status text */
+.eviction-modal-status {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  text-align: center;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+/* Particles container */
+.eviction-particles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Individual particle */
+.eviction-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--accent, #ef4444);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent, #ef4444);
+  animation: particle-burst 1.5s ease-out forwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes particle-burst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .eviction-modal-card {
+    width: 94%;
+    padding: 36px 24px;
+  }
+
+  .eviction-modal-title {
+    font-size: 1.5rem;
+    margin-bottom: 24px;
+  }
+
+  .eviction-modal-votes {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .eviction-modal-vote-item {
+    width: 100%;
+  }
+
+  .eviction-modal-vote-count {
+    font-size: 2.5rem;
+  }
+
+  .eviction-modal-name {
+    font-size: 2.5rem;
+    letter-spacing: 1px;
+  }
+
+  .eviction-modal-status {
+    font-size: 1.1rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .eviction-modal-card {
+    width: 96%;
+    padding: 28px 20px;
+  }
+
+  .eviction-modal-title {
+    font-size: 1.25rem;
+  }
+
+  .eviction-modal-vote-count {
+    font-size: 2rem;
+  }
+
+  .eviction-modal-name {
+    font-size: 2rem;
+  }
+
+  .eviction-modal-status {
+    font-size: 1rem;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .eviction-modal-overlay {
+    animation: none;
+  }
+
+  .eviction-modal-card {
+    animation: none;
+  }
+
+  .eviction-modal-spotlight {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .eviction-modal-name-reveal.revealed .eviction-modal-name {
+    animation: none;
+  }
+
+  .eviction-particle {
+    display: none;
+  }
+
+  .eviction-modal-backdrop {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+/* Light theme support (optional) */
+@media (prefers-color-scheme: light) {
+  .eviction-modal-backdrop {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(241, 245, 249, 0.95) 100%
+    );
+  }
+
+  .eviction-modal-card {
+    background: linear-gradient(
+      135deg,
+      rgba(248, 250, 252, 0.98) 0%,
+      rgba(241, 245, 249, 0.98) 100%
+    );
+  }
+
+  .eviction-modal-title {
+    color: #0f172a;
+  }
+
+  .eviction-modal-vote-item {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .eviction-modal-vote-label {
+    color: #475569;
+  }
+
+  .eviction-modal-vote-count {
+    color: #0f172a;
+  }
+
+  .eviction-modal-status {
+    color: #334155;
+  }
+}
