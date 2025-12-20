@@ -168,6 +168,20 @@
       track.appendChild(nomineeEl);
     });
 
+    // Navigation arrows - created here and will be moved to CTA row
+    // Always create them (no mobile check), but they'll live in CTA, not carousel
+    const prevArrow = document.createElement('button');
+    prevArrow.className = 'lv-overlay__arrow prev';
+    prevArrow.innerHTML = '◀';
+    prevArrow.setAttribute('aria-label', 'Previous nominee');
+    prevArrow.onclick = () => navigateCarousel(-1);
+
+    const nextArrow = document.createElement('button');
+    nextArrow.className = 'lv-overlay__arrow next';
+    nextArrow.innerHTML = '▶';
+    nextArrow.setAttribute('aria-label', 'Next nominee');
+    nextArrow.onclick = () => navigateCarousel(1);
+
     carousel.appendChild(track);
     overlay.appendChild(carousel);
 
@@ -185,17 +199,11 @@
     confirmContainer.appendChild(status);
 
     // CTA row - 3-column layout: left arrow, Evict button, right arrow
-    // Reuse existing carousel arrows (don't create new ones)
+    // Re-parent the navigation arrows created above into CTA (don't duplicate them)
     const ctaRow = document.createElement('div');
     ctaRow.className = 'lv-overlay__cta-row';
     
-    // Create carousel navigation arrows (reused from original implementation)
-    // Always render them (for all viewports), place them in CTA row
-    const prevArrow = document.createElement('button');
-    prevArrow.className = 'lv-overlay__arrow prev';
-    prevArrow.innerHTML = '◀';
-    prevArrow.setAttribute('aria-label', 'Previous nominee');
-    prevArrow.onclick = () => navigateCarousel(-1);
+    // Add left arrow to CTA row (re-parent from above)
     ctaRow.appendChild(prevArrow);
 
     // Evict button - compact and centered in CTA row
@@ -207,12 +215,7 @@
     evictBtn.onclick = handleEvictClick;
     ctaRow.appendChild(evictBtn);
     
-    // Right carousel navigation arrow
-    const nextArrow = document.createElement('button');
-    nextArrow.className = 'lv-overlay__arrow next';
-    nextArrow.innerHTML = '▶';
-    nextArrow.setAttribute('aria-label', 'Next nominee');
-    nextArrow.onclick = () => navigateCarousel(1);
+    // Add right arrow to CTA row (re-parent from above)
     ctaRow.appendChild(nextArrow);
     
     confirmContainer.appendChild(ctaRow);

@@ -46,10 +46,10 @@
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
   padding: 2px 16px; /* COMPACT MODE: Further reduced padding for ultra-tight layout */
-  min-height: 0; /* Critical: Allow flex child to shrink below content size */
   /* Reserve space for selected avatar max size to prevent clipping */
-  min-height: clamp(150px, 28vmin, 220px);
-  padding-top: 12px; /* Small padding-top so avatar can grow without hitting stage top */
+  --avatarSizeSelected: clamp(120px, 22vmin, 180px);
+  min-height: calc(var(--avatarSizeSelected) + 16px); /* Reserve space based on max avatar size + padding */
+  padding-top: 8px; /* Small padding-top so avatar can grow without hitting stage top */
 }
 
 /* Hide scrollbars in Webkit browsers */
