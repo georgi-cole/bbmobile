@@ -1,13 +1,20 @@
 // MODULE: minigames/opponent-synth.js
 // Synthetic opponent score generation for minigame competitions
 // Generates seeded, plausible AI opponent scores after human completion
-// Targets ~20% human win rate using Beta distribution
+// Targets phase-specific human win rate using distribution modeling
+// UPDATED: Uses SCALE=1000 from central-scoring.js
 
 (function(g){
   'use strict';
 
-  // Target human win rate (20% = 1 win in 5 competitions on average)
-  const TARGET_WIN_RATE = 0.20;
+  // Get SCALE from central scoring, fallback to 1000
+  const SCALE = g.MinigameScoring?.SCALE || 1000;
+
+  // Target human win rates by phase (read from cfg.playerWinChances)
+  const DEFAULT_WIN_RATES = {
+    hoh: 0.20,  // 20% win rate for HOH
+    pov: 0.30   // 30% win rate for POV
+  };
 
   /**
    * Generate Beta distribution random variable
@@ -66,17 +73,15 @@
 
   /**
    * Generate synthetic opponent scores for a competition
-   * Uses Beta distribution to control win probability
-   * To achieve ~20% session win rate (beating ALL opponents), we need to consider
-   * that if there are N opponents, and we want P(beat all) = 0.20, then
-   * P(beat one) ≈ 0.20^(1/N)
+   * Uses distribution to control win probability
    * 
    * @param {Object} options - Configuration options
-   * @param {number} options.humanScore - Human player's score (0-100)
+   * @param {number} options.humanScore - Human player's score (0-1000)
    * @param {Array} options.opponents - Array of opponent player objects {id, compBeast, persona}
    * @param {string} options.gameKey - Key of the minigame being played
+   * @param {string} options.phase - Competition phase ('hoh' or 'pov')
    * @param {number} options.seed - Seed for deterministic RNG
-   * @param {number} options.targetWinRate - Target win rate for human (default 0.20)
+   * @param {number} options.targetWinRate - Target win rate for human (optional, overrides phase default)
    * @returns {Map} Map of opponent ID to score
    */
   function generate(options){
@@ -84,8 +89,9 @@
       humanScore,
       opponents,
       gameKey = 'unknown',
+      phase = 'hoh',
       seed,
-      targetWinRate = TARGET_WIN_RATE
+      targetWinRate
     } = options;
 
     if(!opponents || opponents.length === 0){
@@ -101,21 +107,20 @@
     const minScore = gameMetadata.minScore;
     const maxScore = gameMetadata.maxScore;
 
+    // Get phase-specific target win rate
+    const cfg = (g.game && g.game.cfg) || g.cfg || {};
+    const winChances = cfg.playerWinChances || DEFAULT_WIN_RATES;
+    const effectiveWinRate = targetWinRate || winChances[phase] || DEFAULT_WIN_RATES.hoh;
+    
     // Calculate per-opponent beat probability to achieve target session win rate
     // If we want P(beat all N opponents) = targetWinRate, then:
     // P(beat one opponent) = targetWinRate^(1/N)
     const numOpponents = opponents.length;
-    const perOpponentBeatProb = Math.pow(targetWinRate, 1 / numOpponents);
+    const perOpponentBeatProb = Math.pow(effectiveWinRate, 1 / numOpponents);
     
     // Add a conservative adjustment to account for variance and persona effects
     // This brings us closer to the target
     const adjustedBeatProb = perOpponentBeatProb * 0.90; // 10% more conservative
-    
-    // For Beta distribution: we want mean = perOpponentBeatProb
-    // Use Beta(alpha, beta) where mean = alpha/(alpha+beta)
-    // Choose alpha = 2 for some variance, then solve for beta
-    const betaAlpha = 2;
-    const betaBeta = (betaAlpha / perOpponentBeatProb) - betaAlpha;
 
     const scores = new Map();
 
@@ -128,11 +133,14 @@
       // Base score calculation with compBeast factor
       const compBeastFactor = opponent.compBeast || 0.5;
       
+      // Normalize compBeast to 0-1 range (handle both 0-1 and 0-10 scales)
+      const normalizedCompBeast = compBeastFactor > 1 ? compBeastFactor / 10 : compBeastFactor;
+      
       // Calculate opponent score relative to human
       let opponentScore;
       if(humanBeatsOpponent){
         // Human wins: opponent scores below human
-        const marginPct = 0.08 + random() * 0.12; // 8-20% below human
+        const marginPct = 0.05 + random() * 0.15; // 5-20% below human
         opponentScore = humanScore * (1 - marginPct);
       } else {
         // Opponent wins: opponent scores above human
@@ -142,17 +150,17 @@
       
       // Apply compBeast multiplier with variance
       const variance = (random() - 0.5) * 0.08; // ±4% variance
-      const compMultiplier = 0.92 + compBeastFactor * 0.16 + variance;
+      const compMultiplier = 0.90 + normalizedCompBeast * 0.20 + variance;
       opponentScore *= compMultiplier;
       
       // Apply persona adjustments (smaller impact)
       opponentScore = applyPersonaAdjustment(opponentScore, opponent.persona, random);
       
-      // Clamp to valid game bounds
-      opponentScore = Math.max(minScore, Math.min(maxScore, opponentScore));
+      // Clamp to valid game bounds (with SCALE support)
+      opponentScore = Math.max(minScore, Math.min(maxScore * 1.5, opponentScore));
       
-      // Round to 1 decimal place
-      opponentScore = Math.round(opponentScore * 10) / 10;
+      // Round to whole number
+      opponentScore = Math.round(opponentScore);
       
       scores.set(opponent.id, opponentScore);
     }
@@ -162,6 +170,7 @@
 
   /**
    * Get game metadata including score bounds
+   * Supports SCALE=1000 from central-scoring
    * 
    * @param {string} gameKey - Game key
    * @returns {Object} Game metadata {minScore, maxScore}
@@ -174,18 +183,19 @@
       if(game){
         return {
           minScore: game.minScore || 0,
-          maxScore: game.maxScore || 100
+          maxScore: game.maxScore || SCALE
         };
       }
     }
     
-    // Fallback to standard bounds
-    return { minScore: 0, maxScore: 100 };
+    // Fallback to SCALE bounds
+    return { minScore: 0, maxScore: SCALE };
   }
 
   /**
    * Apply persona-based adjustments to score
    * Personas affect score variability and consistency
+   * Scales adjustments based on SCALE
    * 
    * @param {number} baseScore - Base calculated score
    * @param {Object} persona - Player persona {aggr, loyalty, chaos}
@@ -199,21 +209,21 @@
     
     let adjusted = baseScore;
     
-    // High chaos = more unpredictable (±5 point swing)
+    // High chaos = more unpredictable (±5% swing)
     if(persona.chaos > 0.7){
-      const wildSwing = (random() - 0.5) * 10; // ±5 points
+      const wildSwing = (random() - 0.5) * SCALE * 0.10; // ±5% of SCALE
       adjusted += wildSwing;
     }
     
     // Low chaos = more consistent (pull toward mean slightly)
     if(persona.chaos < 0.3){
-      const mean = 50;
+      const mean = SCALE / 2;
       adjusted = adjusted * 0.95 + mean * 0.05;
     }
     
-    // High aggression = slight increase in variability (±3 point swing)
+    // High aggression = slight increase in variability (±3% swing)
     if(persona.aggr > 0.7){
-      const swing = (random() - 0.5) * 6; // ±3 points
+      const swing = (random() - 0.5) * SCALE * 0.06; // ±3% of SCALE
       adjusted += swing;
     }
     
@@ -247,9 +257,10 @@
   g.OpponentSynth = {
     generate,
     calculateWinRate,
-    TARGET_WIN_RATE
+    DEFAULT_WIN_RATES,
+    SCALE
   };
 
-  console.info('[OpponentSynth] Module loaded - Target win rate:', TARGET_WIN_RATE);
+  console.info('[OpponentSynth] Module loaded - SCALE:', SCALE, 'Default win rates:', DEFAULT_WIN_RATES);
 
 })(window);

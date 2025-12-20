@@ -1,27 +1,40 @@
 // MODULE: minigames/scoring.js
 // Scoring normalization system for fair competition across all minigames
-// Maps all game results to a standard 0-100 scale
+// LEGACY COMPATIBILITY WRAPPER - Delegates to central-scoring.js (SCALE=1000)
+// New code should use central-scoring.js directly
 
 (function(g){
   'use strict';
 
+  // Check if central scoring is available
+  if(!g.MinigameScoring || !g.MinigameScoring.SCALE){
+    console.warn('[scoring.js] Central scoring not loaded, using fallback implementations');
+  }
+
+  const SCALE_OLD = 100;
+  const SCALE_NEW = g.MinigameScoring?.SCALE || 1000;
+  const SCALE_RATIO = SCALE_NEW / SCALE_OLD;
+
   /**
-   * Normalize a raw score to 0-100 scale
+   * Normalize a raw score to 0-100 scale (legacy)
    * @param {number} rawScore - The raw score from the game
    * @param {number} minScore - Minimum possible score (default 0)
    * @param {number} maxScore - Maximum possible score (default 100)
    * @returns {number} Normalized score (0-100)
    */
   function normalize(rawScore, minScore = 0, maxScore = 100){
+    if(g.MinigameScoring?.normalize){
+      // Delegate to central scoring and scale down
+      return g.MinigameScoring.normalize(rawScore, minScore, maxScore) / SCALE_RATIO;
+    }
+    
+    // Fallback implementation
     if(maxScore === minScore){
       console.warn('[MinigameScoring] maxScore equals minScore, returning 50');
       return 50;
     }
     
-    // Clamp to valid range
     const clamped = Math.max(minScore, Math.min(maxScore, rawScore));
-    
-    // Normalize to 0-100
     const normalized = ((clamped - minScore) / (maxScore - minScore)) * 100;
     
     return Math.max(0, Math.min(100, normalized));
@@ -35,19 +48,20 @@
    * @returns {number} Normalized score (0-100)
    */
   function normalizeTime(timeMs, targetTimeMs = 1000, maxTimeMs = 5000){
+    if(g.MinigameScoring?.normalizeTime){
+      // Delegate to central scoring and scale down
+      return g.MinigameScoring.normalizeTime(timeMs, targetTimeMs, maxTimeMs) / SCALE_RATIO;
+    }
+    
+    // Fallback implementation
     if(timeMs <= targetTimeMs){
-      // Perfect or better than target = 100
       return 100;
     }
     
     if(timeMs >= maxTimeMs){
-      // At or beyond max time = minimum score
-      return 20; // Give some points for completing
+      return 20;
     }
     
-    // Exponential decay: score drops faster as time increases
-    // Score = 100 * e^(-k * (time - target))
-    // At maxTime, score should be ~20
     const k = Math.log(100 / 20) / (maxTimeMs - targetTimeMs);
     const score = 100 * Math.exp(-k * (timeMs - targetTimeMs));
     
@@ -63,6 +77,12 @@
    * @returns {number} Normalized score (0-100)
    */
   function normalizeAccuracy(correct, total, penalizeIncorrect = false, incorrect = 0){
+    if(g.MinigameScoring?.normalizeAccuracy){
+      // Delegate to central scoring and scale down
+      return g.MinigameScoring.normalizeAccuracy(correct, total, penalizeIncorrect, incorrect) / SCALE_RATIO;
+    }
+    
+    // Fallback implementation
     if(total === 0){
       console.warn('[MinigameScoring] Total is 0, returning 0');
       return 0;
@@ -71,8 +91,7 @@
     let baseScore = (correct / total) * 100;
     
     if(penalizeIncorrect && incorrect > 0){
-      // Subtract percentage for incorrect answers
-      const penalty = (incorrect / total) * 20; // Max 20% penalty
+      const penalty = (incorrect / total) * 20;
       baseScore = Math.max(0, baseScore - penalty);
     }
     
@@ -90,6 +109,12 @@
    * @returns {number} Normalized score (0-100)
    */
   function normalizeHybrid(params){
+    if(g.MinigameScoring?.normalizeHybrid){
+      // Delegate to central scoring and scale down
+      return g.MinigameScoring.normalizeHybrid(params) / SCALE_RATIO;
+    }
+    
+    // Fallback implementation
     const {
       correct,
       total,
@@ -115,19 +140,22 @@
    * @returns {number} Normalized score (0-100)
    */
   function normalizeEndurance(durationMs, targetDurationMs = 30000, minDurationMs = 1000){
+    if(g.MinigameScoring?.normalizeEndurance){
+      // Delegate to central scoring and scale down
+      return g.MinigameScoring.normalizeEndurance(durationMs, targetDurationMs, minDurationMs) / SCALE_RATIO;
+    }
+    
+    // Fallback implementation
     if(durationMs <= minDurationMs){
-      // Too short = minimal points
       return Math.max(0, (durationMs / minDurationMs) * 10);
     }
     
     if(durationMs >= targetDurationMs){
-      // Met or exceeded target = 100
       return 100;
     }
     
-    // Linear scaling between min and target
     const progress = (durationMs - minDurationMs) / (targetDurationMs - minDurationMs);
-    const score = 10 + (progress * 90); // Scale from 10 to 100
+    const score = 10 + (progress * 90);
     
     return Math.max(0, Math.min(100, score));
   }
@@ -197,6 +225,12 @@
    * @returns {number} Final competition score
    */
   function calculateFinalScore(params){
+    if(g.MinigameScoring?.calculateFinalScore){
+      // Delegate to central scoring and scale down
+      return g.MinigameScoring.calculateFinalScore(params) / SCALE_RATIO;
+    }
+    
+    // Fallback implementation
     const {
       rawScore,
       gameKey,
@@ -211,16 +245,13 @@
     // Normalize score to 0-100
     let normalizedScore;
     if(customNormalization){
-      // Use custom normalization if provided
       normalizedScore = normalize(rawScore, 
                                    customNormalization.minScore || 0,
                                    customNormalization.maxScore || 100);
     } else if(strategy.type === 'accuracy' || !customNormalization){
-      // Default normalization
       normalizedScore = normalize(rawScore, strategy.minScore, strategy.maxScore);
     } else {
-      // Use game's specific normalizer
-      normalizedScore = rawScore; // Assume already normalized by game
+      normalizedScore = rawScore;
     }
     
     // Apply competitive multipliers
@@ -229,16 +260,22 @@
     return finalScore;
   }
 
-  // Export API
-  g.MinigameScoring = {
-    normalize,
-    normalizeTime,
-    normalizeAccuracy,
-    normalizeHybrid,
-    normalizeEndurance,
-    getScoringStrategy,
-    applyCompetitiveMultiplier,
-    calculateFinalScore
-  };
+  // Export API (legacy 0-100 scale for backward compatibility)
+  // NOTE: This is preserved but delegates to central-scoring.js internally
+  if(!g.MinigameScoring){
+    g.MinigameScoring = {};
+  }
+  
+  // Only add legacy functions if not already present from central-scoring
+  g.MinigameScoring.normalize = g.MinigameScoring.normalize || normalize;
+  g.MinigameScoring.normalizeTime = g.MinigameScoring.normalizeTime || normalizeTime;
+  g.MinigameScoring.normalizeAccuracy = g.MinigameScoring.normalizeAccuracy || normalizeAccuracy;
+  g.MinigameScoring.normalizeHybrid = g.MinigameScoring.normalizeHybrid || normalizeHybrid;
+  g.MinigameScoring.normalizeEndurance = g.MinigameScoring.normalizeEndurance || normalizeEndurance;
+  g.MinigameScoring.getScoringStrategy = g.MinigameScoring.getScoringStrategy || getScoringStrategy;
+  g.MinigameScoring.applyCompetitiveMultiplier = g.MinigameScoring.applyCompetitiveMultiplier || applyCompetitiveMultiplier;
+  g.MinigameScoring.calculateFinalScore = g.MinigameScoring.calculateFinalScore || calculateFinalScore;
+
+  console.info('[scoring.js] Legacy compatibility wrapper loaded');
 
 })(window);
