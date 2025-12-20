@@ -170,23 +170,21 @@
 
     carousel.appendChild(track);
 
-    // Navigation arrows (desktop only)
-    // On mobile, rely on tap-to-select and natural touch scrolling
-    if (nominees.length > 1 && !isMobile()) {
-      const prevArrow = document.createElement('button');
-      prevArrow.className = 'lv-overlay__arrow prev';
-      prevArrow.innerHTML = '◀';
-      prevArrow.setAttribute('aria-label', 'Show previous nominee');
-      prevArrow.onclick = () => navigateCarousel(-1);
-      carousel.appendChild(prevArrow);
+    // Create navigation arrows in the carousel initially
+    // These will be re-parented into the CTA row later
+    const prevArrow = document.createElement('button');
+    prevArrow.className = 'lv-overlay__arrow lv-overlay__nav-left prev';
+    prevArrow.innerHTML = '◀';
+    prevArrow.setAttribute('aria-label', 'Previous nominee');
+    prevArrow.onclick = () => navigateCarousel(-1);
+    carousel.appendChild(prevArrow);
 
-      const nextArrow = document.createElement('button');
-      nextArrow.className = 'lv-overlay__arrow next';
-      nextArrow.innerHTML = '▶';
-      nextArrow.setAttribute('aria-label', 'Show next nominee');
-      nextArrow.onclick = () => navigateCarousel(1);
-      carousel.appendChild(nextArrow);
-    }
+    const nextArrow = document.createElement('button');
+    nextArrow.className = 'lv-overlay__arrow lv-overlay__nav-right next';
+    nextArrow.innerHTML = '▶';
+    nextArrow.setAttribute('aria-label', 'Next nominee');
+    nextArrow.onclick = () => navigateCarousel(1);
+    carousel.appendChild(nextArrow);
 
     overlay.appendChild(carousel);
 
@@ -207,14 +205,19 @@
     const ctaRow = document.createElement('div');
     ctaRow.className = 'lv-overlay__cta-row';
     
-    // Left nav button - always rendered, disabled at bounds or with single nominee
-    const navLeft = document.createElement('button');
-    navLeft.className = 'lv-overlay__nav-left';
-    navLeft.innerHTML = '◀';
-    navLeft.setAttribute('aria-label', 'Previous nominee');
-    navLeft.onclick = () => navigateCarousel(-1);
-    navLeft.disabled = nominees.length <= 1 || state.selectedIndex === 0; // Disabled if single nominee or at start
-    ctaRow.appendChild(navLeft);
+    // Re-parent existing arrows from carousel into CTA row
+    // This reuses the arrows instead of creating duplicates
+    const navLeft = carousel.querySelector('.lv-overlay__nav-left');
+    const navRight = carousel.querySelector('.lv-overlay__nav-right');
+    
+    if (navLeft && navRight) {
+      // Set initial disabled state
+      navLeft.disabled = nominees.length <= 1 || state.selectedIndex === 0;
+      navRight.disabled = nominees.length <= 1 || state.selectedIndex >= nominees.length - 1;
+      
+      // Re-parent arrows into CTA row
+      ctaRow.appendChild(navLeft);
+    }
 
     // Evict button - compact and centered in CTA row
     const evictBtn = document.createElement('button');
@@ -225,14 +228,9 @@
     evictBtn.onclick = handleEvictClick;
     ctaRow.appendChild(evictBtn);
     
-    // Right nav button - always rendered, disabled at bounds or with single nominee
-    const navRight = document.createElement('button');
-    navRight.className = 'lv-overlay__nav-right';
-    navRight.innerHTML = '▶';
-    navRight.setAttribute('aria-label', 'Next nominee');
-    navRight.onclick = () => navigateCarousel(1);
-    navRight.disabled = nominees.length <= 1 || state.selectedIndex >= nominees.length - 1; // Disabled if single nominee or at end
-    ctaRow.appendChild(navRight);
+    if (navRight) {
+      ctaRow.appendChild(navRight);
+    }
     
     confirmContainer.appendChild(ctaRow);
     overlay.appendChild(confirmContainer);

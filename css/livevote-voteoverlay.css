@@ -5,19 +5,17 @@
  */
 
 .lv-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
   /* COMPACT MODE: Increased transparency for better see-through to top roster */
   background: linear-gradient(135deg, rgba(5, 10, 18, 0.75), rgba(15, 25, 40, 0.78));
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
-  min-height: 100dvh; /* Use min-height instead of fixed height to allow natural sizing */
-  max-height: 560px; /* COMPACT MODE: Constrain to faux TV height on laptop */
-  overflow-y: auto; /* Allow vertical scrolling for long content */
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  overscroll-behavior: contain;
   
   /* Safe area support */
   padding-top: env(safe-area-inset-top);
@@ -49,7 +47,9 @@
   scroll-behavior: smooth; /* Smooth scrolling behavior */
   padding: 2px 16px; /* COMPACT MODE: Further reduced padding for ultra-tight layout */
   min-height: 0; /* Critical: Allow flex child to shrink below content size */
-  max-height: min(46vh, 340px); /* Bounded height for stage */
+  /* Reserve space for selected avatar max size to prevent clipping */
+  min-height: clamp(150px, 28vmin, 220px);
+  padding-top: 12px; /* Small padding-top so avatar can grow without hitting stage top */
 }
 
 /* Hide scrollbars in Webkit browsers */
@@ -63,9 +63,7 @@
   justify-content: center;
   gap: 12px; /* COMPACT MODE: Even tighter gap between nominees */
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 16px; /* Reduced padding since stage arrows are hidden */
-  overflow: auto; /* Enable scrolling on the track, not the stage container */
-  max-height: min(46vh, 340px); /* Bounded height for scrolling */
+  padding: 0 16px; /* Padding for nominee breathing room */
   scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
   overflow-y: visible !important; /* Allow vertical overflow for avatar circles */
 }
@@ -154,19 +152,6 @@
 .lv-overlay__nominee.center .lv-overlay__nominee-name {
   font-size: clamp(1.1rem, 3.5vw, 1.4rem);
   color: #ffd96b;
-}
-
-/* Legacy stage navigation arrows - hidden in favor of CTA row nav buttons */
-/* Keep in DOM for backwards compatibility but hide visually and disable interaction */
-/* Scope to vote overlay only to avoid breaking other screens */
-.lv-overlay .lv-overlay__arrow,
-.lv-overlay .lv-overlay__carousel .lv-overlay__arrow,
-.lv-overlay__carousel button.prev,
-.lv-overlay__carousel button.next {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  display: none !important;
-  visibility: hidden !important;
 }
 
 /* Confirmation container - positioned close to selected avatar (directly below, 8-12px gap) */
@@ -389,7 +374,7 @@
   }
   
   .lv-overlay__track {
-    padding: 0 16px; /* Reduced padding since stage arrows are hidden */
+    padding: 0 16px; /* Padding for nominee breathing room */
     gap: 10px; /* COMPACT MODE: Even tighter gap on mobile */
   }
   
@@ -447,7 +432,7 @@
   
   .lv-overlay__track {
     gap: 10px; /* COMPACT MODE: Even tighter gap */
-    padding: 0 16px; /* Reduced padding since stage arrows are hidden */
+    padding: 0 16px; /* Padding for nominee breathing room */
   }
   
   .lv-overlay__avatar-container {
