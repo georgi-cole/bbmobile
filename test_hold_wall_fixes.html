@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold the Wall - Fix Verification</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #2c3a4d;
+      color: #83bfff;
+    }
+    
+    .btn-secondary:hover {
+      background: #3c4a5d;
+    }
+    
+    .game-container {
+      background: rgba(26, 35, 50, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 500px;
+      position: relative;
+    }
+    
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 3px solid #83bfff;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    .success {
+      background: rgba(102, 255, 102, 0.1);
+      border-left: 3px solid #66ff66;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .warning {
+      background: rgba(255, 204, 0, 0.1);
+      border-left: 3px solid #ffcc00;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .status {
+      background: rgba(26, 35, 50, 0.8);
+      border: 2px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .status-item {
+      padding: 5px 0;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(44, 58, 77, 0.5);
+    }
+    
+    .status-item:last-child {
+      border-bottom: none;
+    }
+    
+    .status-label {
+      color: #95a9c0;
+    }
+    
+    .status-value {
+      color: #83bfff;
+      font-weight: bold;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .checklist li {
+      padding: 8px;
+      margin: 5px 0;
+      background: rgba(26, 35, 50, 0.4);
+      border-radius: 4px;
+      border-left: 3px solid #2c3a4d;
+    }
+    
+    .checklist li.pass {
+      border-left-color: #66ff66;
+      background: rgba(102, 255, 102, 0.05);
+    }
+    
+    .checklist li.fail {
+      border-left-color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏋️ Hold the Wall - Fix Verification</h1>
+    <div class="subtitle">Manual testing for timer hiding and sequential drops</div>
+
+    <div class="section">
+      <h2>📋 Test Objectives</h2>
+      <div class="info">
+        <strong>This test verifies the following fixes:</strong>
+        <ol>
+          <li><strong>No Visible Timer:</strong> The on-screen timer must never appear during gameplay</li>
+          <li><strong>Sequential Drops:</strong> Players should drop one at a time with visible delays (800-1200ms)</li>
+          <li><strong>POV Competition:</strong> Maximum 1 player drops per 10-second tick</li>
+          <li><strong>HOH Competition:</strong> Maximum 2 players drop per 10-second tick</li>
+          <li><strong>Phase Timer Suppression:</strong> Global phase timer remains disabled throughout minigame</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🎮 Test Controls</h2>
+      <div class="controls">
+        <button class="btn" onclick="startPOVMode()">🎯 Start POV Mode (Max 1 drop/tick)</button>
+        <button class="btn" onclick="startHOHMode()">👑 Start HOH Mode (Max 2 drops/tick)</button>
+        <button class="btn btn-secondary" onclick="stopGame()">⏹️ Stop Game</button>
+      </div>
+      <div class="warning">
+        <strong>Note:</strong> The game will start with the player holding the wall. AI opponents will drop according to their probabilities and the competition type limits.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📊 Game Status</h2>
+      <div class="status" id="gameStatus">
+        <div class="status-item">
+          <span class="status-label">Game Running:</span>
+          <span class="status-value" id="statusRunning">No</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Competition Type:</span>
+          <span class="status-value" id="statusCompType">None</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Max Drops Per Tick:</span>
+          <span class="status-value" id="statusMaxDrops">-</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Visible Timer Found:</span>
+          <span class="status-value" id="statusTimer">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Phase Timer Enabled:</span>
+          <span class="status-value" id="statusPhaseTimer">Checking...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🎪 Game Area</h2>
+      <div class="game-container" id="gameContainer">
+        <p style="text-align: center; color: #95a9c0; margin-top: 150px;">
+          Click "Start POV Mode" or "Start HOH Mode" to begin testing
+        </p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>✅ Verification Checklist</h2>
+      <div class="info">
+        <strong>Manually verify each item while testing:</strong>
+      </div>
+      <ul class="checklist">
+        <li id="check1">⏱️ No visible countdown timer appears in the game UI</li>
+        <li id="check2">🔒 Phase timer status shows "Disabled" when game is running</li>
+        <li id="check3">🎯 In POV mode: Only 1 player drops per ~10 second interval</li>
+        <li id="check4">👑 In HOH mode: Maximum 2 players drop per ~10 second interval</li>
+        <li id="check5">⏳ Drops appear sequentially with noticeable delays (~1 second apart)</li>
+        <li id="check6">📊 Drop messages appear in the feed with individual timestamps</li>
+        <li id="check7">🎨 Dropped avatars fade out and become grayscale</li>
+        <li id="check8">🏆 Game completes successfully with proper winner declaration</li>
+      </ul>
+      <div class="warning">
+        <strong>How to mark items:</strong> Click on any checklist item to toggle it between pass/fail/unchecked.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📝 Test Results & Notes</h2>
+      <textarea id="testNotes" 
+                style="width: 100%; min-height: 150px; background: rgba(26, 35, 50, 0.8); 
+                       border: 2px solid #2c3a4d; border-radius: 6px; padding: 12px; 
+                       color: #e3ecf5; font-family: 'Courier New', monospace; font-size: 0.9rem;"
+                placeholder="Enter any observations, issues, or notes here..."></textarea>
+    </div>
+  </div>
+
+  <!-- Mock game infrastructure -->
+  <script>
+    // Mock window.game for the minigame
+    window.game = {
+      phase: {
+        timerEnabled: true,
+        pause() {
+          this.timerEnabled = false;
+          console.log('[Mock] Phase timer paused');
+          updateStatus();
+        },
+        setTimerEnabled(enabled) {
+          this.timerEnabled = enabled;
+          console.log('[Mock] Phase timer enabled:', enabled);
+          updateStatus();
+        },
+        disableTimer() {
+          this.timerEnabled = false;
+          console.log('[Mock] Phase timer disabled');
+          updateStatus();
+        }
+      },
+      bus: {
+        emit(event, data) {
+          console.log('[Mock Event]', event, data);
+        }
+      },
+      players: [],
+      phase: 'hoh',
+      hohId: null,
+      nominees: []
+    };
+
+    let gameRunning = false;
+    let currentCompType = null;
+
+    // Create mock players
+    function createMockPlayers(count = 8) {
+      const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack'];
+      const players = [
+        { id: 'player_human', name: 'You', human: true, evicted: false }
+      ];
+      
+      for (let i = 0; i < count - 1; i++) {
+        players.push({
+          id: `player_${i}`,
+          name: names[i],
+          human: false,
+          evicted: false
+        });
+      }
+      
+      return players;
+    }
+
+    function startGame(compType) {
+      if (gameRunning) {
+        alert('Game already running. Stop it first.');
+        return;
+      }
+
+      gameRunning = true;
+      currentCompType = compType;
+
+      // Setup mock game state
+      window.game.players = createMockPlayers(8);
+      window.game.phase = compType;
+      
+      if (compType === 'pov') {
+        // Mock POV selection (6 players)
+        window.game.povPlayers = window.game.players.slice(0, 6).map(p => p.id);
+      }
+
+      console.log(`[Test] Starting ${compType.toUpperCase()} mode with ${window.game.players.length} players`);
+
+      // Load and start the minigame
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+
+      // Call the minigame render function
+      if (window.MiniGames && window.MiniGames.holdWall && window.MiniGames.holdWall.render) {
+        window.MiniGames.holdWall.render(
+          container,
+          (score) => {
+            console.log('[Test] Game completed with score:', score);
+            gameRunning = false;
+            updateStatus();
+            alert(`Game completed! Score: ${score}`);
+          },
+          {
+            competitionType: compType,
+            seed: Date.now() // Use timestamp as seed for variety
+          }
+        );
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b; text-align: center; margin-top: 150px;">Error: holdWall minigame not loaded. Make sure hold-wall.js is loaded first.</p>';
+        gameRunning = false;
+      }
+
+      updateStatus();
+      
+      // Check for timer after a short delay
+      setTimeout(checkForTimer, 1000);
+    }
+
+    function startPOVMode() {
+      startGame('pov');
+    }
+
+    function startHOHMode() {
+      startGame('hoh');
+    }
+
+    function stopGame() {
+      if (!gameRunning) {
+        alert('No game running.');
+        return;
+      }
+
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<p style="text-align: center; color: #95a9c0; margin-top: 150px;">Game stopped. Click "Start POV Mode" or "Start HOH Mode" to begin testing</p>';
+      
+      gameRunning = false;
+      currentCompType = null;
+      updateStatus();
+    }
+
+    function updateStatus() {
+      document.getElementById('statusRunning').textContent = gameRunning ? 'Yes' : 'No';
+      document.getElementById('statusRunning').style.color = gameRunning ? '#66ff66' : '#ff6b6b';
+      
+      document.getElementById('statusCompType').textContent = currentCompType ? currentCompType.toUpperCase() : 'None';
+      document.getElementById('statusCompType').style.color = currentCompType === 'pov' ? '#ffcc00' : '#83bfff';
+      
+      const maxDrops = currentCompType === 'pov' ? '1' : currentCompType === 'hoh' ? '2' : '-';
+      document.getElementById('statusMaxDrops').textContent = maxDrops;
+      
+      const phaseTimerStatus = window.game.phase.timerEnabled ? 'Enabled ⚠️' : 'Disabled ✓';
+      document.getElementById('statusPhaseTimer').textContent = phaseTimerStatus;
+      document.getElementById('statusPhaseTimer').style.color = window.game.phase.timerEnabled ? '#ff6b6b' : '#66ff66';
+    }
+
+    function checkForTimer() {
+      const container = document.getElementById('gameContainer');
+      const timerElements = container.querySelectorAll('[style*="display"][style*="none"]');
+      
+      let visibleTimerFound = false;
+      container.querySelectorAll('*').forEach(el => {
+        const text = el.textContent || '';
+        const style = window.getComputedStyle(el);
+        
+        // Check if element looks like a timer and is visible
+        if (text.match(/\d+:\d+/) && style.display !== 'none' && style.visibility !== 'hidden') {
+          if (!el.closest('[style*="display: none"]') && !el.closest('[style*="visibility: hidden"]')) {
+            visibleTimerFound = true;
+          }
+        }
+      });
+      
+      const timerStatus = visibleTimerFound ? 'Found ⚠️' : 'Not Found ✓';
+      document.getElementById('statusTimer').textContent = timerStatus;
+      document.getElementById('statusTimer').style.color = visibleTimerFound ? '#ff6b6b' : '#66ff66';
+    }
+
+    // Checklist toggle functionality
+    document.querySelectorAll('.checklist li').forEach((item, idx) => {
+      item.addEventListener('click', function() {
+        if (this.classList.contains('pass')) {
+          this.classList.remove('pass');
+          this.classList.add('fail');
+        } else if (this.classList.contains('fail')) {
+          this.classList.remove('fail');
+        } else {
+          this.classList.add('pass');
+        }
+      });
+    });
+
+    // Initialize status
+    updateStatus();
+    
+    // Periodically check timer status while game is running
+    setInterval(() => {
+      if (gameRunning) {
+        checkForTimer();
+        updateStatus();
+      }
+    }, 2000);
+  </script>
+
+  <!-- Load the minigame modules -->
+  <script src="js/minigames/hold-wall.js"></script>
+  <script src="js/minigames/holdTheWall.js"></script>
+</body>
+</html>
