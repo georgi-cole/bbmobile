@@ -1,14 +1,14 @@
 // MODULE: evictionModal.js
 // Dramatic eviction results modal with animations, particles, and optional audio
-// ES module providing EvictionModal.show() API for rich eviction reveals
+// Provides EvictionModal.show() API for rich eviction reveals
 
-export const EvictionModal = (() => {
+(function(global) {
   'use strict';
 
   // State
   let currentModal = null;
   let previousFocus = null;
-  let audioContext = {
+  const audioContext = {
     tickSound: null,
     revealSound: null,
     loaded: false
@@ -154,25 +154,6 @@ export const EvictionModal = (() => {
    */
   function unlockBodyScroll() {
     document.body.classList.remove('eviction-modal-open');
-  }
-
-  /**
-   * Create screen reader announcement
-   */
-  function announceToScreenReader(message) {
-    const liveRegion = document.createElement('div');
-    liveRegion.setAttribute('role', 'status');
-    liveRegion.setAttribute('aria-live', 'polite');
-    liveRegion.className = 'sr-only';
-    liveRegion.textContent = message;
-    document.body.appendChild(liveRegion);
-
-    // Remove after announcement
-    setTimeout(() => {
-      if (liveRegion.parentNode) {
-        liveRegion.parentNode.removeChild(liveRegion);
-      }
-    }, 1000);
   }
 
   /**
@@ -402,15 +383,14 @@ export const EvictionModal = (() => {
   }
 
   // Public API
-  return {
+  const EvictionModal = {
     show,
     hide
   };
-})();
 
-// Also expose as global for compatibility
-if (typeof window !== 'undefined') {
-  window.EvictionModal = EvictionModal;
-}
+  // Export to global scope
+  global.EvictionModal = EvictionModal;
 
-console.info('[evictionModal] Dramatic eviction modal initialized');
+  console.info('[evictionModal] Dramatic eviction modal initialized');
+
+})(window);

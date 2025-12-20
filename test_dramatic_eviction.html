@@ -186,16 +186,13 @@
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script> -->
 
   <!-- Import the dramatic eviction modal module -->
-  <script type="module">
-    import { EvictionModal } from './js/ui/evictionModal.js';
-
-    // Expose to window for button onclick handlers
-    window.EvictionModal = EvictionModal;
-
+  <script src="js/ui/evictionModal.js"></script>
+  
+  <script>
     // Test functions
     window.testEviction = async function() {
       console.log('[Test] Showing eviction: Jax loses 2-3');
-      await EvictionModal.show({
+      await window.EvictionModal.show({
         name: 'Jax',
         votesFor: 3,
         votesAgainst: 2,
@@ -205,7 +202,7 @@
 
     window.testSafe = async function() {
       console.log('[Test] Showing safe: Maria survives 5-2');
-      await EvictionModal.show({
+      await window.EvictionModal.show({
         name: 'Maria',
         votesFor: 2,
         votesAgainst: 5,
@@ -215,7 +212,7 @@
 
     window.testCloseVote = async function() {
       console.log('[Test] Showing close vote: Tyler loses 4-4');
-      await EvictionModal.show({
+      await window.EvictionModal.show({
         name: 'Tyler',
         votesFor: 4,
         votesAgainst: 4,
@@ -225,7 +222,7 @@
 
     window.testUnanimous = async function() {
       console.log('[Test] Showing unanimous: Alex evicted 7-0');
-      await EvictionModal.show({
+      await window.EvictionModal.show({
         name: 'Alex',
         votesFor: 7,
         votesAgainst: 0,
