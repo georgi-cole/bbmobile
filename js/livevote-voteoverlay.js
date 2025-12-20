@@ -203,15 +203,38 @@
     status.textContent = 'Select a nominee to evict';
     confirmContainer.appendChild(status);
 
-    // Evict button - compact and positioned close to avatar
+    // CTA row - 3-column layout: left nav, Evict button, right nav
+    const ctaRow = document.createElement('div');
+    ctaRow.className = 'lv-overlay__cta-row';
+    
+    // Left nav button - always rendered, disabled at bounds or with single nominee
+    const navLeft = document.createElement('button');
+    navLeft.className = 'lv-overlay__nav-left';
+    navLeft.innerHTML = '◀';
+    navLeft.setAttribute('aria-label', 'Previous nominee');
+    navLeft.onclick = () => navigateCarousel(-1);
+    navLeft.disabled = nominees.length <= 1 || state.selectedIndex === 0; // Disabled if single nominee or at start
+    ctaRow.appendChild(navLeft);
+
+    // Evict button - compact and centered in CTA row
     const evictBtn = document.createElement('button');
     evictBtn.className = 'lv-overlay__evict-btn';
     evictBtn.textContent = 'Evict';
     evictBtn.disabled = true; // Disabled until selection is made
     evictBtn.setAttribute('aria-label', 'Vote to evict selected nominee');
     evictBtn.onclick = handleEvictClick;
-    confirmContainer.appendChild(evictBtn);
-
+    ctaRow.appendChild(evictBtn);
+    
+    // Right nav button - always rendered, disabled at bounds or with single nominee
+    const navRight = document.createElement('button');
+    navRight.className = 'lv-overlay__nav-right';
+    navRight.innerHTML = '▶';
+    navRight.setAttribute('aria-label', 'Next nominee');
+    navRight.onclick = () => navigateCarousel(1);
+    navRight.disabled = nominees.length <= 1 || state.selectedIndex >= nominees.length - 1; // Disabled if single nominee or at end
+    ctaRow.appendChild(navRight);
+    
+    confirmContainer.appendChild(ctaRow);
     overlay.appendChild(confirmContainer);
 
     // Close button - only render if explicitly allowed via options.allowClose
@@ -239,6 +262,9 @@
     // Add to container
     targetContainer.appendChild(overlay);
     state.overlay = overlay;
+
+    // Initialize nav button states
+    updateNavButtons();
 
     // Focus the first nominee
     const firstNominee = track.querySelector('.lv-overlay__nominee[data-index="0"]');
@@ -280,6 +306,27 @@
     });
   }
 
+  // Helper: Update nav button states based on current index
+  function updateNavButtons() {
+    if (!state.overlay) return;
+    
+    const navLeft = state.overlay.querySelector('.lv-overlay__nav-left');
+    const navRight = state.overlay.querySelector('.lv-overlay__nav-right');
+    
+    if (navLeft && navRight) {
+      // Disable both if single nominee, otherwise disable at bounds
+      if (state.nominees.length <= 1) {
+        navLeft.disabled = true;
+        navRight.disabled = true;
+      } else {
+        // Disable left at start, enable otherwise
+        navLeft.disabled = state.selectedIndex === 0;
+        // Disable right at end, enable otherwise
+        navRight.disabled = state.selectedIndex >= state.nominees.length - 1;
+      }
+    }
+  }
+
   // Navigate carousel (swipe or arrow)
   function navigateCarousel(direction) {
     if (!state.overlay || state.nominees.length <= 1) return;
@@ -308,6 +355,9 @@
         nominee.setAttribute('tabindex', '-1');
       }
     });
+
+    // Update nav button states
+    updateNavButtons();
 
     // Announce to screen readers
     const player = global.getP?.(state.nominees[newIndex]);
@@ -347,6 +397,9 @@
           nominee.setAttribute('tabindex', '-1');
         }
       });
+      
+      // Update nav button states
+      updateNavButtons();
     }
 
     // Toggle selection
