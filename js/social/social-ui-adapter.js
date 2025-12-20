@@ -3,7 +3,7 @@
 // Listens for enriched social.action:result and social.entry:story events
 // Adds inline CTAs for spending Social Energy to reveal hidden details
 // Gated by: game.cfg.socialSpendingEnabled
-// Debug HUD gated by: game.cfg.debugSocialAI
+// Debug HUD gated by: game.cfg.debugSocialHUD
 
 (function(global) {
   'use strict';
@@ -34,9 +34,9 @@
   // ============================================================================
   
   const RETRY_CONFIG = {
-    maxRetries: 5,           // Number of retry attempts
-    retryIntervalMs: 200,    // Time between retries
-    totalWindowMs: 2000      // Total retry window (expanded from 100ms)
+    maxRetries: 10,          // Increased from 5
+    retryIntervalMs: 300,    // Increased from 200ms
+    totalWindowMs: 3000      // Increased from 2000ms (3 second window)
   };
 
   // Expanded selectors for Diary Room container
@@ -47,7 +47,8 @@
     '.dr-container',                       // Alternative class
     '#diaryRoom .log-container',           // Nested selector
     '.social-log-container',               // Alternative naming
-    '[data-log-type="social"]'             // Additional data attribute
+    '[data-log-type="social"]',            // Additional data attribute
+    '.log-pane[data-pane="social"]'        // Specific pane selector
   ];
 
   // Expanded selectors for Diary Room entries
@@ -57,7 +58,8 @@
     '.dr-entry',                           // Short form
     '[data-entry-id]',                     // Any with entry ID
     '.social-entry',                       // Social-specific
-    '[data-log-entry]'                     // Generic entry marker
+    '[data-log-entry]',                    // Generic entry marker
+    '.dr-log-item'                         // Additional alternative
   ];
 
   // ============================================================================
@@ -100,467 +102,364 @@
    * Check if player can afford the spend
    */
   function canAfford(playerId, cost) {
-    // Try SocialManeuvers API first
-    if (global.SocialManeuvers?.SocialResources?.get) {
-      const energy = global.SocialManeuvers.SocialResources.get(playerId, 'energy');
-      return energy >= cost;
+    cost = cost || 1;
+    
+    // Try SocialManeuvers bank if available
+    if (global.SocialManeuvers?.Bank) {
+      const balance = global.SocialManeuvers.Bank.getEnergy(playerId);
+      return balance >= cost;
     }
     
-    // Fallback to mock bank for testing
-    const mockBalance = global.__smDebug.fakeBank.get(playerId) ?? 10; // Default 10 for testing
+    // Fallback to mock bank
+    const mockBalance = global.__smDebug.fakeBank.get(playerId) || 0;
     return mockBalance >= cost;
   }
 
   /**
-   * Get current player energy
+   * Deduct energy from player's bank
    */
-  function getPlayerEnergy(playerId) {
-    // Try SocialManeuvers API first
-    if (global.SocialManeuvers?.SocialResources?.get) {
-      return global.SocialManeuvers.SocialResources.get(playerId, 'energy') || 0;
+  function deductEnergy(playerId, cost) {
+    cost = cost || 1;
+    
+    // Try SocialManeuvers bank if available
+    if (global.SocialManeuvers?.Bank) {
+      const success = global.SocialManeuvers.Bank.deduct(playerId, cost);
+      if (success) {
+        console.info('[social-ui-adapter] Deducted', cost, 'energy from', playerId);
+        return true;
+      }
+      return false;
     }
     
     // Fallback to mock bank
-    return global.__smDebug.fakeBank.get(playerId) ?? 10;
-  }
-
-  /**
-   * Spend player energy
-   */
-  function spendEnergy(playerId, cost) {
-    // Try SocialManeuvers API first
-    if (global.SocialManeuvers?.SocialResources?.spend) {
-      const result = global.SocialManeuvers.SocialResources.spend(playerId, { energy: cost });
-      return result.success;
-    }
-    
-    // Fallback to mock bank
-    const current = global.__smDebug.fakeBank.get(playerId) ?? 10;
-    if (current >= cost) {
-      global.__smDebug.fakeBank.set(playerId, current - cost);
-      console.info(`[social-ui-adapter] Mock spend: ${cost} energy (${current} → ${current - cost})`);
+    const mockBalance = global.__smDebug.fakeBank.get(playerId) || 0;
+    if (mockBalance >= cost) {
+      global.__smDebug.fakeBank.set(playerId, mockBalance - cost);
+      console.info('[social-ui-adapter] Deducted', cost, 'energy from mock bank for', playerId);
       return true;
     }
+    
     return false;
   }
 
   /**
-   * Emit analytics event
-   */
-  function emitAnalytics(eventName, data) {
-    // Emit on game bus
-    const bus = global.game?.bus;
-    if (bus && typeof bus.emit === 'function') {
-      try {
-        bus.emit(eventName, data);
-      } catch (err) {
-        console.warn('[social-ui-adapter] Failed to emit bus event:', err);
-      }
-    }
-
-    // Emit on window for compatibility
-    try {
-      window.dispatchEvent(new CustomEvent(eventName, { detail: data }));
-    } catch (err) {
-      console.warn('[social-ui-adapter] Failed to dispatch window event:', err);
-    }
-  }
-
-  /**
-   * Process truthiness for reveal
-   */
-  function processTruthiness(detailedText, truthiness) {
-    if (!truthiness || truthiness === 'true') {
-      return {
-        content: detailedText,
-        annotation: null
-      };
-    }
-
-    if (truthiness === 'partial') {
-      // Show first sentence plus suffix
-      const sentences = detailedText.split(/[.!?]\s+/);
-      const firstSentence = sentences[0] || detailedText;
-      return {
-        content: firstSentence + (firstSentence.endsWith('.') ? '' : '.'),
-        annotation: '(uncertain - partial information)'
-      };
-    }
-
-    if (truthiness === 'lie') {
-      return {
-        content: detailedText,
-        annotation: '⚠️ This might be deceptive'
-      };
-    }
-
-    return {
-      content: detailedText,
-      annotation: null
-    };
-  }
-
-  /**
-   * Find Diary Room container with expanded selectors
+   * Find Diary Room container using expanded selectors
    */
   function findDRContainer() {
     for (const selector of DR_CONTAINER_SELECTORS) {
-      const container = document.querySelector(selector);
-      if (container) {
-        return container;
+      const el = document.querySelector(selector);
+      if (el) {
+        return el;
       }
     }
     return null;
   }
 
   /**
-   * Find all Diary Room entries with expanded selectors
+   * Find entry element by ID with expanded selectors
    */
-  function findDREntries(container) {
-    const allEntries = [];
+  function findEntryElement(entryId) {
     for (const selector of DR_ENTRY_SELECTORS) {
-      const entries = container.querySelectorAll(selector);
-      entries.forEach(entry => {
-        if (!allEntries.includes(entry)) {
-          allEntries.push(entry);
+      const entries = document.querySelectorAll(selector);
+      for (const entry of entries) {
+        if (entry.dataset.entryId === entryId || 
+            entry.id === entryId ||
+            entry.dataset.id === entryId) {
+          return entry;
         }
-      });
+      }
     }
-    return allEntries;
+    return null;
+  }
+
+  // ============================================================================
+  // CTA ATTACHMENT WITH RETRY
+  // ============================================================================
+
+  /**
+   * Attach CTA to entry with retry logic
+   */
+  function attachCTAToEntryWithRetry(entryId, spendPrompt, detailedText) {
+    let attempts = 0;
+    const startTime = Date.now();
+    
+    function tryAttach() {
+      attempts++;
+      const elapsed = Date.now() - startTime;
+      
+      // Check if we've exceeded retry window
+      if (elapsed > RETRY_CONFIG.totalWindowMs) {
+        console.warn('[social-ui-adapter] Retry window exceeded for', entryId, 'after', attempts, 'attempts');
+        // Create fallback entry if nothing was found
+        createFallbackEntry(entryId, spendPrompt, detailedText);
+        return;
+      }
+      
+      // Try to find entry
+      const entryEl = findEntryElement(entryId);
+      
+      if (entryEl) {
+        // Found! Attach CTA
+        attachCTAToEntry(entryEl, entryId, spendPrompt, detailedText);
+        console.info('[social-ui-adapter] ✓ Attached CTA to', entryId, 'after', attempts, 'attempts');
+      } else if (attempts < RETRY_CONFIG.maxRetries) {
+        // Retry after interval
+        setTimeout(tryAttach, RETRY_CONFIG.retryIntervalMs);
+      } else {
+        // Max retries reached
+        console.warn('[social-ui-adapter] Max retries reached for', entryId);
+        createFallbackEntry(entryId, spendPrompt, detailedText);
+      }
+    }
+    
+    // Start attachment process
+    tryAttach();
   }
 
   /**
-   * Create a fallback DR-style entry when real entry not found
+   * Attach CTA directly to entry element
    */
-  function createFallbackEntry(container, payload) {
-    console.info('[social-ui-adapter] Creating fallback DR entry for:', payload.id);
+  function attachCTAToEntry(entryEl, entryId, spendPrompt, detailedText) {
+    // Check if already has CTA
+    if (entryEl.querySelector('.social-spend-cta')) {
+      console.debug('[social-ui-adapter] Entry already has CTA:', entryId);
+      return;
+    }
     
-    const entryElement = document.createElement('div');
-    entryElement.className = 'diary-entry fallback-entry';
-    entryElement.dataset.entryId = payload.id;
-    entryElement.dataset.fallback = 'true';
+    // Create CTA button
+    const cta = document.createElement('button');
+    cta.className = 'social-spend-cta';
+    cta.textContent = spendPrompt.text || '💎 Reveal details';
+    cta.title = `Cost: ${spendPrompt.cost || 1} energy`;
+    cta.dataset.entryId = entryId;
+    cta.dataset.cost = spendPrompt.cost || 1;
     
-    // Create entry text
-    const textDiv = document.createElement('div');
-    textDiv.className = 'entry-text';
-    textDiv.textContent = payload.text || payload.raw?.flavorText || 'Social interaction recorded';
-    entryElement.appendChild(textDiv);
+    // Add click handler
+    cta.addEventListener('click', () => handleSpendClick(entryId, entryEl, spendPrompt, detailedText));
     
-    // Create metadata
-    const metaDiv = document.createElement('div');
-    metaDiv.className = 'entry-meta';
-    metaDiv.textContent = `Entry ${payload.id} • Fallback`;
-    entryElement.appendChild(metaDiv);
+    // Append to entry
+    entryEl.appendChild(cta);
+    
+    // Style the CTA (inline for safety)
+    cta.style.cssText = `
+      display: inline-block;
+      margin-top: 4px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    `;
+    
+    cta.addEventListener('mouseenter', () => {
+      cta.style.transform = 'scale(1.05)';
+      cta.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.4)';
+    });
+    
+    cta.addEventListener('mouseleave', () => {
+      cta.style.transform = 'scale(1)';
+      cta.style.boxShadow = 'none';
+    });
+  }
+
+  /**
+   * Create minimal fallback entry when no real entry found
+   */
+  function createFallbackEntry(entryId, spendPrompt, detailedText) {
+    const container = findDRContainer();
+    
+    if (!container) {
+      console.warn('[social-ui-adapter] Cannot create fallback - no DR container found');
+      if (hudElement) updateHUDMessage('⚠️ No Diary Room container found');
+      return;
+    }
+    
+    // Create fallback entry
+    const fallback = document.createElement('div');
+    fallback.className = 'diary-entry social-entry fallback-entry';
+    fallback.dataset.entryId = entryId;
+    fallback.dataset.fallback = 'true';
+    
+    // Create content using DOM methods (safer than innerHTML)
+    const content = document.createElement('div');
+    content.className = 'entry-content';
+    
+    const icon = document.createElement('span');
+    icon.className = 'entry-icon';
+    icon.textContent = '🔒';
+    
+    const text = document.createElement('span');
+    text.className = 'entry-text';
+    text.textContent = 'Hidden social interaction (entry not found in standard location)';
+    
+    content.appendChild(icon);
+    content.appendChild(text);
+    fallback.appendChild(content);
+    
+    // Add CTA
+    attachCTAToEntry(fallback, entryId, spendPrompt, detailedText);
     
     // Append to container
-    container.appendChild(entryElement);
+    container.appendChild(fallback);
     
-    return entryElement;
-  }
-
-  /**
-   * Attach CTA to entry with retry mechanism
-   */
-  async function attachCTAToEntryWithRetry(payload) {
-    const entryId = payload.id || `entry-${Date.now()}`;
-    let retryCount = 0;
-    let entryElement = null;
-    let logContainer = null;
-    
-    while (retryCount < RETRY_CONFIG.maxRetries) {
-      // Find container
-      logContainer = findDRContainer();
-      
-      if (logContainer) {
-        // Try to find the entry by ID first
-        if (entryId) {
-          entryElement = logContainer.querySelector(`[data-entry-id="${entryId}"]`);
-        }
-        
-        // Fallback: Find most recent entry
-        if (!entryElement) {
-          const entries = findDREntries(logContainer);
-          if (entries.length > 0) {
-            entryElement = entries[entries.length - 1];
-            console.info('[social-ui-adapter] Using most recent entry as fallback');
-          }
-        }
-        
-        if (entryElement) {
-          break; // Found it!
-        }
-      }
-      
-      // Wait and retry
-      retryCount++;
-      if (retryCount < RETRY_CONFIG.maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.retryIntervalMs));
-      }
-    }
-    
-    // If still no container after retries, can't proceed
-    if (!logContainer) {
-      console.warn('[social-ui-adapter] No DR container found after retries');
-      emitAnalytics('social.cta:fail', {
-        entryId,
-        reason: 'no_container',
-        retriesAttempted: retryCount,
-        timestamp: Date.now()
-      });
-      return;
-    }
-    
-    // If no entry found after retries, create fallback
-    if (!entryElement) {
-      console.info('[social-ui-adapter] No entry found after retries, creating fallback');
-      entryElement = createFallbackEntry(logContainer, payload);
-      emitAnalytics('social.cta:fallback_created', {
-        entryId,
-        retriesAttempted: retryCount,
-        timestamp: Date.now()
-      });
-    } else {
-      console.info(`[social-ui-adapter] ✓ Found entry after ${retryCount} retries`);
-    }
-    
-    // Check if already has CTA
-    if (entryElement.querySelector('.social-spend-cta-container')) {
-      console.info('[social-ui-adapter] Entry already has CTA, skipping');
-      return;
-    }
-
-    // Create and append CTA
-    const cta = createSpendCTA(entryElement, payload);
-    if (cta) {
-      entryElement.appendChild(cta);
-      console.info('[social-ui-adapter] ✓ Attached CTA to entry');
-      
-      emitAnalytics('social.cta:attached', {
-        entryId,
-        retriesAttempted: retryCount,
-        isFallback: entryElement.dataset.fallback === 'true',
-        timestamp: Date.now()
-      });
-    }
-  }
-
-  // ============================================================================
-  // CTA RENDERING
-  // ============================================================================
-
-  /**
-   * Create spend CTA button
-   */
-  function createSpendCTA(entryElement, payload) {
-    const entryId = payload.id || `entry-${Date.now()}`;
-    
-    // Check if already revealed
-    if (revealedEntries.has(entryId)) {
-      console.info('[social-ui-adapter] Entry already revealed:', entryId);
-      return null;
-    }
-
-    // Check for spendPrompt
-    const spendPrompt = payload.raw?.spendPrompt || payload.spendPrompt;
-    if (!spendPrompt || !spendPrompt.cost) {
-      return null;
-    }
-
-    const cost = spendPrompt.cost;
-    const label = spendPrompt.label || `Spend ${cost} energy to reveal ▶`;
-    const playerId = getLocalPlayerId();
-
-    if (!playerId) {
-      console.warn('[social-ui-adapter] No local player ID found');
-      return null;
-    }
-
-    // Create CTA container
-    const ctaContainer = document.createElement('div');
-    ctaContainer.className = 'social-spend-cta-container';
-    ctaContainer.dataset.entryId = entryId;
-
-    // Create CTA button
-    const ctaButton = document.createElement('button');
-    ctaButton.className = 'social-spend-cta';
-    ctaButton.textContent = label;
-    ctaButton.dataset.cost = cost;
-    ctaButton.dataset.entryId = entryId;
-    ctaButton.setAttribute('aria-label', `Spend ${cost} social energy to reveal hidden details`);
-
-    // Check affordability
-    const affordable = canAfford(playerId, cost);
-    if (!affordable) {
-      ctaButton.disabled = true;
-      ctaButton.classList.add('disabled');
-      ctaButton.title = 'Not enough energy';
-      
-      const currentEnergy = getPlayerEnergy(playerId);
-      ctaButton.innerHTML = `${label} <span class="energy-status">(${currentEnergy}/${cost})</span>`;
-    }
-
-    // Click handler
-    ctaButton.addEventListener('click', async () => {
-      await handleSpendClick(ctaButton, entryElement, payload, playerId);
-    });
-
-    ctaContainer.appendChild(ctaButton);
-    return ctaContainer;
+    console.info('[social-ui-adapter] Created fallback entry for', entryId);
+    if (hudElement) updateHUDMessage(`✓ Created fallback entry: ${entryId}`);
   }
 
   /**
    * Handle spend button click
    */
-  async function handleSpendClick(button, entryElement, payload, playerId) {
-    const entryId = payload.id || `entry-${Date.now()}`;
-    const cost = parseInt(button.dataset.cost, 10);
-
+  function handleSpendClick(entryId, entryEl, spendPrompt, detailedText) {
+    const playerId = getLocalPlayerId();
+    const cost = spendPrompt.cost || 1;
+    
+    if (!playerId) {
+      console.warn('[social-ui-adapter] No local player ID found');
+      if (hudElement) updateHUDMessage('⚠️ No local player ID');
+      return;
+    }
+    
+    // Check if already revealed
+    if (revealedEntries.has(entryId)) {
+      console.warn('[social-ui-adapter] Entry already revealed:', entryId);
+      return;
+    }
+    
     // Emit attempt event
-    emitAnalytics('social.spend:attempt', {
-      entryId,
-      playerId,
-      cost,
-      timestamp: Date.now()
-    });
-
-    // Validate configuration still enabled
-    if (!global.game?.cfg?.socialSpendingEnabled) {
-      console.warn('[social-ui-adapter] Spend blocked: feature disabled');
-      emitAnalytics('social.spend:fail', {
-        entryId,
-        playerId,
-        cost,
-        reason: 'feature_disabled',
-        timestamp: Date.now()
-      });
-      return;
-    }
-
-    // Check affordability again
+    emitEvent('social.spend:attempt', { entryId, playerId, cost });
+    
+    // Check affordability
     if (!canAfford(playerId, cost)) {
-      console.warn('[social-ui-adapter] Spend blocked: insufficient energy');
-      emitAnalytics('social.spend:fail', {
-        entryId,
-        playerId,
-        cost,
-        reason: 'insufficient_energy',
-        timestamp: Date.now()
-      });
+      console.warn('[social-ui-adapter] Cannot afford:', cost, 'energy');
+      if (hudElement) updateHUDMessage(`⚠️ Not enough energy (need ${cost})`);
+      emitEvent('social.spend:fail', { entryId, playerId, cost, reason: 'insufficient_funds' });
       
-      // Update button to show insufficient funds
-      button.disabled = true;
-      button.classList.add('disabled');
-      button.textContent = 'Not enough energy';
+      // Visual feedback
+      const cta = entryEl.querySelector('.social-spend-cta');
+      if (cta) {
+        cta.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+        cta.textContent = '❌ Not enough energy';
+        setTimeout(() => {
+          cta.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+          cta.textContent = spendPrompt.text || '💎 Reveal details';
+        }, 1500);
+      }
       return;
     }
-
-    // Show loading state
-    button.disabled = true;
-    button.classList.add('loading');
-    const originalText = button.textContent;
-    button.textContent = 'Revealing...';
-
-    // Small delay for visual feedback
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Attempt to spend
-    const success = spendEnergy(playerId, cost);
-
+    
+    // Deduct energy
+    const success = deductEnergy(playerId, cost);
+    
     if (!success) {
       console.error('[social-ui-adapter] Failed to deduct energy');
-      emitAnalytics('social.spend:fail', {
-        entryId,
-        playerId,
-        cost,
-        reason: 'deduction_failed',
-        timestamp: Date.now()
-      });
-      
-      button.classList.remove('loading');
-      button.textContent = 'Failed to spend';
-      setTimeout(() => {
-        button.textContent = originalText;
-        button.disabled = false;
-      }, 2000);
+      if (hudElement) updateHUDMessage('⚠️ Deduction failed');
+      emitEvent('social.spend:fail', { entryId, playerId, cost, reason: 'deduction_failed' });
       return;
     }
-
-    // Success! Mark as revealed
+    
+    // Mark as revealed
     revealedEntries.add(entryId);
-
+    
     // Emit success event
-    emitAnalytics('social.spend:success', {
-      entryId,
-      playerId,
-      cost,
-      timestamp: Date.now()
-    });
-
-    // Reveal content
-    revealContent(button, entryElement, payload);
-
-    // Update energy display if available
-    if (global.SocializeMobile?.updateHUD) {
-      try {
-        global.SocializeMobile.updateHUD();
-      } catch (err) {
-        console.warn('[social-ui-adapter] Failed to update HUD:', err);
-      }
-    }
+    emitEvent('social.spend:success', { entryId, playerId, cost });
+    
+    // Reveal detailed text
+    revealDetailedText(entryEl, detailedText);
+    
+    // Update HUD
+    if (hudElement) updateHUDMessage(`✅ Revealed: ${entryId} (-${cost} energy)`);
+    
+    console.info('[social-ui-adapter] ✓ Spent', cost, 'energy to reveal', entryId);
   }
 
   /**
-   * Reveal hidden content
+   * Reveal detailed text in entry
    */
-  function revealContent(button, entryElement, payload) {
-    // Get detailed text and truthiness
-    const detailedText = payload.raw?.detailedText || payload.detailedText || 'No additional details available.';
-    const truthiness = payload.raw?.truthiness || payload.truthiness || 'true';
-
-    // Process based on truthiness
-    const processed = processTruthiness(detailedText, truthiness);
-
-    // Create reveal container
-    const revealContainer = document.createElement('div');
-    revealContainer.className = 'social-reveal-content';
+  function revealDetailedText(entryEl, detailedText) {
+    // Remove CTA
+    const cta = entryEl.querySelector('.social-spend-cta');
+    if (cta) {
+      cta.remove();
+    }
     
-    // Add content
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'reveal-text';
-    contentDiv.textContent = processed.content;
-    revealContainer.appendChild(contentDiv);
+    // Create revealed content container using DOM methods
+    const revealedDiv = document.createElement('div');
+    revealedDiv.className = 'social-revealed-content';
+    
+    const label = document.createElement('div');
+    label.className = 'revealed-label';
+    label.textContent = '💎 Revealed Details:';
+    
+    const text = document.createElement('div');
+    text.className = 'revealed-text';
+    text.textContent = detailedText || 'No additional details available.';
+    
+    revealedDiv.appendChild(label);
+    revealedDiv.appendChild(text);
+    
+    // Style
+    revealedDiv.style.cssText = `
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: rgba(102, 126, 234, 0.1);
+      border-left: 3px solid #667eea;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    `;
+    
+    label.style.cssText = `
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 4px;
+    `;
+    
+    text.style.cssText = `
+      white-space: pre-wrap;
+      color: var(--ink, #333);
+    `;
+    
+    // Append to entry
+    entryEl.appendChild(revealedDiv);
+    
+    // Emit reveal event
+    emitEvent('social.reveal:exposed', { 
+      entryId: entryEl.dataset.entryId, 
+      detailedText 
+    });
+    
+    // Animate reveal
+    revealedDiv.style.opacity = '0';
+    revealedDiv.style.transform = 'translateY(-10px)';
+    
+    requestAnimationFrame(() => {
+      revealedDiv.style.transition = 'all 0.3s ease';
+      revealedDiv.style.opacity = '1';
+      revealedDiv.style.transform = 'translateY(0)';
+    });
+  }
 
-    // Add annotation if present
-    if (processed.annotation) {
-      const annotationDiv = document.createElement('div');
-      annotationDiv.className = `reveal-annotation truthiness-${truthiness}`;
-      annotationDiv.textContent = processed.annotation;
-      revealContainer.appendChild(annotationDiv);
+  // ============================================================================
+  // EVENT EMISSION
+  // ============================================================================
 
-      // If lie, emit potential expose event for future tracking
-      if (truthiness === 'lie') {
-        emitAnalytics('social.reveal:exposed', {
-          entryId: payload.id,
-          timestamp: Date.now(),
-          truthiness: 'lie'
-        });
-      }
+  /**
+   * Emit events on both bus and window
+   */
+  function emitEvent(eventName, data) {
+    // Emit on game bus if available
+    if (global.game?.bus && typeof global.game.bus.emit === 'function') {
+      global.game.bus.emit(eventName, data);
     }
-
-    // Replace button with revealed content
-    const ctaContainer = button.closest('.social-spend-cta-container');
-    if (ctaContainer) {
-      ctaContainer.replaceWith(revealContainer);
-    } else {
-      button.replaceWith(revealContainer);
-    }
-
-    // Animate in
-    setTimeout(() => {
-      revealContainer.classList.add('revealed');
-    }, 50);
-
-    console.info('[social-ui-adapter] ✓ Revealed content for entry:', payload.id);
+    
+    // Emit on window for broader compatibility
+    const event = new CustomEvent(eventName, { detail: data });
+    window.dispatchEvent(event);
+    
+    console.debug('[social-ui-adapter] Emitted:', eventName, data);
   }
 
   // ============================================================================
@@ -568,280 +467,392 @@
   // ============================================================================
 
   /**
-   * Handle social.entry:story events
+   * Listen for enriched social events
    */
-  function handleStoryEntry(event) {
-    try {
-      const payload = event.detail;
-      if (!payload) return;
-
-      // Only process if has spendPrompt
-      const spendPrompt = payload.raw?.spendPrompt || payload.spendPrompt;
-      if (!spendPrompt) return;
-
-      // Track in debug list
-      const spendableItem = {
-        id: payload.id,
-        timestamp: Date.now(),
-        cost: spendPrompt.cost,
-        label: spendPrompt.label || `Spend ${spendPrompt.cost} energy`,
-        payload: payload
-      };
-      recentSpendables.unshift(spendableItem);
-      if (recentSpendables.length > 10) {
-        recentSpendables.pop(); // Keep last 10
-      }
-
-      // Update debug HUD if visible
-      updateDebugHUD();
-
-      // Use new retry mechanism (wait slightly longer for DR to render)
-      setTimeout(() => {
-        attachCTAToEntryWithRetry(payload);
-      }, 150);
-
-    } catch (err) {
-      console.error('[social-ui-adapter] Error handling story entry:', err);
+  function setupEventListeners() {
+    // Listen on game bus if available
+    if (global.game?.bus && typeof global.game.bus.on === 'function') {
+      global.game.bus.on('social.action:result', handleSocialActionResult);
+      global.game.bus.on('social.entry:story', handleSocialEntryStory);
+      console.info('[social-ui-adapter] Listening on game.bus');
     }
+    
+    // Also listen on window for broader compatibility
+    window.addEventListener('social.action:result', (e) => handleSocialActionResult(e.detail));
+    window.addEventListener('social.entry:story', (e) => handleSocialEntryStory(e.detail));
+    console.info('[social-ui-adapter] Listening on window events');
+  }
+
+  /**
+   * Handle social.action:result event
+   */
+  function handleSocialActionResult(payload) {
+    console.debug('[social-ui-adapter] social.action:result:', payload);
+    
+    if (!payload) return;
+    
+    const { entryId, spendPrompt, detailedText } = payload;
+    
+    if (!spendPrompt || !entryId) {
+      console.debug('[social-ui-adapter] No spendPrompt or entryId in payload');
+      return;
+    }
+    
+    // Track for HUD
+    recentSpendables.push({
+      entryId,
+      spendPrompt,
+      detailedText,
+      timestamp: Date.now()
+    });
+    
+    // Keep only last 10
+    if (recentSpendables.length > 10) {
+      recentSpendables.shift();
+    }
+    
+    // Attach CTA with retry
+    attachCTAToEntryWithRetry(entryId, spendPrompt, detailedText);
+    
+    // Update HUD
+    if (hudElement) updateHUDMessage(`🔔 New spendable: ${entryId}`);
+  }
+
+  /**
+   * Handle social.entry:story event
+   */
+  function handleSocialEntryStory(payload) {
+    console.debug('[social-ui-adapter] social.entry:story:', payload);
+    
+    if (!payload) return;
+    
+    const { entryId, spendPrompt, detailedText } = payload;
+    
+    if (!spendPrompt || !entryId) {
+      console.debug('[social-ui-adapter] No spendPrompt or entryId in story payload');
+      return;
+    }
+    
+    // Track for HUD
+    recentSpendables.push({
+      entryId,
+      spendPrompt,
+      detailedText,
+      timestamp: Date.now()
+    });
+    
+    // Keep only last 10
+    if (recentSpendables.length > 10) {
+      recentSpendables.shift();
+    }
+    
+    // Attach CTA with retry
+    attachCTAToEntryWithRetry(entryId, spendPrompt, detailedText);
+    
+    // Update HUD
+    if (hudElement) updateHUDMessage(`🔔 New story entry: ${entryId}`);
   }
 
   // ============================================================================
-  // DEBUG HUD (gated by debugSocialAI flag)
+  // DEBUG HUD (COLLAPSIBLE, NON-BLOCKING)
   // ============================================================================
 
-  let debugHUDElement = null;
+  let hudElement = null;
+  let hudVisible = false;
+  let hudExpanded = false;
 
   /**
-   * Create debug HUD element
+   * Create debug HUD (only if debugSocialHUD is enabled)
    */
   function createDebugHUD() {
-    if (debugHUDElement) return debugHUDElement;
-
-    const hud = document.createElement('div');
-    hud.id = 'social-spend-debug-hud';
-    hud.style.cssText = `
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.9);
-      color: #fff;
-      border: 2px solid #667eea;
-      border-radius: 8px;
-      padding: 12px;
-      font-family: monospace;
-      font-size: 12px;
-      z-index: 999999;
-      max-width: 350px;
-      max-height: 400px;
-      overflow-y: auto;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    `;
-
-    const header = document.createElement('div');
-    header.style.cssText = `
-      font-weight: bold;
-      margin-bottom: 8px;
-      color: #667eea;
-      border-bottom: 1px solid #667eea;
-      padding-bottom: 4px;
-    `;
-    header.textContent = '🎭 Social Spend Debug HUD';
-    hud.appendChild(header);
-
-    const content = document.createElement('div');
-    content.id = 'debug-hud-content';
-    hud.appendChild(content);
-
-    debugHUDElement = hud;
-    document.body.appendChild(hud);
-
-    return hud;
-  }
-
-  /**
-   * Update debug HUD content
-   */
-  function updateDebugHUD() {
-    if (!global.game?.cfg?.debugSocialAI) {
-      // Remove HUD if debug flag is off
-      if (debugHUDElement) {
-        debugHUDElement.remove();
-        debugHUDElement = null;
+    // Check if HUD should be visible
+    if (!cfg.debugSocialHUD) {
+      // Remove HUD if it exists
+      if (hudElement) {
+        hudElement.remove();
+        hudElement = null;
       }
       return;
     }
-
-    // Create HUD if needed
-    if (!debugHUDElement) {
-      createDebugHUD();
+    
+    // Don't recreate if already exists
+    if (hudElement) {
+      hudElement.style.display = 'block';
+      return;
     }
+    
+    // Create HUD container
+    hudElement = document.createElement('div');
+    hudElement.id = 'socialSpendDebugHUD';
+    hudElement.className = 'social-spend-debug-hud';
+    
+    hudElement.innerHTML = `
+      <div class="hud-toggle" id="hudToggle">
+        <span class="hud-toggle-icon">🔧</span>
+        <span class="hud-toggle-label">Social Spend Debug</span>
+        <span class="hud-toggle-arrow">▼</span>
+      </div>
+      <div class="hud-panel" id="hudPanel" style="display: none;">
+        <div class="hud-section">
+          <div class="hud-section-title">Status</div>
+          <div class="hud-message" id="hudMessage">Ready</div>
+        </div>
+        <div class="hud-section">
+          <div class="hud-section-title">Mock Bank Controls</div>
+          <div class="hud-controls">
+            <label>
+              Player ID: <input type="text" id="hudPlayerId" placeholder="p1" style="width: 80px;">
+            </label>
+            <label>
+              Energy: <input type="number" id="hudEnergy" value="10" min="0" max="100" style="width: 60px;">
+            </label>
+            <button id="hudSetEnergy" class="hud-btn">Set Energy</button>
+          </div>
+        </div>
+        <div class="hud-section">
+          <div class="hud-section-title">Debug Actions</div>
+          <div class="hud-controls">
+            <button id="hudTestAttach" class="hud-btn">Test CTA Attach</button>
+            <button id="hudClearRevealed" class="hud-btn">Clear Revealed</button>
+            <button id="hudRefresh" class="hud-btn">Refresh HUD</button>
+          </div>
+        </div>
+        <div class="hud-section">
+          <div class="hud-section-title">Recent Spendables (${recentSpendables.length})</div>
+          <div class="hud-spendables" id="hudSpendables"></div>
+        </div>
+      </div>
+    `;
+    
+    // Style the HUD
+    hudElement.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(20, 20, 30, 0.95);
+      color: #fff;
+      border: 1px solid rgba(102, 126, 234, 0.5);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      font-family: monospace;
+      font-size: 12px;
+      max-width: 400px;
+      min-width: 250px;
+    `;
+    
+    // Append to body
+    document.body.appendChild(hudElement);
+    
+    // Setup toggle behavior
+    const toggle = hudElement.querySelector('#hudToggle');
+    const panel = hudElement.querySelector('#hudPanel');
+    const arrow = hudElement.querySelector('.hud-toggle-arrow');
+    
+    toggle.style.cssText = `
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    `;
+    
+    toggle.addEventListener('click', () => {
+      hudExpanded = !hudExpanded;
+      panel.style.display = hudExpanded ? 'block' : 'none';
+      arrow.textContent = hudExpanded ? '▲' : '▼';
+    });
+    
+    // Setup controls
+    setupHUDControls();
+    
+    console.info('[social-ui-adapter] Debug HUD created');
+  }
 
-    const content = document.getElementById('debug-hud-content');
-    if (!content) return;
-
-    // Clear content
-    content.innerHTML = '';
-
-    // Show current energy
-    const playerId = getLocalPlayerId();
-    const energy = playerId ? getPlayerEnergy(playerId) : 0;
-    const energyDiv = document.createElement('div');
-    energyDiv.style.cssText = 'margin-bottom: 8px; color: #90caf9;';
-    energyDiv.textContent = `⚡ Energy: ${energy}`;
-    content.appendChild(energyDiv);
-
-    // Show recent spendables
-    if (recentSpendables.length === 0) {
-      const emptyDiv = document.createElement('div');
-      emptyDiv.style.cssText = 'color: #999; font-style: italic;';
-      emptyDiv.textContent = 'No recent spendable events';
-      content.appendChild(emptyDiv);
-    } else {
-      const listTitle = document.createElement('div');
-      listTitle.style.cssText = 'margin-top: 8px; margin-bottom: 4px; color: #a5d6a7;';
-      listTitle.textContent = `Recent Spendables (${recentSpendables.length}):`;
-      content.appendChild(listTitle);
-
-      recentSpendables.forEach((item, idx) => {
-        const itemDiv = document.createElement('div');
-        itemDiv.style.cssText = `
-          background: rgba(102, 126, 234, 0.1);
-          border-left: 3px solid #667eea;
-          padding: 6px;
-          margin-bottom: 4px;
-          border-radius: 3px;
-        `;
-
-        const itemHeader = document.createElement('div');
-        itemHeader.style.cssText = 'color: #90caf9; margin-bottom: 2px;';
-        itemHeader.textContent = `#${idx + 1} - Cost: ${item.cost} ⚡`;
-        itemDiv.appendChild(itemHeader);
-
-        const itemTime = document.createElement('div');
-        itemTime.style.cssText = 'color: #999; font-size: 10px;';
-        const elapsed = Math.round((Date.now() - item.timestamp) / 1000);
-        itemTime.textContent = `${elapsed}s ago • ID: ${item.id}`;
-        itemDiv.appendChild(itemTime);
-
-        // Debug spend button
-        const spendBtn = document.createElement('button');
-        spendBtn.style.cssText = `
-          background: #667eea;
-          color: white;
-          border: none;
-          padding: 4px 8px;
-          margin-top: 4px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-size: 10px;
-        `;
-        spendBtn.textContent = 'Debug Spend';
-        spendBtn.onclick = async () => {
-          if (!playerId) {
-            alert('No player ID found');
-            return;
-          }
-          
-          const canPay = canAfford(playerId, item.cost);
-          if (!canPay) {
-            alert(`Not enough energy! Have: ${energy}, Need: ${item.cost}`);
-            return;
-          }
-
-          const success = spendEnergy(playerId, item.cost);
-          if (success) {
-            alert(`✓ Spent ${item.cost} energy (Debug mode)`);
-            revealedEntries.add(item.id);
-            updateDebugHUD();
-          } else {
-            alert('Failed to spend energy');
-          }
-        };
-        itemDiv.appendChild(spendBtn);
-
-        content.appendChild(itemDiv);
+  /**
+   * Setup HUD control handlers
+   */
+  function setupHUDControls() {
+    if (!hudElement) return;
+    
+    // Set energy button
+    const setEnergyBtn = hudElement.querySelector('#hudSetEnergy');
+    if (setEnergyBtn) {
+      setEnergyBtn.addEventListener('click', () => {
+        const playerId = hudElement.querySelector('#hudPlayerId').value || 'p1';
+        const energy = parseInt(hudElement.querySelector('#hudEnergy').value) || 0;
+        global.__smDebug.fakeBank.set(playerId, energy);
+        updateHUDMessage(`✓ Set ${playerId} energy to ${energy}`);
       });
     }
-
-    // Add revealed count
-    const revealedDiv = document.createElement('div');
-    revealedDiv.style.cssText = 'margin-top: 8px; color: #a5d6a7; border-top: 1px solid #444; padding-top: 4px;';
-    revealedDiv.textContent = `✓ Revealed: ${revealedEntries.size}`;
-    content.appendChild(revealedDiv);
+    
+    // Test attach button
+    const testAttachBtn = hudElement.querySelector('#hudTestAttach');
+    if (testAttachBtn) {
+      testAttachBtn.addEventListener('click', () => {
+        const testId = 'test-' + Date.now();
+        attachCTAToEntryWithRetry(testId, { text: '💎 Test CTA', cost: 1 }, 'Test detailed text');
+        updateHUDMessage(`🔧 Testing CTA attach: ${testId}`);
+      });
+    }
+    
+    // Clear revealed button
+    const clearBtn = hudElement.querySelector('#hudClearRevealed');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        revealedEntries.clear();
+        updateHUDMessage('✓ Cleared revealed entries');
+      });
+    }
+    
+    // Refresh button
+    const refreshBtn = hudElement.querySelector('#hudRefresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        refreshHUD();
+      });
+    }
+    
+    // Style buttons
+    const buttons = hudElement.querySelectorAll('.hud-btn');
+    buttons.forEach(btn => {
+      btn.style.cssText = `
+        padding: 4px 8px;
+        font-size: 11px;
+        background: rgba(102, 126, 234, 0.8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 2px;
+      `;
+      
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'rgba(102, 126, 234, 1)';
+      });
+      
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = 'rgba(102, 126, 234, 0.8)';
+      });
+    });
   }
 
-  // Initialize debug HUD if flag is enabled
-  if (global.game?.cfg?.debugSocialAI) {
-    setTimeout(() => updateDebugHUD(), 500);
+  /**
+   * Update HUD status message
+   */
+  function updateHUDMessage(message) {
+    if (!hudElement) return;
+    
+    const msgEl = hudElement.querySelector('#hudMessage');
+    if (msgEl) {
+      msgEl.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    }
+    
+    // Update spendables list using DOM methods to avoid XSS
+    const spendablesEl = hudElement.querySelector('#hudSpendables');
+    if (spendablesEl) {
+      // Clear existing content
+      spendablesEl.innerHTML = '';
+      
+      if (recentSpendables.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.style.cssText = 'padding: 4px; opacity: 0.5;';
+        emptyDiv.textContent = 'No recent spendables';
+        spendablesEl.appendChild(emptyDiv);
+      } else {
+        recentSpendables.forEach((s, i) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.style.cssText = 'padding: 4px; border-bottom: 1px solid rgba(255,255,255,0.1);';
+          // Use textContent to safely render user data
+          itemDiv.textContent = `${i + 1}. ${s.entryId} - ${s.spendPrompt.text || 'Reveal'} (${s.spendPrompt.cost || 1} energy)`;
+          spendablesEl.appendChild(itemDiv);
+        });
+      }
+    }
   }
+
+  /**
+   * Refresh HUD visibility and content
+   */
+  function refreshHUD() {
+    if (cfg.debugSocialHUD) {
+      createDebugHUD();
+      if (hudElement) updateHUDMessage('🔄 HUD refreshed');
+    } else {
+      if (hudElement) {
+        hudElement.remove();
+        hudElement = null;
+      }
+    }
+    
+    console.info('[social-ui-adapter] HUD refreshed, debugSocialHUD=', cfg.debugSocialHUD);
+  }
+
+  // ============================================================================
+  // PUBLIC API
+  // ============================================================================
+
+  const SocialUIAdapter = {
+    /**
+     * Reset adapter state
+     */
+    reset() {
+      revealedEntries.clear();
+      recentSpendables.length = 0;
+      console.info('[social-ui-adapter] Reset');
+    },
+    
+    /**
+     * Set mock energy for testing
+     */
+    setMockEnergy(playerId, amount) {
+      global.__smDebug.fakeBank.set(playerId, amount);
+      console.info('[social-ui-adapter] Set mock energy:', playerId, '=', amount);
+      if (hudElement) updateHUDMessage(`✓ Mock energy: ${playerId} = ${amount}`);
+    },
+    
+    /**
+     * Get list of revealed entries
+     */
+    getRevealed() {
+      return Array.from(revealedEntries);
+    },
+    
+    /**
+     * Refresh HUD
+     */
+    refreshHUD() {
+      refreshHUD();
+    },
+    
+    /**
+     * Get recent spendables
+     */
+    getRecentSpendables() {
+      return [...recentSpendables];
+    }
+  };
+
+  // Expose globally
+  global.SocialUIAdapter = SocialUIAdapter;
 
   // ============================================================================
   // INITIALIZATION
   // ============================================================================
 
-  // Listen for social.entry:story events
-  window.addEventListener('social.entry:story', handleStoryEntry);
+  // Setup event listeners
+  setupEventListeners();
 
-  // Also listen on game bus if available
-  const bus = global.game?.bus;
-  if (bus && typeof bus.on === 'function') {
-    bus.on('social.entry:story', (payload) => {
-      handleStoryEntry({ detail: payload });
-    });
+  // Create HUD if enabled
+  if (cfg.debugSocialHUD) {
+    // Delay HUD creation slightly to ensure DOM is ready
+    setTimeout(() => {
+      createDebugHUD();
+      if (hudElement) updateHUDMessage('✓ Social UI Adapter ready');
+    }, 500);
   }
 
-  console.info('[social-ui-adapter] ✓ Event listeners registered');
-
-  // ============================================================================
-  // PUBLIC API (for testing)
-  // ============================================================================
-
-  const SocialUIAdapter = {
-    createSpendCTA,
-    canAfford,
-    getPlayerEnergy,
-    spendEnergy,
-    processTruthiness,
-    revealedEntries,
-    
-    // Test helpers
-    reset() {
-      revealedEntries.clear();
-      recentSpendables.length = 0;
-      if (debugHUDElement) {
-        updateDebugHUD();
-      }
-      console.info('[social-ui-adapter] State reset');
-    },
-    
-    setMockEnergy(playerId, amount) {
-      global.__smDebug.fakeBank.set(playerId, amount);
-      if (debugHUDElement) {
-        updateDebugHUD();
-      }
-      console.info(`[social-ui-adapter] Mock energy set: ${playerId} = ${amount}`);
-    },
-    
-    getRevealed() {
-      return Array.from(revealedEntries);
-    },
-    
-    // Debug HUD controls
-    showDebugHUD() {
-      if (!debugHUDElement) {
-        createDebugHUD();
-      }
-      updateDebugHUD();
-    },
-    
-    hideDebugHUD() {
-      if (debugHUDElement) {
-        debugHUDElement.remove();
-        debugHUDElement = null;
-      }
-    }
-  };
-
-  global.SocialUIAdapter = SocialUIAdapter;
+  console.info('[social-ui-adapter] ✓ Initialization complete');
 
 })(window);

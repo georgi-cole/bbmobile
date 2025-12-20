@@ -264,6 +264,13 @@
             html('<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn primary" id="btnLaunchMinigame">🚀 Launch Minigame</button></div>'),
             html('<div class="tiny muted" style="margin-top:6px;">Launch any implemented minigame in a debug sandbox for manual testing. The game will run independently without affecting game flow.</div>')
           ]
+        },
+        {
+          title: 'Social Maneuvers Debug',
+          fields: [
+            checkbox('debugSocialHUD', 'Show Social Spend Debug HUD'),
+            html('<div class="tiny muted">When enabled, shows a collapsible debug HUD for the Social Spend UI Adapter. Includes mock bank controls, CTA attachment testing, and recent spendables tracking.</div>')
+          ]
         }
       ]
     }

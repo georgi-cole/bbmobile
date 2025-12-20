@@ -74,9 +74,9 @@
       ],
       
       probe_pov: [
-        `${actor}: "If you win veto, what's the play?"\n${target}: "${suggested ? `I'd probably ${suggested} it.` : 'Still weighing my options.'}"`,
-        `${actor}: "Honest question – would you use it?"\n${target}: "${suggested ? `${suggested.includes('use') ? 'Most likely yes.' : 'Probably not.'}` : 'Depends on the situation.'}"`,
-        `${actor}: "POV holder's got a big decision coming up."\n${target}: "${suggested ? `Yeah, I'm thinking ${suggested}.` : 'It's complicated.'}"`
+        `${actor}: "If you win veto, what's the play?"\n${target}: "${suggested ? 'I\'d probably ' + suggested + ' it.' : 'Still weighing my options.'}"`,
+        `${actor}: "Honest question – would you use it?"\n${target}: "${suggested ? (suggested.includes('use') ? 'Most likely yes.' : 'Probably not.') : 'Depends on the situation.'}"`,
+        `${actor}: "POV holder's got a big decision coming up."\n${target}: "${suggested ? 'Yeah, I\'m thinking ' + suggested + '.' : 'It\'s complicated.'}"`
       ],
       
       bargain_pov: [
@@ -116,9 +116,9 @@
       ],
       
       verify_rumor: [
-        `${actor}: "I heard something about you. Is it true?"\n${target}: "${Math.random() > 0.5 ? 'Some of it, maybe.' : 'That's completely false.'}"`,
+        `${actor}: "I heard something about you. Is it true?"\n${target}: "${(Math.random() > 0.5) ? 'Some of it, maybe.' : 'That\'s completely false.'}"`,
         `${actor}: "I need to ask you directly – what's the real story?"\n${target}: "Let me explain..."`,
-        `${actor}: "Can we talk about what I heard?"\n${target}: "${Math.random() > 0.5 ? 'Yeah, I figured this would come up.' : 'There's nothing to talk about.'}"`
+        `${actor}: "Can we talk about what I heard?"\n${target}: "${(Math.random() > 0.5) ? 'Yeah, I figured this would come up.' : 'There\'s nothing to talk about.'}"`
       ],
       
       sympathy_visit: [

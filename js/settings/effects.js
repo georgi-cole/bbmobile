@@ -41,6 +41,17 @@
       }catch(e){
         console.warn('[effects] enableJuryHouse update failed', e);
       }
+    },
+    
+    // Social Spend Debug HUD toggle
+    debugSocialHUD: function(value, cfg){
+      try{
+        if (global.SocialUIAdapter && typeof global.SocialUIAdapter.refreshHUD === 'function') {
+          global.SocialUIAdapter.refreshHUD();
+        }
+      }catch(e){
+        console.warn('[effects] debugSocialHUD refresh failed', e);
+      }
     }
   };
 
