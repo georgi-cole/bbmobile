@@ -206,7 +206,7 @@
 <body>
   <div class="test-container">
     <h1>🏋️ Hold The Wall Minigame Test Harness</h1>
-    <div class="subtitle">Testing endurance minigame with no phase timer</div>
+    <div class="subtitle">Testing endurance minigame with no phase timer and sequential drops</div>
 
     <div class="test-section">
       <h2>📋 Test Instructions</h2>
@@ -215,10 +215,23 @@
         without relying on the full game infrastructure. It validates:
         <ul>
           <li>Phase timer is disabled when the minigame starts</li>
+          <li><strong>NEW: No visible on-screen timer is shown to players</strong></li>
+          <li><strong>NEW: Drops occur sequentially, not simultaneously</strong></li>
+          <li><strong>NEW: POV competitions allow max 1 drop per tick</strong></li>
+          <li><strong>NEW: HOH competitions allow max 2 drops per tick</strong></li>
           <li>Players can drop and receive 0 points</li>
           <li>Results are computed from non-dropped players only</li>
           <li>Results are published exactly once</li>
           <li>Phase advances to results when returning to main screen</li>
+        </ul>
+      </div>
+      <div class="warning" style="background: rgba(255, 204, 0, 0.1); border-left: 3px solid #ffcc00; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 0.9rem;">
+        <strong>Testing Sequential Drops:</strong>
+        <ul>
+          <li>Watch the event log for drop events - they should appear with timestamps showing 800-1200ms gaps</li>
+          <li>In POV mode: Only 1 player should drop per 10-second check interval</li>
+          <li>In HOH mode: Maximum 2 players should drop per 10-second check interval</li>
+          <li>During fail-safe acceleration (final 20s): Same limits apply but checks happen every 5s</li>
         </ul>
       </div>
     </div>
@@ -226,7 +239,9 @@
     <div class="test-section">
       <h2>🎮 Test Controls</h2>
       <div style="margin-bottom: 15px;">
-        <button class="btn" onclick="startGame()">Start Game</button>
+        <strong>Competition Type Selection:</strong><br>
+        <button class="btn" onclick="startGame('hoh')">Start HOH Game (Max 2 drops/tick)</button>
+        <button class="btn" onclick="startGame('pov')">Start POV Game (Max 1 drop/tick)</button>
         <button class="btn" onclick="stopGame()">Stop Game</button>
         <button class="btn" onclick="clearLog()">Clear Log</button>
       </div>
@@ -244,6 +259,10 @@
     <div class="test-section">
       <h2>📊 Game State</h2>
       <div class="state-display">
+        <div class="state-card">
+          <h3>Competition Type</h3>
+          <div class="value" id="stateCompType">None</div>
+        </div>
         <div class="state-card">
           <h3>Started</h3>
           <div class="value" id="stateStarted">No</div>
@@ -285,8 +304,12 @@
         <strong>Verify these behaviors during testing:</strong>
         <ul>
           <li>✓ When "Start Game" is clicked, phase timer should be paused (check console)</li>
+          <li>✓ <strong>No visible timer should appear on screen (timerDiv is hidden)</strong></li>
           <li>✓ When a player drops, they should be removed from holding list</li>
           <li>✓ Dropped players should emit "minigame.playerDropped" event with points: 0</li>
+          <li>✓ <strong>In POV mode: Only 1 player drops per tick (check timestamps)</strong></li>
+          <li>✓ <strong>In HOH mode: Max 2 players drop per tick (check timestamps)</strong></li>
+          <li>✓ <strong>Sequential drops show 800-1200ms stagger between each drop</strong></li>
           <li>✓ Winners should only include players who haven't dropped</li>
           <li>✓ "Return to Main Screen" should publish results exactly once</li>
           <li>✓ Phase should advance to "results" after return to main screen</li>
@@ -364,6 +387,7 @@
     let gameState = {
       started: false,
       resultsShown: false,
+      competitionType: 'none',
       playersHolding: new Set(['player1', 'player2', 'player3']),
       droppedPlayers: new Set()
     };
@@ -397,12 +421,13 @@
     });
     
     // Test control functions
-    window.startGame = function() {
-      logEvent('Test', 'Starting game with 3 players', 'info');
+    window.startGame = function(compType = 'hoh') {
+      logEvent('Test', `Starting ${compType.toUpperCase()} game with 3 players`, 'info');
       
       gameState.started = true;
       gameState.resultsShown = false;
       gameState.resultsShownCount = 0;
+      gameState.competitionType = compType;
       gameState.playersHolding = new Set(['player1', 'player2', 'player3']);
       gameState.droppedPlayers = new Set();
       
@@ -416,12 +441,15 @@
       });
       
       updateStateDisplay();
+      
+      logEvent('Info', `Competition type: ${compType.toUpperCase()} - Max drops per tick: ${compType === 'pov' ? 1 : 2}`, 'info');
     };
     
     window.stopGame = function() {
       logEvent('Test', 'Stopping game', 'info');
       HoldTheWall.stop();
       gameState.started = false;
+      gameState.competitionType = 'none';
       updateStateDisplay();
     };
     
@@ -459,6 +487,9 @@
     
     // Update state display
     function updateStateDisplay() {
+      document.getElementById('stateCompType').textContent = gameState.competitionType.toUpperCase();
+      document.getElementById('stateCompType').style.color = gameState.competitionType === 'pov' ? '#ffcc00' : '#83bfff';
+      
       document.getElementById('stateStarted').textContent = gameState.started ? 'Yes' : 'No';
       document.getElementById('stateStarted').style.color = gameState.started ? '#66ff66' : '#ff6b6b';
       
