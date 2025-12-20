@@ -258,7 +258,7 @@
     let pulsateInterval = null;
     let sheenInterval = null;
     let hasEnded = false; // Guard to prevent duplicate end calls
-    let isProcessingDrops = false; // Lock to prevent overlapping drop sequences
+    let isProcessingDrops = false; // Lock to prevent overlapping drop sequences during tick processing
     
     // Participant tracking: { name, isPlayer, dropTimeMs, avatarEl, img, badge, player }
     let participants = [];
@@ -774,9 +774,9 @@
         selectAndDropCandidates(dropOdds, 'couldn\'t endure');
         
         // Check game state after drop sequence completes
-        // Note: We use DROP_COMPLETION_BUFFER_MS (1500ms) to allow time for sequential drops
-        // to finish. Worst case: 2 drops with 1200ms stagger = ~1200ms total.
-        // The 1500ms buffer ensures all drops are processed before checking final state.
+        // Note: DROP_COMPLETION_BUFFER_MS allows time for sequential drops to finish.
+        // Worst case: 2 drops with DROP_STAGGER_MAX_MS delay = ~DROP_STAGGER_MAX_MS total.
+        // The buffer ensures all drops are processed before checking final state.
         setTimeout(() => {
           const stillRemaining = participants.filter(p => !p.dropTimeMs);
           if(stillRemaining.length === 2){
