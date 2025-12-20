@@ -106,19 +106,15 @@
       const accuracy = score / (score + errors + 1);
       const rawScore = Math.min(100, Math.round(accuracy * 100));
       
-      // Determine if player succeeded
-      const playerSucceeded = rawScore >= 60; // 60% threshold for success
-      
-      // Apply win probability logic
-      let finalScore = rawScore;
-      if(g.GameUtils && !debugMode && competitionMode){
-        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-        if(!shouldWin && playerSucceeded){
-          // Force loss despite success (25% win rate)
-          finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
-          console.log('[FlashFlood] Win probability applied: success forced to loss');
-        }
-      }
+      // Use MinigameScoring to calculate final score (SCALE=1000)
+          const finalScore = g.MinigameScoring ? 
+            g.MinigameScoring.calculateFinalScore({
+              rawScore: rawScore,
+              minScore: 0,
+              maxScore: 100,
+              compBeast: 0.5
+            }) :
+            rawScore * 10; // Fallback: scale to 0-1000
       
       if(onComplete) onComplete(finalScore);
     }

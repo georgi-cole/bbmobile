@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central Scoring Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #1a2332;
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+    }
+    .pass { color: #74e48b; }
+    .fail { color: #ff6b6b; }
+    pre {
+      background: #0f1320;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Central Scoring System Test</h1>
+  
+  <div class="test-section">
+    <h2>Module Load Test</h2>
+    <div id="load-test"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>SCALE Test</h2>
+    <div id="scale-test"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>MinigameScoring.normalize Test</h2>
+    <div id="normalize-test"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>MinigameScoring.calculateFinalScore Test</h2>
+    <div id="calc-test"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>GameUtils.determineGameResult Test</h2>
+    <div id="gameutils-test"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>OpponentSynth.generateOpponentScores Test</h2>
+    <div id="opponentsynth-test"></div>
+  </div>
+
+  <!-- Load central scoring module -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/central-scoring.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+  <script src="js/minigames/gameUtils.js"></script>
+  <script src="js/minigames/opponent-synth.js"></script>
+  
+  <script>
+    // Initialize game.cfg for tests
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {
+      playerWinChances: { hoh: 0.20, pov: 0.30 }
+    };
+    
+    // Seeded RNG for tests
+    window.bbSeededRng = function(seed) {
+      let state = seed;
+      return {
+        next() {
+          state = (state * 1103515245 + 12345) & 0x7fffffff;
+          return state / 0x7fffffff;
+        }
+      };
+    };
+    
+    function runTests() {
+      // Test 1: Module Load
+      const loadEl = document.getElementById('load-test');
+      if (window.MinigameScoring && window.GameUtils && window.OpponentSynth) {
+        loadEl.innerHTML = '<span class="pass">✓ PASS</span> - All modules loaded successfully';
+      } else {
+        loadEl.innerHTML = '<span class="fail">✗ FAIL</span> - Modules not loaded';
+        return;
+      }
+      
+      // Test 2: SCALE
+      const scaleEl = document.getElementById('scale-test');
+      const scale = window.MinigameScoring.SCALE;
+      if (scale === 1000) {
+        scaleEl.innerHTML = `<span class="pass">✓ PASS</span> - SCALE = ${scale}`;
+      } else {
+        scaleEl.innerHTML = `<span class="fail">✗ FAIL</span> - SCALE = ${scale} (expected 1000)`;
+      }
+      
+      // Test 3: normalize
+      const normalizeEl = document.getElementById('normalize-test');
+      const normalized = window.MinigameScoring.normalize(50, 0, 100);
+      const expected = 500; // 50% of 1000
+      if (Math.abs(normalized - expected) < 1) {
+        normalizeEl.innerHTML = `<span class="pass">✓ PASS</span> - normalize(50, 0, 100) = ${normalized} (expected ${expected})`;
+      } else {
+        normalizeEl.innerHTML = `<span class="fail">✗ FAIL</span> - normalize(50, 0, 100) = ${normalized} (expected ${expected})`;
+      }
+      
+      // Test 4: calculateFinalScore
+      const calcEl = document.getElementById('calc-test');
+      const finalScore = window.MinigameScoring.calculateFinalScore({
+        rawScore: 75,
+        minScore: 0,
+        maxScore: 100,
+        compBeast: 0.5
+      });
+      if (finalScore >= 500 && finalScore <= 1000) {
+        calcEl.innerHTML = `<span class="pass">✓ PASS</span> - calculateFinalScore({rawScore: 75, ...}) = ${finalScore.toFixed(0)} (reasonable range)`;
+      } else {
+        calcEl.innerHTML = `<span class="fail">✗ FAIL</span> - calculateFinalScore({rawScore: 75, ...}) = ${finalScore.toFixed(0)} (out of range)`;
+      }
+      
+      // Test 5: determineGameResult
+      const gameUtilsEl = document.getElementById('gameutils-test');
+      let wins = 0;
+      const trials = 100;
+      for (let i = 0; i < trials; i++) {
+        if (window.GameUtils.determineGameResult(true, 'hoh', {debugMode: false})) {
+          wins++;
+        }
+      }
+      const winRate = wins / trials;
+      const expectedRate = 0.20;
+      if (Math.abs(winRate - expectedRate) < 0.10) {
+        gameUtilsEl.innerHTML = `<span class="pass">✓ PASS</span> - Win rate: ${(winRate * 100).toFixed(1)}% (expected ~${(expectedRate * 100).toFixed(0)}%, within 10%)`;
+      } else {
+        gameUtilsEl.innerHTML = `<span class="fail">✗ FAIL</span> - Win rate: ${(winRate * 100).toFixed(1)}% (expected ~${(expectedRate * 100).toFixed(0)}%)`;
+      }
+      
+      // Test 6: OpponentSynth
+      const opponentSynthEl = document.getElementById('opponentsynth-test');
+      const humanScore = 700;
+      const opponents = [
+        {id: 'ai1', compBeast: 0.5, persona: {chaos: 0.5, aggr: 0.5}},
+        {id: 'ai2', compBeast: 0.6, persona: {chaos: 0.3, aggr: 0.7}},
+        {id: 'ai3', compBeast: 0.4, persona: {chaos: 0.7, aggr: 0.3}}
+      ];
+      
+      const opponentScores = window.OpponentSynth.generateOpponentScores(humanScore, opponents, {
+        phase: 'hoh',
+        seed: 12345
+      });
+      
+      const scores = Array.from(opponentScores.values());
+      const allRealistic = scores.every(s => s >= 300 && s <= 1200);
+      const hasVariance = Math.max(...scores) - Math.min(...scores) > 50;
+      
+      if (allRealistic && hasVariance) {
+        opponentSynthEl.innerHTML = `<span class="pass">✓ PASS</span> - Generated ${scores.length} realistic opponent scores<br><pre>${JSON.stringify(Object.fromEntries(opponentScores), null, 2)}</pre>`;
+      } else {
+        opponentSynthEl.innerHTML = `<span class="fail">✗ FAIL</span> - Generated scores not realistic<br><pre>${JSON.stringify(Object.fromEntries(opponentScores), null, 2)}</pre>`;
+      }
+    }
+    
+    // Run tests after modules load
+    window.addEventListener('load', () => {
+      setTimeout(runTests, 100);
+    });
+  </script>
+</body>
+</html>

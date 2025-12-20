@@ -27,31 +27,71 @@
     }
     
     let humanWins = 0;
+    let humanWins = 0;
     let aiWins = 0;
     const alive = global.alivePlayers?.() || g.players.filter(p => !p.evicted);
     const eligible = alive.filter(p => p.id !== g.lastHOHId || alive.length === 4);
     
+    // Get SCALE from MinigameScoring
+    const SCALE = global.MinigameScoring?.SCALE || 1000;
+    
     console.log(`[debug] Human compBeast: ${human.compBeast?.toFixed(3) || 'N/A'}`);
     console.log(`[debug] Eligible players: ${eligible.length}`);
+    console.log(`[debug] Using SCALE: ${SCALE}`);
     
-    for(let i = 0; i < numSims; i++){
-      const scores = new Map();
-      
-      for(const p of eligible){
-        const baseScore = 8 + Math.random() * 20;
-        const multiplier = 0.75 + (p.compBeast || 0.5) * 0.6;
-        const variance = 0.9 + Math.random() * 0.3;
-        const finalScore = baseScore * multiplier * variance;
-        scores.set(p.id, finalScore);
+    // Use OpponentSynth if available for realistic scoring
+    if(global.OpponentSynth && typeof global.OpponentSynth.generate === 'function'){
+      for(let i = 0; i < numSims; i++){
+        // Generate human score (simulate performance)
+        const humanRawScore = 50 + Math.random() * 50; // 50-100 raw
+        const humanScore = global.MinigameScoring ? 
+          global.MinigameScoring.calculateFinalScore({
+            rawScore: humanRawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: human.compBeast || 0.5
+          }) : 
+          humanRawScore * (SCALE / 100);
+        
+        // Generate opponent scores using OpponentSynth
+        const opponents = eligible.filter(p => p.id !== humanId);
+        const opponentScores = global.OpponentSynth.generate({
+          humanScore: humanScore,
+          opponents: opponents,
+          gameKey: 'simulation',
+          phase: 'hoh',
+          seed: Date.now() + i
+        });
+        
+        // Check if human wins
+        const didHumanWin = [...opponentScores.values()].every(score => humanScore > score);
+        if(didHumanWin){
+          humanWins++;
+        } else {
+          aiWins++;
+        }
       }
-      
-      const sorted = [...scores.entries()].sort((a, b) => b[1] - a[1]);
-      const winnerId = sorted[0][0];
-      
-      if(winnerId === humanId){
-        humanWins++;
-      } else {
-        aiWins++;
+    } else {
+      // Fallback: old scoring simulation (scaled to SCALE)
+      for(let i = 0; i < numSims; i++){
+        const scores = new Map();
+        
+        for(const p of eligible){
+          const baseScore = (SCALE * 0.08) + Math.random() * (SCALE * 0.20); // 8-28% of SCALE
+          const multiplier = 0.75 + (p.compBeast || 0.5) * 0.6;
+          const variance = 0.9 + Math.random() * 0.3;
+          const finalScore = baseScore * multiplier * variance;
+          scores.set(p.id, finalScore);
+        }
+        
+        const sorted = [...scores.entries()].sort((a, b) => b[1] - a[1]);
+        const winnerId = sorted[0][0];
+        
+        if(winnerId === humanId){
+          humanWins++;
+        } else {
+          aiWins++;
+        }
       }
     }
     

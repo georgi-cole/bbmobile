@@ -13,6 +13,13 @@
 
   // Win probability constant - human players win ~20% of the time when eligible (new golden rule)
   const PLAYER_WIN_CHANCE = 0.20;
+  const PLAYER_WIN_CHANCE_POV = 0.30; // POV has higher win chance
+  
+  // Default win chances by phase
+  const DEFAULT_WIN_CHANCES = {
+    hoh: 0.20,
+    pov: 0.30
+  };
   
   // New outcome logic constants
   const SKIP_PENALTY = 10;        // Score penalty for using Skip action
@@ -23,27 +30,47 @@
   /**
    * [LEGACY] Determine game result with win probability bias
    * DEPRECATED: Use evaluateOutcome() for new implementations.
-   * In competition mode, even if player succeeds, they only win ~20% of the time (updated from 25%)
+   * In competition mode, player win chance depends on phase (HOH=20%, POV=30% by default)
    * In debug/test mode, actual success is shown without bias
    * 
    * @param {boolean} playerSucceeded - Whether the player completed the game successfully
-   * @param {boolean} debugMode - If true, bypass win probability (show actual result)
+   * @param {string|boolean} phaseOrDebugMode - Phase string ('hoh'/'pov') or legacy debugMode boolean
+   * @param {Object} options - Additional options (for phase-aware calls)
    * @returns {boolean} Whether the player should be shown as winner
    */
-  function determineGameResult(playerSucceeded, debugMode = false){
+  function determineGameResult(playerSucceeded, phaseOrDebugMode = false, options = {}){
     // If player failed, they never win
     if(!playerSucceeded){
       return false;
     }
     
+    // Handle legacy boolean debugMode parameter
+    let debugMode = false;
+    let phase = 'hoh';
+    
+    if(typeof phaseOrDebugMode === 'boolean'){
+      // Legacy call: determineGameResult(success, debugMode)
+      debugMode = phaseOrDebugMode;
+    } else if(typeof phaseOrDebugMode === 'string'){
+      // New call: determineGameResult(success, 'hoh'/'pov', options)
+      phase = phaseOrDebugMode;
+      debugMode = options.debugMode || false;
+    }
+    
+    const cfg = (g.game && g.game.cfg) || g.cfg || {};
+    
     // In debug mode, show actual result
-    if(debugMode){
+    if(debugMode || cfg.debugAlwaysWin === true){
       return true;
     }
     
-    // Apply 20% win probability (updated from 25%)
+    // Get phase-specific win chance from config
+    const winChances = cfg.playerWinChances || DEFAULT_WIN_CHANCES;
+    const winChance = winChances[phase] || DEFAULT_WIN_CHANCES.hoh;
+    
+    // Apply win probability
     const rng = g.rng || Math.random;
-    return rng() < PLAYER_WIN_CHANCE;
+    return rng() < winChance;
   }
 
   /**
@@ -272,6 +299,8 @@
   // Export API
   g.GameUtils = {
     PLAYER_WIN_CHANCE,
+    PLAYER_WIN_CHANCE_POV,
+    DEFAULT_WIN_CHANCES,
     determineGameResult,
     evaluateOutcome,
     coerceSuccessToLossScore,
@@ -282,6 +311,8 @@
     getDifficultySettings,
     consts: {
       PLAYER_WIN_CHANCE,
+      PLAYER_WIN_CHANCE_POV,
+      DEFAULT_WIN_CHANCES,
       SKIP_PENALTY,
       MIN_ELIGIBLE_PCT,
       LOSS_FLOOR,
@@ -289,6 +320,6 @@
     }
   };
 
-  console.info('[GameUtils] Module loaded - Player win chance:', PLAYER_WIN_CHANCE);
+  console.info('[GameUtils] Module loaded - Player win chances:', DEFAULT_WIN_CHANCES);
 
 })(window);

@@ -109,6 +109,16 @@
             checkbox('enableMinigameBridge', 'Enable minigame compatibility bridge'),
             checkbox('enableMinigameTelemetryPanel', 'Show minigame telemetry panel (Dev)')
           ]
+        },
+        {
+          title: 'Competition win chances',
+          fields: [
+            html('<div class="tiny muted">Configure player win probability for different competition types (stored as decimals internally: 20% = 0.20).</div>'),
+            number('playerWinChanceHOH', 'HOH win chance (%)', 0, 100, 1),
+            html('<div class="tiny muted">Default: 20% chance to win HOH competitions when performing well.</div>'),
+            number('playerWinChancePOV', 'POV win chance (%)', 0, 100, 1),
+            html('<div class="tiny muted">Default: 30% chance to win POV competitions when performing well.</div>')
+          ]
         }
       ]
     },

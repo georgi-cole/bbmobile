@@ -183,6 +183,8 @@
     autoShowRulesOnStart: true,  // Show rules modal automatically after intro
     skipIntros: false,  // When true, skip intro video and animated intro sequence
     debugAlwaysWin: false,  // Debug: Always win minigames/competitions (testing only)
+    playerWinChanceHOH: 20,  // HOH win chance (percentage, converted to 0.20 decimal internally)
+    playerWinChancePOV: 30,  // POV win chance (percentage, converted to 0.30 decimal internally)
   };
 
   function injectUiCssOnce(){
@@ -220,6 +222,27 @@
       if(g.audio?.setMusicEnabled) g.audio.setMusicEnabled(!!cfg.musicOn);
       if(g.audio?.setSfxEnabled) g.audio.setSfxEnabled(!!cfg.sfxOn);
     }catch(e){}
+    
+    // Convert percentage win chances to decimal playerWinChances object
+    try{
+      if(!cfg.playerWinChances || typeof cfg.playerWinChances !== 'object'){
+        cfg.playerWinChances = {};
+      }
+      // Convert HOH percentage to decimal (20 => 0.20)
+      if(typeof cfg.playerWinChanceHOH === 'number'){
+        cfg.playerWinChances.hoh = cfg.playerWinChanceHOH / 100;
+      } else if(typeof cfg.playerWinChances.hoh !== 'number'){
+        cfg.playerWinChances.hoh = 0.20; // Default
+      }
+      // Convert POV percentage to decimal (30 => 0.30)
+      if(typeof cfg.playerWinChancePOV === 'number'){
+        cfg.playerWinChances.pov = cfg.playerWinChancePOV / 100;
+      } else if(typeof cfg.playerWinChances.pov !== 'number'){
+        cfg.playerWinChances.pov = 0.30; // Default
+      }
+    }catch(e){
+      console.error('[applyCfgEffects] Failed to convert playerWinChances:', e);
+    }
   }
   function ensureGameCfg(){
     // Use centralized Config.ensureGameCfg when available to ensure single alias

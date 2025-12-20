@@ -2,7 +2,17 @@
 
 ## Overview
 
-The unified scoring system ensures fairness and balance across all minigames by normalizing scores to a 0-100 scale. Different game types use different scoring strategies optimized for their mechanics.
+The unified scoring system ensures fairness and balance across all minigames by normalizing scores to a **0-1000 scale** (SCALE=1000). Different game types use different scoring strategies optimized for their mechanics.
+
+**Update (v2.0):** Scoring system updated to use SCALE=1000 (previously 0-100) for higher precision and better granularity in competition results.
+
+## Core Module: central-scoring.js
+
+All minigames now use the centralized scoring module (`js/minigames/central-scoring.js`) which provides:
+
+- **MinigameScoring**: Score normalization with SCALE=1000
+- **GameUtils**: Phase-specific win determination (HOH: 20%, POV: 30%)
+- **OpponentSynth**: Realistic AI opponent score generation
 
 ## Scoring Types
 
@@ -13,12 +23,13 @@ Used for games where **faster is better** (e.g., reaction games, races).
 **Formula:** Exponential decay from max time to min time
 ```javascript
 MinigameScoring.normalizeTime(timeMs, minTimeMs, maxTimeMs)
+// Returns: 0-1000 (SCALE=1000)
 ```
 
 **Example:**
-- Min time: 1000ms (fastest possible) → 100 points
-- Max time: 10000ms (slowest acceptable) → 0 points
-- 3000ms → ~75 points (exponential curve)
+- Min time: 1000ms (fastest possible) → 1000 points
+- Max time: 10000ms (slowest acceptable) → 200 points (20% of SCALE)
+- 3000ms → ~750 points (exponential curve)
 
 **Games using this:**
 - Reaction Timer
@@ -32,11 +43,12 @@ Used for games where **correctness matters** (e.g., counting, matching).
 **Formula:** Percentage correct with optional penalties
 ```javascript
 MinigameScoring.normalizeAccuracy(correct, total, penalties)
+// Returns: 0-1000 (SCALE=1000)
 ```
 
 **Example:**
-- 8/10 correct → 80 points
-- 8/10 correct with 2 penalties → 60 points
+- 8/10 correct → 800 points
+- 8/10 correct with 2 penalties → 600 points
 
 **Games using this:**
 - Count House
@@ -280,3 +292,59 @@ function answerQuestion(answer){
 - Add bounds checking
 - Clamp extreme values
 - Log telemetry for analysis
+
+## Migration to SCALE=1000 (v2.0)
+
+### Key Changes
+
+1. **Scoring Scale**: All scores now use 0-1000 range (was 0-100)
+2. **Fairness Band**: Updated to 350-700 (was 35-70)
+3. **No Forced Losses**: Player scores reflect true performance
+4. **Win Determination**: Handled by OpponentSynth at competition level
+5. **Phase-Specific Win Rates**: HOH (20%), POV (30%) - configurable in settings
+
+### API Updates
+
+```javascript
+// New: Calculate final score with SCALE=1000
+const finalScore = MinigameScoring.calculateFinalScore({
+  rawScore: rawScore,      // Raw score 0-100
+  minScore: 0,             // Min possible raw score
+  maxScore: 100,           // Max possible raw score
+  compBeast: 0.5           // Player's competition skill (0-1)
+});
+// Returns: 0-1000 (or up to 1500 for exceptional performance)
+
+// Phase-specific win determination
+const didWin = GameUtils.determineGameResult(
+  playerSucceeded, 
+  'hoh',  // or 'pov'
+  { debugMode: false }
+);
+
+// Generate opponent scores
+const opponentScores = OpponentSynth.generateOpponentScores(
+  humanScore,    // 0-1000
+  opponents,     // Array of player objects
+  { phase: 'hoh', seed: Date.now() }
+);
+```
+
+### Migration Checklist
+
+When updating a minigame to use the new system:
+
+- [ ] Remove manual score clamping (e.g., `Math.min(100, ...)`)
+- [ ] Remove forced loss logic (`30 + Math.random() * 25`)
+- [ ] Replace with `MinigameScoring.calculateFinalScore(...)`
+- [ ] Ensure final score is rounded: `Math.round(finalScore)`
+- [ ] Update tests to expect 0-1000 scale
+- [ ] Test in browser to verify scoring behavior
+
+### Settings Configuration
+
+Players can now configure win chances in Settings > Gameplay > Competition win chances:
+- **HOH Win Chance**: Default 20% (range: 0-100%)
+- **POV Win Chance**: Default 30% (range: 0-100%)
+
+These are stored as percentages in the UI but converted to decimals (0.20, 0.30) internally.

@@ -181,18 +181,17 @@
       const maxPossible = 15;
       const rawScore = Math.round((totalCorrect / maxPossible) * 100);
       
-      const playerSucceeded = rawScore >= 60;
+      // Use MinigameScoring to calculate final score (SCALE=1000)
+      const finalScore = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        rawScore * 10; // Fallback: scale to 0-1000
       
-      // Apply win probability logic
-      let finalScore = rawScore;
-      if(g.GameUtils && !debugMode && competitionMode){
-        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-        if(!shouldWin && playerSucceeded){
-          finalScore = Math.round(30 + Math.random() * 25);
-        }
-      }
-      
-      setTimeout(() => onComplete(finalScore), 500);
+      setTimeout(() => onComplete(Math.round(finalScore)), 500);
     }
     
     submitBtn.addEventListener('click', evaluateRound);

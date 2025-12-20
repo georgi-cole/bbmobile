@@ -172,15 +172,18 @@
     const min = Math.min(...scores);
     const max = Math.max(...scores);
 
-    // Fairness band check (default 35-70)
-    const inFairnessBand = mean >= 35 && mean <= 70;
+    // Fairness band check (SCALE=1000: 350-700, was 35-70 for 0-100 scale)
+    const SCALE = g.MinigameScoring?.SCALE || 1000;
+    const fairnessMin = SCALE * 0.35; // 35% of SCALE
+    const fairnessMax = SCALE * 0.70; // 70% of SCALE
+    const inFairnessBand = mean >= fairnessMin && mean <= fairnessMax;
 
     console.log('📊 Score Distribution:');
     console.log(`  Samples: ${samples}`);
     console.log(`  Mean: ${mean.toFixed(2)}`);
     console.log(`  Std Dev: ${stdDev.toFixed(2)}`);
     console.log(`  Min: ${min.toFixed(2)}, Max: ${max.toFixed(2)}`);
-    console.log(`  ${inFairnessBand ? '✅' : '⚠️'} Mean ${inFairnessBand ? 'within' : 'outside'} fairness band (35-70)`);
+    console.log(`  ${inFairnessBand ? '✅' : '⚠️'} Mean ${inFairnessBand ? 'within' : 'outside'} fairness band (${fairnessMin}-${fairnessMax} on 0-${SCALE} scale)`);
 
     return {
       gameKey,
@@ -192,7 +195,10 @@
         stdDev,
         min,
         max,
-        inFairnessBand
+        inFairnessBand,
+        fairnessMin,
+        fairnessMax,
+        scale: SCALE
       }
     };
   }
