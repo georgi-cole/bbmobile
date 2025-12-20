@@ -549,6 +549,7 @@
     g.__humanPlayedVeto = false;
     g.__instructionsRenderedVeto = false; // Track if instructions were rendered
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
+    g.__vetoResultsShown = false; // Track if results have been shown to prevent redundant display
     // Reset grace attempt flag for new competition
     if (g.humanId != null) {
       delete g[`__graceReplayAttempt_veto_comp_${g.humanId}`];
@@ -895,6 +896,7 @@
     }
     
     // Guard: prevent multiple calls and re-entry
+    // This guard ensures finishVetoComp only runs once even if called multiple times
     if (g.__finishVetoCompCalled || g.__vetoResolving) {
       console.warn('[veto] finishVetoComp already called or resolving - skipping duplicate');
       return;
@@ -911,12 +913,15 @@
       if(humanIsParticipant() && g.phaseEndsAt && Date.now() > g.phaseEndsAt + 250){
         submitGuarded(g.humanId, 0, 1, 'Veto/Auto');
       } else {
+        // Retry after short delay if human hasn't submitted yet
         setTimeout(finishVetoComp, 700);
         return;
       }
     }
     
     // Mark as called and set resolving flag
+    // These flags act as the single source of truth for competition state
+    // All timer handlers must check these flags before proceeding
     g.__finishVetoCompCalled = true;
     g.__vetoResolving = true;
 
@@ -1028,6 +1033,20 @@
 
     // Clear resolving flag before async operations
     g.__vetoResolving = false;
+
+    // Check if results have already been shown by fast-forward mechanism
+    // If so, skip the redundant display and proceed directly to ceremony
+    if(g.__vetoResultsShown){
+      console.info('[veto] Results already shown via fast-forward, skipping redundant display');
+      // Proceed directly to ceremony without additional delay
+      setTimeout(function(){
+        handlePostVetoReveal();
+      }, 100); // Minimal delay to allow any pending operations to complete
+      return;
+    }
+
+    // Mark that results are being shown to prevent duplicate displays
+    g.__vetoResultsShown = true;
 
     // Always show full reveal - skip/FFWD should jump to results, not bypass them
     // Use new leaderboard renderer if available
