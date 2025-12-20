@@ -169,23 +169,6 @@
     });
 
     carousel.appendChild(track);
-
-    // Create navigation arrows in the carousel initially
-    // These will be re-parented into the CTA row later
-    const prevArrow = document.createElement('button');
-    prevArrow.className = 'lv-overlay__arrow lv-overlay__nav-left prev';
-    prevArrow.innerHTML = '◀';
-    prevArrow.setAttribute('aria-label', 'Previous nominee');
-    prevArrow.onclick = () => navigateCarousel(-1);
-    carousel.appendChild(prevArrow);
-
-    const nextArrow = document.createElement('button');
-    nextArrow.className = 'lv-overlay__arrow lv-overlay__nav-right next';
-    nextArrow.innerHTML = '▶';
-    nextArrow.setAttribute('aria-label', 'Next nominee');
-    nextArrow.onclick = () => navigateCarousel(1);
-    carousel.appendChild(nextArrow);
-
     overlay.appendChild(carousel);
 
     // Confirmation container - placed directly below carousel for proximity to selected avatar
@@ -201,23 +184,19 @@
     status.textContent = 'Select a nominee to evict';
     confirmContainer.appendChild(status);
 
-    // CTA row - 3-column layout: left nav, Evict button, right nav
+    // CTA row - 3-column layout: left arrow, Evict button, right arrow
+    // Reuse existing carousel arrows (don't create new ones)
     const ctaRow = document.createElement('div');
     ctaRow.className = 'lv-overlay__cta-row';
     
-    // Re-parent existing arrows from carousel into CTA row
-    // This reuses the arrows instead of creating duplicates
-    const navLeft = carousel.querySelector('.lv-overlay__nav-left');
-    const navRight = carousel.querySelector('.lv-overlay__nav-right');
-    
-    if (navLeft && navRight) {
-      // Set initial disabled state
-      navLeft.disabled = nominees.length <= 1 || state.selectedIndex === 0;
-      navRight.disabled = nominees.length <= 1 || state.selectedIndex >= nominees.length - 1;
-      
-      // Re-parent arrows into CTA row
-      ctaRow.appendChild(navLeft);
-    }
+    // Create carousel navigation arrows (reused from original implementation)
+    // Always render them (for all viewports), place them in CTA row
+    const prevArrow = document.createElement('button');
+    prevArrow.className = 'lv-overlay__arrow prev';
+    prevArrow.innerHTML = '◀';
+    prevArrow.setAttribute('aria-label', 'Previous nominee');
+    prevArrow.onclick = () => navigateCarousel(-1);
+    ctaRow.appendChild(prevArrow);
 
     // Evict button - compact and centered in CTA row
     const evictBtn = document.createElement('button');
@@ -228,9 +207,13 @@
     evictBtn.onclick = handleEvictClick;
     ctaRow.appendChild(evictBtn);
     
-    if (navRight) {
-      ctaRow.appendChild(navRight);
-    }
+    // Right carousel navigation arrow
+    const nextArrow = document.createElement('button');
+    nextArrow.className = 'lv-overlay__arrow next';
+    nextArrow.innerHTML = '▶';
+    nextArrow.setAttribute('aria-label', 'Next nominee');
+    nextArrow.onclick = () => navigateCarousel(1);
+    ctaRow.appendChild(nextArrow);
     
     confirmContainer.appendChild(ctaRow);
     overlay.appendChild(confirmContainer);
@@ -308,19 +291,19 @@
   function updateNavButtons() {
     if (!state.overlay) return;
     
-    const navLeft = state.overlay.querySelector('.lv-overlay__nav-left');
-    const navRight = state.overlay.querySelector('.lv-overlay__nav-right');
+    const prevArrow = state.overlay.querySelector('.lv-overlay__arrow.prev');
+    const nextArrow = state.overlay.querySelector('.lv-overlay__arrow.next');
     
-    if (navLeft && navRight) {
+    if (prevArrow && nextArrow) {
       // Disable both if single nominee, otherwise disable at bounds
       if (state.nominees.length <= 1) {
-        navLeft.disabled = true;
-        navRight.disabled = true;
+        prevArrow.disabled = true;
+        nextArrow.disabled = true;
       } else {
-        // Disable left at start, enable otherwise
-        navLeft.disabled = state.selectedIndex === 0;
-        // Disable right at end, enable otherwise
-        navRight.disabled = state.selectedIndex >= state.nominees.length - 1;
+        // Disable prev at start, enable otherwise
+        prevArrow.disabled = state.selectedIndex === 0;
+        // Disable next at end, enable otherwise
+        nextArrow.disabled = state.selectedIndex >= state.nominees.length - 1;
       }
     }
   }

@@ -166,7 +166,7 @@
   animation: fadeIn 0.3s ease-out;
 }
 
-/* CTA row - 3-column layout with left nav, Evict button, right nav */
+/* CTA row - 3-column layout with left arrow, Evict button, right arrow */
 .lv-overlay__cta-row {
   display: grid;
   grid-template-columns: 44px 1fr 44px;
@@ -177,9 +177,8 @@
   max-width: 280px;
 }
 
-/* Nav buttons in CTA row - always rendered, disabled at bounds */
-.lv-overlay__nav-left,
-.lv-overlay__nav-right {
+/* Carousel navigation arrows - reused in CTA row (always rendered, disabled at bounds) */
+.lv-overlay__arrow {
   width: 44px;
   height: 44px;
   min-width: 44px;
@@ -194,23 +193,20 @@
   color: #e8f4ff;
   cursor: pointer;
   transition: all 0.2s ease;
-  /* Never remove from DOM, only disable */
+  /* Never remove from DOM, only disable via opacity + pointer-events */
 }
 
-.lv-overlay__nav-left:hover:not(:disabled),
-.lv-overlay__nav-right:hover:not(:disabled) {
+.lv-overlay__arrow:hover:not(:disabled) {
   background: rgba(20, 35, 55, 1);
   border-color: rgba(143, 211, 255, 0.5);
   transform: scale(1.05);
 }
 
-.lv-overlay__nav-left:active:not(:disabled),
-.lv-overlay__nav-right:active:not(:disabled) {
+.lv-overlay__arrow:active:not(:disabled) {
   transform: scale(0.95);
 }
 
-.lv-overlay__nav-left:disabled,
-.lv-overlay__nav-right:disabled {
+.lv-overlay__arrow:disabled {
   opacity: 0.35;
   pointer-events: none;
   cursor: not-allowed;
@@ -463,10 +459,8 @@
   .lv-overlay__evict-btn:active,
   .lv-overlay__close:hover,
   .lv-overlay__close:active,
-  .lv-overlay__nav-left:hover,
-  .lv-overlay__nav-left:active,
-  .lv-overlay__nav-right:hover,
-  .lv-overlay__nav-right:active {
+  .lv-overlay__arrow:hover,
+  .lv-overlay__arrow:active {
     transform: none;
   }
 }
@@ -482,9 +476,7 @@
   }
   
   .lv-overlay__arrow,
-  .lv-overlay__close,
-  .lv-overlay__nav-left,
-  .lv-overlay__nav-right {
+  .lv-overlay__close {
     border-width: 3px;
   }
 }
