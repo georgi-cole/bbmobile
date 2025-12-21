@@ -77,7 +77,7 @@
   min-height: 0 !important;
   max-height: min(46vh, 340px) !important; /* Bounded */
   width: 100% !important;
-  overflow: auto !important; /* Scrolls if needed */
+  overflow: visible !important; /* Allow avatars to render fully without clipping */
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -113,40 +113,43 @@
   border-radius: 50% !important;
 }
 
-/* Avatar containers for carousel overlay */
-.tvViewport .lv-overlay__avatar-container {
+/* Avatar containers for carousel overlay - DO NOT override CSS variable sizing */
+/* The avatar container uses --avatarSize variable for size-based growth (not transform scale) */
+/* Overriding with fixed clamp() breaks the design and causes layout issues */
+/* .tvViewport .lv-overlay__avatar-container {
   width: clamp(85px, 20vw, 180px) !important;
   height: clamp(85px, 20vw, 180px) !important;
 }
 
-/* Center avatar when selected */
 .tvViewport .lv-overlay__nominee.center .lv-overlay__avatar-container {
   width: clamp(110px, 26vw, 200px) !important;
   height: clamp(110px, 26vw, 200px) !important;
-}
+} */
 
 /* Ensure center nominee stands out and is visually centered */
+/* DO NOT override the gap - let livevote-voteoverlay.css control spacing */
 .tvViewport .lv-overlay__nominee.center {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: clamp(8px, 1.5vw, 12px) !important;
 }
 
 /* Nominee elements - normal spacing */
+/* DO NOT override the gap - let livevote-voteoverlay.css control spacing */
 .tvViewport .lv-overlay__nominee {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  gap: clamp(8px, 1.5vw, 12px) !important;
 }
 
 /* Nominee names */
 .tvViewport .lv-overlay__nominee-name {
   font-size: clamp(1rem, 3vw, 1.2rem) !important;
   margin: 0 !important;
+  margin-top: 0 !important; /* Explicitly prevent margin-top: auto */
   padding: 0 !important;
+  position: static !important; /* Ensure it's in normal document flow */
 }
 
 /* Carousel track - normal gaps between avatars */
@@ -158,6 +161,7 @@
   padding: 0 clamp(12px, 3vw, 24px) !important; /* Horizontal padding only, remove vertical padding */
   margin: 0 auto !important; /* Center the track horizontally */
   width: 100% !important; /* Full width for proper centering */
+  overflow: visible !important; /* Allow vertical overflow for avatar circles */
 }
 
 /* Evict button styling with normal padding */
