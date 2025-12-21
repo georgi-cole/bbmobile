@@ -7,194 +7,229 @@
  * for minimal, non-breaking fixes to legacy vote overlay implementation.
  * 
  * Fixes:
- * 1. Title→avatar clearance (prevent overlap when avatar grows)
- * 2. Hide redundant "Now showing..." helper line
- * 3. Reduce avatar→name gap and anchor name closer
- * 4. Move CTA lower with smaller Evict button
- * 5. Fix scrim coverage + horizontal centering inside faux TV
+ * 1. Full-bleed scrim on overlay root (NOT inner panel)
+ * 2. Fix centering asymmetry (cyan vs magenta)
+ * 3. Remove the "Now showing..." helper line
+ * 4. Avatar layout: lower, never clipped, tighter gap, no space-between
+ * 5. CTA lower + narrower button
+ * 6. Legacy-stage arrows hidden (NOT CTA arrows)
  */
 
 /* ========================================
-   FIX 1: Guarantee title→avatar clearance
+   FIX 1: Full-bleed scrim on overlay root (NOT inner panel)
    ======================================== */
 
-/* Add min spacing under title to prevent avatar overlap */
-#tv .lv-overlay__header,
-#tv .lv-overlay__title {
-  margin-bottom: clamp(12px, 2vh, 18px) !important;
+/* Ensure TV viewport is positioned and clipped correctly */
+#tv .tvViewport {
+  position: relative !important;
+  overflow: hidden !important;
 }
 
-/* Add top padding on stage to create buffer zone */
-#tv .lv-overlay__stage,
-#tv .lv-overlay__carousel {
-  padding-top: clamp(12px, 2vh, 20px) !important;
-}
-
-/* Center carousel/track wrapper horizontally */
-#tv .lv-overlay__stage {
+/* Overlay root fills tvViewport completely AND acts as flex container */
+#tv .lv-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
   display: flex !important;
-  justify-content: center !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  padding: 14px 14px 18px !important;
+  align-items: center !important;
+  background: transparent !important; /* Remove any background - using ::before instead */
 }
 
-/* Ensure track viewport/carousel is centered and not offset */
-#tv .lv-overlay__carousel,
+/* Full-coverage scrim via ::before to dim the entire TV viewport */
+#tv .lv-overlay::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.55) !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* Constrain child elements to max width */
+#tv .lv-overlay > * {
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
+}
+
+/* ========================================
+   FIX 2: Fix centering asymmetry (cyan vs magenta)
+   ======================================== */
+
+/* Close button positioned absolutely so it doesn't force padding on stage */
+#tv .lv-overlay__close {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  z-index: 2 !important;
+}
+
+/* Title: centered, consistent margin */
+#tv .lv-overlay__title,
+#tv .lv-overlay__header {
+  margin: 0 auto 14px !important;
+  padding: 0 !important;
+  text-align: center !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
+}
+
+/* Stage and carousel: centered, no asymmetric padding */
+#tv .lv-overlay__stage,
 #tv .lv-overlay__track-viewport,
-#tv .lv-overlay__stage-inner {
+#tv .lv-overlay__carousel {
   margin-inline: auto !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
+  box-sizing: border-box !important;
+  padding-inline: 0 !important;
+}
+
+/* Remove any translate/left offset on stage viewport container */
+#tv .lv-overlay__stage,
+#tv .lv-overlay__track-viewport,
+#tv .lv-overlay__carousel {
+  transform: none !important;
   left: auto !important;
   right: auto !important;
 }
 
-/* Keep transform only on the track for sliding animation (NOT on viewport) */
-#tv .lv-overlay__carousel:not(.lv-overlay__track),
-#tv .lv-overlay__track-viewport,
-#tv .lv-overlay__stage-inner {
-  transform: none !important;
+/* Keep transforms only on the moving track (for carousel animation) */
+#tv .lv-overlay__track {
+  /* Allow transform on track for sliding */
 }
 
 /* ========================================
-   FIX 2: Hide redundant "Now showing..." helper line
+   FIX 3: Remove the "Now showing..." helper line
    ======================================== */
 
-/* Hide the status line that duplicates nominee name */
-#tv .lv-overlay__now-showing,
-#tv .lv-overlay__status-line,
+/* Hide the status message that shows "Select a nominee to evict" */
 #tv .lv-overlay__status {
   display: none !important;
 }
 
+/* Also hide any other now-showing or status-line elements */
+#tv .lv-overlay__now-showing,
+#tv .lv-overlay__status-line {
+  display: none !important;
+}
+
 /* ========================================
-   FIX 3: Reduce avatar→name gap
+   FIX 4: Avatar layout: lower, never clipped, tighter gap, no space-between
    ======================================== */
 
-/* Ensure nominee uses flexbox column layout with tight packing at top */
+/* Define avatar size CSS variables */
+#tv .lv-overlay {
+  --avatarSize: clamp(92px, 18vmin, 140px) !important;
+  --avatarSizeSelected: clamp(112px, 22vmin, 168px) !important;
+}
+
+/* Nominee card: flex column, flex-start, small gap, top padding */
 #tv .lv-overlay__nominee {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: flex-start !important;
   gap: 6px !important;
-  height: auto !important;
-  min-height: 0 !important;
-  flex: none !important;
+  padding-top: 10px !important;
+  flex: 0 0 auto !important;
 }
 
-/* Prevent avatar or name from growing to fill space */
-#tv .lv-overlay__nominee-avatar,
-#tv .lv-overlay__avatar-wrapper,
-#tv .lv-overlay__nominee-name,
-#tv .lv-overlay__nominee-name-wrapper,
-#tv .lv-overlay__name-container {
-  flex: none !important;
+/* Avatar container uses CSS variable for sizing */
+#tv .lv-overlay__avatar-container,
+#tv .lv-overlay__avatar {
+  width: var(--avatarSize) !important;
+  height: var(--avatarSize) !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
 }
 
-/* Reduce gap between avatar and name, tighten line-height */
-#tv .lv-overlay__nominee-name {
-  margin-top: 0 !important;
-  line-height: 1.1 !important;
+/* Selected nominee gets larger avatar size */
+#tv .lv-overlay__nominee.is-selected,
+#tv .lv-overlay__nominee.center,
+#tv .lv-overlay__nominee.selected {
+  --avatarSize: var(--avatarSizeSelected) !important;
 }
 
-/* Reset any legacy top margins on name wrappers */
-#tv .lv-overlay__nominee-name-wrapper,
-#tv .lv-overlay__name-container {
-  margin-top: 0 !important;
+/* Ensure stage, track-viewport, and track allow overflow for avatars */
+#tv .lv-overlay__stage,
+#tv .lv-overlay__track-viewport,
+#tv .lv-overlay__track,
+#tv .lv-overlay__carousel {
+  overflow: visible !important;
+}
+
+/* Add spacing below title and above stage */
+#tv .lv-overlay__title,
+#tv .lv-overlay__header {
+  margin-bottom: 18px !important;
+}
+
+#tv .lv-overlay__stage,
+#tv .lv-overlay__carousel {
+  padding-top: 6px !important;
 }
 
 /* ========================================
-   FIX 4: Move CTA lower and smaller Evict button
+   FIX 5: CTA lower + narrower button
    ======================================== */
 
-/* Ensure tvViewport is positioned context */
-#tv .tvViewport {
-  position: relative !important;
-}
-
-/* Overlay fills tvViewport completely */
-#tv .lv-overlay {
-  position: absolute !important;
-  inset: 0 !important;
-  /* width/height set below in FIX 5 */
-}
-
-/* Panel fills height and uses flex column for margin-top: auto to work */
-#tv .lv-overlay__panel {
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
+/* Panel must fill tvViewport height so margin-top:auto can push CTA down */
+/* (Already set in FIX 1) */
 
 /* Push CTA to bottom with margin-top: auto */
 #tv .lv-overlay__confirm-container {
   margin-top: auto !important;
-  padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  margin-inline: auto !important;
+  padding-top: 10px !important;
+  padding-bottom: 6px !important;
+  width: 100% !important;
+  max-width: min(92%, 520px) !important;
 }
 
-/* Smaller Evict button to save vertical space */
-#tv .lv-overlay__evict-btn {
-  width: clamp(120px, 35vw, 160px) !important;
-  min-height: 42px !important;
-  padding: 10px 14px !important;
-  font-size: 0.95rem !important;
-}
-
-/* CTA row grid layout for proper arrow containment */
-#tv .lv-overlay__cta-row,
-#tv .lv-overlay__confirm-inner {
+/* CTA inner row: grid layout with 44px 1fr 44px for arrows + button */
+#tv .lv-overlay__confirm-inner,
+#tv .lv-overlay__cta-row {
   display: grid !important;
   grid-template-columns: 44px 1fr 44px !important;
   align-items: center !important;
-  gap: 8px !important;
+  column-gap: 10px !important;
 }
 
-/* Ensure nav arrows are properly contained in grid cells */
-#tv .lv-overlay__arrow,
-#tv .lv-overlay__cta-row .lv-overlay__arrow,
-#tv .lv-overlay__confirm-inner .lv-overlay__arrow,
-#tv .lv-overlay__nav-btn {
-  position: static !important;
+/* Narrower Evict button with clamp on mobile */
+#tv .lv-overlay__evict-btn {
+  width: clamp(140px, 40vw, 210px) !important;
+  min-height: 42px !important;
+}
+
+/* Nav arrows: center in their grid cells */
+#tv .lv-overlay__nav-btn,
+#tv .lv-overlay__arrow {
   justify-self: center !important;
-  align-self: center !important;
 }
 
 /* ========================================
-   FIX 5: Fix scrim coverage + horizontal centering
+   FIX 6: Legacy-stage arrows
    ======================================== */
 
-/* Overlay fills tvViewport (not 100vw) and adds scrim */
-#tv .lv-overlay {
-  width: 100% !important;
-  height: 100% !important;
-  background: rgba(0, 0, 0, 0.55) !important;
-  /* position and inset set above in FIX 4 */
-}
-
-/* Center panel horizontally with margin auto */
-#tv .lv-overlay__panel {
-  width: min(92%, 520px) !important;
-  margin: 0 auto !important;
-}
-
-/* ========================================
-   FIX 6: Hide legacy stage arrows (NOT CTA arrows)
-   ======================================== */
-
-/* Hide arrows in stage/carousel but NOT in CTA row */
-#tv .lv-overlay__stage .navArrow,
-#tv .lv-overlay__stage .carouselArrow,
-#tv .lv-overlay__stage .arrowBtn,
-#tv .lv-overlay__stage .stage-arrow,
-#tv .lv-overlay__carousel .navArrow,
-#tv .lv-overlay__carousel .carouselArrow,
-#tv .lv-overlay__carousel .arrowBtn,
-#tv .lv-overlay__carousel .stage-arrow,
-#tv .lv-overlay__carousel > button:not(.lv-overlay__arrow),
-#tv .lv-overlay__track > button:not(.lv-overlay__arrow) {
+/* Hide arrows inside the stage with strict selectors */
+/* Do NOT hide .lv-overlay__nav-btn or CTA arrows */
+#tv .voteStage .stage-arrow,
+#tv .voteStage .legacy-arrow,
+#tv .voteStage .arrow {
   display: none !important;
 }
 
-/* Ensure CTA row arrows remain visible */
-#tv .lv-overlay__cta-row .lv-overlay__arrow,
-#tv .lv-overlay__confirm-container .lv-overlay__arrow {
-  display: flex !important;
-  visibility: visible !important;
+#tv .voteStage button.arrow,
+#tv .voteStage .arrowBtn {
+  display: none !important;
+}
+
+/* Additional selectors for carousel arrows that should be hidden */
+#tv .lv-overlay__carousel > button:not(.lv-overlay__arrow),
+#tv .lv-overlay__stage > button:not(.lv-overlay__arrow) {
+  display: none !important;
 }
