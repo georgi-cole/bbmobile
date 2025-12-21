@@ -76,6 +76,18 @@
   gap: 6px !important;
   height: auto !important;
   min-height: 0 !important;
+  flex: none !important;
+}
+
+/* Prevent avatar or name from growing to fill space */
+#tv .lv-overlay__nominee-avatar,
+#tv .lv-overlay__avatar-wrapper,
+#tv .lv-overlay__nominee-name,
+#tv .lv-overlay__nominee-name-wrapper,
+#tv .lv-overlay__name-container {
+  flex: none !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 /* Reduce gap between avatar and name, tighten line-height */
