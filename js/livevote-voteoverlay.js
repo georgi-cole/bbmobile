@@ -168,26 +168,21 @@
       track.appendChild(nomineeEl);
     });
 
+    // Navigation arrows - created here and will be moved to CTA row
+    // Always create them (no mobile check), but they'll live in CTA, not carousel
+    const prevArrow = document.createElement('button');
+    prevArrow.className = 'lv-overlay__arrow prev';
+    prevArrow.innerHTML = '◀';
+    prevArrow.setAttribute('aria-label', 'Previous nominee');
+    prevArrow.onclick = () => navigateCarousel(-1);
+
+    const nextArrow = document.createElement('button');
+    nextArrow.className = 'lv-overlay__arrow next';
+    nextArrow.innerHTML = '▶';
+    nextArrow.setAttribute('aria-label', 'Next nominee');
+    nextArrow.onclick = () => navigateCarousel(1);
+
     carousel.appendChild(track);
-
-    // Navigation arrows (desktop only)
-    // On mobile, rely on tap-to-select and natural touch scrolling
-    if (nominees.length > 1 && !isMobile()) {
-      const prevArrow = document.createElement('button');
-      prevArrow.className = 'lv-overlay__arrow prev';
-      prevArrow.innerHTML = '◀';
-      prevArrow.setAttribute('aria-label', 'Show previous nominee');
-      prevArrow.onclick = () => navigateCarousel(-1);
-      carousel.appendChild(prevArrow);
-
-      const nextArrow = document.createElement('button');
-      nextArrow.className = 'lv-overlay__arrow next';
-      nextArrow.innerHTML = '▶';
-      nextArrow.setAttribute('aria-label', 'Show next nominee');
-      nextArrow.onclick = () => navigateCarousel(1);
-      carousel.appendChild(nextArrow);
-    }
-
     overlay.appendChild(carousel);
 
     // Confirmation container - placed directly below carousel for proximity to selected avatar
@@ -203,15 +198,27 @@
     status.textContent = 'Select a nominee to evict';
     confirmContainer.appendChild(status);
 
-    // Evict button - compact and positioned close to avatar
+    // CTA row - 3-column layout: left arrow, Evict button, right arrow
+    // Re-parent the navigation arrows created above into CTA (don't duplicate them)
+    const ctaRow = document.createElement('div');
+    ctaRow.className = 'lv-overlay__cta-row';
+    
+    // Add left arrow to CTA row (re-parent from above)
+    ctaRow.appendChild(prevArrow);
+
+    // Evict button - compact and centered in CTA row
     const evictBtn = document.createElement('button');
     evictBtn.className = 'lv-overlay__evict-btn';
     evictBtn.textContent = 'Evict';
     evictBtn.disabled = true; // Disabled until selection is made
     evictBtn.setAttribute('aria-label', 'Vote to evict selected nominee');
     evictBtn.onclick = handleEvictClick;
-    confirmContainer.appendChild(evictBtn);
-
+    ctaRow.appendChild(evictBtn);
+    
+    // Add right arrow to CTA row (re-parent from above)
+    ctaRow.appendChild(nextArrow);
+    
+    confirmContainer.appendChild(ctaRow);
     overlay.appendChild(confirmContainer);
 
     // Close button - only render if explicitly allowed via options.allowClose
@@ -239,6 +246,9 @@
     // Add to container
     targetContainer.appendChild(overlay);
     state.overlay = overlay;
+
+    // Initialize nav button states
+    updateNavButtons();
 
     // Focus the first nominee
     const firstNominee = track.querySelector('.lv-overlay__nominee[data-index="0"]');
@@ -280,6 +290,27 @@
     });
   }
 
+  // Helper: Update nav button states based on current index
+  function updateNavButtons() {
+    if (!state.overlay) return;
+    
+    const prevArrow = state.overlay.querySelector('.lv-overlay__arrow.prev');
+    const nextArrow = state.overlay.querySelector('.lv-overlay__arrow.next');
+    
+    if (prevArrow && nextArrow) {
+      // Disable both if single nominee, otherwise disable at bounds
+      if (state.nominees.length <= 1) {
+        prevArrow.disabled = true;
+        nextArrow.disabled = true;
+      } else {
+        // Disable prev at start, enable otherwise
+        prevArrow.disabled = state.selectedIndex === 0;
+        // Disable next at end, enable otherwise
+        nextArrow.disabled = state.selectedIndex >= state.nominees.length - 1;
+      }
+    }
+  }
+
   // Navigate carousel (swipe or arrow)
   function navigateCarousel(direction) {
     if (!state.overlay || state.nominees.length <= 1) return;
@@ -308,6 +339,9 @@
         nominee.setAttribute('tabindex', '-1');
       }
     });
+
+    // Update nav button states
+    updateNavButtons();
 
     // Announce to screen readers
     const player = global.getP?.(state.nominees[newIndex]);
@@ -347,6 +381,9 @@
           nominee.setAttribute('tabindex', '-1');
         }
       });
+      
+      // Update nav button states
+      updateNavButtons();
     }
 
     // Toggle selection

@@ -5,19 +5,17 @@
  */
 
 .lv-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
   /* COMPACT MODE: Increased transparency for better see-through to top roster */
   background: linear-gradient(135deg, rgba(5, 10, 18, 0.75), rgba(15, 25, 40, 0.78));
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
-  min-height: 100dvh; /* Use min-height instead of fixed height to allow natural sizing */
-  max-height: 560px; /* COMPACT MODE: Constrain to faux TV height on laptop */
-  overflow-y: auto; /* Allow vertical scrolling for long content */
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  overscroll-behavior: contain;
   
   /* Safe area support */
   padding-top: env(safe-area-inset-top);
@@ -35,25 +33,23 @@
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
   flex-shrink: 0;
+  margin-bottom: 10px; /* Required spacing below title */
 }
 
 .lv-overlay__carousel {
-  flex: 1 1 auto; /* Allow growing and shrinking */
+  flex: 0 1 auto; /* Can shrink if needed */
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow-y: auto; /* Enable vertical scrolling for content that exceeds height */
-  overflow-x: auto; /* Enable horizontal scrolling for nominee track */
+  overflow: visible !important; /* Allow avatars to render fully without clipping */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
-  scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
   padding: 2px 16px; /* COMPACT MODE: Further reduced padding for ultra-tight layout */
-  min-height: 0; /* Critical: Allow flex child to shrink below content size */
-  
-  /* Hide scrollbars visually while keeping functionality */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  /* Reserve space for selected avatar max size to prevent clipping */
+  --avatarSizeSelected: clamp(120px, 22vmin, 180px);
+  min-height: calc(var(--avatarSizeSelected) + 16px); /* Reserve space based on max avatar size + padding */
+  padding-top: 8px; /* Small padding-top so avatar can grow without hitting stage top */
 }
 
 /* Hide scrollbars in Webkit browsers */
@@ -67,7 +63,9 @@
   justify-content: center;
   gap: 12px; /* COMPACT MODE: Even tighter gap between nominees */
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 60px; /* Space for arrows */
+  padding: 0 16px; /* Padding for nominee breathing room */
+  scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
+  overflow-y: visible !important; /* Allow vertical overflow for avatar circles */
 }
 
 .lv-overlay__nominee {
@@ -77,17 +75,20 @@
   flex-direction: column;
   align-items: center;
   gap: 6px; /* COMPACT MODE: Even tighter gap between avatar and name */
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.4;
-  transform: scale(0.75);
+  /* No transform scale - use real size changes only */
   filter: blur(2px);
   cursor: pointer;
   scroll-snap-align: center; /* Snap to center of carousel */
+  padding: 8px; /* Breathing room for avatar circle */
+  min-width: 0; /* Allow shrinking if needed */
 }
 
 .lv-overlay__nominee.center {
   opacity: 1;
-  transform: scale(1);
+  /* No transform scale - avatar size change via CSS variable causes reflow */
   filter: blur(0);
 }
 
@@ -97,14 +98,22 @@
 
 .lv-overlay__avatar-container {
   position: relative;
-  width: clamp(75px, 20vw, 120px); /* COMPACT MODE: Further reduced avatars */
-  height: clamp(75px, 20vw, 120px);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Use CSS variable for avatar sizing to enable reflow (not transform scale) */
+  --avatarSize: clamp(88px, 18vmin, 140px);
+  width: var(--avatarSize);
+  height: var(--avatarSize);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden !important; /* Critical: ensures true circle crop without edge clipping */
+  border-radius: 50% !important; /* Ensures container is circular */
+  flex: 0 0 auto;
+  box-sizing: border-box;
 }
 
-.lv-overlay__nominee.center .lv-overlay__avatar-container {
-  width: clamp(100px, 26vw, 145px); /* COMPACT MODE: Further reduced center avatar */
-  height: clamp(100px, 26vw, 145px);
+.lv-overlay__nominee.center .lv-overlay__avatar-container,
+.lv-overlay__nominee.selected .lv-overlay__avatar-container {
+  /* Selected avatar grows via CSS variable, causing reflow */
+  --avatarSize: clamp(120px, 22vmin, 180px);
 }
 
 .lv-overlay__avatar {
@@ -112,7 +121,8 @@
   height: 100%;
   border-radius: 50%;
   border: 3px solid rgba(255, 107, 107, 0.5);
-  object-fit: cover;
+  object-fit: cover !important; /* Prevents stretching/cut weirdness */
+  display: block !important; /* Removes inline spacing issues */
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   background: rgba(20, 35, 55, 0.8);
   transition: all 0.3s ease;
@@ -144,46 +154,25 @@
   color: #ffd96b;
 }
 
-/* Navigation arrows */
-.lv-overlay__arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(20, 35, 55, 0.9);
-  border: 2px solid rgba(143, 211, 255, 0.3);
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  color: #e8f4ff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 10;
-  
-  /* Minimum tap target */
-  min-width: 44px;
-  min-height: 44px;
-}
-
-.lv-overlay__arrow:hover {
-  background: rgba(20, 35, 55, 1);
-  border-color: rgba(143, 211, 255, 0.5);
-  transform: translateY(-50%) scale(1.05);
-}
-
-.lv-overlay__arrow:active {
-  transform: translateY(-50%) scale(0.95);
-}
-
-.lv-overlay__arrow.prev {
-  left: 8px;
-}
-
-.lv-overlay__arrow.next {
-  right: 8px;
+/* Hide legacy stage/carousel navigation arrows (from other modules/old code) */
+/* These might be rendered by carousel components or legacy systems */
+/* Scoped to vote overlay only to avoid breaking other screens */
+.lv-overlay .voteStage .navArrow,
+.lv-overlay .voteStage .carouselArrow,
+.lv-overlay .voteStage .arrowBtn,
+.lv-overlay .voteStage [data-role="carousel-arrow"],
+.lv-overlay .carousel-arrow,
+.lv-overlay .stage-arrow,
+.lv-overlay__carousel .navArrow,
+.lv-overlay__carousel .carouselArrow,
+.lv-overlay__carousel .arrowBtn,
+.lv-overlay__carousel [data-role="carousel-arrow"],
+.lv-overlay__carousel > button:not(.lv-overlay__arrow),
+.lv-overlay__track > button:not(.lv-overlay__arrow) {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }
 
 /* Confirmation container - positioned close to selected avatar (directly below, 8-12px gap) */
@@ -191,11 +180,57 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px; /* COMPACT MODE: Ultra-minimal spacing between elements */
+  gap: 10px; /* Spacing between status and CTA row */
   padding: 0 16px 6px; /* COMPACT MODE: Further reduced padding */
   margin-top: 8px; /* COMPACT MODE: Exactly 8px gap under avatars as per requirements */
   flex-shrink: 0;
   animation: fadeIn 0.3s ease-out;
+}
+
+/* CTA row - 3-column layout with left arrow, Evict button, right arrow */
+.lv-overlay__cta-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 280px;
+}
+
+/* Carousel navigation arrows - reused in CTA row (always rendered, disabled at bounds) */
+.lv-overlay__arrow {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  background: rgba(20, 35, 55, 0.9);
+  border: 2px solid rgba(143, 211, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #e8f4ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  /* Never remove from DOM, only disable via opacity + pointer-events */
+}
+
+.lv-overlay__arrow:hover:not(:disabled) {
+  background: rgba(20, 35, 55, 1);
+  border-color: rgba(143, 211, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.lv-overlay__arrow:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.lv-overlay__arrow:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 @keyframes fadeIn {
@@ -225,9 +260,10 @@
   
   /* Maintain accessible 44x44 touch target */
   min-height: 44px;
-  width: auto;
-  min-width: 120px; /* COMPACT MODE: Further reduced min-width */
+  width: 100%;
   max-width: 160px; /* COMPACT MODE: Further reduced max-width */
+  /* Grid places this in center column */
+  grid-column: 2;
 }
 
 .lv-overlay__evict-btn:hover:not(:disabled):not(.submitting):not(.submitted) {
@@ -355,46 +391,23 @@
   }
   
   .lv-overlay__track {
-    padding: 0 48px; /* Tighter spacing for arrows */
+    padding: 0 16px; /* Padding for nominee breathing room */
     gap: 10px; /* COMPACT MODE: Even tighter gap on mobile */
   }
   
   .lv-overlay__avatar-container {
-    width: clamp(70px, 18vw, 100px); /* COMPACT MODE: Smaller avatars for mobile */
-    height: clamp(70px, 18vw, 100px);
+    --avatarSize: clamp(75px, 16vmin, 110px); /* Mobile: smaller avatars */
   }
   
-  .lv-overlay__nominee.center .lv-overlay__avatar-container {
-    width: clamp(90px, 24vw, 125px); /* COMPACT MODE: Smaller center avatar for mobile */
-    height: clamp(90px, 24vw, 125px);
-  }
-  
-  .lv-overlay__arrow {
-    width: 44px;
-    height: 44px;
-    font-size: 1.2rem;
-  }
-  
-  .lv-overlay__arrow.prev {
-    left: 4px;
-  }
-  
-  .lv-overlay__arrow.next {
-    right: 4px;
+  .lv-overlay__nominee.center .lv-overlay__avatar-container,
+  .lv-overlay__nominee.selected .lv-overlay__avatar-container {
+    --avatarSize: clamp(100px, 20vmin, 140px); /* Mobile: smaller selected avatar */
   }
   
   /* Ensure confirmation container stays visible and close to avatar */
   .lv-overlay__confirm-container {
     margin-top: 8px; /* 8-12px gap as per requirements */
     padding-bottom: 8px; /* COMPACT MODE: Further reduced bottom padding for mobile */
-  }
-}
-
-/* Hide navigation arrows on mobile/coarse pointers */
-/* Defensive rule for backwards compatibility with cached JS */
-@media (max-width: 820px), (pointer: coarse) {
-  .lv-overlay__arrow {
-    display: none !important;
   }
 }
 
@@ -414,13 +427,12 @@
   }
   
   .lv-overlay__avatar-container {
-    width: clamp(65px, 16vw, 90px); /* COMPACT MODE: Even smaller for landscape */
-    height: clamp(65px, 16vw, 90px);
+    --avatarSize: clamp(70px, 14vmin, 95px); /* Landscape: even smaller avatars */
   }
   
-  .lv-overlay__nominee.center .lv-overlay__avatar-container {
-    width: clamp(85px, 20vw, 110px); /* COMPACT MODE: Even smaller for landscape */
-    height: clamp(85px, 20vw, 110px);
+  .lv-overlay__nominee.center .lv-overlay__avatar-container,
+  .lv-overlay__nominee.selected .lv-overlay__avatar-container {
+    --avatarSize: clamp(90px, 18vmin, 120px); /* Landscape: smaller selected avatar */
   }
   
   .lv-overlay__confirm-container {
@@ -437,23 +449,16 @@
   
   .lv-overlay__track {
     gap: 10px; /* COMPACT MODE: Even tighter gap */
-    padding: 0 40px;
+    padding: 0 16px; /* Padding for nominee breathing room */
   }
   
   .lv-overlay__avatar-container {
-    width: 75px; /* COMPACT MODE: Even smaller avatars */
-    height: 75px;
+    --avatarSize: 75px; /* Very narrow: fixed smaller size */
   }
   
-  .lv-overlay__nominee.center .lv-overlay__avatar-container {
-    width: 110px; /* COMPACT MODE: Even smaller center avatar */
-    height: 110px;
-  }
-  
-  .lv-overlay__arrow {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
+  .lv-overlay__nominee.center .lv-overlay__avatar-container,
+  .lv-overlay__nominee.selected .lv-overlay__avatar-container {
+    --avatarSize: 110px; /* Very narrow: fixed smaller selected size */
   }
   
   .lv-overlay__evict-btn {
@@ -471,12 +476,12 @@
     transition: none;
   }
   
-  .lv-overlay__arrow:hover,
-  .lv-overlay__arrow:active,
   .lv-overlay__evict-btn:hover,
   .lv-overlay__evict-btn:active,
   .lv-overlay__close:hover,
-  .lv-overlay__close:active {
+  .lv-overlay__close:active,
+  .lv-overlay__arrow:hover,
+  .lv-overlay__arrow:active {
     transform: none;
   }
 }
