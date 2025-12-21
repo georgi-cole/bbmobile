@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/livevote-voteoverlay.css">
   <link rel="stylesheet" href="css/livevote-compact-fullyfit.css">
   <link rel="stylesheet" href="css/eviction-layout-containment.css">
+  <link rel="stylesheet" href="src/styles/vote.css">
   <style>
     /* DEBUG OUTLINES */
     #tv .tvViewport { outline: 2px solid red !important; }
@@ -99,16 +100,16 @@
   </div>
 
   <div class="info-box">
-    <h3>🎯 Testing Goals</h3>
+    <h3>🎯 Testing Goals - Vote UI Fixes</h3>
     <ul>
-      <li><strong>Static Nav Arrows:</strong> Left/right arrows always visible in CTA row, never removed</li>
-      <li><strong>Disable-Only Behavior:</strong> Arrows disabled at bounds (opacity 0.35), not hidden</li>
-      <li><strong>Avatar Reflow:</strong> Selected avatar grows via CSS variable (no transform scale)</li>
-      <li><strong>No Title Overlap:</strong> Avatar growth pushes content down, doesn't overlap title</li>
-      <li><strong>Stage Scrolling:</strong> Stage area scrolls if content exceeds max-height</li>
-      <li><strong>CTA Pinned to Bottom:</strong> CTA row pinned to bottom of panel with margin-top: auto</li>
-      <li><strong>Smaller Evict Button:</strong> Evict button is smaller (width: min(240px, 70%)) to save vertical space</li>
-      <li><strong>Full Scrim Coverage:</strong> Scrim covers entire TV viewport, no background peeking on right</li>
+      <li><strong>1. Title Clearance:</strong> Guaranteed spacing under title prevents avatar overlap when selected avatar grows</li>
+      <li><strong>2. No "Now showing...":</strong> Redundant helper line hidden to save vertical space</li>
+      <li><strong>3. Tighter Name Gap:</strong> Nominee name sits 6px from avatar (down from 10px)</li>
+      <li><strong>4. Lower CTA:</strong> CTA row pushed to bottom with margin-top: auto</li>
+      <li><strong>5. Smaller Evict:</strong> Evict button reduced to clamp(160px, 46vw, 220px)</li>
+      <li><strong>6. Full Scrim:</strong> Scrim covers entire tvViewport (no 100vw mistakes)</li>
+      <li><strong>7. Centered Panel:</strong> Panel centered with margin: 0 auto inside tvViewport</li>
+      <li><strong>8. Stage Arrows Hidden:</strong> Legacy stage arrows hidden, only CTA arrows visible</li>
     </ul>
   </div>
 
@@ -119,19 +120,18 @@
   </div>
 
   <div class="info-box">
-    <h3>✅ Expected Behavior</h3>
+    <h3>✅ Expected Behavior After Fixes</h3>
     <ul>
-      <li>CTA row has 3 columns: left arrow, Evict button, right arrow</li>
-      <li>Arrows are always present (never removed from DOM)</li>
-      <li>Left arrow disabled when at first nominee</li>
-      <li>Right arrow disabled when at last nominee</li>
-      <li>Both arrows disabled when only 1 nominee</li>
-      <li>Selected avatar grows smoothly via width/height change</li>
-      <li>Title has 10px margin-bottom for spacing</li>
-      <li>No transform: scale used - only real size changes</li>
-      <li>CTA row is pinned to bottom of panel with margin-top: auto</li>
-      <li>Evict button is smaller (width: min(240px, 70%)) to avoid pushing nominees out of view</li>
-      <li>Full scrim covers the entire TV viewport background</li>
+      <li>Title has clamp(12px, 2vh, 18px) margin-bottom for guaranteed clearance</li>
+      <li>Stage has clamp(12px, 2vh, 20px) padding-top to create buffer zone</li>
+      <li>"Now showing..." status text is hidden (display: none)</li>
+      <li>Nominee name has 6px margin-top (tighter gap to avatar)</li>
+      <li>CTA container has margin-top: auto (pushed to bottom)</li>
+      <li>Evict button width: clamp(160px, 46vw, 220px) and min-height: 42px</li>
+      <li>Overlay width/height: 100% (not 100vw) for proper tvViewport containment</li>
+      <li>Panel width: min(92%, 520px) with margin: 0 auto (centered)</li>
+      <li>Scrim background: rgba(0,0,0,0.55) covers full tvViewport</li>
+      <li>Legacy stage arrows hidden, CTA arrows remain visible</li>
     </ul>
   </div>
 
