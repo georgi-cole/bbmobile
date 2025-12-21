@@ -30,6 +30,25 @@
   padding-top: clamp(12px, 2vh, 20px) !important;
 }
 
+/* Center carousel/track wrapper horizontally */
+#tv .lv-overlay__stage {
+  display: flex !important;
+  justify-content: center !important;
+}
+
+/* Ensure track viewport/carousel is centered and not offset */
+#tv .lv-overlay__carousel,
+#tv .lv-overlay__track {
+  margin-inline: auto !important;
+  left: auto !important;
+  right: auto !important;
+}
+
+/* Keep transform only on the track for sliding animation */
+#tv .lv-overlay__carousel {
+  transform: none !important;
+}
+
 /* ========================================
    FIX 2: Hide redundant "Now showing..." helper line
    ======================================== */
@@ -45,16 +64,20 @@
    FIX 3: Reduce avatar→name gap
    ======================================== */
 
-/* Ensure nominee uses flexbox column layout */
+/* Ensure nominee uses flexbox column layout with tight packing at top */
 #tv .lv-overlay__nominee {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 /* Reduce gap between avatar and name, tighten line-height */
 #tv .lv-overlay__nominee-name {
-  margin-top: 6px !important;
+  margin-top: 0 !important;
   line-height: 1.1 !important;
 }
 
@@ -95,9 +118,25 @@
 
 /* Smaller Evict button to save vertical space */
 #tv .lv-overlay__evict-btn {
-  width: clamp(160px, 46vw, 220px) !important;
+  width: clamp(140px, 40vw, 180px) !important;
   min-height: 42px !important;
   padding: 10px 16px !important;
+}
+
+/* CTA row grid layout for proper arrow containment */
+#tv .lv-overlay__cta-row {
+  display: grid !important;
+  grid-template-columns: 44px 1fr 44px !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Ensure nav arrows are properly contained in grid cells */
+#tv .lv-overlay__arrow,
+#tv .lv-overlay__cta-row .lv-overlay__arrow {
+  position: static !important;
+  justify-self: center !important;
+  align-self: center !important;
 }
 
 /* ========================================
