@@ -86,8 +86,6 @@
 #tv .lv-overlay__nominee-name-wrapper,
 #tv .lv-overlay__name-container {
   flex: none !important;
-  flex-grow: 0 !important;
-  flex-shrink: 0 !important;
 }
 
 /* Reduce gap between avatar and name, tighten line-height */
