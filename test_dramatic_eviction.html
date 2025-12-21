@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dramatic Eviction Modal - Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Dramatic eviction modal styles -->
+  <link rel="stylesheet" href="css/eviction.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin: 0 0 16px;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: #94a3b8;
+      margin-bottom: 40px;
+      line-height: 1.6;
+    }
+
+    .info-box {
+      padding: 24px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      margin-bottom: 32px;
+    }
+
+    .info-box h2 {
+      margin: 0 0 12px;
+      font-size: 1.25rem;
+      color: #3b82f6;
+    }
+
+    .info-box ul {
+      margin: 8px 0;
+      padding-left: 24px;
+      line-height: 1.8;
+    }
+
+    .info-box li {
+      color: #cbd5e1;
+    }
+
+    .test-buttons {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .test-btn {
+      padding: 20px 24px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+      color: #f1f5f9;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .test-btn:hover {
+      background: linear-gradient(135deg, rgba(51, 65, 85, 0.9), rgba(30, 41, 59, 0.9));
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .test-btn:active {
+      transform: translateY(0);
+    }
+
+    .test-btn strong {
+      display: block;
+      font-size: 1.125rem;
+      margin-bottom: 6px;
+      color: #60a5fa;
+    }
+
+    .test-btn small {
+      display: block;
+      color: #94a3b8;
+      font-weight: 400;
+    }
+
+    .note {
+      padding: 16px;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 8px;
+      color: #fde047;
+      font-size: 0.875rem;
+      margin-top: 24px;
+    }
+
+    .note strong {
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎭 Dramatic Eviction Modal</h1>
+    <p class="subtitle">
+      Test the new dramatic eviction results modal with animations, particles, and optional audio cues.
+      This modal provides a cinematic reveal with vote counting and name reveal effects.
+    </p>
+
+    <div class="info-box">
+      <h2>✨ Features</h2>
+      <ul>
+        <li><strong>Animated Vote Counting:</strong> Votes count up with optional tick sound effects</li>
+        <li><strong>Dramatic Name Reveal:</strong> Player name appears with scale and glow animation</li>
+        <li><strong>Particle Burst:</strong> Visual particle explosion on reveal</li>
+        <li><strong>Accent Colors:</strong> Red border/glow for eviction, green for safe</li>
+        <li><strong>Accessibility:</strong> Screen reader announcements, keyboard navigation (ESC to close)</li>
+        <li><strong>Reduced Motion:</strong> Respects user preferences, disables animations if needed</li>
+        <li><strong>Mobile Friendly:</strong> Responsive design works on all screen sizes</li>
+      </ul>
+    </div>
+
+    <div class="test-buttons">
+      <button class="test-btn" onclick="testEviction()">
+        <strong>🔴 Test Eviction (Jax loses 2-3)</strong>
+        <small>Red theme — Player evicted by vote of 3 to 2</small>
+      </button>
+
+      <button class="test-btn" onclick="testSafe()">
+        <strong>🟢 Test Safe (Maria survives 5-2)</strong>
+        <small>Green theme — Player survives by vote of 5 to 2</small>
+      </button>
+
+      <button class="test-btn" onclick="testCloseVote()">
+        <strong>⚖️ Test Close Vote (Tyler loses 4-4)</strong>
+        <small>Tied vote with tiebreaker — Evicted 4 to 4</small>
+      </button>
+
+      <button class="test-btn" onclick="testUnanimous()">
+        <strong>💯 Test Unanimous (Alex evicted 7-0)</strong>
+        <small>Unanimous vote — Evicted 7 to 0</small>
+      </button>
+    </div>
+
+    <div class="note">
+      <strong>Note:</strong> Audio files (tick.wav, reveal.wav) are optional. 
+      The modal will work without them, but will be silent. 
+      To enable audio, add WAV files to <code>/assets/audio/</code>.
+    </div>
+
+    <div class="note" style="margin-top: 12px; background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #93c5fd;">
+      <strong>Integration:</strong> Import the module and call 
+      <code>EvictionModal.show({ name, votesFor, votesAgainst, onClose })</code> 
+      wherever eviction results need to be displayed.
+    </div>
+  </div>
+
+  <!-- Optional: GSAP for enhanced animations (commented out - not required) -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script> -->
+
+  <!-- Import the dramatic eviction modal module -->
+  <script src="js/ui/evictionModal.js"></script>
+  
+  <script>
+    // Test functions
+    window.testEviction = async function() {
+      console.log('[Test] Showing eviction: Jax loses 2-3');
+      await window.EvictionModal.show({
+        name: 'Jax',
+        votesFor: 3,
+        votesAgainst: 2,
+        onClose: () => console.log('[Test] Modal closed - eviction')
+      });
+    };
+
+    window.testSafe = async function() {
+      console.log('[Test] Showing safe: Maria survives 5-2');
+      await window.EvictionModal.show({
+        name: 'Maria',
+        votesFor: 2,
+        votesAgainst: 5,
+        onClose: () => console.log('[Test] Modal closed - safe')
+      });
+    };
+
+    window.testCloseVote = async function() {
+      console.log('[Test] Showing close vote: Tyler loses 4-4');
+      await window.EvictionModal.show({
+        name: 'Tyler',
+        votesFor: 4,
+        votesAgainst: 4,
+        onClose: () => console.log('[Test] Modal closed - close vote')
+      });
+    };
+
+    window.testUnanimous = async function() {
+      console.log('[Test] Showing unanimous: Alex evicted 7-0');
+      await window.EvictionModal.show({
+        name: 'Alex',
+        votesFor: 7,
+        votesAgainst: 0,
+        onClose: () => console.log('[Test] Modal closed - unanimous')
+      });
+    };
+
+    console.log('✅ Dramatic Eviction Modal test page loaded');
+    console.log('ℹ️  Click any button to test different scenarios');
+  </script>
+</body>
+</html>
