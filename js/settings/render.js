@@ -8,6 +8,7 @@
   const Config = global.Config || {};
   const SettingsRegistry = global.SettingsRegistry || {};
   const SettingsEffects = global.SettingsEffects || {};
+  const SettingsVisibilityFilter = global.SettingsVisibilityFilter || {};
   const UI = global.UI || {};
 
   const FALLBACK_AVATAR = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
@@ -102,7 +103,12 @@
   // Build the complete settings modal
   function ensureSettingsModal(){
     let dim = document.getElementById('settingsBackdrop');
-    if(dim) return dim;
+    
+    // If backdrop already exists, we'll need to rebuild it to respect visibility changes
+    if(dim){
+      // Remove the old modal entirely
+      dim.remove();
+    }
 
     injectCssOnce();
 
@@ -120,13 +126,26 @@
     const h = document.createElement('h2');
     h.textContent = 'Settings';
 
+    // Get current config to determine visibility
+    const cfg = (global.game && global.game.cfg) || {};
+    
+    // Filter tabs based on advancedMode and dev user status
+    const fullRegistry = SettingsRegistry.TAB_REGISTRY || [];
+    const isDev = SettingsVisibilityFilter.isDevUser ? SettingsVisibilityFilter.isDevUser() : false;
+    const advancedMode = !!cfg.advancedMode;
+    
+    const visibleTabs = SettingsVisibilityFilter.filterVisibleTabs ? 
+      SettingsVisibilityFilter.filterVisibleTabs(fullRegistry, {isDev: isDev, advancedMode: advancedMode}) :
+      fullRegistry;
+    
+    console.info('[settings/render] Rendering settings modal with', visibleTabs.length, 'visible tabs (isDev:', isDev, ', advancedMode:', advancedMode, ')');
+    
     // Tab bar
     const tabBar = document.createElement('div');
     tabBar.className = 'tabBar';
     tabBar.id = 'settingsTabs';
     
-    const registry = SettingsRegistry.TAB_REGISTRY || [];
-    tabBar.innerHTML = registry.map(function(tab, idx){
+    tabBar.innerHTML = visibleTabs.map(function(tab, idx){
       return '<button class="tab-btn' + (idx === 0 ? ' active' : '') + '" data-tab="' + tab.id + '">' + escapeHtml(tab.label) + '</button>';
     }).join('');
 
@@ -134,7 +153,7 @@
     const panes = document.createElement('div');
     panes.id = 'settingsPanes';
     
-    registry.forEach(function(tab, idx){
+    visibleTabs.forEach(function(tab, idx){
       const pane = renderTabPane(tab);
       if(idx === 0) pane.classList.add('active');
       panes.appendChild(pane);
@@ -270,7 +289,15 @@
     });
     
     btnSaveClose.addEventListener('click', function(){
-      applySettings(modal);
+      // Check if advancedMode will change before applying
+      const cfg = (global.game && global.game.cfg) || {};
+      const oldAdvancedMode = cfg.advancedMode;
+      const advancedModeCheckbox = modal.querySelector('[data-key="advancedMode"]');
+      const newAdvancedMode = advancedModeCheckbox ? !!advancedModeCheckbox.checked : oldAdvancedMode;
+      
+      // Apply settings with skipModalRebuild if we're closing anyway
+      applySettings(modal, {skipModalRebuild: true});
+      
       // Special handling for Cast tab
       const activePane = panes.querySelector('.settingsTabPane.active');
       if(activePane && activePane.getAttribute('data-pane') === 'cast'){
@@ -282,8 +309,19 @@
           }
         }
       }
+      
       closeSettingsModal();
-      notify('Settings saved', 'ok');
+      
+      // If advancedMode changed, show a message explaining the change
+      if(oldAdvancedMode !== newAdvancedMode){
+        if(newAdvancedMode){
+          notify('Advanced mode enabled. Re-open Settings to see all tabs.', 'ok');
+        }else{
+          notify('Advanced mode disabled. Re-open Settings to see compact view.', 'ok');
+        }
+      }else{
+        notify('Settings saved', 'ok');
+      }
     });
 
     // Wire advanced actions (export, import, reset, etc.)
@@ -357,12 +395,14 @@
   }
 
   // Apply settings from modal form to config
-  function applySettings(modal){
+  function applySettings(modal, opts){
+    opts = opts || {};
     const g = global.game = global.game || {};
     const cfg = g.cfg = Object.assign({}, Config.DEFAULT_CFG || {}, g.cfg || {});
     
     const changedKeys = [];
     const oldNumPlayers = cfg.numPlayers;
+    const oldAdvancedMode = cfg.advancedMode;
     
     Array.prototype.forEach.call(modal.querySelectorAll('[data-key]'), function(inp){
       const k = inp.getAttribute('data-key');
@@ -393,6 +433,18 @@
 
     // Apply side effects for changed keys
     if(SettingsEffects.applyEffects) SettingsEffects.applyEffects(cfg, changedKeys);
+    
+    // If advancedMode changed and we're not already in the middle of rebuilding, rebuild the modal
+    if(changedKeys.indexOf('advancedMode') !== -1 && oldAdvancedMode !== cfg.advancedMode && !opts.skipModalRebuild){
+      console.info('[settings/render] advancedMode changed, rebuilding modal');
+      // Close current modal
+      closeSettingsModal();
+      // Re-open with new visibility
+      setTimeout(function(){
+        openSettingsModal();
+      }, 100);
+      return;
+    }
     
     // If numPlayers changed, apply the player count logic
     if(changedKeys.indexOf('numPlayers') !== -1 && oldNumPlayers !== cfg.numPlayers){

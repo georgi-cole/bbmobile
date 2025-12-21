@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings Revamp - Advanced Mode Toggle Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .test-panel h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    .test-panel button {
+      margin: 4px;
+    }
+    .status {
+      padding: 8px;
+      border-radius: 4px;
+      margin: 8px 0;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .status.ok {
+      background: rgba(121, 209, 154, 0.15);
+      color: #79d19a;
+      border: 1px solid #79d19a;
+    }
+    .status.info {
+      background: rgba(40, 119, 160, 0.15);
+      color: #2d8ab4;
+      border: 1px solid #2d8ab4;
+    }
+    .compact-info {
+      background: rgba(242, 200, 98, 0.1);
+      border: 1px solid #f2c862;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Settings Revamp Test - Advanced Mode Toggle</h1>
+  
+  <div class="test-panel">
+    <h2>Current Status</h2>
+    <div id="statusDisplay" class="status info">
+      Loading...
+    </div>
+  </div>
+
+  <div class="test-panel">
+    <h2>Test Actions</h2>
+    <button class="btn primary" id="btnOpenSettings">Open Settings Modal</button>
+    <button class="btn" id="btnToggleAdvanced">Toggle Advanced Mode</button>
+    <button class="btn" id="btnSetDev">Set Dev Mode (localStorage)</button>
+    <button class="btn danger" id="btnClearDev">Clear Dev Mode</button>
+    <button class="btn warn" id="btnResetAll">Reset All Settings</button>
+  </div>
+
+  <div class="test-panel">
+    <h2>Test Scenarios</h2>
+    <div class="compact-info">
+      <h3 style="margin-top:0">Expected Behavior:</h3>
+      <ul>
+        <li><strong>Default (advancedMode=false):</strong> Only General, Cast, Visual, Audio tabs visible</li>
+        <li><strong>Advanced (advancedMode=true):</strong> All tabs visible including Gameplay, Timing, Advanced, Debug</li>
+        <li><strong>Dev Mode (bb_dev_mode=true):</strong> All tabs visible regardless of advancedMode</li>
+        <li><strong>Toggle in modal:</strong> Changing advancedMode checkbox and clicking Apply should rebuild modal immediately</li>
+        <li><strong>Toggle in modal (Save & Close):</strong> Closing modal should show message, next open shows new tabs</li>
+      </ul>
+    </div>
+    <ol>
+      <li>Click "Open Settings Modal" - should see compact view (General, Cast, Visual, Audio)</li>
+      <li>In General tab, check "Show advanced settings" and click Apply - modal should rebuild showing all tabs</li>
+      <li>Close modal, uncheck advanced mode in General, close again - should see compact view on next open</li>
+      <li>Click "Set Dev Mode" - as a dev user, all tabs should always be visible</li>
+      <li>Test on mobile viewport (resize browser to ~400px width) - ensure controls are touch-friendly</li>
+    </ol>
+  </div>
+
+  <div class="test-panel">
+    <h2>Manual Verification Checklist</h2>
+    <ul>
+      <li>✓ advancedMode default is false in config/defaults.js</li>
+      <li>✓ visibility-filter.js filters tabs correctly</li>
+      <li>✓ Registry tabs marked with visibility: 'all' or 'dev'</li>
+      <li>✓ advancedMode checkbox appears in General tab</li>
+      <li>✓ Toggling advancedMode rebuilds modal instantly (Apply button)</li>
+      <li>✓ Toggling advancedMode shows message on Save & Close</li>
+      <li>✓ Dev users always see full UI</li>
+      <li>✓ Modal is scrollable and responsive</li>
+      <li>✓ Existing settings functionality still works</li>
+    </ul>
+  </div>
+
+  <!-- Load dependencies in correct order -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/settings/constants.js" type="module"></script>
+  <script src="js/settings/visibility-filter.js"></script>
+  <script src="js/settings/registry.js"></script>
+  <script src="js/settings/effects.js"></script>
+  <script src="js/ui.config-and-settings.js"></script>
+  <script src="js/settings/render.js"></script>
+
+  <script>
+    // Initialize game object
+    window.game = window.game || {};
+    window.game.bus = window.game.bus || new BBGameBus();
+    
+    // Ensure config is loaded
+    if (typeof Config !== 'undefined' && Config.ensureGameCfg) {
+      Config.ensureGameCfg();
+    }
+
+    // Update status display
+    function updateStatus() {
+      const cfg = (window.game && window.game.cfg) || {};
+      const isDev = SettingsVisibilityFilter.isDevUser ? SettingsVisibilityFilter.isDevUser() : false;
+      const advancedMode = !!cfg.advancedMode;
+      
+      const statusEl = document.getElementById('statusDisplay');
+      statusEl.className = 'status ' + (isDev || advancedMode ? 'ok' : 'info');
+      statusEl.innerHTML = `
+        <strong>Config Status:</strong><br>
+        advancedMode: <code>${advancedMode}</code><br>
+        isDev: <code>${isDev}</code><br>
+        Expected tabs: <code>${isDev || advancedMode ? 'ALL (7 tabs)' : 'USER ONLY (4 tabs)'}</code><br>
+        <small style="opacity:0.7">bb_dev_mode localStorage: ${localStorage.getItem('bb_dev_mode') || 'not set'}</small>
+      `;
+    }
+
+    // Wire test buttons
+    document.getElementById('btnOpenSettings').addEventListener('click', function() {
+      if (typeof openSettingsModal === 'function') {
+        openSettingsModal();
+      } else {
+        alert('openSettingsModal not available');
+      }
+    });
+
+    document.getElementById('btnToggleAdvanced').addEventListener('click', function() {
+      const cfg = (window.game && window.game.cfg) || {};
+      cfg.advancedMode = !cfg.advancedMode;
+      
+      if (typeof Config !== 'undefined' && Config.saveStoredCfg) {
+        Config.saveStoredCfg(cfg);
+      }
+      
+      updateStatus();
+      alert('Advanced mode toggled to: ' + cfg.advancedMode + '\nRe-open settings to see changes.');
+    });
+
+    document.getElementById('btnSetDev').addEventListener('click', function() {
+      localStorage.setItem('bb_dev_mode', 'true');
+      updateStatus();
+      alert('Dev mode enabled in localStorage.\nRe-open settings to see all tabs.');
+    });
+
+    document.getElementById('btnClearDev').addEventListener('click', function() {
+      localStorage.removeItem('bb_dev_mode');
+      updateStatus();
+      alert('Dev mode cleared from localStorage.\nRe-open settings to see normal behavior.');
+    });
+
+    document.getElementById('btnResetAll').addEventListener('click', function() {
+      if (!confirm('Reset all settings to defaults?')) return;
+      
+      if (typeof Config !== 'undefined' && Config.DEFAULT_CFG && Config.saveStoredCfg) {
+        const g = window.game = window.game || {};
+        g.cfg = Object.assign({}, Config.DEFAULT_CFG);
+        Config.saveStoredCfg(g.cfg);
+        window.cfg = g.cfg;
+      }
+      
+      localStorage.removeItem('bb_dev_mode');
+      updateStatus();
+      alert('All settings reset to defaults.');
+    });
+
+    // Initialize status
+    updateStatus();
+    
+    // Add notification helper if not present
+    if (typeof window.addLog !== 'function') {
+      window.addLog = function(msg, cls) {
+        console.log('[LOG]', cls, msg);
+      };
+    }
+    
+    // Add confirm helper if not present
+    if (typeof window.showConfirm !== 'function') {
+      window.showConfirm = function(msg, opts) {
+        return Promise.resolve(confirm(msg));
+      };
+    }
+  </script>
+</body>
+</html>

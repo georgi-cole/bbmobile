@@ -46,6 +46,7 @@
     {
       id: 'general',
       label: 'General',
+      visibility: 'all',
       groups: [
         {
           title: 'Interface',
@@ -61,18 +62,27 @@
             checkbox('colorblindMode', 'Colorblind/high-contrast mode'),
             html('<div class="tiny muted">Adds body class "cb" for theming; you can style colors via CSS if desired.</div>')
           ]
+        },
+        {
+          title: 'Advanced Settings',
+          fields: [
+            checkbox('advancedMode', 'Show advanced settings (power-user mode)'),
+            html('<div class="tiny muted">Enable to show Advanced and Debug tabs with additional configuration options.</div>')
+          ]
         }
       ]
     },
     {
       id: 'cast',
       label: 'Cast',
+      visibility: 'all',
       // Custom mount function - will inject Cast editor UI
       mount: 'mountCastTab'
     },
     {
       id: 'gameplay',
       label: 'Gameplay',
+      visibility: 'dev',
       groups: [
         {
           title: 'Features',
@@ -125,6 +135,7 @@
     {
       id: 'timing',
       label: 'Timing',
+      visibility: 'dev',
       groups: [
         {
           title: 'Phase timers (seconds)',
@@ -165,6 +176,7 @@
     {
       id: 'visual',
       label: 'Visual',
+      visibility: 'all',
       groups: [
         {
           title: 'Theme',
@@ -198,6 +210,7 @@
     {
       id: 'audio',
       label: 'Audio',
+      visibility: 'all',
       groups: [
         {
           title: 'Audio',
@@ -219,6 +232,7 @@
     {
       id: 'advanced',
       label: 'Advanced',
+      visibility: 'dev',
       groups: [
         {
           title: 'Quick Actions',
@@ -245,6 +259,7 @@
     {
       id: 'debug',
       label: 'Debug',
+      visibility: 'dev',
       groups: [
         {
           title: 'Quick Actions',

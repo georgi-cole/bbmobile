@@ -52,6 +52,12 @@
       }catch(e){
         console.warn('[effects] debugSocialHUD refresh failed', e);
       }
+    },
+    
+    // Advanced mode toggle - triggers settings modal rebuild when changed
+    advancedMode: function(value, cfg){
+      console.info('[effects] advancedMode changed to:', value);
+      // The modal rebuild is handled in render.js applySettings
     }
   };
 
