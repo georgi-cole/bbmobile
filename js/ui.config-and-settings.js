@@ -86,6 +86,8 @@
     '.ok{color:#79d19a}',
     '.warn{color:#f2c862}',
     '.deferred-indicator{color:#f2c862;font-size:.8em;margin-left:4px;cursor:help}',
+    '.settings-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px;padding-top:12px;border-top:1px solid #2a3448}',
+    '.settings-actions .btn{min-width:100px;padding:8px 16px;font-size:.85rem}',
     '@media (min-width:740px){ .settingsGrid{grid-template-columns:1fr 1fr} }',
     '.settingsTabPane[data-pane="cast"] .settingsGrid{grid-template-columns:1fr !important}',
     '.cast-wrap{display:flex;flex-direction:column;gap:8px;max-width:100%;overflow:hidden}',

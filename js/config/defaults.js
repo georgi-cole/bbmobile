@@ -18,6 +18,7 @@
     skipIntros: false, // When true, skip intro video and animated intro sequence
     useRibbon: true,
     modernLiveVoteUI: false, // When true, use modern cinematic Live Vote UI (lv2) - DISABLED: Using legacy LiveVoteOverlay for compact layout
+    advancedMode: false, // When true, show advanced/debug tabs in Settings modal (power-user mode)
     
     // Core game mechanics
     enableJuryHouse: true,
@@ -180,7 +181,8 @@
     // UI modes
     'modernLiveVoteUI',
     'enableMinigameTelemetryPanel',
-    'debugSocialHUD'
+    'debugSocialHUD',
+    'advancedMode'  // Settings modal advanced mode toggle
   ];
 
   /**
