@@ -4,6 +4,22 @@
  * Mobile-first with safe-area support
  */
 
+/* Ensure TV viewport is positioned and clipped correctly for scrim */
+#tv .tvViewport {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Full-coverage scrim via ::before to dim the entire TV viewport */
+#tv .lv-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: -1;
+  pointer-events: none;
+}
+
 .lv-overlay {
   position: absolute;
   inset: 0;
@@ -11,8 +27,7 @@
   height: 100%;
   border-radius: inherit;
   overflow: hidden;
-  /* COMPACT MODE: Increased transparency for better see-through to top roster */
-  background: linear-gradient(135deg, rgba(5, 10, 18, 0.75), rgba(15, 25, 40, 0.78));
+  /* COMPACT MODE: Removed background here - now using ::before scrim for full coverage */
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
@@ -175,14 +190,14 @@
   visibility: hidden !important;
 }
 
-/* Confirmation container - positioned close to selected avatar (directly below, 8-12px gap) */
+/* Confirmation container - pinned to bottom of panel with margin-top: auto */
 .lv-overlay__confirm-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px; /* Spacing between status and CTA row */
-  padding: 0 16px 6px; /* COMPACT MODE: Further reduced padding */
-  margin-top: 8px; /* COMPACT MODE: Exactly 8px gap under avatars as per requirements */
+  padding: 0 16px 12px; /* Bottom padding for breathing room */
+  margin-top: auto; /* Push CTA to bottom of panel */
   flex-shrink: 0;
   animation: fadeIn 0.3s ease-out;
 }
@@ -248,8 +263,8 @@
   background: linear-gradient(135deg, #ff6b6b, #d63031);
   border: none;
   border-radius: 20px; /* Pill shape for compact look */
-  padding: 8px 24px; /* COMPACT MODE: Further reduced padding while maintaining 44px touch target */
-  font-size: clamp(13px, 3.2vw, 14px); /* COMPACT MODE: Smaller but still readable */
+  padding: 10px 18px; /* Smaller padding to reduce button size */
+  font-size: clamp(16px, 2.0vh, 20px); /* Smaller but still readable */
   font-weight: 700;
   color: #ffffff;
   cursor: pointer;
@@ -260,8 +275,7 @@
   
   /* Maintain accessible 44x44 touch target */
   min-height: 44px;
-  width: 100%;
-  max-width: 160px; /* COMPACT MODE: Further reduced max-width */
+  width: min(240px, 70%); /* Smaller max-width to reduce size */
   /* Grid places this in center column */
   grid-column: 2;
 }
@@ -404,10 +418,10 @@
     --avatarSize: clamp(100px, 20vmin, 140px); /* Mobile: smaller selected avatar */
   }
   
-  /* Ensure confirmation container stays visible and close to avatar */
+  /* Ensure confirmation container stays visible and pinned to bottom */
   .lv-overlay__confirm-container {
-    margin-top: 8px; /* 8-12px gap as per requirements */
-    padding-bottom: 8px; /* COMPACT MODE: Further reduced bottom padding for mobile */
+    margin-top: auto; /* Keep pinned to bottom */
+    padding-bottom: 10px; /* Slightly more padding for mobile */
   }
 }
 
@@ -436,8 +450,8 @@
   }
   
   .lv-overlay__confirm-container {
-    margin-top: 6px;
-    padding-bottom: 6px; /* COMPACT MODE: Ultra-minimal bottom padding */
+    margin-top: auto; /* Keep pinned to bottom */
+    padding-bottom: 8px; /* Minimal padding for landscape */
   }
 }
 
@@ -462,7 +476,7 @@
   }
   
   .lv-overlay__evict-btn {
-    padding: 8px 22px; /* COMPACT MODE: Even smaller padding */
+    padding: 10px 18px; /* Keep consistent padding */
   }
 }
 
