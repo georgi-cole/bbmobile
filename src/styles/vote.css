@@ -2,6 +2,10 @@
  * Surgical CSS fixes for vote overlay UX/layout issues
  * All rules scoped to #tv to avoid global side effects
  * 
+ * NOTE: Using !important throughout to surgically override existing styles
+ * without restructuring DOM or modifying inline styles. This is intentional
+ * for minimal, non-breaking fixes to legacy vote overlay implementation.
+ * 
  * Fixes:
  * 1. Title→avatar clearance (prevent overlap when avatar grows)
  * 2. Hide redundant "Now showing..." helper line
@@ -73,6 +77,7 @@
 #tv .lv-overlay {
   position: absolute !important;
   inset: 0 !important;
+  /* width/height set below in FIX 5 */
 }
 
 /* Panel fills height and uses flex column for margin-top: auto to work */
@@ -99,11 +104,12 @@
    FIX 5: Fix scrim coverage + horizontal centering
    ======================================== */
 
-/* Overlay fills tvViewport (not 100vw) */
+/* Overlay fills tvViewport (not 100vw) and adds scrim */
 #tv .lv-overlay {
   width: 100% !important;
   height: 100% !important;
   background: rgba(0, 0, 0, 0.55) !important;
+  /* position and inset set above in FIX 4 */
 }
 
 /* Center panel horizontally with margin auto */
@@ -128,7 +134,6 @@
 #tv .lv-overlay__carousel > button:not(.lv-overlay__arrow),
 #tv .lv-overlay__track > button:not(.lv-overlay__arrow) {
   display: none !important;
-  visibility: hidden !important;
 }
 
 /* Ensure CTA row arrows remain visible */
