@@ -154,6 +154,27 @@
   color: #ffd96b;
 }
 
+/* Hide legacy stage/carousel navigation arrows (from other modules/old code) */
+/* These might be rendered by carousel components or legacy systems */
+/* Scoped to vote overlay only to avoid breaking other screens */
+.lv-overlay .voteStage .navArrow,
+.lv-overlay .voteStage .carouselArrow,
+.lv-overlay .voteStage .arrowBtn,
+.lv-overlay .voteStage [data-role="carousel-arrow"],
+.lv-overlay .carousel-arrow,
+.lv-overlay .stage-arrow,
+.lv-overlay__carousel .navArrow,
+.lv-overlay__carousel .carouselArrow,
+.lv-overlay__carousel .arrowBtn,
+.lv-overlay__carousel [data-role="carousel-arrow"],
+.lv-overlay__carousel > button:not(.lv-overlay__arrow),
+.lv-overlay__track > button:not(.lv-overlay__arrow) {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
 /* Confirmation container - positioned close to selected avatar (directly below, 8-12px gap) */
 .lv-overlay__confirm-container {
   display: flex;

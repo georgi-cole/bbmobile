@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vote Overlay Final Verification - All Requirements</title>
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #0a1628 0%, #1a2f4f 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #e8f4ff;
+    }
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(10, 22, 40, 0.95);
+      padding: 16px;
+      border-radius: 12px;
+      border: 2px solid rgba(143, 211, 255, 0.3);
+      z-index: 10000;
+      max-width: 320px;
+    }
+    .test-controls h2 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      color: #ffd96b;
+    }
+    .test-controls button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .test-controls button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+    #tv {
+      width: 100%;
+      max-width: 900px;
+      margin: 60px auto 40px;
+      background: #0f1a2e;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+    .tvViewport {
+      width: 100%;
+      height: 560px;
+      position: relative;
+      background: linear-gradient(135deg, #1a2f4f, #0f1a2e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .placeholder-text {
+      font-size: 18px;
+      color: #8fb3d3;
+      text-align: center;
+    }
+    .requirements-checklist {
+      max-width: 900px;
+      margin: 20px auto;
+      background: rgba(10, 22, 40, 0.95);
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid rgba(143, 211, 255, 0.3);
+    }
+    .requirements-checklist h3 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #ffd96b;
+    }
+    .requirements-checklist ul {
+      list-style: none;
+      padding: 0;
+    }
+    .requirements-checklist li {
+      padding: 8px 0;
+      padding-left: 28px;
+      position: relative;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .requirements-checklist li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00e0cc;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .requirements-checklist li.pending::before {
+      content: '○';
+      color: #8fb3d3;
+    }
+    .viewport-info {
+      text-align: center;
+      margin: 20px auto;
+      font-size: 14px;
+      color: #8fb3d3;
+    }
+    @media (max-width: 768px) {
+      .test-controls {
+        position: static;
+        margin-bottom: 20px;
+      }
+      #tv {
+        margin-top: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>🧪 Test Scenarios</h2>
+    <button onclick="test2Nominees()">2 Nominees</button>
+    <button onclick="test3Nominees()">3 Nominees</button>
+    <button onclick="test4Nominees()">4 Nominees</button>
+    <button onclick="test5Nominees()">5 Nominees</button>
+    <button onclick="testSingleNominee()">1 Nominee (edge case)</button>
+    <button onclick="closeOverlay()">Close Overlay</button>
+  </div>
+
+  <div id="tv">
+    <div class="tvViewport">
+      <div class="placeholder-text">
+        Click a button above to open the vote overlay
+      </div>
+    </div>
+  </div>
+
+  <div class="viewport-info">
+    <strong>Current Viewport:</strong> <span id="viewport-size"></span>
+  </div>
+
+  <div class="requirements-checklist">
+    <h3>✅ Requirements Verification Checklist</h3>
+    <ul>
+      <li><strong>Navigation:</strong> Arrows reused (not duplicated), placed in CTA row only</li>
+      <li><strong>CTA Layout:</strong> Fixed 3-col grid (44px / 1fr / 44px)</li>
+      <li><strong>Arrow Behavior:</strong> Disabled at bounds via opacity + pointer-events (never removed from DOM)</li>
+      <li><strong>No Duplicate Arrows:</strong> No arrows in stage/carousel area (only in CTA)</li>
+      <li><strong>Avatar Growth:</strong> Size-based growth via CSS vars (width/height reflow, not transform scale)</li>
+      <li><strong>No Avatar Clipping:</strong> Carousel wrapper overflow: visible</li>
+      <li><strong>Space Reservation:</strong> min-height based on --avatarSizeSelected</li>
+      <li><strong>Clearance:</strong> padding-top: 8px so avatar doesn't hit stage top</li>
+      <li><strong>Mobile Coverage:</strong> Scrim covers full TV viewport (position:absolute; inset:0; width/height:100%)</li>
+      <li><strong>Centered Panel:</strong> Inner panel remains centered in viewport</li>
+      <li><strong>Left Arrow Disabled:</strong> At first nominee (opacity 0.35)</li>
+      <li><strong>Right Arrow Disabled:</strong> At last nominee (opacity 0.35)</li>
+      <li><strong>Both Arrows Disabled:</strong> With single nominee</li>
+      <li><strong>Evict Always Visible:</strong> Always present in CTA row</li>
+      <li><strong>Arrows Never Move:</strong> Static position in CTA (don't shift or disappear)</li>
+    </ul>
+  </div>
+
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script>
+    // Mock window.game global
+    if (!window.game) {
+      window.game = {};
+    }
+
+    // Mock player data
+    const mockPlayers = {
+      1: { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+      2: { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+      3: { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+      4: { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+      5: { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' }
+    };
+
+    // Mock getP function
+    window.getP = function(playerId) {
+      return mockPlayers[playerId];
+    };
+
+    // Mock resolveAvatar function
+    window.resolveAvatar = function(player) {
+      return player?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${player?.name || 'player'}`;
+    };
+
+    // Mock safeName function
+    window.safeName = function(name) {
+      return name;
+    };
+
+    function test2Nominees() {
+      showVoteOverlay([1, 2]);
+    }
+
+    function test3Nominees() {
+      showVoteOverlay([1, 2, 3]);
+    }
+
+    function test4Nominees() {
+      showVoteOverlay([1, 2, 3, 4]);
+    }
+
+    function test5Nominees() {
+      showVoteOverlay([1, 2, 3, 4, 5]);
+    }
+
+    function testSingleNominee() {
+      showVoteOverlay([1]);
+    }
+
+    function showVoteOverlay(nomineeIds) {
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.show({
+          nominees: nomineeIds,
+          onSubmit: (selectedId) => {
+            const player = mockPlayers[selectedId];
+            console.log('Vote submitted for:', player?.name);
+            setTimeout(() => {
+              window.LiveVoteOverlay.hide();
+            }, 1000);
+          },
+          isTieBreak: false,
+          allowClose: true,
+          onCancel: () => {
+            console.log('Vote cancelled');
+          }
+        });
+      }
+    }
+
+    function closeOverlay() {
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.hide();
+      }
+    }
+
+    // Update viewport size display
+    function updateViewportSize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const sizeEl = document.getElementById('viewport-size');
+      sizeEl.textContent = `${width}px × ${height}px`;
+      
+      let deviceType = 'Desktop';
+      if (width < 768) {
+        deviceType = 'Mobile';
+      } else if (width < 1024) {
+        deviceType = 'Tablet';
+      }
+      sizeEl.textContent += ` (${deviceType})`;
+    }
+
+    updateViewportSize();
+    window.addEventListener('resize', updateViewportSize);
+
+    console.log('Vote Overlay Final Verification Test Ready!');
+    console.log('Open DevTools to inspect:');
+    console.log('1. Check that arrows are ONLY in .lv-overlay__cta-row (not in .lv-overlay__carousel)');
+    console.log('2. Verify CTA row has grid-template-columns: 44px 1fr 44px');
+    console.log('3. Confirm arrows are disabled (opacity 0.35) at bounds, but never removed');
+    console.log('4. Verify avatar sizing uses --avatarSize CSS variable (not transform scale)');
+    console.log('5. Confirm carousel has overflow: visible to prevent clipping');
+  </script>
+</body>
+</html>
