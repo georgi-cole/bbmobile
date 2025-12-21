@@ -168,33 +168,26 @@
       }
     });
 
-    // Action buttons
+    // Action buttons - aligned right with proper spacing
     const actions = document.createElement('div');
-    actions.className = 'row between';
-    actions.style.marginTop = '10px';
-    
-    const left = document.createElement('div');
-    left.className = 'row';
-    const right = document.createElement('div');
-    right.className = 'row';
+    actions.className = 'settings-actions';
+    actions.style.cssText = 'display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px;padding-top:12px;border-top:1px solid #2a3448';
 
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'btn';
+    btnCancel.textContent = 'Cancel';
+    
     const btnApply = document.createElement('button');
-    btnApply.className = 'btn primary';
+    btnApply.className = 'btn';
     btnApply.textContent = 'Apply';
     
     const btnSaveClose = document.createElement('button');
-    btnSaveClose.className = 'btn';
+    btnSaveClose.className = 'btn primary';
     btnSaveClose.textContent = 'Save & Close';
-    
-    const btnCancel = document.createElement('button');
-    btnCancel.className = 'btn danger';
-    btnCancel.textContent = 'Cancel';
 
-    left.appendChild(btnApply);
-    right.appendChild(btnCancel);
-    right.appendChild(btnSaveClose);
-    actions.appendChild(left);
-    actions.appendChild(right);
+    actions.appendChild(btnCancel);
+    actions.appendChild(btnApply);
+    actions.appendChild(btnSaveClose);
 
     modal.appendChild(closeX);
     modal.appendChild(h);
