@@ -120,7 +120,7 @@
   <script>
     // Initialize game object
     window.game = window.game || {};
-    window.game.bus = window.game.bus || new BBGameBus();
+    window.game.bus = window.game.bus || (window.bbGameBus || {on:()=>{}, off:()=>{}, emit:()=>{}, once:()=>{}});
     
     // Ensure config is loaded
     if (typeof Config !== 'undefined' && Config.ensureGameCfg) {

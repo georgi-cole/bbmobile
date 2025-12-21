@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compact Mode Test</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body style="padding:20px">
+  <h1>Compact Mode Test (Non-Dev User)</h1>
+  <p>This simulates a non-dev user environment where advancedMode=false by default.</p>
+  <button class="btn primary" onclick="openSettingsModal()">Open Settings (Should show 4 tabs only)</button>
+  
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/settings/effects.js"></script>
+  <script>
+    // Force non-dev mode BEFORE loading visibility-filter
+    window.__FORCE_NON_DEV = true;
+  </script>
+  <script src="js/settings/visibility-filter.js"></script>
+  <script>
+    // Override after loading
+    if (window.SettingsVisibilityFilter) {
+      const original = window.SettingsVisibilityFilter.isDevUser;
+      window.SettingsVisibilityFilter.isDevUser = function() {
+        console.log('[TEST] Forcing non-dev mode');
+        return false; // Always return false for this test
+      };
+    }
+  </script>
+  <script src="js/settings/registry.js"></script>
+  <script src="js/settings/render.js"></script>
+  <script src="js/ui.config-and-settings.js"></script>
+
+  <script>
+    window.game = window.game || {};
+    window.game.bus = window.game.bus || (window.bbGameBus || {on:()=>{}, off:()=>{}, emit:()=>{}, once:()=>{}});
+    
+    if (Config && Config.ensureGameCfg) {
+      Config.ensureGameCfg();
+      // Force advancedMode to false
+      window.game.cfg.advancedMode = false;
+      Config.saveStoredCfg(window.game.cfg);
+    }
+    
+    window.addLog = window.addLog || function(msg, cls) { console.log('[LOG]', cls, msg); };
+    window.showConfirm = window.showConfirm || function(msg) { return Promise.resolve(confirm(msg)); };
+    
+    console.log('Test environment:', {
+      isDev: window.SettingsVisibilityFilter?.isDevUser?.(),
+      advancedMode: window.game?.cfg?.advancedMode
+    });
+  </script>
+</body>
+</html>
