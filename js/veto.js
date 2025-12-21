@@ -1,6 +1,55 @@
 // MODULE: veto.js
 // Integrated: automatic 0 submission for human participant if time expires without submission.
 // Other flow unchanged.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// POV TIMER MANAGEMENT & REDUNDANT WAIT ELIMINATION
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// This module implements a single-source-of-truth timer system for POV flow
+// to eliminate redundant idle waiting periods while maintaining smooth UX:
+//
+// Timer Configuration Constants (lines 11-15):
+// - POV_RESULTS_TO_WINNER_DELAY_MS = 1000ms (1s from results to winner)
+// - VETO_CEREMONY_START_DELAY_MS = 0ms (ceremony starts immediately)
+//
+// Timer Lifecycle & Guards:
+// 1. Competition Start (startVetoComp):
+//    - Initializes all veto flow flags including __vetoAutoTimer
+//    - Resets __vetoResultsShown and __postVetoRevealCalled
+//
+// 2. Competition Completion (finishVetoComp):
+//    - Sets __finishVetoCompCalled and __vetoResolving guards
+//    - Clears all g.__vetoAutoTimer instances
+//    - Sets canonical phase countdown to 1s via setPhase()
+//    - Shows results with POV_RESULTS_TO_WINNER_DELAY_MS duration
+//    - Single timeout to handlePostVetoReveal() with guard
+//
+// 3. Post-Reveal Handler (handlePostVetoReveal):
+//    - Guarded by __postVetoRevealCalled to prevent duplicate execution
+//    - Calls startVetoCeremony() immediately (no 500ms wait)
+//    - Final 4 path has 500ms delay (acceptable for different flow)
+//
+// 4. Ceremony Start (startVetoCeremony):
+//    - Clears any existing g.__vetoAutoTimer
+//    - Removed ceremony intro card (line 2790) - starts decision immediately
+//    - For human: shows decision prompt instantly
+//    - For AI: schedules auto-decision with 1200ms delay + phase guard
+//
+// Timer Guards:
+// - All setTimeout callbacks check game phase before executing
+// - handlePostVetoReveal guarded by __postVetoRevealCalled flag
+// - finishVetoComp guarded by __finishVetoCompCalled flag
+// - AI auto-decision checks phase==='veto_ceremony' and ceremony not resolved
+//
+// Benefits:
+// - No redundant idle waiting between results and winner display
+// - No empty timer cycle before POV decision UI appears
+// - Single canonical countdown (game.phaseEndsAt) as source of truth
+// - All background timers cleared when results shown
+// - Phase guards prevent stale timer callbacks from executing
+//
+// ═══════════════════════════════════════════════════════════════════════════
 
 (function(global){
   'use strict';
@@ -556,6 +605,7 @@
     g.__instructionsRenderedVeto = false; // Track if instructions were rendered
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
     g.__vetoResultsShown = false; // Track if results have been shown to prevent redundant display
+    g.__postVetoRevealCalled = false; // Track if post-reveal handler has been called
     // Reset grace attempt flag for new competition
     if (g.humanId != null) {
       delete g[`__graceReplayAttempt_veto_comp_${g.humanId}`];
@@ -880,7 +930,12 @@
     
     if(aliveCount === 4){
       console.info('[veto] Final 4 bypass - skipping ceremony, going to Final 4 eviction');
-      setTimeout(function(){ startFinal4Eviction(); }, 500);
+      setTimeout(function(){ 
+        // Guard: Only proceed if still in correct phase
+        if(global.game && (global.game.phase === 'veto_comp' || global.game.phase === 'veto_ceremony')){
+          startFinal4Eviction(); 
+        }
+      }, 500);
     } else {
       console.info('[veto] Starting veto ceremony immediately (no redundant wait)');
       // FIX: Remove redundant 500ms delay - start ceremony immediately after winner is shown
@@ -1064,7 +1119,12 @@
       }
 
       // Proceed to post-reveal flow with a very small buffer to let UI settle
-      setTimeout(function () { handlePostVetoReveal(); }, 50);
+      setTimeout(function () { 
+        // Guard: Only proceed if still in veto phase and results already shown
+        if(global.game && global.game.__vetoResultsShown){
+          handlePostVetoReveal(); 
+        }
+      }, 50);
       return;
     }
 
@@ -1118,7 +1178,11 @@
         // Continue to ceremony after display duration (using configured constant)
         // Small buffer added to ensure UI completes animation
         setTimeout(function(){
-          handlePostVetoReveal();
+          // Guard: Only proceed if still in veto phase and not already handled
+          if(global.game && !global.game.__postVetoRevealCalled){
+            global.game.__postVetoRevealCalled = true;
+            handlePostVetoReveal();
+          }
         }, displayDuration + 100); // Minimal buffer for animation completion
       }catch(e){
         console.warn('[veto] VetoResultsUI error, using fallback reveal', e);
@@ -1183,7 +1247,12 @@
     function afterWait(){
       if(typeof global.setPhase === 'function')
         global.setPhase('final4_eviction', Math.max(20, Math.floor(g.cfg.tVote * 0.9)), finalizeFinal4Eviction);
-      setTimeout(function(){ renderFinal4EvictionPanel(); }, 50);
+      setTimeout(function(){ 
+        // Guard: Only render if still in final4_eviction phase
+        if(global.game && global.game.phase === 'final4_eviction'){
+          renderFinal4EvictionPanel(); 
+        }
+      }, 50);
       
       var holder = getP(g.vetoHolder);
       if(holder && !holder.human){
@@ -1411,7 +1480,12 @@
     }
     
     // Proceed to next phase
-    setTimeout(function(){ proceedAfterFinal4Eviction(); }, 700);
+    setTimeout(function(){ 
+      // Guard: Only proceed if still in final4_eviction phase and resolved
+      if(global.game && global.game.phase === 'final4_eviction' && global.game.__f4EvictionResolved){
+        proceedAfterFinal4Eviction(); 
+      }
+    }, 700);
   }
   global.finalizeFinal4Eviction = finalizeFinal4Eviction;
   
