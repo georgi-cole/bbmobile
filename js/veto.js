@@ -1040,14 +1040,31 @@
     // Clear resolving flag before async operations
     g.__vetoResolving = false;
 
-    // Check if results have already been shown by fast-forward mechanism
-    // If so, skip the redundant display and proceed directly to ceremony
-    if(g.__vetoResultsShown){
-      console.info('[veto] Results already shown via fast-forward, skipping redundant display');
-      // Proceed directly to ceremony without additional delay
-      setTimeout(function(){
-        handlePostVetoReveal();
-      }, 100); // Minimal delay to allow any pending operations to complete
+    // If results have already been shown by a fast-forward mechanism,
+    // still perform the necessary timer cleanup and countdown shortening
+    // so we don't leave redundant timers running.
+    if (g.__vetoResultsShown) {
+      console.info('[veto] Results already shown via fast-forward - ensuring timers cleared and countdown shortened');
+
+      // Clear any active veto auto-timers
+      if (g.__vetoAutoTimer) {
+        try { clearTimeout(g.__vetoAutoTimer); } catch (e) {}
+        g.__vetoAutoTimer = null;
+      }
+
+      // Ensure the canonical phase countdown is shortened to the results→winner value
+      if (typeof global.setPhase === 'function') {
+        try {
+          var timeToWinner = Math.ceil(POV_RESULTS_TO_WINNER_DELAY_MS / 1000);
+          console.info('[veto] Forcing phase countdown to ' + timeToWinner + 's for fast-forwarded results');
+          global.setPhase(g.phase, timeToWinner, null);
+        } catch (e) {
+          console.warn('[veto] Failed to force phase countdown:', e);
+        }
+      }
+
+      // Proceed to post-reveal flow with a very small buffer to let UI settle
+      setTimeout(function () { handlePostVetoReveal(); }, 50);
       return;
     }
 
