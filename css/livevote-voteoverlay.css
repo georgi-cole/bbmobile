@@ -94,7 +94,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px; /* COMPACT MODE: Even tighter gap between avatar and name */
+  gap: 10px; /* Controls distance between circle and name */
   transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               filter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.4;
@@ -169,7 +169,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: 8px; /* Keep names anchored below the circles (no overlap) */
+  /* Force name back into normal document flow */
+  position: static !important;
+  bottom: auto !important;
+  top: auto !important;
+  margin: 0 !important; /* Remove any margin (gap on parent controls spacing) */
   line-height: 1.1;
 }
 
