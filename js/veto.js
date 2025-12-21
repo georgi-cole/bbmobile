@@ -7,6 +7,12 @@
 
   // Configuration constants
   const MOBILE_VIEWPORT_THRESHOLD = 860; // Max width for mobile/tablet detection
+  
+  // POV/Veto Flow Timer Configuration
+  // These constants control the delays in the POV competition and veto ceremony flow
+  // to eliminate redundant waiting periods while allowing minimal UI animation time
+  const POV_RESULTS_TO_WINNER_DELAY_MS = 1000; // 1s delay from results to winner display
+  const VETO_CEREMONY_START_DELAY_MS = 0;      // 0ms - start ceremony immediately (no wait)
 
   function getP(id){ return (global.getP ? global.getP(id) : null); }
   function alivePlayers(){ return (global.alivePlayers ? global.alivePlayers() : []); }
@@ -876,12 +882,12 @@
       console.info('[veto] Final 4 bypass - skipping ceremony, going to Final 4 eviction');
       setTimeout(function(){ startFinal4Eviction(); }, 500);
     } else {
-      console.info('[veto] Starting veto ceremony in 500ms');
-      setTimeout(function(){ 
-        startVetoCeremony().catch(function(err){
-          console.error('[veto] startVetoCeremony error:', err);
-        });
-      }, 500);
+      console.info('[veto] Starting veto ceremony immediately (no redundant wait)');
+      // FIX: Remove redundant 500ms delay - start ceremony immediately after winner is shown
+      // This eliminates the empty waiting period before ceremony begins
+      startVetoCeremony().catch(function(err){
+        console.error('[veto] startVetoCeremony error:', err);
+      });
     }
   }
 
@@ -1047,6 +1053,33 @@
 
     // Mark that results are being shown to prevent duplicate displays
     g.__vetoResultsShown = true;
+    
+    // FIX: Clear all background timers and set main countdown to 1s
+    // This ensures winner appears after exactly 1 second with no redundant waits
+    // Timer Management (Single Source of Truth):
+    // - All background timers must be cleared when results are shown
+    // - Main phase countdown is shortened to POV_RESULTS_TO_WINNER_DELAY_MS (1s)
+    // - This eliminates idle periods and provides immediate winner display
+    console.info('[veto] Clearing background timers and setting countdown to 1s');
+    
+    // Clear any active veto auto-timers
+    if(g.__vetoAutoTimer){ 
+      try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} 
+      g.__vetoAutoTimer = null; 
+    }
+    
+    // Set phase countdown to exactly 1 second for results-to-winner transition
+    // This uses the canonical phase timer as single source of truth
+    if(typeof global.setPhase === 'function'){
+      try{
+        // Calculate time in seconds (convert from ms constant)
+        var timeToWinner = Math.ceil(POV_RESULTS_TO_WINNER_DELAY_MS / 1000);
+        console.info('[veto] Setting phase countdown to ' + timeToWinner + 's for winner reveal');
+        global.setPhase(g.phase, timeToWinner, null); // Set to 1s, no callback
+      }catch(e){
+        console.warn('[veto] Failed to set phase countdown:', e);
+      }
+    }
 
     // Always show full reveal - skip/FFWD should jump to results, not bypass them
     // Use new leaderboard renderer if available
@@ -1057,18 +1090,19 @@
         g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
         
         // Render winner-only result card with auto-dismiss and FFWD support
-        // Use shorter duration if fast-forward is active
-        var displayDuration = (ffActive && g.__humanPlayedVeto) ? 2500 : 5000;
+        // Display duration should align with POV_RESULTS_TO_WINNER_DELAY_MS
+        var displayDuration = POV_RESULTS_TO_WINNER_DELAY_MS;
         console.info('[veto] Rendering winner result card (duration: ' + displayDuration + 'ms)');
         window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
           maxResults: 1,  // Cosmetic: Show only winner (not top 3)
           autoDismissMs: displayDuration 
         });
         
-        // Continue to ceremony after auto-dismiss (with buffer)
+        // Continue to ceremony after display duration (using configured constant)
+        // Small buffer added to ensure UI completes animation
         setTimeout(function(){
           handlePostVetoReveal();
-        }, displayDuration + 200); // Buffer to account for auto-dismiss
+        }, displayDuration + 100); // Minimal buffer for animation completion
       }catch(e){
         console.warn('[veto] VetoResultsUI error, using fallback reveal', e);
         // Fallback to legacy reveal
@@ -2736,20 +2770,18 @@
     console.info('[veto] startVetoCeremony - holder:', holderName, 'id:', g.vetoHolder, 
                  'twist:', twistMode, 'nominees:', g.nominees, 'playerCount:', playerCount);
 
-    // Step 1: Ceremony Intro - use TV contained card
-    await showTVCard({
-      title: 'Veto Ceremony',
-      lines: [holderName + ' will decide whether to use the Power of Veto.'],
-      tone: 'veto',
-      duration: 2400
-    });
+    // FIX: Remove redundant ceremony intro card to eliminate empty waiting period
+    // The ceremony should start immediately with the decision prompt
+    // Ceremony intro is now combined with decision prompt for efficiency
+    // No separate "will decide" card needed - decision UI is self-explanatory
+    console.info('[veto] Skipping ceremony intro card - starting decision immediately');
 
-    // Log action
+    // Log action without UI delay
     try{ 
       if(global.addLog) global.addLog(holderName + ' stands to make the veto decision.', 'tiny'); 
     }catch(e){}
 
-    // Step 2: Set phase WITHOUT callback - we'll handle flow manually
+    // Set phase WITHOUT callback - we'll handle flow manually
     // This prevents premature invocation of finalizeCeremony when phase timer expires
     // Only set phase if we're not already in veto_ceremony phase
     if(g.phase !== 'veto_ceremony' && typeof global.setPhase==='function'){
