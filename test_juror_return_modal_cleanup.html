@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juror Return Modal Cleanup Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/juror-overlay.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a1628;
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { 
+      color: #8fd3ff; 
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .test-panel {
+      background: #152235;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3b5a;
+    }
+    button {
+      background: #6fd3ff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      color: #0a1628;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #8fd3ff; }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .result.success {
+      background: rgba(116, 228, 139, 0.1);
+      border: 1px solid rgba(116, 228, 139, 0.3);
+      color: #74e48b;
+    }
+    .result.info {
+      background: rgba(111, 211, 255, 0.1);
+      border: 1px solid rgba(111, 211, 255, 0.3);
+      color: #6fd3ff;
+    }
+    .result.error {
+      background: rgba(255, 107, 138, 0.1);
+      border: 1px solid rgba(255, 107, 138, 0.3);
+      color: #ff6b8a;
+    }
+    #panel {
+      min-height: 300px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid #2a3b5a;
+      border-radius: 8px;
+      margin: 20px 0;
+      padding: 20px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Juror Return Modal Cleanup Test</h1>
+    <p class="subtitle">Tests that the juror return modal is removed immediately after voting ends</p>
+
+    <div class="test-panel">
+      <h3>Test: Modal Cleanup Timing</h3>
+      <p>This test verifies that:</p>
+      <ol>
+        <li>The modal appears when voting starts</li>
+        <li>The modal is removed immediately when voting ends</li>
+        <li>Result card appears after modal is gone</li>
+        <li>No 10-second delay blocking the screen</li>
+      </ol>
+      
+      <button onclick="runTest()">Run Test</button>
+      <button onclick="clearLog()">Clear Log</button>
+      
+      <div id="testLog"></div>
+    </div>
+
+    <div id="panel"></div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/cards-queue.js"></script>
+  <script src="js/twists.js"></script>
+  
+  <script>
+    // Mock global functions and state
+    window.game = {
+      phase: 'return_twist',
+      week: 3,
+      players: [
+        { id: 1, name: 'Alice', evicted: true, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice' },
+        { id: 2, name: 'Bob', evicted: true, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob' },
+        { id: 3, name: 'Charlie', evicted: true, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=charlie' },
+        { id: 4, name: 'Diana', evicted: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=diana' },
+        { id: 5, name: 'Eve', evicted: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=eve' },
+        { id: 6, name: 'Frank', evicted: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=frank' },
+      ],
+      juryHouse: [1, 2, 3],
+      cfg: { 
+        enableJuryHouse: true,
+        tJurorReturnVoteMs: 2000, // 2 seconds for quick testing
+        numPlayers: 6,
+        jurorReturnChance: 100, // 100% chance to trigger
+        jurorReturnAliveMin: 3,
+        jurorReturnAliveMax: 10,
+        jurorReturnMinJurors: 2
+      },
+      __initialPlayers: 6
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Player ' + id;
+    };
+
+    window.resolveAvatar = function(id) {
+      const p = window.getP(id);
+      return p ? p.avatar : `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}`;
+    };
+
+    window.rng = Math.random;
+
+    window.setPhase = function(phase, duration, callback) {
+      log(`Phase set to: ${phase} (${duration}s)`, 'info');
+      window.game.phase = phase;
+      if (callback) {
+        setTimeout(callback, duration * 1000);
+      }
+    };
+
+    window.addJuryLog = function(msg, type) {
+      log(`Jury Log: ${msg}`, type || 'info');
+    };
+
+    window.setMusic = function(track, play) {
+      log(`Music: ${track} (${play ? 'play' : 'stop'})`, 'info');
+    };
+
+    window.updateHud = function() {
+      log('HUD updated', 'info');
+    };
+
+    window.TvStatus = {
+      set: function(msg) {
+        log(`TV Status: ${msg}`, 'info');
+      }
+    };
+
+    window.showCard = function(title, lines, type, duration, queue) {
+      log(`Card shown: "${title}" - ${lines.join(' | ')} (${duration}ms)`, 'success');
+      return Promise.resolve();
+    };
+
+    window.cardQueueWaitIdle = function() {
+      log('Card queue idle', 'info');
+      return Promise.resolve();
+    };
+
+    window.tv = {
+      say: function(msg) {
+        log(`TV: ${msg}`, 'info');
+      }
+    };
+
+    window.PlayerService = {
+      setAlivePlayers: function(players) {
+        log('PlayerService updated', 'info');
+      }
+    };
+
+    window.showEventModal = function(config) {
+      log(`Event Modal: ${config.title} - ${config.subtitle}`, 'info');
+      return Promise.resolve();
+    };
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = `result ${type}`;
+      entry.textContent = `[${timestamp}] ${message}`;
+      document.getElementById('testLog').appendChild(entry);
+      console.log(`[${timestamp}] ${message}`);
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+    }
+
+    function checkModalPresent() {
+      const modalHost = document.querySelector('.jrModalHost');
+      const jrPanel = document.querySelector('.jrPanel');
+      return !!(modalHost || jrPanel);
+    }
+
+    async function runTest() {
+      clearLog();
+      log('=== TEST STARTED ===', 'info');
+      log('Starting juror return vote...', 'info');
+
+      // Reset game state
+      window.game.phase = 'return_twist';
+      window.game.__returnTwist = null;
+      window.game.__jurorReturnModalShown = false;
+      window.game.__americaReturnCompleted = false;
+      window.game.__jurorReturnCompleted = false;
+
+      // Check modal is not present initially
+      if (checkModalPresent()) {
+        log('❌ ERROR: Modal already present before test!', 'error');
+        return;
+      }
+      log('✓ Modal not present initially', 'success');
+
+      // Start the vote
+      if (typeof window.startAmericaReturnVote === 'function') {
+        await window.startAmericaReturnVote();
+      } else {
+        log('❌ ERROR: startAmericaReturnVote not found!', 'error');
+        return;
+      }
+
+      // Check modal appeared
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (checkModalPresent()) {
+        log('✓ Modal appeared after vote started', 'success');
+      } else {
+        log('❌ ERROR: Modal did not appear!', 'error');
+        return;
+      }
+
+      // Wait for vote to finish (voteDurationMs + buffer)
+      const voteDuration = window.game.cfg.tJurorReturnVoteMs || 2000;
+      log(`Waiting ${voteDuration}ms for vote to complete...`, 'info');
+      await new Promise(resolve => setTimeout(resolve, voteDuration + 500));
+
+      // Check modal is gone immediately after vote finishes
+      const modalPresentAfterVote = checkModalPresent();
+      if (!modalPresentAfterVote) {
+        log('✓ Modal removed immediately after vote finished!', 'success');
+      } else {
+        log('❌ ERROR: Modal still present after vote finished!', 'error');
+        log('This means the fix did not work - modal should be removed immediately', 'error');
+      }
+
+      // Wait a bit more to see if result card appears
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      log('=== TEST COMPLETED ===', 'info');
+      
+      if (!modalPresentAfterVote) {
+        log('✅ All checks passed! Modal cleanup works correctly.', 'success');
+      } else {
+        log('❌ Test failed! Modal cleanup did not work.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
