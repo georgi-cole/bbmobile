@@ -15,9 +15,12 @@
   /**
    * Removes duplicate Evict buttons, ensuring exactly one exists inside the TV panel.
    * Removes duplicates outside the panel only.
+   * Updated to support both intermission overlay and lv-overlay structures.
    */
   function removeDuplicateEvictButtons() {
-    const panel = document.querySelector('#tv .tv-intermission-overlay .intermission-card-container');
+    // Try to find panel in either intermission overlay or lv-overlay structure
+    const panel = document.querySelector('#tv .tv-intermission-overlay .intermission-card-container') ||
+                  document.querySelector('#tv .lv-overlay');
     if (!panel) return;
 
     // Search for all possible evict button class variations
@@ -28,7 +31,11 @@
     // If no buttons in panel, move the first outside button into panel
     if (inPanel.length === 0 && outsidePanel.length > 0) {
       const btnToMove = outsidePanel[0];
-      panel.appendChild(btnToMove);
+      // For lv-overlay, append to confirm container if it exists, else to panel root
+      const confirmContainer = panel.querySelector('.lv-overlay__confirm-container');
+      const ctaRow = panel.querySelector('.lv-overlay__cta-row');
+      const targetContainer = ctaRow || confirmContainer || panel;
+      targetContainer.appendChild(btnToMove);
       // Update outsidePanel array to exclude the moved button
       outsidePanel = outsidePanel.slice(1);
     } else if (inPanel.length > 1) {
