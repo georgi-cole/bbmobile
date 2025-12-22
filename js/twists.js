@@ -572,6 +572,10 @@
 
     const sorted=st.jurors.map(id=>({id,c:st.counts.get(id)||0})).sort((a,b)=>b.c-a.c);
     const winnerId=sorted.length?sorted[0].id:null;
+    
+    // Clean up panel immediately after voting ends (before showing results)
+    // This removes the modal from screen so it doesn't block during result announcement
+    cleanupReturnPanel();
 
     if(winnerId!=null){
       const w=gp(winnerId);
@@ -633,6 +637,23 @@
   function cleanupReturnPanel(){
     const panel=document.getElementById('panel');
     if(!panel) return;
+    
+    // Remove modal host and panel elements from DOM
+    const modalHost = panel.querySelector('.jrModalHost');
+    if(modalHost){
+      modalHost.remove();
+    }
+    
+    // Also remove any stray jrPanel elements not in modalHost
+    const strayPanels = panel.querySelectorAll('.jrPanel');
+    strayPanels.forEach(p => p.remove());
+    
+    // Clear cached DOM references
+    const g = global.game;
+    if(g?.__returnTwist?._domCache){
+      g.__returnTwist._domCache = null;
+    }
+    
     // Use inline status instead of below-TV message
     if (window.TvStatus?.set) {
       window.TvStatus.set("America's Vote complete.");
