@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle Card Modal Test</title>
+  <link rel="stylesheet" href="css/ui/buttons.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .event-log {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .event-item {
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .event-item:last-child {
+      border-bottom: none;
+    }
+    .timestamp {
+      color: #999;
+      margin-right: 10px;
+    }
+    
+    /* Modal base styles */
+    .game-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      z-index: 10000;
+    }
+    .game-modal.visible {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1;
+    }
+    .modal-panel {
+      position: relative;
+      z-index: 2;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 90%;
+      width: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    .modal-header {
+      margin-bottom: 16px;
+    }
+    .modal-title {
+      margin: 0;
+      font-size: 1.5rem;
+      color: #333;
+      text-align: center;
+    }
+    .modal-body {
+      margin-bottom: 20px;
+    }
+    .modal-message {
+      margin: 0;
+      font-size: 1rem;
+      color: #666;
+      text-align: center;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <h1>Idle Card Modal Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <p>Click the buttons below to test the idle modal with different configurations:</p>
+    <button onclick="showBasicModal()">Show Basic Modal</button>
+    <button onclick="showCustomModal()">Show Custom Message Modal</button>
+    <button onclick="showWithCallbacks()">Show Modal with Callbacks</button>
+    <button onclick="clearLog()">Clear Event Log</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <p>Events emitted by the modal and clock listener will appear here:</p>
+    <div class="event-log" id="eventLog">
+      <div class="event-item">No events yet. Click buttons to test the modal.</div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Clock Status</h2>
+    <div id="clockStatus">
+      <p>Clock speed: <strong id="clockSpeed">1x</strong></p>
+      <p>Last fast-forward request: <strong id="lastFastForward">None</strong></p>
+    </div>
+  </div>
+
+  <!-- Load scripts -->
+  <script src="js/bbGameBus.js"></script>
+  <script>
+    // Initialize game object with bus
+    window.game = window.game || {};
+    window.game.bus = window.bbGameBus;
+    window.game.cfg = window.game.cfg || {};
+    
+    // Mock clock object for testing
+    window.game.clock = {
+      speed: 1,
+      fastForward: function(payload) {
+        logEvent('clock.fastForward called', payload);
+        this.speed = 5;
+        updateClockStatus();
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          this.speed = 1;
+          updateClockStatus();
+        }, 2000);
+      },
+      setSpeed: function(speed) {
+        logEvent('clock.setSpeed called', { speed: speed });
+        this.speed = speed;
+        updateClockStatus();
+      }
+    };
+
+    // Event log functionality
+    function logEvent(eventName, data) {
+      const log = document.getElementById('eventLog');
+      const item = document.createElement('div');
+      item.className = 'event-item';
+      
+      const timestamp = new Date().toLocaleTimeString();
+      const dataStr = data ? JSON.stringify(data) : '';
+      
+      item.innerHTML = `<span class="timestamp">${timestamp}</span><strong>${eventName}</strong> ${dataStr}`;
+      log.appendChild(item);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('eventLog').innerHTML = '<div class="event-item">Log cleared.</div>';
+    }
+
+    function updateClockStatus() {
+      document.getElementById('clockSpeed').textContent = window.game.clock.speed + 'x';
+    }
+
+    // Listen to events from the modal
+    window.game.bus.on('idle:choice', (data) => {
+      logEvent('idle:choice', data);
+    });
+
+    window.game.bus.on('clock:request-fast-forward', (data) => {
+      logEvent('clock:request-fast-forward', data);
+      document.getElementById('lastFastForward').textContent = new Date().toLocaleTimeString();
+    });
+
+    window.game.bus.on('clock:fast-forward', (data) => {
+      logEvent('clock:fast-forward (fallback)', data);
+    });
+
+    window.game.bus.on('idle:choice:callback', (data) => {
+      logEvent('idle:choice:callback', data);
+    });
+  </script>
+  <script src="js/bootstrap.idleClockListener.js"></script>
+  <script type="module">
+    import { IdleCard } from './js/ui/idleCard.js';
+    
+    // Make IdleCard available globally for test functions
+    window.IdleCard = IdleCard;
+    
+    // Test functions
+    window.showBasicModal = function() {
+      IdleCard.show({
+        title: 'You cannot compete',
+        message: 'The competition is in progress. Would you like to fast-forward?'
+      });
+    };
+
+    window.showCustomModal = function() {
+      IdleCard.show({
+        title: 'Game Paused',
+        message: 'You are not eligible for this competition. Click "No" to speed up the clock.',
+        yesLabel: 'Wait',
+        noLabel: 'Fast Forward'
+      });
+    };
+
+    window.showWithCallbacks = function() {
+      IdleCard.show({
+        title: 'You cannot compete',
+        message: 'This test includes custom callbacks.',
+        onYes: () => {
+          alert('Yes callback triggered!');
+        },
+        onNo: () => {
+          alert('No callback triggered! Clock should also fast-forward.');
+        }
+      });
+    };
+  </script>
+</body>
+</html>
