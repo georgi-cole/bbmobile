@@ -27,8 +27,9 @@
 //
 // 3. Post-Reveal Handler (handlePostVetoReveal):
 //    - Guarded by __postVetoRevealCalled to prevent duplicate execution
-//    - Calls startVetoCeremony() immediately (no 500ms wait)
-//    - Final 4 path has 500ms delay (acceptable for different flow)
+//    - For non-Final4: calls startVetoCeremony() IMMEDIATELY (no delay)
+//    - For Final4: calls startFinal4Eviction() IMMEDIATELY (no delay)
+//    - All delays removed to eliminate idle waiting periods
 //
 // 4. Ceremony Start (startVetoCeremony):
 //    - Clears any existing g.__vetoAutoTimer
@@ -43,11 +44,13 @@
 // - AI auto-decision checks phase==='veto_ceremony' and ceremony not resolved
 //
 // Benefits:
-// - No redundant idle waiting between results and winner display
-// - No empty timer cycle before POV decision UI appears
+// - No redundant idle waiting between results and ceremony start
+// - No empty timer cycle before POV decision UI appears  
 // - Single canonical countdown (game.phaseEndsAt) as source of truth
 // - All background timers cleared when results shown
 // - Phase guards prevent stale timer callbacks from executing
+// - Immediate transitions: results → ceremony → decision (no gaps)
+// - Total flow: results show 1s → 100ms buffer → ceremony starts → decision shows immediately
 //
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -924,21 +927,31 @@
   }
 
   function handlePostVetoReveal(){
+    var g = global.game;
     var aliveCount = alivePlayers().length;
+    
+    // Guard: Prevent duplicate execution of post-reveal handler
+    // This ensures we only transition once from results to next phase
+    if(g.__postVetoRevealCalled){
+      console.warn('[veto] handlePostVetoReveal already called - skipping duplicate');
+      return;
+    }
+    g.__postVetoRevealCalled = true;
     
     console.info('[veto] handlePostVetoReveal - aliveCount:', aliveCount);
     
     if(aliveCount === 4){
-      console.info('[veto] Final 4 bypass - skipping ceremony, going to Final 4 eviction');
-      setTimeout(function(){ 
-        // Guard: Only proceed if still in correct phase
-        if(global.game && (global.game.phase === 'veto_comp' || global.game.phase === 'veto_ceremony')){
-          startFinal4Eviction(); 
-        }
-      }, 500);
+      console.info('[veto] Final 4 bypass - starting Final 4 eviction immediately (no delay)');
+      // FIX: Remove 500ms delay to eliminate redundant wait before Final 4 eviction
+      // Phase guard ensures we only proceed if still in correct game state
+      if(g && (g.phase === 'veto_comp' || g.phase === 'veto_ceremony')){
+        startFinal4Eviction();
+      } else {
+        console.warn('[veto] Phase changed before Final 4 eviction start - aborting');
+      }
     } else {
       console.info('[veto] Starting veto ceremony immediately (no redundant wait)');
-      // FIX: Remove redundant 500ms delay - start ceremony immediately after winner is shown
+      // FIX: No delay - start ceremony immediately after winner is shown
       // This eliminates the empty waiting period before ceremony begins
       startVetoCeremony().catch(function(err){
         console.error('[veto] startVetoCeremony error:', err);
@@ -1179,8 +1192,8 @@
         // Small buffer added to ensure UI completes animation
         setTimeout(function(){
           // Guard: Only proceed if still in veto phase and not already handled
+          // Note: handlePostVetoReveal will set the guard flag itself to prevent duplicates
           if(global.game && !global.game.__postVetoRevealCalled){
-            global.game.__postVetoRevealCalled = true;
             handlePostVetoReveal();
           }
         }, displayDuration + 100); // Minimal buffer for animation completion
