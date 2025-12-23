@@ -65,11 +65,9 @@
       
       // Update outsidePanel array to exclude the moved button
       outsidePanel = outsidePanel.slice(1);
-    }
-    
-    // CASE 2: Multiple buttons in panel
-    // ACTION: Keep the first one, remove extras
-    else if (inPanel.length > 1) {
+    } else if (inPanel.length > 1) {
+      // CASE 2: Multiple buttons in panel
+      // ACTION: Keep the first one, remove extras
       console.info('[VoteOverlaySafeDedupe] ✓ Removing duplicate in-panel buttons (keeping first)');
       inPanel.slice(1).forEach(btn => {
         console.debug('[VoteOverlaySafeDedupe]   - Removing duplicate:', btn);
@@ -110,9 +108,8 @@
       bus.on('vote:show', runDedupe);
       bus.on('vote:render', runDedupe);
       console.info('[VoteOverlaySafeDedupe] ✓ Wired to event bus');
-    } 
-    // Fallback: use MutationObserver to detect overlay mount
-    else if (typeof MutationObserver !== 'undefined') {
+    } else if (typeof MutationObserver !== 'undefined') {
+      // Fallback: use MutationObserver to detect overlay mount
       const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           if (mutation.type === 'childList') {
@@ -139,9 +136,8 @@
         });
         console.info('[VoteOverlaySafeDedupe] ✓ Wired to MutationObserver (fallback)');
       }
-    }
-    // Final fallback: run on DOMContentLoaded
-    else {
+    } else {
+      // Final fallback: run on DOMContentLoaded
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', runDedupe);
       } else {
