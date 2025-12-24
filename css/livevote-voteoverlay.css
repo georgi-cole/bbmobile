@@ -230,13 +230,25 @@
   color: #ffd96b;
 }
 
-/* Hide redundant "Now showing..." status text */
+/* Hide redundant "Now showing..." status text visually but keep for screen readers */
 .lv-overlay__now-showing,
-.lv-overlay__status,
 .lv-overlay__status-line,
 .lv-overlay__helper-text,
 .status-helper {
   display: none !important;
+}
+
+/* Keep .lv-overlay__status for screen readers but hide visually (sr-only pattern) */
+.lv-overlay__status {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 /* Hide legacy stage/carousel navigation arrows (from other modules/old code) */
@@ -438,30 +450,8 @@
   transform: scale(0.95);
 }
 
-/* Status message area - now inside confirm container, close to avatar */
-.lv-overlay__status {
-  padding: 0px 10px;
-  text-align: center;
-  font-size: clamp(0.65rem, 1.6vw, 0.75rem); /* COMPACT MODE: Even smaller font */
-  color: #8fb3d3;
-  min-height: 16px; /* COMPACT MODE: Further reduced height */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-/* Submitted state - success confirmation */
-.lv-overlay__status.submitted {
-  color: #7cffad;
-  font-weight: 600;
-}
-
-/* Error state - submission failure */
-.lv-overlay__status.error {
-  color: #ff6b6b;
-  font-weight: 600;
-}
+/* Status message area is sr-only (defined above with clip pattern) */
+/* Removed duplicate rules for .lv-overlay__status that were overriding sr-only pattern */
 
 /* Mobile portrait optimizations */
 @media (max-width: 767px) and (orientation: portrait) {
