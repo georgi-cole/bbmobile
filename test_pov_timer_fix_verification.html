@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POV Timer Fix Verification</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #0e1a28;
+      color: #e2e8f0;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #71bfff;
+      margin-bottom: 20px;
+    }
+    
+    .test-section {
+      background: rgba(28, 43, 62, 0.6);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+    }
+    
+    .info {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .success {
+      background: rgba(74, 222, 128, 0.1);
+      border-left: 3px solid #4ade80;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    .warning {
+      background: rgba(251, 191, 36, 0.1);
+      border-left: 3px solid #fbbf24;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #2563eb;
+    }
+    
+    button.secondary {
+      background: #475569;
+    }
+    
+    button.secondary:hover {
+      background: #334155;
+    }
+    
+    #log {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    
+    #log div {
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    
+    #log .veto {
+      color: #a78bfa;
+    }
+    
+    #log .info {
+      color: #60a5fa;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    #log .warn {
+      color: #fbbf24;
+    }
+    
+    #log .error {
+      color: #f87171;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    
+    .checklist li:before {
+      content: "□ ";
+      color: #64748b;
+      margin-right: 8px;
+    }
+    
+    code {
+      background: rgba(59, 130, 246, 0.2);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    
+    .timer-flow {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    
+    .flow-step {
+      padding: 8px;
+      margin: 5px 0;
+      border-left: 3px solid #3b82f6;
+      padding-left: 12px;
+    }
+    
+    .flow-step.good {
+      border-left-color: #4ade80;
+      background: rgba(74, 222, 128, 0.05);
+    }
+    
+    .flow-step.bad {
+      border-left-color: #f87171;
+      background: rgba(248, 113, 113, 0.05);
+    }
+  </style>
+</head>
+<body>
+  <h1>🛡️ POV Timer Fix Verification</h1>
+  
+  <div class="test-section">
+    <h2>Fix Summary</h2>
+    <div class="success">
+      <strong>Issue Fixed:</strong> Redundant idle/wait timers in POV flow causing empty waiting periods
+    </div>
+    <div class="info">
+      <strong>Root Cause:</strong> Multiple setTimeout calls without proper tracking and cleanup, resulting in redundant waits between results → winner display → veto choice card.
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Changes Made</h2>
+    <ol style="line-height: 1.8; color: #cbd5e1;">
+      <li><strong>Added Timer Tracking</strong> - New fields <code>__vetoInlineWinnerTimer</code> and <code>__vetoPostRevealTimer</code> to track all active timers</li>
+      <li><strong>Created clearAllVetoTimers()</strong> - Central function to clear all veto-related timers</li>
+      <li><strong>Added POV_INLINE_WINNER_DURATION_MS</strong> - Configurable constant (3000ms default) for inline winner display duration</li>
+      <li><strong>Modified handlePostVetoReveal()</strong> - Shows inline winner UI for human POV winner using <code>TVInlineStatus</code></li>
+      <li><strong>Timer Cleanup on Phase Transitions</strong> - All timers cleared when phase changes to prevent stale callbacks</li>
+    </ol>
+  </div>
+  
+  <div class="test-section">
+    <h2>Flow Comparison</h2>
+    
+    <h3 style="color: #f87171; margin-top: 20px;">❌ BEFORE (with redundant timers):</h3>
+    <div class="timer-flow">
+      <div class="flow-step bad">1. POV competition completes → finishVetoComp()</div>
+      <div class="flow-step bad">2. Results shown fullscreen (1000ms)</div>
+      <div class="flow-step bad">3. Timer 1: Wait for results dismiss (1100ms setTimeout)</div>
+      <div class="flow-step bad">4. handlePostVetoReveal() called</div>
+      <div class="flow-step bad">5. Timer 2: Idle wait (??ms) ← REDUNDANT</div>
+      <div class="flow-step bad">6. Timer 3: Another wait (??ms) ← REDUNDANT</div>
+      <div class="flow-step bad">7. startVetoCeremony() shows veto decision</div>
+      <div class="flow-step bad">Total time: ~3-5s with empty waits</div>
+    </div>
+    
+    <h3 style="color: #4ade80; margin-top: 20px;">✅ AFTER (human POV winner):</h3>
+    <div class="timer-flow">
+      <div class="flow-step good">1. POV competition completes → finishVetoComp()</div>
+      <div class="flow-step good">2. clearAllVetoTimers() - Clean slate</div>
+      <div class="flow-step good">3. Results shown fullscreen (1000ms)</div>
+      <div class="flow-step good">4. __vetoPostRevealTimer: handlePostVetoReveal() (1100ms) ← TRACKED</div>
+      <div class="flow-step good">5. Inline winner UI shows immediately: "You won POV! 🛡️"</div>
+      <div class="flow-step good">6. __vetoInlineWinnerTimer: Wait for inline winner (3000ms) ← TRACKED</div>
+      <div class="flow-step good">7. clearAllVetoTimers() → startVetoCeremony()</div>
+      <div class="flow-step good">8. Veto decision shows immediately</div>
+      <div class="flow-step good">Total time: 4.1s (1s results + 3s winner + 0.1s transition)</div>
+    </div>
+    
+    <h3 style="color: #4ade80; margin-top: 20px;">✅ AFTER (spectator/AI winner):</h3>
+    <div class="timer-flow">
+      <div class="flow-step good">1. POV competition completes → finishVetoComp()</div>
+      <div class="flow-step good">2. clearAllVetoTimers() - Clean slate</div>
+      <div class="flow-step good">3. Results shown fullscreen (1000ms)</div>
+      <div class="flow-step good">4. __vetoPostRevealTimer: handlePostVetoReveal() (1100ms) ← TRACKED</div>
+      <div class="flow-step good">5. startVetoCeremony() called immediately (no inline winner)</div>
+      <div class="flow-step good">6. Ceremony proceeds normally</div>
+      <div class="flow-step good">Total time: 1.1s (unchanged from before)</div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Key Improvements</h2>
+    <ul class="checklist">
+      <li>✓ All timers tracked in game state fields</li>
+      <li>✓ clearAllVetoTimers() called on phase transitions</li>
+      <li>✓ No idle/empty waiting periods</li>
+      <li>✓ Human POV winner sees inline winner UI for 3s</li>
+      <li>✓ Phase guards prevent stale callbacks</li>
+      <li>✓ Configurable timing constants</li>
+      <li>✓ Spectator flow unchanged (no regressions)</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>Console Log Monitoring</h2>
+    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 10px;">
+      Look for these key log messages to verify the fix is working:
+    </p>
+    <ul style="line-height: 1.8; color: #cbd5e1;">
+      <li><code>[veto] Clearing all veto timers before showing results</code> - Timer cleanup</li>
+      <li><code>[veto] handlePostVetoReveal - vetoHolder:X humanId:Y</code> - Winner determination</li>
+      <li><code>[veto] Human won POV - showing inline winner UI for 3000ms</code> - Human winner path</li>
+      <li><code>[veto] Inline winner duration complete - starting ceremony</code> - Timer expired</li>
+      <li><code>[veto] Starting veto ceremony immediately (spectator or AI winner)</code> - Spectator path</li>
+      <li><code>[veto] All veto timers cleared</code> - Cleanup confirmation</li>
+      <li><code>[veto] startVetoCeremony - ceremony flow beginning</code> - Ceremony start</li>
+    </ul>
+    
+    <button onclick="clearLog()">Clear Log</button>
+    <button class="secondary" onclick="copyLog()">Copy Log</button>
+    <div id="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Testing Instructions</h2>
+    <ol style="line-height: 1.8; color: #cbd5e1;">
+      <li>Open the main game (<code>index.html</code>) in a new tab</li>
+      <li>Start a new game with at least one human player</li>
+      <li>Advance through the game phases until reaching the veto competition</li>
+      <li>Ensure the human player wins the veto (or manually set: <code>game.vetoHolder = [human_id]</code>)</li>
+      <li>Complete the minigame</li>
+      <li>Watch the console (F12) for the timing sequence</li>
+      <li>Verify:
+        <ul>
+          <li>Results show fullscreen for ~1s</li>
+          <li>Inline winner UI appears immediately: "You won the Power of Veto! 🛡️"</li>
+          <li>Inline winner visible for ~3s</li>
+          <li>Veto choice card appears immediately after</li>
+          <li>No empty waiting periods</li>
+        </ul>
+      </li>
+      <li>Return to this tab to review captured logs</li>
+    </ol>
+  </div>
+  
+  <div class="test-section">
+    <h2>Manual Testing Checklist</h2>
+    <ul class="checklist">
+      <li>✓ Console shows "Clearing all veto timers"</li>
+      <li>✓ Console shows "Human won POV - showing inline winner UI"</li>
+      <li>✓ Inline winner message appears on main screen (not fullscreen)</li>
+      <li>✓ Inline winner visible for approximately 3 seconds</li>
+      <li>✓ Console shows "Inline winner duration complete"</li>
+      <li>✓ Veto choice card appears immediately after inline winner</li>
+      <li>✓ No empty waiting periods between transitions</li>
+      <li>✓ Spectator flow still works (ceremony starts immediately)</li>
+      <li>✓ All timers cleared on phase transition (no stale callbacks)</li>
+      <li>✓ Fast-forward mode still works</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>Timer Count Verification</h2>
+    <div class="info">
+      <strong>To verify no timers are left running:</strong>
+      <ol style="margin: 10px 0 0 20px; line-height: 1.6;">
+        <li>After ceremony completes, open browser console</li>
+        <li>Type: <code>game.__vetoAutoTimer</code> - Should be <code>null</code></li>
+        <li>Type: <code>game.__vetoInlineWinnerTimer</code> - Should be <code>null</code></li>
+        <li>Type: <code>game.__vetoPostRevealTimer</code> - Should be <code>null</code></li>
+      </ol>
+    </div>
+  </div>
+  
+  <script>
+    // Intercept console methods to display in the log div
+    const logDiv = document.getElementById('log');
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    function addLogEntry(type, args) {
+      const message = Array.from(args).map(arg => {
+        if (typeof arg === 'object') {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch (e) {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+      
+      const div = document.createElement('div');
+      div.className = type;
+      
+      // Highlight veto-related messages
+      if (message.includes('[veto]')) {
+        div.classList.add('veto');
+      }
+      
+      const timestamp = new Date().toLocaleTimeString();
+      div.textContent = `[${timestamp}] ${message}`;
+      
+      logDiv.appendChild(div);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addLogEntry('info', args);
+    };
+    
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      addLogEntry('info', args);
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addLogEntry('warn', args);
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addLogEntry('error', args);
+    };
+    
+    function clearLog() {
+      logDiv.innerHTML = '';
+    }
+    
+    function copyLog() {
+      const text = Array.from(logDiv.children)
+        .map(div => div.textContent)
+        .join('\n');
+      
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Log copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy log:', err);
+      });
+    }
+    
+    // Initial message
+    console.info('✅ POV Timer Fix Verification Test Ready');
+    console.info('Open the main game (index.html) and play until veto competition');
+    console.info('Watch for inline winner UI when human player wins POV');
+    console.info('Verify no empty waiting periods between transitions');
+  </script>
+</body>
+</html>

@@ -9,48 +9,59 @@
 // This module implements a single-source-of-truth timer system for POV flow
 // to eliminate redundant idle waiting periods while maintaining smooth UX:
 //
-// Timer Configuration Constants (lines 11-15):
-// - POV_RESULTS_TO_WINNER_DELAY_MS = 1000ms (1s from results to winner)
+// Timer Configuration Constants (lines 66-68):
+// - POV_RESULTS_TO_WINNER_DELAY_MS = 1000ms (1s from results to inline winner)
+// - POV_INLINE_WINNER_DURATION_MS = 3000ms (3s inline winner display)
 // - VETO_CEREMONY_START_DELAY_MS = 0ms (ceremony starts immediately)
 //
 // Timer Lifecycle & Guards:
 // 1. Competition Start (startVetoComp):
-//    - Initializes all veto flow flags including __vetoAutoTimer
+//    - Initializes all veto flow flags including timer references
 //    - Resets __vetoResultsShown and __postVetoRevealCalled
+//    - Initializes __vetoInlineWinnerTimer and __vetoPostRevealTimer
 //
 // 2. Competition Completion (finishVetoComp):
 //    - Sets __finishVetoCompCalled and __vetoResolving guards
-//    - Clears all g.__vetoAutoTimer instances
+//    - Clears all veto timers via clearAllVetoTimers()
 //    - Sets canonical phase countdown to 1s via setPhase()
 //    - Shows results with POV_RESULTS_TO_WINNER_DELAY_MS duration
-//    - Single timeout to handlePostVetoReveal() with guard
+//    - Schedules handlePostVetoReveal() with tracked timer
 //
 // 3. Post-Reveal Handler (handlePostVetoReveal):
 //    - Guarded by __postVetoRevealCalled to prevent duplicate execution
-//    - For non-Final4: calls startVetoCeremony() IMMEDIATELY (no delay)
-//    - For Final4: calls startFinal4Eviction() IMMEDIATELY (no delay)
-//    - All delays removed to eliminate idle waiting periods
+//    - For human POV winner: Shows inline winner UI for POV_INLINE_WINNER_DURATION_MS
+//    - After inline duration: Calls startVetoCeremony()
+//    - For spectator/AI winner: Calls startVetoCeremony() IMMEDIATELY
+//    - For Final4: calls startFinal4Eviction() IMMEDIATELY
 //
 // 4. Ceremony Start (startVetoCeremony):
-//    - Clears any existing g.__vetoAutoTimer
-//    - Removed ceremony intro card (line 2790) - starts decision immediately
+//    - Clears all veto timers via clearAllVetoTimers()
+//    - Removed ceremony intro card - starts decision immediately
 //    - For human: shows decision prompt instantly
 //    - For AI: schedules auto-decision with 1200ms delay + phase guard
+//
+// Timer Cleanup (clearAllVetoTimers):
+//    - Clears __vetoAutoTimer (AI decisions)
+//    - Clears __vetoInlineWinnerTimer (inline winner display)
+//    - Clears __vetoPostRevealTimer (post-reveal transition)
+//    - Called on phase transitions to prevent stale callbacks
 //
 // Timer Guards:
 // - All setTimeout callbacks check game phase before executing
 // - handlePostVetoReveal guarded by __postVetoRevealCalled flag
 // - finishVetoComp guarded by __finishVetoCompCalled flag
 // - AI auto-decision checks phase==='veto_ceremony' and ceremony not resolved
+// - Inline winner timer checks phase before starting ceremony
 //
 // Benefits:
 // - No redundant idle waiting between results and ceremony start
-// - No empty timer cycle before POV decision UI appears  
+// - POV winner sees inline winner UI for configurable duration (3s default)
+// - All background timers tracked and cleared on phase transitions
 // - Single canonical countdown (game.phaseEndsAt) as source of truth
-// - All background timers cleared when results shown
 // - Phase guards prevent stale timer callbacks from executing
-// - Immediate transitions: results → ceremony → decision (no gaps)
-// - Total flow: results show 1s → 100ms buffer → ceremony starts → decision shows immediately
+// - Immediate transitions: results → inline winner → veto choice (no gaps)
+// - Total flow for winner: results show 1s → inline winner 3s → ceremony starts immediately
+// - Total flow for spectator: results show 1s → ceremony starts immediately
 //
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -64,6 +75,7 @@
   // These constants control the delays in the POV competition and veto ceremony flow
   // to eliminate redundant waiting periods while allowing minimal UI animation time
   const POV_RESULTS_TO_WINNER_DELAY_MS = 1000; // 1s delay from results to winner display
+  const POV_INLINE_WINNER_DURATION_MS = 3000;  // 3s duration for inline winner display
   const VETO_CEREMONY_START_DELAY_MS = 0;      // 0ms - start ceremony immediately (no wait)
 
   function getP(id){ return (global.getP ? global.getP(id) : null); }
@@ -600,6 +612,8 @@
     g.__vetoNarrativeShown = false;
     g.__vetoDecisionInProgress = false;
     g.__vetoAutoTimer = null;
+    g.__vetoInlineWinnerTimer = null; // Track inline winner display timer
+    g.__vetoPostRevealTimer = null; // Track post-reveal transition timer
     g.__replacementCommitted = false;
     g.__replacementApplied = false;
     g.__finishVetoCompCalled = false;
@@ -839,6 +853,36 @@
   }
   global.startVetoComp = startVetoComp;
 
+  /**
+   * Clear all veto-related timers to prevent stale callbacks
+   * Should be called on phase transitions and ceremony start
+   */
+  function clearAllVetoTimers(){
+    var g = global.game;
+    if(!g) return;
+    
+    // Clear auto-timer (used for AI decisions)
+    if(g.__vetoAutoTimer){
+      try{ clearTimeout(g.__vetoAutoTimer); }catch(e){}
+      g.__vetoAutoTimer = null;
+    }
+    
+    // Clear inline winner timer
+    if(g.__vetoInlineWinnerTimer){
+      try{ clearTimeout(g.__vetoInlineWinnerTimer); }catch(e){}
+      g.__vetoInlineWinnerTimer = null;
+    }
+    
+    // Clear post-reveal timer
+    if(g.__vetoPostRevealTimer){
+      try{ clearTimeout(g.__vetoPostRevealTimer); }catch(e){}
+      g.__vetoPostRevealTimer = null;
+    }
+    
+    console.info('[veto] All veto timers cleared');
+  }
+  global.clearAllVetoTimers = clearAllVetoTimers;
+
   function humanIsParticipant(){
     var g = global.game;
     var you = (g && g.humanId!=null) ? getP(g.humanId) : null;
@@ -938,7 +982,10 @@
     }
     g.__postVetoRevealCalled = true;
     
-    console.info('[veto] handlePostVetoReveal - aliveCount:', aliveCount);
+    console.info('[veto] handlePostVetoReveal - aliveCount:', aliveCount, 'vetoHolder:', g.vetoHolder, 'humanId:', g.humanId);
+    
+    // Determine if human is the POV winner
+    var humanWonPOV = (g.vetoHolder != null && g.humanId != null && g.vetoHolder === g.humanId);
     
     if(aliveCount === 4){
       console.info('[veto] Final 4 bypass - starting Final 4 eviction immediately (no delay)');
@@ -949,10 +996,37 @@
       } else {
         console.warn('[veto] Phase changed before Final 4 eviction start - aborting');
       }
+    } else if(humanWonPOV){
+      // Human won POV - show inline winner UI before ceremony
+      console.info('[veto] Human won POV - showing inline winner UI for ' + POV_INLINE_WINNER_DURATION_MS + 'ms');
+      
+      // Show inline winner message on main UI
+      if(window.TVInlineStatus && typeof window.TVInlineStatus.set === 'function'){
+        var winnerMsg = 'You won the Power of Veto! 🛡️';
+        window.TVInlineStatus.set(winnerMsg, 'veto');
+      }
+      
+      // Schedule ceremony start after inline winner duration
+      g.__vetoInlineWinnerTimer = setTimeout(function(){
+        // Guard: Only proceed if still in veto phase
+        if(g && (g.phase === 'veto_comp' || g.phase === 'veto_ceremony')){
+          console.info('[veto] Inline winner duration complete - starting ceremony');
+          
+          // Clear inline status before ceremony starts
+          if(window.TVInlineStatus && typeof window.TVInlineStatus.clear === 'function'){
+            window.TVInlineStatus.clear();
+          }
+          
+          startVetoCeremony().catch(function(err){
+            console.error('[veto] startVetoCeremony error:', err);
+          });
+        } else {
+          console.warn('[veto] Phase changed before ceremony start - aborting');
+        }
+      }, POV_INLINE_WINNER_DURATION_MS);
     } else {
-      console.info('[veto] Starting veto ceremony immediately (no redundant wait)');
-      // FIX: No delay - start ceremony immediately after winner is shown
-      // This eliminates the empty waiting period before ceremony begins
+      // Spectator flow or AI won - start ceremony immediately
+      console.info('[veto] Starting veto ceremony immediately (spectator or AI winner)');
       startVetoCeremony().catch(function(err){
         console.error('[veto] startVetoCeremony error:', err);
       });
@@ -1114,11 +1188,8 @@
     if (g.__vetoResultsShown) {
       console.info('[veto] Results already shown via fast-forward - ensuring timers cleared and countdown shortened');
 
-      // Clear any active veto auto-timers
-      if (g.__vetoAutoTimer) {
-        try { clearTimeout(g.__vetoAutoTimer); } catch (e) {}
-        g.__vetoAutoTimer = null;
-      }
+      // Clear all veto timers
+      clearAllVetoTimers();
 
       // Ensure the canonical phase countdown is shortened to the results→winner value
       if (typeof global.setPhase === 'function') {
@@ -1132,7 +1203,7 @@
       }
 
       // Proceed to post-reveal flow with a very small buffer to let UI settle
-      setTimeout(function () { 
+      g.__vetoPostRevealTimer = setTimeout(function () { 
         // Guard: Only proceed if still in veto phase and results already shown
         if(global.game && global.game.__vetoResultsShown){
           handlePostVetoReveal(); 
@@ -1144,19 +1215,10 @@
     // Mark that results are being shown to prevent duplicate displays
     g.__vetoResultsShown = true;
     
-    // FIX: Clear all background timers and set main countdown to 1s
-    // This ensures winner appears after exactly 1 second with no redundant waits
-    // Timer Management (Single Source of Truth):
-    // - All background timers must be cleared when results are shown
-    // - Main phase countdown is shortened to POV_RESULTS_TO_WINNER_DELAY_MS (1s)
-    // - This eliminates idle periods and provides immediate winner display
-    console.info('[veto] Clearing background timers and setting countdown to 1s');
-    
-    // Clear any active veto auto-timers
-    if(g.__vetoAutoTimer){ 
-      try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} 
-      g.__vetoAutoTimer = null; 
-    }
+    // FIX: Clear all background timers to prevent stale callbacks
+    // This ensures no redundant timers are left running from previous phases
+    console.info('[veto] Clearing all veto timers before showing results');
+    clearAllVetoTimers();
     
     // Set phase countdown to exactly 1 second for results-to-winner transition
     // This uses the canonical phase timer as single source of truth
@@ -1188,9 +1250,10 @@
           autoDismissMs: displayDuration 
         });
         
+        // Track post-reveal timer to allow cleanup on phase transition
         // Continue to ceremony after display duration (using configured constant)
         // Small buffer added to ensure UI completes animation
-        setTimeout(function(){
+        g.__vetoPostRevealTimer = setTimeout(function(){
           // Guard: Only proceed if still in veto phase and not already handled
           // Note: handlePostVetoReveal will set the guard flag itself to prevent duplicates
           if(global.game && !global.game.__postVetoRevealCalled){
@@ -2850,7 +2913,9 @@
     g.__replacementCommitted = false;
     g.__replacementApplied = false;
     g.__useTVCeremonyUI = false;
-    if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
+    
+    // Clear all veto timers on ceremony start to prevent stale callbacks
+    clearAllVetoTimers();
 
     // Set legacy UI disable flags BEFORE any async UI
     g.__disableLegacyVetoUI = true;
