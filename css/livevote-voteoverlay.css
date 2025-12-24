@@ -4,8 +4,10 @@
  * Mobile-first with safe-area support
  */
 
-/* SMOKE CHECK: Temporary lime outline to verify CSS is loaded (remove after confirming) */
-.lv-overlay { outline: 3px solid lime !important; }
+/* SMOKE CHECK: Temporary debug outlines to verify CSS is loaded (NOT scoped to #tv) */
+/* Remove these after confirming they're visible on iPhone */
+.lv-overlay { outline: 6px solid lime !important; }
+.lv-overlay__confirm-container { outline: 4px solid magenta !important; }
 
 /* Ensure TV viewport is positioned and clipped correctly for scrim */
 #tv .tvViewport {
@@ -288,12 +290,12 @@
 .lv-overlay__cta-row,
 .lv-overlay__confirm-inner {
   display: grid !important;
-  grid-template-columns: 44px 1fr 44px !important;
+  grid-template-columns: 52px 1fr 52px !important;
   align-items: center !important;
   justify-items: center;
-  gap: 8px;
   width: 100% !important;
-  max-width: 280px;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
 }
 
 /* Carousel navigation arrows - reused in CTA row (always rendered, disabled at bounds) */
@@ -416,19 +418,21 @@
   transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
-/* Close button (top-right) */
+/* Close button (top-right) - FIXED: force small circle, never oval/pill */
 .lv-overlay__close {
-  position: absolute;
-  top: calc(12px + env(safe-area-inset-top)); /* Respect safe area inset */
-  right: calc(12px + env(safe-area-inset-right)); /* Respect safe area inset */
-  background: rgba(20, 35, 55, 0.9);
-  border: 2px solid rgba(143, 211, 255, 0.3);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 999px !important;
+  background: rgba(20, 35, 55, 0.9) !important;
+  border: 2px solid rgba(143, 211, 255, 0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
   font-size: 1.3rem;
   color: #e8f4ff;
   cursor: pointer;
@@ -436,8 +440,8 @@
   z-index: 20;
   
   /* Minimum tap target */
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 44px !important;
+  min-height: 44px !important;
 }
 
 .lv-overlay__close:hover {
@@ -570,5 +574,45 @@
   .lv-overlay__arrow,
   .lv-overlay__close {
     border-width: 3px;
+  }
+}
+
+/* Mobile-specific layout fixes (max-width: 480px) */
+@media (max-width: 480px) {
+  /* Keep title visible, add guaranteed breathing room */
+  .lv-overlay__header {
+    margin: 8px 0 14px !important;
+  }
+
+  /* Make selected avatar only slightly bigger (not huge) */
+  :root,
+  .lv-overlay {
+    --avatarBase: 96px;
+    --avatarSelected: 116px;
+  }
+
+  /* Remove the huge "luft": keep nominee content top-packed */
+  .lv-overlay__nominee {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    padding-top: 10px !important;
+  }
+  
+  .lv-overlay__nominee-name {
+    margin-top: 6px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Push CTA lower + safe area */
+  .lv-overlay__confirm-container {
+    margin-top: auto !important;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Narrower evict button on mobile */
+  .lv-overlay__evict-btn {
+    width: clamp(120px, 34vw, 160px) !important;
   }
 }
