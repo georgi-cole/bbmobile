@@ -44,7 +44,7 @@
 
     // Create card container - sized to fit TV overlay without scroll
     const cardContainer = document.createElement('div');
-    cardContainer.className = 'intermission-card-container';
+    cardContainer.className = 'intermission-card-container game-modal';
     cardContainer.style.cssText = `
       pointer-events: auto;
       padding: 0 8px;
@@ -101,80 +101,45 @@
     `;
     card.appendChild(message);
 
-    // Buttons container
+    // Buttons container - use CSS classes from buttons.css
     const buttons = document.createElement('div');
-    buttons.className = 'intermission-offer-buttons';
-    buttons.style.cssText = `
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-    `;
+    buttons.className = 'intermission-offer-buttons action-row';
 
-    // Yes button - compact for TV overlay
+    // Yes button - use consistent button CSS
     const yesBtn = document.createElement('button');
-    yesBtn.className = 'intermission-offer-button yes';
-    yesBtn.textContent = 'Yes';
-    yesBtn.style.cssText = `
-      flex: 1;
-      max-width: 120px;
-      padding: 10px 16px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      background: linear-gradient(135deg, #10b981, #059669);
-      border: 2px solid #34d399;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    `;
+    yesBtn.className = 'intermission-offer-button yes btn btn-primary';
+    const yesLabel = document.createElement('span');
+    yesLabel.className = 'btn-label';
+    yesLabel.textContent = 'Yes';
+    yesBtn.appendChild(yesLabel);
     yesBtn.addEventListener('click', () => {
       if (onYes) onYes();
       removeCard();
     });
-    yesBtn.addEventListener('mouseenter', () => {
-      yesBtn.style.background = 'linear-gradient(135deg, #34d399, #10b981)';
-      yesBtn.style.transform = 'translateY(-2px)';
-      yesBtn.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)';
-    });
-    yesBtn.addEventListener('mouseleave', () => {
-      yesBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      yesBtn.style.transform = 'translateY(0)';
-      yesBtn.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
-    });
     buttons.appendChild(yesBtn);
 
-    // No button - compact for TV overlay
+    // No button - use consistent button CSS and emit clock fast-forward event
     const noBtn = document.createElement('button');
-    noBtn.className = 'intermission-offer-button no';
-    noBtn.textContent = 'No';
-    noBtn.style.cssText = `
-      flex: 1;
-      max-width: 120px;
-      padding: 10px 16px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      background: linear-gradient(135deg, #6b7280, #4b5563);
-      border: 2px solid #9ca3af;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(75, 85, 99, 0.3);
-    `;
+    noBtn.className = 'intermission-offer-button no btn btn-secondary';
+    const noLabel = document.createElement('span');
+    noLabel.className = 'btn-label';
+    noLabel.textContent = 'No';
+    noBtn.appendChild(noLabel);
     noBtn.addEventListener('click', () => {
+      // Emit clock fast-forward event
+      try {
+        if (global.game && global.game.bus && global.game.bus.emit) {
+          global.game.bus.emit('clock:request-fast-forward', { 
+            reason: 'intermission_declined', 
+            compType: compType 
+          });
+        }
+      } catch (err) {
+        console.error('[IntermissionCard] Failed to emit clock fast-forward event:', err);
+      }
+      
       if (onNo) onNo();
       removeCard();
-    });
-    noBtn.addEventListener('mouseenter', () => {
-      noBtn.style.background = 'linear-gradient(135deg, #9ca3af, #6b7280)';
-      noBtn.style.transform = 'translateY(-2px)';
-      noBtn.style.boxShadow = '0 6px 16px rgba(75, 85, 99, 0.4)';
-    });
-    noBtn.addEventListener('mouseleave', () => {
-      noBtn.style.background = 'linear-gradient(135deg, #6b7280, #4b5563)';
-      noBtn.style.transform = 'translateY(0)';
-      noBtn.style.boxShadow = '0 4px 12px rgba(75, 85, 99, 0.3)';
     });
     buttons.appendChild(noBtn);
 

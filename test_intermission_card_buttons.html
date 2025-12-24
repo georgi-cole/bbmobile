@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Idle Card Modal Test</title>
+  <title>Intermission Card Test</title>
   <link rel="stylesheet" href="css/ui/buttons.css">
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto;
-      background: #f5f5f5;
+      background: #1a1a2e;
+      color: #fff;
     }
     .test-section {
-      background: white;
+      background: rgba(255, 255, 255, 0.05);
       padding: 20px;
       margin: 20px 0;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .test-section h2 {
       margin-top: 0;
-      color: #333;
+      color: #60a5fa;
     }
-    button {
+    button.test-btn {
       padding: 10px 20px;
       margin: 5px;
       cursor: pointer;
@@ -34,11 +34,11 @@
       border-radius: 5px;
       font-size: 14px;
     }
-    button:hover {
+    button.test-btn:hover {
       background: #45a049;
     }
     .event-log {
-      background: #f9f9f9;
+      background: rgba(0, 0, 0, 0.3);
       padding: 15px;
       border-radius: 5px;
       margin-top: 10px;
@@ -49,7 +49,7 @@
     }
     .event-item {
       padding: 5px 0;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     .event-item:last-child {
       border-bottom: none;
@@ -58,79 +58,39 @@
       color: #999;
       margin-right: 10px;
     }
-    
-    /* Modal base styles */
-    .game-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: none;
-      z-index: 10000;
-    }
-    .game-modal.visible {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-backdrop {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1;
-    }
-    .modal-panel {
+    #panel {
       position: relative;
-      z-index: 2;
-      background: white;
+      width: 100%;
+      height: 400px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #60a5fa;
       border-radius: 12px;
-      padding: 24px;
-      max-width: 90%;
-      width: 400px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    }
-    .modal-header {
-      margin-bottom: 16px;
-    }
-    .modal-title {
-      margin: 0;
-      font-size: 1.5rem;
-      color: #333;
-      text-align: center;
-    }
-    .modal-body {
-      margin-bottom: 20px;
-    }
-    .modal-message {
-      margin: 0;
-      font-size: 1rem;
-      color: #666;
-      text-align: center;
-      line-height: 1.5;
+      margin: 20px 0;
+      overflow: hidden;
     }
   </style>
 </head>
 <body>
-  <h1>Idle Card Modal Test</h1>
+  <h1>Intermission Card Test</h1>
   
   <div class="test-section">
     <h2>Test Controls</h2>
-    <p>Click the buttons below to test the idle modal with different configurations:</p>
-    <button onclick="showBasicModal()">Show Basic Modal</button>
-    <button onclick="showCustomModal()">Show Custom Message Modal</button>
-    <button onclick="showWithCallbacks()">Show Modal with Callbacks</button>
-    <button onclick="clearLog()">Clear Event Log</button>
+    <p>Click the buttons below to test the intermission card with different configurations:</p>
+    <button class="test-btn" onclick="showHOHCard()">Show HOH Card (Tic Tac Toe)</button>
+    <button class="test-btn" onclick="showVetoCard()">Show Veto Card (Dots & Boxes)</button>
+    <button class="test-btn" onclick="clearLog()">Clear Event Log</button>
+  </div>
+
+  <div class="test-section">
+    <h2>TV Container (Card will appear here)</h2>
+    <div id="panel"></div>
   </div>
 
   <div class="test-section">
     <h2>Event Log</h2>
     <p>Events emitted by the modal and clock listener will appear here:</p>
     <div class="event-log" id="eventLog">
-      <div class="event-item">No events yet. Click buttons to test the modal.</div>
+      <div class="event-item">No events yet. Click buttons to test the card.</div>
     </div>
   </div>
 
@@ -149,6 +109,39 @@
     window.game = window.game || {};
     window.game.bus = window.bbGameBus;
     window.game.cfg = window.game.cfg || {};
+    
+    // Mock TvContainer for testing
+    window.TvContainer = {
+      getTvContainer: function() {
+        return document.getElementById('panel');
+      },
+      ensurePositioned: function(el) {
+        if (el) {
+          el.style.position = 'relative';
+        }
+      },
+      getOrCreateTvOverlay: function(container, className) {
+        let overlay = container.querySelector('.' + className);
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.className = className;
+          overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+          `;
+          container.appendChild(overlay);
+        }
+        return overlay;
+      }
+    };
     
     // Mock clock object for testing
     window.game.clock = {
@@ -194,56 +187,43 @@
     }
 
     // Listen to events from the modal
-    window.game.bus.on('idle:choice', (data) => {
-      logEvent('idle:choice', data);
-    });
-
     window.game.bus.on('clock:request-fast-forward', (data) => {
       logEvent('clock:request-fast-forward', data);
       document.getElementById('lastFastForward').textContent = new Date().toLocaleTimeString();
     });
 
-    window.game.bus.on('clock:fast-forward', (data) => {
-      logEvent('clock:fast-forward (fallback)', data);
-    });
-
-    window.game.bus.on('idle:choice:callback', (data) => {
-      logEvent('idle:choice:callback', data);
+    window.game.bus.on('phase:timer:skip-to-results', (data) => {
+      logEvent('phase:timer:skip-to-results', data);
     });
   </script>
   <script src="js/bootstrap.idleClockListener.js"></script>
-  <script type="module">
-    import { IdleCard } from './js/ui/idleCard.js';
-    
-    // Make IdleCard available globally for test functions
-    window.IdleCard = IdleCard;
-    
+  <script src="js/ui/intermissionCard.js"></script>
+  <script>
     // Test functions
-    window.showBasicModal = function() {
-      IdleCard.show({
-        title: 'You cannot compete',
-        message: 'The competition is in progress. Would you like to fast-forward?'
-      });
-    };
-
-    window.showCustomModal = function() {
-      IdleCard.show({
-        title: 'Game Paused',
-        message: 'You are not eligible for this competition. Click "No" to speed up the clock.',
-        yesLabel: 'Wait',
-        noLabel: 'Fast Forward'
-      });
-    };
-
-    window.showWithCallbacks = function() {
-      IdleCard.show({
-        title: 'You cannot compete',
-        message: 'This test includes custom callbacks.',
+    window.showHOHCard = function() {
+      logEvent('Showing HOH Card', { compType: 'HOH' });
+      window.IntermissionCard.showInTv({
+        compType: 'HOH',
+        gameType: 'tictactoe',
         onYes: () => {
-          alert('Yes callback triggered!');
+          logEvent('User clicked YES', { action: 'start_game' });
         },
         onNo: () => {
-          alert('No callback triggered! Clock should also fast-forward.');
+          logEvent('User clicked NO', { action: 'skip_game' });
+        }
+      });
+    };
+
+    window.showVetoCard = function() {
+      logEvent('Showing Veto Card', { compType: 'Veto' });
+      window.IntermissionCard.showInTv({
+        compType: 'Veto',
+        gameType: 'dotsandboxes',
+        onYes: () => {
+          logEvent('User clicked YES', { action: 'start_game' });
+        },
+        onNo: () => {
+          logEvent('User clicked NO', { action: 'skip_game' });
         }
       });
     };
