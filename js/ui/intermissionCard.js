@@ -63,7 +63,7 @@
       border: none;
       outline: none;
       border-radius: 12px;
-      padding: 16px;
+      padding: 12px;
       max-width: min(780px, 92%);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(12px);
@@ -75,11 +75,11 @@
     title.className = 'intermission-offer-title';
     title.textContent = 'You cannot compete';
     title.style.cssText = `
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: #60a5fa;
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       text-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
     `;
     card.appendChild(title);
@@ -93,11 +93,11 @@
       : 'Play Tic Tac Toe while you wait?';
     message.textContent = messageText;
     message.style.cssText = `
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: rgba(255, 255, 255, 0.9);
       text-align: center;
-      line-height: 1.5;
-      margin-bottom: 14px;
+      line-height: 1.4;
+      margin-bottom: 12px;
     `;
     card.appendChild(message);
 
