@@ -1,0 +1,144 @@
+/* livevote-voteoverlay-patch.css
+ * SURGICAL PATCH for LiveVote overlay centering and layer mounting issues
+ * 
+ * Problem: The overlay used getBoundingClientRect() for centering, which returns
+ * scaled (visual) pixels. When the Faux TV is scaled via transform, this causes
+ * mis-centering/drift on iPhone/mobile because scrollLeft uses layout pixels.
+ * The overlay also mounted into .tvViewport instead of the shared #tvOverlay layer.
+ * 
+ * Solution: This patch makes the overlay container-relative, removes vw/vh sizing,
+ * ensures proper clipping, pins CTA to bottom, and fixes arrow/close button styling.
+ * Load this file AFTER existing livevote CSS to apply overrides.
+ */
+
+/* Enable pointer events on tvOverlay layer when interactive class is added */
+#tvOverlay.tvOverlay--interactive {
+  pointer-events: auto !important;
+  z-index: 2147483640 !important;
+}
+
+/* Make overlay fill its container with absolute positioning */
+.lv-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  /* Remove any vw/vh sizing - use container-relative only */
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Panel uses container-relative sizing instead of vw/vh */
+.lv-overlay__panel {
+  width: min(92%, 520px) !important;
+  max-width: 520px !important;
+  height: 100% !important;
+  margin-inline: auto !important;
+  /* Remove any vw/vh constraints */
+  max-height: none !important;
+}
+
+/* Carousel should allow overflow for avatars (prevent clipping) */
+.lv-overlay__carousel {
+  overflow: visible !important;
+  /* Symmetric centering - no hidden offsets */
+  margin-inline: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
+
+/* Track should also allow overflow */
+.lv-overlay__track {
+  overflow: visible !important;
+  overflow-y: visible !important;
+  /* Symmetric centering */
+  margin-inline: auto !important;
+  left: auto !important;
+  right: auto !important;
+}
+
+/* Nominee card should not clip avatars */
+.lv-overlay__nominee {
+  overflow: visible !important;
+}
+
+/* Avatar container must not clip the circular avatar */
+.lv-overlay__avatar-container,
+.lv-overlay__avatar-wrap {
+  overflow: visible !important;
+}
+
+/* Avatar-to-name gap should be tight (6px) */
+.lv-overlay__nominee-name {
+  margin-top: 6px !important;
+  line-height: 1.1 !important;
+}
+
+/* CTA container pinned to bottom with safe-area support */
+.lv-overlay__confirm-container {
+  margin-top: auto !important;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  flex-shrink: 0 !important;
+}
+
+/* CTA row grid layout with static arrows */
+.lv-overlay__cta-row,
+.lv-overlay__confirm-inner {
+  display: grid !important;
+  grid-template-columns: 52px 1fr 52px !important;
+  align-items: center !important;
+  justify-items: center !important;
+  width: 100% !important;
+  padding: 0 12px !important;
+}
+
+/* Arrows must stay static in grid, never move */
+.lv-overlay__arrow,
+.lv-overlay__nav-btn {
+  justify-self: center !important;
+  position: static !important;
+  /* Never remove from DOM, only disable */
+  display: flex !important;
+  visibility: visible !important;
+}
+
+.lv-overlay__arrow.prev {
+  grid-column: 1 !important;
+}
+
+.lv-overlay__arrow.next {
+  grid-column: 3 !important;
+}
+
+/* Evict button in center column */
+.lv-overlay__evict-btn {
+  grid-column: 2 !important;
+  width: clamp(140px, 40vw, 200px) !important;
+}
+
+/* Close button: small circle, fixed size, never oval */
+.lv-overlay__close {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  border-radius: 999px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 480px) {
+  .lv-overlay__evict-btn {
+    width: clamp(120px, 34vw, 160px) !important;
+  }
+}

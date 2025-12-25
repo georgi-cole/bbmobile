@@ -44,6 +44,44 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   }
 
+  // Helper: Get the shared overlay container
+  // Prefers TVContainer.getOrCreateTvOverlay() or falls back to #tvOverlay or TV viewport
+  function getContainer() {
+    // Try TVContainer helper if available
+    if (global.TVContainer?.getOrCreateTvOverlay) {
+      try {
+        const tvContainer = global.TVContainer.getTvContainer?.() || 
+                           document.querySelector('#tv') || 
+                           document.body;
+        const overlay = global.TVContainer.getOrCreateTvOverlay(tvContainer, 'tv-overlay-mount');
+        if (overlay) {
+          console.info('[VoteOverlay] ✓ Using TVContainer.getOrCreateTvOverlay()');
+          return overlay;
+        }
+      } catch (e) {
+        console.warn('[VoteOverlay] TVContainer.getOrCreateTvOverlay() failed:', e);
+      }
+    }
+    
+    // Fallback to #tvOverlay if it exists
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      console.info('[VoteOverlay] ✓ Using #tvOverlay');
+      return tvOverlay;
+    }
+    
+    // Last resort: use .tvViewport inside #tv
+    const tvViewport = document.querySelector('#tv .tvViewport');
+    if (tvViewport) {
+      console.info('[VoteOverlay] ⚠ Falling back to .tvViewport');
+      return tvViewport;
+    }
+    
+    // Final fallback: #tv or body
+    console.warn('[VoteOverlay] ⚠ Using #tv or body as last resort');
+    return document.querySelector('#tv') || document.body;
+  }
+
   // Create and show the voting overlay
   async function show(options = {}) {
     // Idempotency guard: if already open, return early (no-op)
@@ -66,14 +104,18 @@
       return null;
     }
 
-    // Find container (either provided or default to TV viewport for proper centering)
-    // Prefer .tvViewport inside #tv for proper layout integration
-    const targetContainer = container || 
-      document.querySelector('#tv .tvViewport') || 
-      document.querySelector('#tv');
+    // Find container using shared overlay layer (prefer TVContainer or #tvOverlay)
+    const targetContainer = container || getContainer();
     if (!targetContainer) {
       console.warn('[VoteOverlay] No container found');
       return null;
+    }
+    
+    // Enable pointer events on tvOverlay layer if it exists
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      tvOverlay.classList.add('tvOverlay--interactive');
+      console.info('[VoteOverlay] ✓ Added tvOverlay--interactive class');
     }
 
     // MOBILE FIX: Do not lock body scroll - the overlay itself is scrollable
@@ -267,6 +309,9 @@
   }
 
   // Helper: Scroll carousel to center a nominee
+  // FIXED: Use layout-pixel-safe implementation with offsetLeft/offsetWidth/clientWidth
+  // instead of getBoundingClientRect() which returns scaled (visual) pixels.
+  // This prevents mis-centering/drift on iPhone when TV viewport is scaled via transform.
   function scrollToNomineeCenter(index, immediate = false) {
     if (!state.overlay) return;
 
@@ -278,21 +323,23 @@
     const targetNominee = nominees[index];
     if (!targetNominee) return;
 
-    // Calculate the delta to center the nominee
-    const carouselRect = carousel.getBoundingClientRect();
-    const nomineeRect = targetNominee.getBoundingClientRect();
+    // Use layout pixels (offsetLeft, offsetWidth, clientWidth) instead of
+    // getBoundingClientRect() to avoid transform/scale issues on mobile
+    const carouselWidth = carousel.clientWidth;
+    const carouselCenter = carouselWidth / 2;
     
-    // Calculate the center of the carousel
-    const carouselCenter = carouselRect.left + carouselRect.width / 2;
-    // Calculate the center of the nominee
-    const nomineeCenter = nomineeRect.left + nomineeRect.width / 2;
+    // Nominee's position relative to track (layout pixels)
+    const nomineeOffsetLeft = targetNominee.offsetLeft;
+    const nomineeWidth = targetNominee.offsetWidth;
+    const nomineeCenter = nomineeOffsetLeft + nomineeWidth / 2;
     
-    // Calculate the delta needed to center the nominee
-    const delta = nomineeCenter - carouselCenter;
+    // Calculate scroll position to center nominee in carousel
+    // scrollLeft is the distance from track's left edge to carousel's left edge
+    const targetScrollLeft = nomineeCenter - carouselCenter;
     
-    // Scroll the carousel by the delta
+    // Scroll the carousel to center the nominee
     carousel.scrollTo({
-      left: carousel.scrollLeft + delta,
+      left: targetScrollLeft,
       behavior: immediate ? 'auto' : 'smooth'
     });
   }
@@ -606,6 +653,13 @@
     // Remove the overlay
     state.overlay.remove();
     state.overlay = null;
+    
+    // Disable pointer events on tvOverlay layer if it exists
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      tvOverlay.classList.remove('tvOverlay--interactive');
+      console.info('[VoteOverlay] ✓ Removed tvOverlay--interactive class');
+    }
     
     // Note: Body scroll lock was not applied, so no need to unlock
     // The overlay is self-contained and scrollable without affecting body scroll
