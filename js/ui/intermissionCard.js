@@ -47,12 +47,15 @@
     cardContainer.className = 'intermission-card-container game-modal';
     cardContainer.style.cssText = `
       pointer-events: auto;
-      padding: 0 8px;
-      max-width: clamp(260px, 86vw, 360px);
+      padding: 0;
+      max-width: 100%;
       width: 100%;
       max-height: 90%;
       overflow: hidden;
       animation: slideUpFade 0.4s ease-out;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
 
     // Create card - compact styling for TV overlay using TV inline card standards
@@ -64,10 +67,13 @@
       outline: none;
       border-radius: 12px;
       padding: 12px;
-      max-width: min(780px, 92%);
+      width: calc(100% - 16px);
+      max-width: 360px;
+      margin: 0 8px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      box-sizing: border-box;
     `;
 
     // Title - unified text for both competition types
