@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intermission Card Test</title>
+  <link rel="stylesheet" href="css/ui/buttons.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #60a5fa;
+    }
+    button.test-btn {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    button.test-btn:hover {
+      background: #45a049;
+    }
+    .event-log {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .event-item {
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .event-item:last-child {
+      border-bottom: none;
+    }
+    .timestamp {
+      color: #999;
+      margin-right: 10px;
+    }
+    #panel {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #60a5fa;
+      border-radius: 12px;
+      margin: 20px 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <h1>Intermission Card Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <p>Click the buttons below to test the intermission card with different configurations:</p>
+    <button class="test-btn" onclick="showHOHCard()">Show HOH Card (Tic Tac Toe)</button>
+    <button class="test-btn" onclick="showVetoCard()">Show Veto Card (Dots & Boxes)</button>
+    <button class="test-btn" onclick="clearLog()">Clear Event Log</button>
+  </div>
+
+  <div class="test-section">
+    <h2>TV Container (Card will appear here)</h2>
+    <div id="panel"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <p>Events emitted by the modal and clock listener will appear here:</p>
+    <div class="event-log" id="eventLog">
+      <div class="event-item">No events yet. Click buttons to test the card.</div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Clock Status</h2>
+    <div id="clockStatus">
+      <p>Clock speed: <strong id="clockSpeed">1x</strong></p>
+      <p>Last fast-forward request: <strong id="lastFastForward">None</strong></p>
+    </div>
+  </div>
+
+  <!-- Load scripts -->
+  <script src="js/bbGameBus.js"></script>
+  <script>
+    // Initialize game object with bus
+    window.game = window.game || {};
+    window.game.bus = window.bbGameBus;
+    window.game.cfg = window.game.cfg || {};
+    
+    // Mock TvContainer for testing
+    window.TvContainer = {
+      getTvContainer: function() {
+        return document.getElementById('panel');
+      },
+      ensurePositioned: function(el) {
+        if (el) {
+          el.style.position = 'relative';
+        }
+      },
+      getOrCreateTvOverlay: function(container, className) {
+        let overlay = container.querySelector('.' + className);
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.className = className;
+          overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+          `;
+          container.appendChild(overlay);
+        }
+        return overlay;
+      }
+    };
+    
+    // Mock clock object for testing
+    window.game.clock = {
+      speed: 1,
+      fastForward: function(payload) {
+        logEvent('clock.fastForward called', payload);
+        this.speed = 5;
+        updateClockStatus();
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          this.speed = 1;
+          updateClockStatus();
+        }, 2000);
+      },
+      setSpeed: function(speed) {
+        logEvent('clock.setSpeed called', { speed: speed });
+        this.speed = speed;
+        updateClockStatus();
+      }
+    };
+
+    // Event log functionality
+    function logEvent(eventName, data) {
+      const log = document.getElementById('eventLog');
+      const item = document.createElement('div');
+      item.className = 'event-item';
+      
+      const timestamp = new Date().toLocaleTimeString();
+      const dataStr = data ? JSON.stringify(data) : '';
+      
+      item.innerHTML = `<span class="timestamp">${timestamp}</span><strong>${eventName}</strong> ${dataStr}`;
+      log.appendChild(item);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('eventLog').innerHTML = '<div class="event-item">Log cleared.</div>';
+    }
+
+    function updateClockStatus() {
+      document.getElementById('clockSpeed').textContent = window.game.clock.speed + 'x';
+    }
+
+    // Listen to events from the modal
+    window.game.bus.on('clock:request-fast-forward', (data) => {
+      logEvent('clock:request-fast-forward', data);
+      document.getElementById('lastFastForward').textContent = new Date().toLocaleTimeString();
+    });
+
+    window.game.bus.on('phase:timer:skip-to-results', (data) => {
+      logEvent('phase:timer:skip-to-results', data);
+    });
+  </script>
+  <script src="js/bootstrap.idleClockListener.js"></script>
+  <script src="js/ui/intermissionCard.js"></script>
+  <script>
+    // Test functions
+    window.showHOHCard = function() {
+      logEvent('Showing HOH Card', { compType: 'HOH' });
+      window.IntermissionCard.showInTv({
+        compType: 'HOH',
+        gameType: 'tictactoe',
+        onYes: () => {
+          logEvent('User clicked YES', { action: 'start_game' });
+        },
+        onNo: () => {
+          logEvent('User clicked NO', { action: 'skip_game' });
+        }
+      });
+    };
+
+    window.showVetoCard = function() {
+      logEvent('Showing Veto Card', { compType: 'Veto' });
+      window.IntermissionCard.showInTv({
+        compType: 'Veto',
+        gameType: 'dotsandboxes',
+        onYes: () => {
+          logEvent('User clicked YES', { action: 'start_game' });
+        },
+        onNo: () => {
+          logEvent('User clicked NO', { action: 'skip_game' });
+        }
+      });
+    };
+  </script>
+</body>
+</html>

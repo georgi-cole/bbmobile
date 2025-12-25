@@ -33,41 +33,40 @@
     // Get or create overlay mount inside TV
     const overlay = global.TvContainer?.getOrCreateTvOverlay(tvContainer, 'tv-intermission-overlay');
     
-    // Clear any existing content in overlay and update positioning
+    // Clear any existing content in overlay and configure as grid centering context
     if (overlay) {
       overlay.innerHTML = '';
-      overlay.style.pointerEvents = 'none'; // Overlay itself doesn't block
-      // Update to center positioning (in case overlay was created with old settings)
-      overlay.style.justifyContent = 'center';
-      overlay.style.padding = '20px';
+      // Grid centering with proper padding - overlay acts as positioning context
+      overlay.style.cssText = `
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 8px;
+        box-sizing: border-box;
+        overflow: visible;
+        pointer-events: none;
+        z-index: 10;
+      `;
     }
-
-    // Create card container - sized to fit TV overlay without scroll
-    const cardContainer = document.createElement('div');
-    cardContainer.className = 'intermission-card-container';
-    cardContainer.style.cssText = `
-      pointer-events: auto;
-      padding: 0 8px;
-      max-width: clamp(260px, 86vw, 360px);
-      width: 100%;
-      max-height: 90%;
-      overflow: hidden;
-      animation: slideUpFade 0.4s ease-out;
-    `;
 
     // Create card - compact styling for TV overlay using TV inline card standards
     const card = document.createElement('div');
-    card.className = 'intermission-offer-card in-tv tv-inline-card';
+    card.className = 'intermission-offer-card in-tv tv-inline-card game-modal';
     card.style.cssText = `
       background: rgba(30, 41, 59, 0.75);
       border: none;
       outline: none;
       border-radius: 12px;
-      padding: 16px;
-      max-width: min(780px, 92%);
+      padding: 12px;
+      width: min(360px, 100%);
+      max-height: calc(100% - 16px);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      box-sizing: border-box;
+      pointer-events: auto;
+      overflow: auto;
     `;
 
     // Title - unified text for both competition types
@@ -75,11 +74,11 @@
     title.className = 'intermission-offer-title';
     title.textContent = 'You cannot compete';
     title.style.cssText = `
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: #60a5fa;
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       text-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
     `;
     card.appendChild(title);
@@ -93,99 +92,63 @@
       : 'Play Tic Tac Toe while you wait?';
     message.textContent = messageText;
     message.style.cssText = `
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: rgba(255, 255, 255, 0.9);
       text-align: center;
-      line-height: 1.5;
-      margin-bottom: 14px;
+      line-height: 1.4;
+      margin-bottom: 12px;
     `;
     card.appendChild(message);
 
-    // Buttons container
+    // Buttons container - use CSS classes from buttons.css
     const buttons = document.createElement('div');
-    buttons.className = 'intermission-offer-buttons';
-    buttons.style.cssText = `
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-    `;
+    buttons.className = 'intermission-offer-buttons action-row';
 
-    // Yes button - compact for TV overlay
+    // Yes button - use consistent button CSS
     const yesBtn = document.createElement('button');
-    yesBtn.className = 'intermission-offer-button yes';
-    yesBtn.textContent = 'Yes';
-    yesBtn.style.cssText = `
-      flex: 1;
-      max-width: 120px;
-      padding: 10px 16px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      background: linear-gradient(135deg, #10b981, #059669);
-      border: 2px solid #34d399;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    `;
+    yesBtn.className = 'intermission-offer-button yes btn btn-primary';
+    const yesLabel = document.createElement('span');
+    yesLabel.className = 'btn-label';
+    yesLabel.textContent = 'Yes';
+    yesBtn.appendChild(yesLabel);
     yesBtn.addEventListener('click', () => {
       if (onYes) onYes();
       removeCard();
     });
-    yesBtn.addEventListener('mouseenter', () => {
-      yesBtn.style.background = 'linear-gradient(135deg, #34d399, #10b981)';
-      yesBtn.style.transform = 'translateY(-2px)';
-      yesBtn.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)';
-    });
-    yesBtn.addEventListener('mouseleave', () => {
-      yesBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      yesBtn.style.transform = 'translateY(0)';
-      yesBtn.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
-    });
     buttons.appendChild(yesBtn);
 
-    // No button - compact for TV overlay
+    // No button - use consistent button CSS and emit clock fast-forward event
     const noBtn = document.createElement('button');
-    noBtn.className = 'intermission-offer-button no';
-    noBtn.textContent = 'No';
-    noBtn.style.cssText = `
-      flex: 1;
-      max-width: 120px;
-      padding: 10px 16px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      background: linear-gradient(135deg, #6b7280, #4b5563);
-      border: 2px solid #9ca3af;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(75, 85, 99, 0.3);
-    `;
+    noBtn.className = 'intermission-offer-button no btn btn-secondary';
+    const noLabel = document.createElement('span');
+    noLabel.className = 'btn-label';
+    noLabel.textContent = 'No';
+    noBtn.appendChild(noLabel);
     noBtn.addEventListener('click', () => {
+      // Emit clock fast-forward event
+      try {
+        if (global.game && global.game.bus && global.game.bus.emit) {
+          global.game.bus.emit('clock:request-fast-forward', { 
+            reason: 'intermission_declined', 
+            compType: compType 
+          });
+        }
+      } catch (err) {
+        console.error('[IntermissionCard] Failed to emit clock fast-forward event:', err);
+      }
+      
       if (onNo) onNo();
       removeCard();
-    });
-    noBtn.addEventListener('mouseenter', () => {
-      noBtn.style.background = 'linear-gradient(135deg, #9ca3af, #6b7280)';
-      noBtn.style.transform = 'translateY(-2px)';
-      noBtn.style.boxShadow = '0 6px 16px rgba(75, 85, 99, 0.4)';
-    });
-    noBtn.addEventListener('mouseleave', () => {
-      noBtn.style.background = 'linear-gradient(135deg, #6b7280, #4b5563)';
-      noBtn.style.transform = 'translateY(0)';
-      noBtn.style.boxShadow = '0 4px 12px rgba(75, 85, 99, 0.3)';
     });
     buttons.appendChild(noBtn);
 
     card.appendChild(buttons);
-    cardContainer.appendChild(card);
     
     if (overlay) {
-      overlay.appendChild(cardContainer);
+      overlay.appendChild(card);
     } else {
       // Fallback: append to TV container directly
-      tvContainer.appendChild(cardContainer);
+      tvContainer.appendChild(card);
     }
 
     // Add keyframe animation if not already present
@@ -207,21 +170,24 @@
       document.head.appendChild(style);
     }
 
+    // Apply animation to card
+    card.style.animation = 'slideUpFade 0.4s ease-out';
+
     // Store reference for removal
-    cardContainer._overlay = overlay;
+    card._overlay = overlay;
 
     /**
      * Remove the card from the TV
      */
     function removeCard() {
-      // Null-safe: check if cardContainer is still in DOM
-      if (!cardContainer || !cardContainer.parentNode) {
+      // Null-safe: check if card is still in DOM
+      if (!card || !card.parentNode) {
         console.info('[IntermissionCard] Card already removed, skipping');
         return;
       }
 
-      cardContainer.style.animation = 'slideDownFade 0.3s ease-in';
-      cardContainer.style.animationFillMode = 'forwards';
+      card.style.animation = 'slideDownFade 0.3s ease-in';
+      card.style.animationFillMode = 'forwards';
       
       // Add fade out animation
       if (!document.getElementById('intermission-card-animations-out')) {
@@ -244,8 +210,8 @@
 
       setTimeout(() => {
         // Remove using modern remove() method (null-safe)
-        if (cardContainer) {
-          cardContainer.remove();
+        if (card) {
+          card.remove();
         }
         
         // Clean up empty overlay
@@ -260,10 +226,10 @@
       }, 300);
     }
 
-    cardContainer.remove = removeCard;
+    card.remove = removeCard;
     
     console.info('[IntermissionCard] ✓ Card shown in TV overlay');
-    return cardContainer;
+    return card;
   }
 
   /**
@@ -275,7 +241,7 @@
     let removedCount = 0;
     
     overlays.forEach(overlay => {
-      const cards = overlay.querySelectorAll('.intermission-card-container');
+      const cards = overlay.querySelectorAll('.intermission-offer-card');
       cards.forEach(card => {
         // Null-safe removal using modern remove() method
         if (card) {
