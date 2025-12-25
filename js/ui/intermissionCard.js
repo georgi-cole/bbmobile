@@ -33,47 +33,40 @@
     // Get or create overlay mount inside TV
     const overlay = global.TvContainer?.getOrCreateTvOverlay(tvContainer, 'tv-intermission-overlay');
     
-    // Clear any existing content in overlay and update positioning
+    // Clear any existing content in overlay and configure as grid centering context
     if (overlay) {
       overlay.innerHTML = '';
-      overlay.style.pointerEvents = 'none'; // Overlay itself doesn't block
-      // Update to center positioning (in case overlay was created with old settings)
-      overlay.style.justifyContent = 'center';
-      overlay.style.padding = '20px';
+      // Grid centering with proper padding - overlay acts as positioning context
+      overlay.style.cssText = `
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 8px;
+        box-sizing: border-box;
+        overflow: visible;
+        pointer-events: none;
+        z-index: 10;
+      `;
     }
-
-    // Create card container - sized to fit TV overlay without scroll
-    const cardContainer = document.createElement('div');
-    cardContainer.className = 'intermission-card-container game-modal';
-    cardContainer.style.cssText = `
-      pointer-events: auto;
-      padding: 0;
-      max-width: 100%;
-      width: 100%;
-      max-height: 90%;
-      overflow: hidden;
-      animation: slideUpFade 0.4s ease-out;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
 
     // Create card - compact styling for TV overlay using TV inline card standards
     const card = document.createElement('div');
-    card.className = 'intermission-offer-card in-tv tv-inline-card';
+    card.className = 'intermission-offer-card in-tv tv-inline-card game-modal';
     card.style.cssText = `
       background: rgba(30, 41, 59, 0.75);
       border: none;
       outline: none;
       border-radius: 12px;
       padding: 12px;
-      width: calc(100% - 16px);
-      max-width: 360px;
-      margin: 0 8px;
+      width: min(360px, 100%);
+      max-height: calc(100% - 16px);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       box-sizing: border-box;
+      pointer-events: auto;
+      overflow: auto;
     `;
 
     // Title - unified text for both competition types
@@ -150,13 +143,12 @@
     buttons.appendChild(noBtn);
 
     card.appendChild(buttons);
-    cardContainer.appendChild(card);
     
     if (overlay) {
-      overlay.appendChild(cardContainer);
+      overlay.appendChild(card);
     } else {
       // Fallback: append to TV container directly
-      tvContainer.appendChild(cardContainer);
+      tvContainer.appendChild(card);
     }
 
     // Add keyframe animation if not already present
@@ -178,21 +170,24 @@
       document.head.appendChild(style);
     }
 
+    // Apply animation to card
+    card.style.animation = 'slideUpFade 0.4s ease-out';
+
     // Store reference for removal
-    cardContainer._overlay = overlay;
+    card._overlay = overlay;
 
     /**
      * Remove the card from the TV
      */
     function removeCard() {
-      // Null-safe: check if cardContainer is still in DOM
-      if (!cardContainer || !cardContainer.parentNode) {
+      // Null-safe: check if card is still in DOM
+      if (!card || !card.parentNode) {
         console.info('[IntermissionCard] Card already removed, skipping');
         return;
       }
 
-      cardContainer.style.animation = 'slideDownFade 0.3s ease-in';
-      cardContainer.style.animationFillMode = 'forwards';
+      card.style.animation = 'slideDownFade 0.3s ease-in';
+      card.style.animationFillMode = 'forwards';
       
       // Add fade out animation
       if (!document.getElementById('intermission-card-animations-out')) {
@@ -215,8 +210,8 @@
 
       setTimeout(() => {
         // Remove using modern remove() method (null-safe)
-        if (cardContainer) {
-          cardContainer.remove();
+        if (card) {
+          card.remove();
         }
         
         // Clean up empty overlay
@@ -231,10 +226,10 @@
       }, 300);
     }
 
-    cardContainer.remove = removeCard;
+    card.remove = removeCard;
     
     console.info('[IntermissionCard] ✓ Card shown in TV overlay');
-    return cardContainer;
+    return card;
   }
 
   /**
@@ -246,7 +241,7 @@
     let removedCount = 0;
     
     overlays.forEach(overlay => {
-      const cards = overlay.querySelectorAll('.intermission-card-container');
+      const cards = overlay.querySelectorAll('.intermission-offer-card');
       cards.forEach(card => {
         // Null-safe removal using modern remove() method
         if (card) {
