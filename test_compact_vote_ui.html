@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="css/livevote-compact-fullyfit.css">
   <link rel="stylesheet" href="css/eviction-layout-containment.css">
   <link rel="stylesheet" href="src/styles/vote.css">
+  <!-- NEW: Vote overlay fixes for layout/spacing regressions -->
+  <link rel="stylesheet" href="src/styles/vote-overlay-fixes.css">
   <style>
     /* DEBUG OUTLINES */
     #tv .tvViewport { outline: 2px solid red !important; }
@@ -136,6 +138,8 @@
   </div>
 
   <script src="js/livevote-voteoverlay.js"></script>
+  <!-- NEW: Safe dedupe helper to prevent duplicate Evict buttons -->
+  <script src="src/js/vote-overlay-safe-dedupe.js"></script>
   <script>
     // Mock global functions
     window.game = { cfg: {} };

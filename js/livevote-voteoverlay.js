@@ -106,12 +106,16 @@
       overlay.classList.add('reduce-motion');
     }
 
+    // Panel wrapper for symmetric centering inside TV viewport
+    const panel = document.createElement('div');
+    panel.className = 'lv-overlay__panel';
+
     // Header
     const header = document.createElement('div');
     header.className = 'lv-overlay__header';
     header.textContent = isTieBreak ? 'Break the tie.' : 'Cast your vote to evict.';
     
-    overlay.appendChild(header);
+    panel.appendChild(header);
 
     // Carousel container
     const carousel = document.createElement('div');
@@ -183,7 +187,7 @@
     nextArrow.onclick = () => navigateCarousel(1);
 
     carousel.appendChild(track);
-    overlay.appendChild(carousel);
+    panel.appendChild(carousel);
 
     // Confirmation container - placed directly below carousel for proximity to selected avatar
     const confirmContainer = document.createElement('div');
@@ -219,7 +223,10 @@
     ctaRow.appendChild(nextArrow);
     
     confirmContainer.appendChild(ctaRow);
-    overlay.appendChild(confirmContainer);
+    panel.appendChild(confirmContainer);
+
+    // Append panel to overlay
+    overlay.appendChild(panel);
 
     // Close button - only render if explicitly allowed via options.allowClose
     if (allowClose) {

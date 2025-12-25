@@ -1,0 +1,362 @@
+/* vote-overlay-fixes.css
+ * Surgical CSS fixes for vote overlay UX/layout regressions
+ * All rules strictly scoped under #tv to avoid global side effects
+ * 
+ * This file addresses mobile vote/intermission overlay issues:
+ * 1. Full-bleed scrim covering entire TV viewport (no uncovered strips)
+ * 2. Perfect centering inside TV viewport (remove asymmetric padding)
+ * 3. Hide redundant "Now showing..." helper text
+ * 4. Selected avatar grows via CSS variables, never touches title
+ * 5. Tightened avatar→name gap (6px instead of 10px)
+ * 6. CTA row pinned to bottom, Evict button narrower on mobile
+ * 7. Legacy stage arrows hidden with strict selectors
+ * 8. Close button position:absolute to not affect layout
+ */
+
+/* ========================================
+   FIX 1: Full-bleed scrim on overlay root
+   ======================================== */
+
+/* Ensure TV viewport is positioned and clipped correctly for scrim */
+#tv .tvViewport {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Full-coverage scrim via ::before to dim the entire TV viewport */
+#tv .lv-overlay::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.55) !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* Ensure overlay root uses full TV viewport dimensions (not 100vw) */
+#tv .lv-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  background: transparent !important; /* Scrim is on ::before */
+}
+
+/* ========================================
+   FIX 2: Perfect centering inside TV viewport
+   ======================================== */
+
+/* Use an inner wrapper to center content with consistent margins */
+#tv .lv-overlay__content {
+  width: min(92%, 520px) !important;
+  margin: 0 auto !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* If no wrapper exists, apply centering to direct children */
+#tv .lv-overlay > *:not(.lv-overlay__close) {
+  width: min(92%, 520px) !important;
+  margin-inline: auto !important;
+}
+
+/* Close button positioned absolutely so it doesn't force padding */
+#tv .lv-overlay__close {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  z-index: 10 !important;
+}
+
+/* Remove any asymmetric side padding on stage/carousel */
+#tv .lv-overlay__stage,
+#tv .lv-overlay__carousel,
+#tv .lv-overlay__track-viewport {
+  margin-inline: auto !important;
+  padding-inline: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Remove transforms from viewport container (only track should transform) */
+#tv .lv-overlay__stage,
+#tv .lv-overlay__carousel,
+#tv .lv-overlay__track-viewport {
+  transform: none !important;
+  left: auto !important;
+  right: auto !important;
+}
+
+/* Keep transforms only on the moving track for carousel animation */
+#tv .lv-overlay__track {
+  /* Allow transform for sliding animation */
+}
+
+/* ========================================
+   FIX 3: Hide redundant "Now showing..." helper
+   ======================================== */
+
+/* Hide the status message that shows "Now showing [name]" or "Select a nominee" */
+#tv .lv-overlay__status {
+  display: none !important;
+}
+
+/* Also target other possible selectors for status/helper text */
+#tv .lv-overlay__status-line,
+#tv .lv-overlay__now-showing,
+#tv .lv-overlay__helper-text,
+#tv .status-helper {
+  display: none !important;
+}
+
+/* Mobile-specific status helper (if different class is used) */
+@media (max-width: 767px) {
+  #tv .mobile-status-helper,
+  #tv .vote-status-text {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   FIX 4: Avatar sizing via CSS variables (no clipping)
+   ======================================== */
+
+/* Define avatar size CSS variables */
+#tv .lv-overlay {
+  --avatarBase: clamp(88px, 18vmin, 140px) !important;
+  --avatarSelected: clamp(120px, 22vmin, 180px) !important;
+}
+
+/* Nominee card layout: flex column with tight gap */
+#tv .lv-overlay__nominee {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important; /* Tighter gap between avatar and name */
+  padding-top: 12px !important;
+  overflow: visible !important; /* Never clip avatar */
+}
+
+/* Avatar container and image use CSS variable for sizing */
+#tv .lv-overlay__avatar-container {
+  width: var(--avatarBase) !important;
+  height: var(--avatarBase) !important;
+  overflow: visible !important; /* Ensure avatar not clipped */
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+#tv .lv-overlay__avatar {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+}
+
+/* Selected/center nominee gets larger avatar via CSS variable */
+#tv .lv-overlay__nominee.center .lv-overlay__avatar-container,
+#tv .lv-overlay__nominee.selected .lv-overlay__avatar-container {
+  width: var(--avatarSelected) !important;
+  height: var(--avatarSelected) !important;
+}
+
+/* Ensure stage/carousel/track allow overflow for larger avatars */
+#tv .lv-overlay__stage,
+#tv .lv-overlay__carousel,
+#tv .lv-overlay__track-viewport,
+#tv .lv-overlay__track {
+  overflow: visible !important;
+}
+
+/* Add clearance below title to prevent avatar collision */
+#tv .lv-overlay__header,
+#tv .lv-overlay__title {
+  margin-bottom: clamp(12px, 2vh, 18px) !important;
+}
+
+/* Add buffer zone at top of stage */
+#tv .lv-overlay__stage,
+#tv .lv-overlay__carousel {
+  padding-top: clamp(12px, 2vh, 20px) !important;
+}
+
+/* ========================================
+   FIX 5: Tighter avatar→name gap
+   ======================================== */
+
+/* Gap already set to 6px on .lv-overlay__nominee above */
+/* Ensure name element has no extra margin */
+#tv .lv-overlay__nominee-name {
+  margin-top: 6px !important; /* Explicit tight gap */
+  margin-bottom: 0 !important;
+}
+
+/* ========================================
+   FIX 6: CTA pinned to bottom, narrower Evict button
+   ======================================== */
+
+/* Ensure overlay uses full height so margin-top:auto works */
+#tv .lv-overlay {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Panel must fill tvViewport height */
+#tv .lv-overlay__panel {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Push CTA container to bottom with margin-top: auto */
+#tv .lv-overlay__confirm-container {
+  margin-top: auto !important;
+  flex-shrink: 0 !important;
+  padding-bottom: 12px !important;
+}
+
+/* CTA row: 3-column grid for left arrow, Evict button, right arrow */
+#tv .lv-overlay__cta-row,
+#tv .lv-overlay__confirm-inner {
+  display: grid !important;
+  grid-template-columns: 44px 1fr 44px !important;
+  align-items: center !important;
+  column-gap: 8px !important;
+  width: 100% !important;
+  max-width: 280px !important;
+  margin: 0 auto !important;
+}
+
+/* Narrower Evict button on mobile */
+#tv .lv-overlay__evict-btn {
+  width: clamp(160px, 46vw, 220px) !important;
+  min-height: 42px !important;
+  justify-self: center !important;
+  grid-column: 2 !important;
+}
+
+@media (max-width: 767px) {
+  #tv .lv-overlay__evict-btn {
+    width: clamp(140px, 44vw, 200px) !important;
+  }
+}
+
+/* CTA arrows: always rendered, only disabled at bounds */
+#tv .lv-overlay__arrow {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  justify-self: center !important;
+}
+
+#tv .lv-overlay__arrow:disabled {
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+}
+
+/* ========================================
+   FIX 7: Hide legacy stage arrows (strict selectors)
+   ======================================== */
+
+/* Hide arrows inside the stage/carousel with strict selectors */
+/* Do NOT hide .lv-overlay__arrow (CTA arrows) */
+#tv .voteStage .stage-arrow,
+#tv .voteStage .legacy-arrow,
+#tv .voteStage .arrow,
+#tv .voteStage button.arrow,
+#tv .voteStage .arrowBtn {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* Additional carousel arrow selectors that should be hidden */
+#tv .lv-overlay__carousel .navArrow,
+#tv .lv-overlay__carousel .carouselArrow,
+#tv .lv-overlay__carousel .arrowBtn,
+#tv .lv-overlay__carousel [data-role="carousel-arrow"],
+#tv .lv-overlay__stage .navArrow,
+#tv .lv-overlay__stage .carouselArrow {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide any button inside carousel/stage that is NOT a CTA arrow */
+#tv .lv-overlay__carousel > button:not(.lv-overlay__arrow),
+#tv .lv-overlay__stage > button:not(.lv-overlay__arrow),
+#tv .lv-overlay__track > button:not(.lv-overlay__arrow) {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* ========================================
+   Mobile-specific optimizations
+   ======================================== */
+
+@media (max-width: 767px) and (orientation: portrait) {
+  /* Smaller avatars on mobile */
+  #tv .lv-overlay {
+    --avatarBase: clamp(75px, 16vmin, 110px) !important;
+    --avatarSelected: clamp(100px, 20vmin, 140px) !important;
+  }
+  
+  /* More compact spacing */
+  #tv .lv-overlay__nominee {
+    gap: 6px !important;
+    padding-top: 10px !important;
+  }
+}
+
+@media (max-width: 896px) and (orientation: landscape) {
+  /* Even smaller avatars on landscape mobile */
+  #tv .lv-overlay {
+    --avatarBase: clamp(70px, 14vmin, 95px) !important;
+    --avatarSelected: clamp(90px, 18vmin, 120px) !important;
+  }
+  
+  #tv .lv-overlay__nominee {
+    gap: 6px !important;
+    padding-top: 8px !important;
+  }
+}
+
+/* Very narrow screens (iPhone SE, etc.) */
+@media (max-width: 390px) {
+  #tv .lv-overlay {
+    --avatarBase: 75px !important;
+    --avatarSelected: 110px !important;
+  }
+  
+  #tv .lv-overlay__evict-btn {
+    width: clamp(120px, 42vw, 180px) !important;
+  }
+}
+
+/* ========================================
+   Accessibility
+   ======================================== */
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #tv .lv-overlay__avatar-container,
+  #tv .lv-overlay__track {
+    transition: none !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  #tv .lv-overlay__avatar {
+    border-width: 4px !important;
+  }
+  
+  #tv .lv-overlay__nominee.selected .lv-overlay__avatar {
+    border-width: 6px !important;
+  }
+}

@@ -4,33 +4,38 @@
  * Mobile-first with safe-area support
  */
 
+/* SMOKE CHECK: Temporary debug outlines to verify CSS is loaded (NOT scoped to #tv) */
+/* Remove these after confirming they're visible on iPhone */
+.lv-overlay { outline: 6px solid lime !important; }
+.lv-overlay__confirm-container { outline: 4px solid magenta !important; }
+
 /* Ensure TV viewport is positioned and clipped correctly for scrim */
 #tv .tvViewport {
-  position: relative;
-  overflow: hidden;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
 /* Full-coverage scrim via ::before to dim the entire TV viewport */
 #tv .lv-overlay::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: -1;
-  pointer-events: none;
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.55) !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
 }
 
 .lv-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
   border-radius: inherit;
   overflow: hidden;
   /* COMPACT MODE: Removed background here - now using ::before scrim for full coverage */
   z-index: 2147483640;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   
   /* Safe area support */
   padding-top: env(safe-area-inset-top);
@@ -48,7 +53,26 @@
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
   flex-shrink: 0;
-  margin-bottom: 10px; /* Required spacing below title */
+  margin-bottom: clamp(12px, 2vh, 18px) !important; /* Guaranteed clearance to prevent avatar collision */
+}
+
+/* Panel wrapper for symmetric centering inside TV viewport */
+.lv-overlay__panel {
+  width: min(92%, 520px) !important;
+  margin-inline: auto !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* CSS variables for avatar sizing (real size changes, not transform scale) */
+:root {
+  --avatarBase: 96px;
+  --avatarSelected: 128px;
+  --nameH: 22px;
+  --avatarNameGap: 6px;
+  --stagePadTop: 14px;
+  --stagePadBottom: 10px;
 }
 
 .lv-overlay__carousel {
@@ -61,15 +85,16 @@
   overflow: visible !important; /* Allow avatars to render fully without clipping */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
-  padding-top: 14px; /* pushes avatars a bit lower */
-  padding-bottom: 10px;
+  padding-top: var(--stagePadTop) !important; /* pushes avatars lower */
+  padding-bottom: var(--stagePadBottom) !important;
   padding-left: 16px;
   padding-right: 16px;
-  min-height: 0; /* preserve overflow behavior */
-  /* Reserve space for the largest selected avatar + name row */
-  --avatarBase: clamp(88px, 18vmin, 140px);
-  --avatarSelected: clamp(120px, 22vmin, 180px);
-  min-height: calc(var(--avatarSelected) + 64px); /* avatar + name + breathing room */
+  min-height: calc(var(--avatarSelected) + var(--nameH) + var(--avatarNameGap) + var(--stagePadTop) + var(--stagePadBottom)) !important;
+  /* Symmetric centering - remove any hidden translate/left offsets */
+  margin-inline: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
 }
 
 /* Hide scrollbars in Webkit browsers */
@@ -86,15 +111,31 @@
   padding: 0 16px; /* Padding for nominee breathing room */
   scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
   overflow-y: visible !important; /* Allow vertical overflow for avatar circles */
+  /* Symmetric centering - remove any hidden translate/left offsets */
+  margin-inline: auto !important;
+  left: auto !important;
+  right: auto !important;
+  /* Keep transforms only on track for sliding animation */
+}
+
+/* Track viewport wrapper - no transform */
+.lv-overlay__track-viewport,
+.lv-overlay__stage-inner {
+  margin-inline: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+  overflow: visible !important;
 }
 
 .lv-overlay__nominee {
   flex-shrink: 0; /* Don't shrink nominees */
-  flex: 0 0 auto; /* Fixed size, don't grow or shrink */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px; /* Controls distance between circle and name */
+  flex: 0 0 auto !important; /* Fixed size, don't grow or shrink */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important; /* Fix luft/stretching - no space-between */
+  gap: 0 !important; /* Remove gap - we'll use margin-top on name for tight control */
   transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               filter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.4;
@@ -120,21 +161,29 @@
 .lv-overlay__avatar-container {
   position: relative;
   /* Use CSS variable for avatar sizing to enable reflow (not transform scale) */
-  --avatarSize: var(--avatarBase, clamp(88px, 18vmin, 140px));
+  --avatarSize: var(--avatarBase, 96px);
   width: var(--avatarSize);
   height: var(--avatarSize);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
               height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible !important; /* Ensure the avatar circle cannot be clipped by its own wrapper */
   border-radius: 50% !important; /* Ensures container is circular */
-  flex: 0 0 auto;
+  flex: 0 0 auto !important;
   box-sizing: border-box;
+  margin-top: 6px !important; /* Position avatar lower within nominee card */
+}
+
+/* Avatar wrap alias */
+.lv-overlay__avatar-wrap {
+  overflow: visible !important;
+  flex: 0 0 auto !important;
+  margin-top: 6px !important;
 }
 
 .lv-overlay__nominee.center .lv-overlay__avatar-container,
 .lv-overlay__nominee.selected .lv-overlay__avatar-container {
   /* Selected avatar grows via CSS variable, causing reflow */
-  --avatarSize: var(--avatarSelected, clamp(120px, 22vmin, 180px));
+  --avatarSize: var(--avatarSelected, 128px);
 }
 
 .lv-overlay__avatar {
@@ -173,13 +222,35 @@
   position: static !important;
   bottom: auto !important;
   top: auto !important;
-  margin: 0 !important; /* Remove any margin (gap on parent controls spacing) */
+  margin-top: 6px !important; /* Tight gap to avatar (6px instead of 10px) */
+  margin-bottom: 0 !important;
   line-height: 1.1;
 }
 
 .lv-overlay__nominee.center .lv-overlay__nominee-name {
   font-size: clamp(1.1rem, 3.5vw, 1.4rem);
   color: #ffd96b;
+}
+
+/* Hide redundant "Now showing..." status text visually but keep for screen readers */
+.lv-overlay__now-showing,
+.lv-overlay__status-line,
+.lv-overlay__helper-text,
+.status-helper {
+  display: none !important;
+}
+
+/* Keep .lv-overlay__status for screen readers but hide visually (sr-only pattern) */
+.lv-overlay__status {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 /* Hide legacy stage/carousel navigation arrows (from other modules/old code) */
@@ -209,25 +280,27 @@
   flex-direction: column;
   align-items: center;
   gap: 10px; /* Spacing between status and CTA row */
-  padding: 0 16px 12px; /* Bottom padding for breathing room */
-  margin-top: auto; /* Push CTA to bottom of panel */
+  padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important; /* Safe area support */
+  margin-top: auto !important; /* Push CTA to bottom of panel */
   flex-shrink: 0;
   animation: fadeIn 0.3s ease-out;
 }
 
 /* CTA row - 3-column layout with left arrow, Evict button, right arrow */
-.lv-overlay__cta-row {
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  align-items: center;
+.lv-overlay__cta-row,
+.lv-overlay__confirm-inner {
+  display: grid !important;
+  grid-template-columns: 52px 1fr 52px !important;
+  align-items: center !important;
   justify-items: center;
-  gap: 8px;
-  width: 100%;
-  max-width: 280px;
+  width: 100% !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
 }
 
 /* Carousel navigation arrows - reused in CTA row (always rendered, disabled at bounds) */
-.lv-overlay__arrow {
+.lv-overlay__arrow,
+.lv-overlay__nav-btn {
   width: 44px;
   height: 44px;
   min-width: 44px;
@@ -242,6 +315,7 @@
   color: #e8f4ff;
   cursor: pointer;
   transition: all 0.2s ease;
+  justify-self: center !important; /* Keep arrows contained in grid */
   /* Never remove from DOM, only disable via opacity + pointer-events */
 }
 
@@ -286,9 +360,9 @@
     0 4px 16px rgba(255, 107, 107, 0.4),
     0 0 0 1px rgba(255, 107, 107, 0.2);
   
-  /* Maintain accessible 44x44 touch target */
-  min-height: 44px;
-  width: min(240px, 70%); /* Smaller max-width to reduce size */
+  /* Narrower Evict button on mobile */
+  width: clamp(140px, 40vw, 200px) !important;
+  min-height: 40px !important;
   /* Grid places this in center column */
   grid-column: 2;
 }
@@ -344,19 +418,21 @@
   transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
-/* Close button (top-right) */
+/* Close button (top-right) - FIXED: force small circle, never oval/pill */
 .lv-overlay__close {
-  position: absolute;
-  top: calc(12px + env(safe-area-inset-top)); /* Respect safe area inset */
-  right: calc(12px + env(safe-area-inset-right)); /* Respect safe area inset */
-  background: rgba(20, 35, 55, 0.9);
-  border: 2px solid rgba(143, 211, 255, 0.3);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 999px !important;
+  background: rgba(20, 35, 55, 0.9) !important;
+  border: 2px solid rgba(143, 211, 255, 0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
   font-size: 1.3rem;
   color: #e8f4ff;
   cursor: pointer;
@@ -364,8 +440,8 @@
   z-index: 20;
   
   /* Minimum tap target */
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 44px !important;
+  min-height: 44px !important;
 }
 
 .lv-overlay__close:hover {
@@ -378,30 +454,8 @@
   transform: scale(0.95);
 }
 
-/* Status message area - now inside confirm container, close to avatar */
-.lv-overlay__status {
-  padding: 0px 10px;
-  text-align: center;
-  font-size: clamp(0.65rem, 1.6vw, 0.75rem); /* COMPACT MODE: Even smaller font */
-  color: #8fb3d3;
-  min-height: 16px; /* COMPACT MODE: Further reduced height */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-/* Submitted state - success confirmation */
-.lv-overlay__status.submitted {
-  color: #7cffad;
-  font-weight: 600;
-}
-
-/* Error state - submission failure */
-.lv-overlay__status.error {
-  color: #ff6b6b;
-  font-weight: 600;
-}
+/* Status message area is sr-only (defined above with clip pattern) */
+/* Removed duplicate rules for .lv-overlay__status that were overriding sr-only pattern */
 
 /* Mobile portrait optimizations */
 @media (max-width: 767px) and (orientation: portrait) {
@@ -520,5 +574,45 @@
   .lv-overlay__arrow,
   .lv-overlay__close {
     border-width: 3px;
+  }
+}
+
+/* Mobile-specific layout fixes (max-width: 480px) */
+@media (max-width: 480px) {
+  /* Keep title visible, add guaranteed breathing room */
+  .lv-overlay__header {
+    margin: 8px 0 14px !important;
+  }
+
+  /* Make selected avatar only slightly bigger (not huge) */
+  :root,
+  .lv-overlay {
+    --avatarBase: 96px;
+    --avatarSelected: 116px;
+  }
+
+  /* Remove the huge "luft": keep nominee content top-packed */
+  .lv-overlay__nominee {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    padding-top: 10px !important;
+  }
+  
+  .lv-overlay__nominee-name {
+    margin-top: 6px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Push CTA lower + safe area */
+  .lv-overlay__confirm-container {
+    margin-top: auto !important;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Narrower evict button on mobile */
+  .lv-overlay__evict-btn {
+    width: clamp(120px, 34vw, 160px) !important;
   }
 }
