@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Live Vote Grid Overlay Test - Mobile Visibility</title>
+  <!--
+  ============================================================================
+  LIVE VOTE GRID OVERLAY TEST PAGE
+  
+  Purpose: 
+  Test the live vote overlay grid implementation to ensure nominees and
+  the Evict button are always tappable/clickable and visible on mobile
+  (especially iPhone portrait).
+  
+  How to Test:
+  1. Open this file in a browser
+  2. Use browser DevTools to simulate different viewports:
+     - iPhone 13 Pro (390x844)
+     - iPhone SE (375x667)
+     - iPhone 12 (390x844)
+     - Desktop/Laptop (1920x1080)
+  3. Click "Show Vote Overlay" button
+  4. Verify:
+     - All nominee avatars and names are visible without scrolling
+     - Evict button is visible at bottom without scrolling
+     - Avatars are tappable (44px+ touch target)
+     - Evict button is tappable (44px+ touch target)
+     - Overlay is above roster/controls (z-index 99999)
+     - Safe area insets are respected (iPhone home indicator)
+  5. Test with 2, 3, and 4 nominees
+  6. Test keyboard navigation (Tab, Arrow keys, Enter/Space)
+  
+  Expected Behavior:
+  - iPhone Portrait: All nominees + Evict button visible, no scroll needed
+  - Desktop: Grid layout with proper spacing
+  - No element should be hidden behind roster or controls
+  - Touch targets should be 44px minimum
+  - Safe area insets should prevent overlap with home indicator
+  ============================================================================
+  -->
+  
+  <!-- Core styles -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Vote overlay styles -->
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/eviction-manager.css">
+  <link rel="stylesheet" href="css/livevote-overrides.css">
+  
+  <style>
+    /* Test page specific styles */
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    /* Mock roster bar at top */
+    .mock-roster {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(20, 35, 55, 0.95);
+      border-bottom: 2px solid rgba(143, 211, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 1000;
+    }
+    
+    .mock-roster h3 {
+      margin: 0;
+      color: #00e0cc;
+      font-size: 1.2rem;
+    }
+    
+    /* Mock controls bar at bottom */
+    .mock-controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(20, 35, 55, 0.95);
+      border-top: 2px solid rgba(143, 211, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 16px;
+      z-index: 1000;
+    }
+    
+    .mock-controls button {
+      background: linear-gradient(135deg, #3a5a7c, #2a4a6c);
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      color: #e8f4ff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    /* Main content area */
+    .test-content {
+      padding: 80px 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .test-controls {
+      background: rgba(20, 35, 55, 0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(143, 211, 255, 0.2);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px;
+      color: #ffd96b;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls p {
+      margin: 0 0 12px;
+      color: #b0c4d4;
+      line-height: 1.6;
+    }
+    
+    .test-controls .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s;
+      font-size: 0.95rem;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.secondary {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+      color: #ffffff;
+    }
+    
+    .test-info {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 16px;
+    }
+    
+    .test-info h3 {
+      margin: 0 0 8px;
+      color: #00e0cc;
+      font-size: 1rem;
+    }
+    
+    .test-info ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #b0c4d4;
+    }
+    
+    .test-info li {
+      margin: 4px 0;
+    }
+    
+    /* Status indicator */
+    .status {
+      position: fixed;
+      top: 70px;
+      right: 16px;
+      background: rgba(20, 35, 55, 0.95);
+      border: 2px solid rgba(143, 211, 255, 0.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      z-index: 2000;
+      max-width: 200px;
+    }
+    
+    .status.success {
+      border-color: rgba(0, 224, 204, 0.5);
+      background: rgba(0, 224, 204, 0.1);
+    }
+    
+    .status.error {
+      border-color: rgba(255, 107, 107, 0.5);
+      background: rgba(255, 107, 107, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <!-- Mock roster bar (should be UNDER overlay) -->
+  <div class="mock-roster">
+    <h3>🏠 Week 5 - Live Eviction</h3>
+    <div style="color: #b0c4d4;">8 HG Remaining</div>
+  </div>
+  
+  <!-- Mock controls bar (should be UNDER overlay) -->
+  <div class="mock-controls">
+    <button>🎮 Game</button>
+    <button>📊 Stats</button>
+    <button>⚙️ Settings</button>
+  </div>
+  
+  <!-- Main test content -->
+  <div class="test-content">
+    <div class="test-controls">
+      <h1>Live Vote Grid Overlay Test</h1>
+      <p>
+        This test verifies that the live vote overlay uses a nomination-style grid
+        with proper z-index, touch targets, and mobile visibility.
+      </p>
+      
+      <div class="button-group">
+        <button onclick="showOverlay(2)">Show 2 Nominees</button>
+        <button onclick="showOverlay(3)">Show 3 Nominees</button>
+        <button onclick="showOverlay(4)">Show 4 Nominees</button>
+        <button class="secondary" onclick="hideOverlay()">Hide Overlay</button>
+      </div>
+      
+      <div class="test-info">
+        <h3>✅ Expected Behavior</h3>
+        <ul>
+          <li>Overlay appears ABOVE roster and controls (z-index 99999)</li>
+          <li>All nominees visible without scrolling on iPhone portrait</li>
+          <li>Evict button visible at bottom with safe area padding</li>
+          <li>Touch targets are 44px minimum (tap-friendly)</li>
+          <li>Grid layout with compact 8-12px spacing</li>
+          <li>Keyboard navigation works (Tab, Arrow keys, Enter)</li>
+        </ul>
+      </div>
+      
+      <div class="test-info">
+        <h3>🔍 Test Viewports</h3>
+        <ul>
+          <li>iPhone 13 Pro: 390×844 (portrait)</li>
+          <li>iPhone SE: 375×667 (portrait)</li>
+          <li>iPhone 12: 390×844 (portrait)</li>
+          <li>Desktop: 1920×1080</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Status indicator (will be updated by JS) -->
+  <div class="status" id="status" style="display: none;">
+    Ready
+  </div>
+  
+  <!-- Scripts -->
+  <script>
+    // Mock player data
+    const mockPlayers = [
+      { id: 1, name: 'Alex', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex' },
+      { id: 2, name: 'Bailey', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bailey' },
+      { id: 3, name: 'Casey', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Casey' },
+      { id: 4, name: 'Dana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Dana' },
+      { id: 5, name: 'Evan', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Evan' },
+      { id: 6, name: 'Fiona', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Fiona' }
+    ];
+    
+    // Global helpers for compatibility
+    window.getP = (id) => mockPlayers.find(p => p.id === id);
+    window.safeName = (id) => mockPlayers.find(p => p.id === id)?.name || 'Unknown';
+    window.resolveAvatar = (player) => player?.avatar;
+    
+    // Show status message
+    function showStatus(message, type = 'info') {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.style.display = 'block';
+      status.className = 'status ' + type;
+      
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 3000);
+    }
+    
+    // Show vote overlay with N nominees
+    function showOverlay(nomineeCount) {
+      const nominees = mockPlayers.slice(0, nomineeCount).map(p => p.id);
+      
+      showStatus(`Showing overlay with ${nomineeCount} nominees`, 'success');
+      
+      // Use LiveVoteOverlay if available
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.show({
+          nominees: nominees,
+          onSubmit: (selectedId) => {
+            const name = window.safeName(selectedId);
+            showStatus(`Vote cast: Evict ${name}`, 'success');
+            console.log('Vote submitted:', selectedId, name);
+            hideOverlay();
+          }
+        });
+      } else if (window.EvictionManager) {
+        // Fallback to EvictionManager
+        window.EvictionManager.show({
+          nominees: nominees,
+          evictCount: 1,
+          onVote: (selectedId) => {
+            const name = window.safeName(selectedId);
+            showStatus(`Vote cast: Evict ${name}`, 'success');
+            console.log('Vote submitted:', selectedId, name);
+            hideOverlay();
+          }
+        });
+      } else {
+        showStatus('Vote overlay modules not loaded', 'error');
+        console.error('Neither LiveVoteOverlay nor EvictionManager is available');
+      }
+    }
+    
+    // Hide overlay
+    function hideOverlay() {
+      if (window.LiveVoteOverlay?.hide) {
+        window.LiveVoteOverlay.hide();
+      }
+      if (window.EvictionManager?.hide) {
+        window.EvictionManager.hide();
+      }
+      showStatus('Overlay hidden', 'info');
+    }
+    
+    // Log viewport info on load and resize
+    function logViewportInfo() {
+      console.log('Viewport:', {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio,
+        orientation: window.innerHeight > window.innerWidth ? 'portrait' : 'landscape'
+      });
+    }
+    
+    window.addEventListener('load', logViewportInfo);
+    window.addEventListener('resize', logViewportInfo);
+    
+    // Initial status
+    setTimeout(() => {
+      showStatus('Ready to test', 'success');
+    }, 500);
+  </script>
+  
+  <!-- Load vote overlay modules -->
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script src="js/ui/evictionManager.js"></script>
+  
+  <script>
+    // Verify modules loaded
+    console.log('LiveVoteOverlay available:', !!window.LiveVoteOverlay);
+    console.log('EvictionManager available:', !!window.EvictionManager);
+  </script>
+</body>
+</html>
