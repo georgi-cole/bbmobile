@@ -350,7 +350,7 @@
    * @param {object} options - Configuration options
    * @param {string[]} options.nominees - Array of nominee IDs
    * @param {number} options.evictCount - Number of evictions
-   * @param {HTMLElement|null} [options.container] - Optional container element
+   * @param {HTMLElement|null} [options.container] - Optional container element (DEPRECATED - always uses document.body)
    * @param {function|null} [options.onVote] - Optional vote callback
    * @returns {HTMLElement|null} Root element or null on validation error
    */
@@ -360,7 +360,7 @@
       return null;
     }
 
-    const { nominees, evictCount, container, onVote } = options;
+    const { nominees, evictCount, onVote } = options;
 
     // STRICT VALIDATION: nominees.length must equal evictCount + 1
     if (nominees.length !== evictCount + 1) {
@@ -392,10 +392,23 @@
     state.selectedNomineeId = null;
     state.onVote = onVote || null;
     state.voteSubmitted = false;
-    state.container = findContainer(container);
+    state.container = document.body; // FIXED: Always use document.body to avoid stacking context issues
 
     // Render UI
     state.rootElement = render();
+    
+    // FIXED: Apply defensive inline styles to ensure overlay is always interactive and on top
+    state.rootElement.style.position = 'fixed';
+    state.rootElement.style.inset = '0';
+    state.rootElement.style.width = '100vw';
+    state.rootElement.style.height = '100vh';
+    state.rootElement.style.zIndex = '2147483000'; // Very high z-index to sit above all UI
+    state.rootElement.style.pointerEvents = 'auto'; // Ensure interactivity
+    
+    // Add body class to signal overlay is open
+    document.documentElement.classList.add('live-vote-overlay-open');
+    
+    // Append to document.body (not container)
     state.container.appendChild(state.rootElement);
 
     emitEvent('eviction:opened', { nominees, evictCount });
@@ -431,6 +444,9 @@
     if (state.rootElement && state.rootElement.parentElement) {
       state.rootElement.parentElement.removeChild(state.rootElement);
     }
+    
+    // Remove body class to signal overlay is closed
+    document.documentElement.classList.remove('live-vote-overlay-open');
 
     // Reset state
     state.rootElement = null;
