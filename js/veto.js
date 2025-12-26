@@ -24,13 +24,19 @@
 //    - Sets __finishVetoCompCalled and __vetoResolving guards
 //    - Clears all veto timers via clearAllVetoTimers()
 //    - Sets canonical phase countdown to 1s via setPhase()
-//    - Shows results with POV_RESULTS_TO_WINNER_DELAY_MS duration
+//    - Determines if human won POV and sets __skipInlineWinner flag
+//    - For human winner: Shows results with autoDismissMs=0 (instant dismiss)
+//    - For non-human: Shows results with POV_RESULTS_TO_WINNER_DELAY_MS (1s)
 //    - Schedules handlePostVetoReveal() with tracked timer
 //
 // 3. Post-Reveal Handler (handlePostVetoReveal):
 //    - Guarded by __postVetoRevealCalled to prevent duplicate execution
-//    - For human POV winner: Shows inline winner UI for POV_INLINE_WINNER_DURATION_MS
-//    - After inline duration: Calls startVetoCeremony()
+//    - For human POV winner with __skipInlineWinner=true:
+//      * Calls startVetoCeremony() IMMEDIATELY (no 3s inline winner wait)
+//      * Fast-path: results → ceremony (no intermediate main-screen timer)
+//    - For human POV winner with __skipInlineWinner=false (legacy):
+//      * Shows inline winner UI for POV_INLINE_WINNER_DURATION_MS (3s)
+//      * Then calls startVetoCeremony()
 //    - For spectator/AI winner: Calls startVetoCeremony() IMMEDIATELY
 //    - For Final4: calls startFinal4Eviction() IMMEDIATELY
 //
@@ -55,12 +61,13 @@
 //
 // Benefits:
 // - No redundant idle waiting between results and ceremony start
-// - POV winner sees inline winner UI for configurable duration (3s default)
+// - Human POV winner sees immediate transition: results → ceremony
+// - Non-human flow preserved with 1s results display
 // - All background timers tracked and cleared on phase transitions
 // - Single canonical countdown (game.phaseEndsAt) as source of truth
 // - Phase guards prevent stale timer callbacks from executing
 // - Immediate transitions: results → inline winner → veto choice (no gaps)
-// - Total flow for winner: results show 1s → inline winner 3s → ceremony starts immediately
+// - Total flow for human winner: results instant → ceremony starts immediately
 // - Total flow for spectator: results show 1s → ceremony starts immediately
 //
 // ═══════════════════════════════════════════════════════════════════════════
@@ -77,6 +84,9 @@
   const POV_RESULTS_TO_WINNER_DELAY_MS = 1000; // 1s delay from results to winner display
   const POV_INLINE_WINNER_DURATION_MS = 3000;  // 3s duration for inline winner display
   const VETO_CEREMONY_START_DELAY_MS = 0;      // 0ms - start ceremony immediately (no wait)
+  const POV_RESULTS_INSTANT_DISMISS_MS = 0;    // 0ms - instant dismiss for human winner results
+  const POV_FAST_PATH_DELAY_MS = 50;           // 50ms - minimal delay for human winner fast-path
+  const POV_ANIMATION_BUFFER_MS = 100;         // 100ms - animation completion buffer
 
   function getP(id){ return (global.getP ? global.getP(id) : null); }
   function alivePlayers(){ return (global.alivePlayers ? global.alivePlayers() : []); }
@@ -87,6 +97,13 @@
   function rng(){
     try{ return (global.rng && typeof global.rng==='function') ? global.rng() : Math.random(); }
     catch(e){ return Math.random(); }
+  }
+  
+  // Helper to determine if human won POV - used for fast-path flow optimization
+  function isHumanPOVWinner(vetoHolderId, humanId) {
+    if (vetoHolderId == null || humanId == null) return false;
+    var holder = getP(vetoHolderId);
+    return (holder && holder.human) || (vetoHolderId === humanId);
   }
 
   // Veto decision phrase pools
@@ -623,6 +640,7 @@
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
     g.__vetoResultsShown = false; // Track if results have been shown to prevent redundant display
     g.__postVetoRevealCalled = false; // Track if post-reveal handler has been called
+    g.__skipInlineWinner = false; // Track if inline winner wait should be skipped (human fast-path)
     // Reset grace attempt flag for new competition
     if (g.humanId != null) {
       delete g[`__graceReplayAttempt_veto_comp_${g.humanId}`];
@@ -966,10 +984,10 @@
     }
     g.__postVetoRevealCalled = true;
     
-    console.info('[veto] handlePostVetoReveal - aliveCount:', aliveCount, 'vetoHolder:', g.vetoHolder, 'humanId:', g.humanId);
+    console.info('[veto] handlePostVetoReveal - aliveCount:', aliveCount, 'vetoHolder:', g.vetoHolder, 'humanId:', g.humanId, 'skipInlineWinner:', !!g.__skipInlineWinner);
     
-    // Determine if human is the POV winner
-    var humanWonPOV = (g.vetoHolder != null && g.humanId != null && g.vetoHolder === g.humanId);
+    // Determine if human is the POV winner using helper function
+    var humanWonPOV = isHumanPOVWinner(g.vetoHolder, g.humanId);
     
     if(aliveCount === 4){
       console.info('[veto] Final 4 bypass - starting Final 4 eviction immediately (no delay)');
@@ -980,8 +998,9 @@
       } else {
         console.warn('[veto] Phase changed before Final 4 eviction start - aborting');
       }
-    } else if(humanWonPOV){
+    } else if(humanWonPOV && !g.__skipInlineWinner){
       // Human won POV - show inline winner UI before ceremony
+      // Only if __skipInlineWinner flag is not set (legacy behavior)
       console.info('[veto] Human won POV - showing inline winner UI for ' + POV_INLINE_WINNER_DURATION_MS + 'ms');
       
       // Show inline winner message on main UI
@@ -1009,8 +1028,13 @@
         }
       }, POV_INLINE_WINNER_DURATION_MS);
     } else {
-      // Spectator flow or AI won - start ceremony immediately
-      console.info('[veto] Starting veto ceremony immediately (spectator or AI winner)');
+      // Fast-path for human winner OR spectator flow or AI won - start ceremony immediately
+      if(humanWonPOV && g.__skipInlineWinner){
+        console.info('[veto] Human won POV - fast-path enabled, starting ceremony immediately (no inline winner wait)');
+      } else {
+        console.info('[veto] Starting veto ceremony immediately (spectator or AI winner)');
+      }
+      
       startVetoCeremony().catch(function(err){
         console.error('[veto] startVetoCeremony error:', err);
       });
@@ -1107,9 +1131,14 @@
     global.game.vetoHolder = arr[0] && arr[0][0];
     var W = getP(global.game.vetoHolder);
     
+    // Determine if human won POV using helper function - used for fast-path flow optimization
+    var humanWonPOV = isHumanPOVWinner(g.vetoHolder, g.humanId);
+    g.__skipInlineWinner = humanWonPOV; // Flag to skip 3s inline winner wait for human
+    
     console.info('[veto] POV Winner determined:', global.game.vetoHolder, 
                  'name:', W ? W.name : 'Unknown', 
                  'human:', W ? W.human : false,
+                 'humanWonPOV:', humanWonPOV,
                  'score:', arr[0] ? arr[0][1] : 0);
     
     if(W){
@@ -1227,8 +1256,9 @@
         
         // Render winner-only result card with auto-dismiss and FFWD support
         // Display duration should align with POV_RESULTS_TO_WINNER_DELAY_MS
-        var displayDuration = POV_RESULTS_TO_WINNER_DELAY_MS;
-        console.info('[veto] Rendering winner result card (duration: ' + displayDuration + 'ms)');
+        // For human winner: use POV_RESULTS_INSTANT_DISMISS_MS to dismiss immediately and proceed to ceremony
+        var displayDuration = g.__skipInlineWinner ? POV_RESULTS_INSTANT_DISMISS_MS : POV_RESULTS_TO_WINNER_DELAY_MS;
+        console.info('[veto] Rendering winner result card (duration: ' + displayDuration + 'ms, skipInlineWinner: ' + !!g.__skipInlineWinner + ')');
         window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
           maxResults: 1,  // Cosmetic: Show only winner (not top 3)
           autoDismissMs: displayDuration 
@@ -1237,13 +1267,15 @@
         // Track post-reveal timer to allow cleanup on phase transition
         // Continue to ceremony after display duration (using configured constant)
         // Small buffer added to ensure UI completes animation
+        // For human winner: use POV_FAST_PATH_DELAY_MS for minimal delay to proceed immediately
+        var postRevealDelay = g.__skipInlineWinner ? POV_FAST_PATH_DELAY_MS : (displayDuration + POV_ANIMATION_BUFFER_MS);
         g.__vetoPostRevealTimer = setTimeout(function(){
           // Guard: Only proceed if still in veto phase and not already handled
           // Note: handlePostVetoReveal will set the guard flag itself to prevent duplicates
           if(global.game && !global.game.__postVetoRevealCalled){
             handlePostVetoReveal();
           }
-        }, displayDuration + 100); // Minimal buffer for animation completion
+        }, postRevealDelay);
       }catch(e){
         console.warn('[veto] VetoResultsUI error, using fallback reveal', e);
         // Fallback to legacy reveal
