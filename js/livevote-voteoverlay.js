@@ -299,6 +299,17 @@
     // Initialize nav button states
     updateNavButtons();
 
+    // Force initial centering immediately after mount (immediate, not smooth)
+    // This ensures the selected nominee starts centered, not off to the left
+    requestAnimationFrame(() => {
+      scrollToNomineeCenter(state.selectedIndex, true); // immediate=true
+      
+      // Dev guardrail: Check panel centering if debug enabled
+      if (global.location?.search?.includes('debug_overlay=1')) {
+        setTimeout(() => assertPanelCentered(), 100);
+      }
+    });
+
     // Focus the first nominee
     const firstNominee = track.querySelector('.lv-overlay__nominee[data-index="0"]');
     if (firstNominee) {
@@ -675,11 +686,34 @@
   // The overlay is now self-contained and scrollable without locking body scroll
   // This allows the ceremony page to remain accessible and scrollable on mobile devices
 
+  // Dev guardrail: Assert panel is centered within TV viewport
+  // Helps catch regression bugs where centering breaks due to refactoring
+  // Enable with ?debug_overlay=1 in URL or when debug flag is set
+  function assertPanelCentered() {
+    const vp = document.querySelector('#tv .tvViewport');
+    const panel = document.querySelector('#tvOverlay .lv-overlay__panel') 
+               || document.querySelector('#tv .lv-overlay__panel');
+    if (!vp || !panel) return;
+
+    const vr = vp.getBoundingClientRect();
+    const pr = panel.getBoundingClientRect();
+    const dx = (pr.left + pr.width/2) - (vr.left + vr.width/2);
+    const dy = (pr.top  + pr.height/2) - (vr.top  + vr.height/2);
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+      console.warn('[LiveVote] Panel off-center (px):', dx.toFixed(2), dy.toFixed(2));
+    } else {
+      console.debug('[LiveVote] Panel centered (delta px):', dx.toFixed(2), dy.toFixed(2));
+    }
+  }
+
   // Export public API
   global.LiveVoteOverlay = {
     show,
     hide,
-    isOpen: () => state.overlay !== null
+    isOpen: () => state.overlay !== null,
+    // Dev/debug utilities
+    assertPanelCentered: assertPanelCentered
   };
 
 })(window);

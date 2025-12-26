@@ -203,6 +203,14 @@
     </div>
     
     <button class="danger" onclick="clearLogs()">Clear Console Logs</button>
+    <button onclick="runPanelCenterCheck()">Check Panel Centering</button>
+    
+    <div style="margin: 16px 0;">
+      <strong>Stress Tests:</strong>
+    </div>
+    
+    <button onclick="rapidArrowTest()">Rapid Arrow Test (40 clicks)</button>
+    <button onclick="scaleRotationTest()">Scale Rotation Test</button>
     
     <div class="test-info">
       <strong>Current Test:</strong> <span id="testStatus">Ready to test</span><br>
@@ -420,6 +428,81 @@
     function clearLogs() {
       console.clear();
       console.log('[Test] Console cleared');
+    }
+    
+    function runPanelCenterCheck() {
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.assertPanelCentered) {
+        console.log('[Test] Running panel center check...');
+        window.LiveVoteOverlay.assertPanelCentered();
+      } else {
+        console.warn('[Test] assertPanelCentered not available');
+      }
+    }
+    
+    function rapidArrowTest() {
+      if (!window.LiveVoteOverlay || !window.LiveVoteOverlay.isOpen()) {
+        alert('Please open an overlay first (test with 4+ nominees)');
+        return;
+      }
+      
+      console.log('[Test] Starting rapid arrow test (40 clicks)...');
+      const overlay = document.querySelector('.lv-overlay');
+      if (!overlay) return;
+      
+      const nextArrow = overlay.querySelector('.lv-overlay__arrow.next');
+      const prevArrow = overlay.querySelector('.lv-overlay__arrow.prev');
+      
+      if (!nextArrow || !prevArrow) {
+        console.error('[Test] Arrows not found');
+        return;
+      }
+      
+      let clickCount = 0;
+      const totalClicks = 40;
+      
+      const clickInterval = setInterval(() => {
+        if (clickCount >= totalClicks) {
+          clearInterval(clickInterval);
+          console.log('[Test] Rapid arrow test complete. Check for drift!');
+          // Run center check after test
+          setTimeout(() => runPanelCenterCheck(), 500);
+          return;
+        }
+        
+        // Alternate between next and prev
+        const arrow = (clickCount % 2 === 0) ? nextArrow : prevArrow;
+        arrow.click();
+        clickCount++;
+        
+        if (clickCount % 10 === 0) {
+          console.log(`[Test] Click ${clickCount}/${totalClicks}...`);
+        }
+      }, 50); // 50ms between clicks (very fast)
+    }
+    
+    function scaleRotationTest() {
+      if (!window.LiveVoteOverlay || !window.LiveVoteOverlay.isOpen()) {
+        alert('Please open an overlay first');
+        return;
+      }
+      
+      console.log('[Test] Starting scale rotation test...');
+      const scales = ['75', '50', '125', 'none', '75'];
+      let index = 0;
+      
+      const rotateInterval = setInterval(() => {
+        if (index >= scales.length) {
+          clearInterval(rotateInterval);
+          console.log('[Test] Scale rotation test complete');
+          setTimeout(() => runPanelCenterCheck(), 500);
+          return;
+        }
+        
+        const scale = scales[index];
+        setScale(scale);
+        console.log(`[Test] Rotated to scale: ${scale}`);
+        index++;
+      }, 1500); // 1.5s per scale change
     }
     
     // Log when page loads
