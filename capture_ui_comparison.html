@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI Comparison: Nomination vs Live Vote</title>
+  
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  
+  <style>
+    body {
+      background: #0a0f16;
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .comparison-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      max-width: 2400px;
+      margin: 0 auto;
+    }
+    
+    .ui-section {
+      background: rgba(20, 35, 55, 0.5);
+      border: 2px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .ui-section h2 {
+      color: #00e0cc;
+      text-align: center;
+      margin: 0 0 20px 0;
+      font-size: 1.4rem;
+    }
+    
+    .ui-section .label {
+      background: rgba(0, 224, 204, 0.2);
+      color: #00e0cc;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+    
+    #tv {
+      margin: 20px auto;
+      max-width: 1100px;
+    }
+    
+    .controls {
+      text-align: center;
+      margin: 30px 0;
+    }
+    
+    .btn {
+      padding: 14px 28px;
+      margin: 8px;
+      background: #00e0cc;
+      color: #001a18;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.5);
+    }
+    
+    .btn.secondary {
+      background: #415a77;
+      color: #e8f4ff;
+    }
+    
+    .instructions {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 900px;
+      text-align: center;
+    }
+    
+    .instructions h3 {
+      color: #ffd96b;
+      margin: 0 0 15px 0;
+    }
+    
+    .instructions p {
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+    
+    @media (max-width: 1400px) {
+      .comparison-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center; color: #00e0cc; font-size: 2rem; margin-bottom: 10px;">
+    🎮 UI Comparison: Nomination Ceremony vs Live Voting
+  </h1>
+  <p style="text-align: center; color: #8fb3d3; font-size: 1.1rem; margin-bottom: 30px;">
+    Both now use the same grid-based fullscreen selector
+  </p>
+  
+  <div class="instructions">
+    <h3>📸 Screenshot Instructions</h3>
+    <p><strong>Step 1:</strong> Click "Show Nomination Ceremony UI" to see the HOH nomination interface</p>
+    <p><strong>Step 2:</strong> Take a screenshot of the fullscreen grid</p>
+    <p><strong>Step 3:</strong> Press Escape to close</p>
+    <p><strong>Step 4:</strong> Click "Show Live Voting UI" to see the voting interface</p>
+    <p><strong>Step 5:</strong> Take a screenshot of the fullscreen grid</p>
+    <p><strong>Result:</strong> Both screenshots should show identical grid layouts! ✨</p>
+  </div>
+  
+  <div class="controls">
+    <button class="btn" onclick="showNominationUI()">
+      📋 Show Nomination Ceremony UI
+    </button>
+    <button class="btn" onclick="showLiveVotingUI()">
+      🗳️ Show Live Voting UI
+    </button>
+    <button class="btn secondary" onclick="closeSelector()">
+      ✖️ Close
+    </button>
+  </div>
+  
+  <div id="tv">
+    <div class="tvViewport">
+      <div class="tvNow" id="tvNow">Click a button above to see the UI</div>
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+  
+  <div class="comparison-container">
+    <div class="ui-section">
+      <h2>Nomination Ceremony (HOH)</h2>
+      <div class="label">When user is Head of Household</div>
+      <ul style="color: #b8d4e6; line-height: 1.8;">
+        <li>✅ Grid layout showing all eligible players</li>
+        <li>✅ Select 2-4 nominees (multi-selection)</li>
+        <li>✅ Ally/enemy indicators (optional)</li>
+        <li>✅ "Nominate" button at bottom</li>
+        <li>✅ Fullscreen overlay with dark backdrop</li>
+      </ul>
+    </div>
+    
+    <div class="ui-section">
+      <h2>Live Voting (Voter)</h2>
+      <div class="label">When user casts vote to evict</div>
+      <ul style="color: #b8d4e6; line-height: 1.8;">
+        <li>✅ Grid layout showing all nominees</li>
+        <li>✅ Select 1 nominee to evict (single-selection)</li>
+        <li>✅ Same visual style as nomination</li>
+        <li>✅ "Evict" button at bottom</li>
+        <li>✅ Fullscreen overlay with dark backdrop</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div style="margin: 40px auto; max-width: 900px; padding: 20px; background: rgba(74, 222, 128, 0.1); border: 2px solid rgba(74, 222, 128, 0.3); border-radius: 8px;">
+    <h3 style="color: #4ade80; text-align: center; margin: 0 0 15px 0;">✅ Confirmation</h3>
+    <p style="text-align: center; color: #b8d4e6; line-height: 1.8; margin: 0;">
+      Both interfaces now use the <strong style="color: #4ade80;">exact same grid-based fullscreen selector</strong>.
+      The only differences are the title text, button label, and selection mode (single vs multi).
+      The visual layout, styling, and interaction pattern are <strong style="color: #4ade80;">identical</strong>! 🎉
+    </p>
+  </div>
+  
+  <script>
+    // Mock global namespace
+    window.global = window;
+    
+    // Mock players with affinity data
+    window.players = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice', affinity: {2: 0.5, 3: -0.5, 4: 0.3, 5: -0.2} },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob', affinity: {1: 0.6, 3: 0.2, 4: -0.4, 5: 0.1} },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie', affinity: {1: -0.3, 2: 0.4, 4: 0.5, 5: -0.6} },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana', affinity: {1: 0.2, 2: -0.5, 3: 0.6, 5: 0.3} },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve', affinity: {1: -0.4, 2: 0.3, 3: -0.7, 4: 0.2} }
+    ];
+    
+    window.getP = function(id) {
+      return window.players.find(p => p.id === id);
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+    
+    window.resolveAvatar = function(player) {
+      return player.avatar || 'https://api.dicebear.com/6.x/bottts/svg?seed=default';
+    };
+    
+    function showNominationUI() {
+      document.getElementById('tvNow').textContent = 'Nomination Ceremony';
+      
+      if (!window.FullscreenGridSelector) {
+        alert('FullscreenGridSelector not loaded. Please refresh the page.');
+        return;
+      }
+      
+      window.FullscreenGridSelector.show({
+        candidates: [1, 2, 3, 5], // All except HOH (Diana)
+        required: 2,
+        title: 'Select your nominees',
+        confirmText: 'Nominate',
+        actorId: 4, // Diana is HOH
+        showRelations: true, // Show ally/enemy indicators
+        onConfirm: (selectedIds) => {
+          console.log('Nominations:', selectedIds.map(id => window.safeName(id)));
+          document.getElementById('tvNow').textContent = `Nominated: ${selectedIds.map(id => window.safeName(id)).join(', ')}`;
+        },
+        onCancel: () => {
+          document.getElementById('tvNow').textContent = 'Click a button above to see the UI';
+        }
+      });
+    }
+    
+    function showLiveVotingUI() {
+      document.getElementById('tvNow').textContent = 'Live Voting';
+      
+      if (!window.FullscreenGridSelector) {
+        alert('FullscreenGridSelector not loaded. Please refresh the page.');
+        return;
+      }
+      
+      window.FullscreenGridSelector.show({
+        candidates: [1, 2, 3, 5], // Nominees
+        required: 1,
+        title: 'Cast your vote to evict.',
+        confirmText: 'Evict',
+        actorId: 4, // Diana voting
+        showRelations: false, // Hide ally/enemy indicators
+        onConfirm: (selectedIds) => {
+          console.log('Vote:', window.safeName(selectedIds[0]));
+          document.getElementById('tvNow').textContent = `Voted to evict: ${window.safeName(selectedIds[0])}`;
+        },
+        onCancel: () => {
+          document.getElementById('tvNow').textContent = 'Click a button above to see the UI';
+        }
+      });
+    }
+    
+    function closeSelector() {
+      // Clear TV overlay
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.innerHTML = '';
+      }
+      document.getElementById('tvNow').textContent = 'Click a button above to see the UI';
+    }
+  </script>
+  
+  <script src="js/ui/fullscreen-grid-selector.js"></script>
+</body>
+</html>

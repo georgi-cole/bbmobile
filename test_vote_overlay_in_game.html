@@ -188,6 +188,18 @@
       <h2>🏠 Eviction Week 3</h2>
       <p><strong>HOH:</strong> Diana | <strong>Nominees:</strong> Alice, Bob, Charlie, Eve</p>
       <p>The house has voted. It's time for you to cast your vote to evict.</p>
+      
+      <!-- Feature Flag Toggle -->
+      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0, 224, 204, 0.3);">
+        <p style="margin-bottom: 10px;"><strong>Feature Flag:</strong></p>
+        <label style="display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">
+          <input type="checkbox" id="overlayOnlyToggle" checked style="transform: scale(1.3);">
+          <span>enableLiveVoteOverlayOnly (Default: ON)</span>
+        </label>
+        <p style="font-size: 0.9rem; color: #8fb3d3; margin-top: 8px;">
+          <strong>ON:</strong> Overlay-only mode (no inline UI) | <strong>OFF:</strong> Legacy mode (shows inline tally)
+        </p>
+      </div>
     </div>
     
     <div class="demo-controls">
@@ -210,6 +222,7 @@
     <div class="info-panel">
       <h3>📋 Demo Features</h3>
       <ul>
+        <li><strong>Feature Flag Toggle:</strong> Test enableLiveVoteOverlayOnly flag (ON=overlay-only, OFF=legacy inline UI)</li>
         <li><strong>Voting Sequence:</strong> Simulates the full in-game voting experience with intro message</li>
         <li><strong>Realistic Context:</strong> Shows overlay within the TV viewport as it appears in actual gameplay</li>
         <li><strong>Responsive Design:</strong> Works on mobile and desktop viewports</li>
@@ -222,7 +235,22 @@
   <script>
     // Mock global namespace
     window.global = window;
-    window.game = window.game || {};
+    window.game = window.game || {
+      cfg: {
+        enableLiveVoteOverlayOnly: true // Default flag value
+      }
+    };
+    
+    // Update flag from checkbox on change
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggle = document.getElementById('overlayOnlyToggle');
+      if (toggle) {
+        toggle.addEventListener('change', (e) => {
+          window.game.cfg.enableLiveVoteOverlayOnly = e.target.checked;
+          console.log('[Demo] enableLiveVoteOverlayOnly =', e.target.checked);
+        });
+      }
+    });
     
     // Mock player data with more realistic Big Brother houseguests
     window.players = [
@@ -252,6 +280,7 @@
   </script>
   
   <script src="js/tv-container.js"></script>
+  <script src="js/ui/fullscreen-grid-selector.js"></script>
   <script src="js/livevote-voteoverlay.js"></script>
   
   <script>
@@ -273,38 +302,75 @@
       const tvNow = document.getElementById('tvNow');
       tvNow.textContent = 'Cast your vote to evict.';
       
-      // Show the overlay
-      currentOverlay = window.LiveVoteOverlay.show({
-        nominees: nominees,
-        isTieBreak: false,
-        allowClose: true,
-        onSubmit: (selectedId) => {
-          const player = window.getP(selectedId);
-          console.log(`[Demo] Vote submitted for: ${player.name}`);
-          
-          // Update TV display with vote result
-          tvNow.textContent = `Vote cast to evict ${player.name}`;
-          
-          // Show confirmation message
-          setTimeout(() => {
-            tvNow.textContent = 'Thank you for voting.';
+      // Use Fullscreen Grid Selector (matches nomination ceremony UX)
+      if (window.FullscreenGridSelector) {
+        window.FullscreenGridSelector.show({
+          candidates: nominees,
+          required: 1,
+          title: 'Cast your vote to evict.',
+          confirmText: 'Evict',
+          actorId: 4, // Diana is the actor
+          showRelations: false,
+          onConfirm: (selectedIds) => {
+            const selectedId = selectedIds[0];
+            const player = window.getP(selectedId);
+            console.log(`[Demo] Vote submitted for: ${player.name}`);
+            
+            // Update TV display with vote result
+            tvNow.textContent = `Vote cast to evict ${player.name}`;
+            
+            // Show confirmation message
             setTimeout(() => {
-              tvNow.textContent = 'Big Brother House';
-            }, 2000);
-          }, 1500);
-        },
-        onCancel: () => {
-          console.log('[Demo] Vote cancelled');
-          tvNow.textContent = 'Big Brother House';
-        }
-      });
+              tvNow.textContent = 'Thank you for voting.';
+              setTimeout(() => {
+                tvNow.textContent = 'Big Brother House';
+              }, 2000);
+            }, 1500);
+          },
+          onCancel: () => {
+            console.log('[Demo] Vote cancelled');
+            tvNow.textContent = 'Big Brother House';
+          }
+        });
+      } else {
+        console.warn('[Demo] FullscreenGridSelector not loaded, falling back to LiveVoteOverlay');
+        // Fallback to original carousel overlay
+        currentOverlay = window.LiveVoteOverlay.show({
+          nominees: nominees,
+          isTieBreak: false,
+          allowClose: true,
+          onSubmit: (selectedId) => {
+            const player = window.getP(selectedId);
+            console.log(`[Demo] Vote submitted for: ${player.name}`);
+            
+            // Update TV display with vote result
+            tvNow.textContent = `Vote cast to evict ${player.name}`;
+            
+            // Show confirmation message
+            setTimeout(() => {
+              tvNow.textContent = 'Thank you for voting.';
+              setTimeout(() => {
+                tvNow.textContent = 'Big Brother House';
+              }, 2000);
+            }, 1500);
+          },
+          onCancel: () => {
+            console.log('[Demo] Vote cancelled');
+            tvNow.textContent = 'Big Brother House';
+          }
+        });
+      }
       
       console.log(`[Demo] Showing vote overlay with ${nomineeCount} nominees`);
     }
     
     // Close vote overlay
     function closeVoteOverlay() {
-      if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
+      if (window.FullscreenGridSelector && window.FullscreenGridSelector.isOpen()) {
+        // Grid selector cleanup is handled internally
+        const tvNow = document.getElementById('tvNow');
+        tvNow.textContent = 'Big Brother House';
+      } else if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
         window.LiveVoteOverlay.hide();
       }
       currentOverlay = null;
