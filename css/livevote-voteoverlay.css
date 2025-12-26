@@ -2,12 +2,8 @@
  * Styles for the full-screen (in-TV) voting overlay
  * Features center-emphasis carousel, nominee selection, and Evict pill
  * Mobile-first with safe-area support
+ * Diary room style with dimmed background for immersive voting experience
  */
-
-/* SMOKE CHECK: Temporary debug outlines to verify CSS is loaded (NOT scoped to #tv) */
-/* Remove these after confirming they're visible on iPhone */
-.lv-overlay { outline: 6px solid lime !important; }
-.lv-overlay__confirm-container { outline: 4px solid magenta !important; }
 
 /* Ensure TV viewport is positioned and clipped correctly for scrim */
 #tv .tvViewport {
@@ -15,7 +11,7 @@
   overflow: hidden !important;
 }
 
-/* Full-coverage scrim via ::before to dim the entire TV viewport */
+/* Full-coverage scrim via ::before to dim the entire TV viewport (diary room style) */
 #tv .lv-overlay::before {
   content: '' !important;
   position: absolute !important;
@@ -615,4 +611,9 @@
   .lv-overlay__evict-btn {
     width: clamp(120px, 34vw, 160px) !important;
   }
+}
+
+/* Hide panel when vote overlay is open to prevent overlap on mobile */
+#panel.voteOverlayOpen {
+  display: none !important;
 }
