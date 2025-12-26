@@ -1,0 +1,93 @@
+/* cards-theme-fix.css
+   Make HOH/POV competition / challenge cards match the project's
+   standard card colors, glassmorphism, border and opacity.
+   Place this file last in the CSS load order (or append to overrides-vertical.css)
+   so it wins over previous transparent rules.
+*/
+
+.revealCard,
+.reveal-card,
+.challenge-card,
+.challenge-card-example,
+.card.challenge,
+.card.hoh-comp,
+.card.pov-comp,
+.card[data-card-type*="comp"],
+.card[data-phase="hoh"],
+.card[data-phase="veto"],
+[data-card="hoh"],
+[data-card="veto"],
+.tv-card,
+.tv-card .card,
+.bigCard.reveal,
+.bigCard.challenge {
+  background: linear-gradient(145deg, rgba(28, 43, 62, 0.92), rgba(12, 22, 36, 0.90)) !important;
+  color: #e3ecf5 !important;
+  backdrop-filter: blur(14px) saturate(1.15) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.15) !important;
+  border: 1px solid rgba(110, 160, 220, 0.18) !important;
+  border-radius: 16px !important;
+  padding: 18px 22px !important;
+  box-shadow:
+    0 12px 36px -16px rgba(0, 0, 0, 0.75),
+    0 6px 20px -8px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(120, 180, 255, 0.12),
+    0 0 24px -10px rgba(131, 191, 255, 0.24) inset !important;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.45) !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  opacity: 1 !important;
+  background-color: rgba(18, 26, 36, 0.92) !important;
+  --card-heading-gradient-from: #f0f8ff;
+  --card-heading-gradient-mid: #66b8ff;
+  --card-heading-gradient-to: #f0f8ff;
+}
+
+.revealCard h3,
+.reveal-card h3,
+.challenge-card h3,
+.challenge-card-example h3,
+.card.challenge h3 {
+  font-weight: 700 !important;
+  font-size: 1.12rem !important;
+  margin: 0 0 0.6em !important;
+  background: linear-gradient(135deg, var(--card-heading-gradient-from, #f0f8ff) 0%, var(--card-heading-gradient-mid, #66b8ff) 50%, var(--card-heading-gradient-to, #f0f8ff) 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  text-shadow: 0 0 20px rgba(102, 184, 255, 0.15) !important;
+}
+
+.revealCard::before,
+.reveal-card::before,
+.challenge-card::before,
+.card.challenge::before,
+.challenge-card-example::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  mix-blend-mode: overlay !important;
+  opacity: 0.18 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revealCard,
+  .reveal-card,
+  .challenge-card,
+  .challenge-card-example,
+  .card.challenge {
+    transition: none !important;
+    will-change: auto !important;
+  }
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .revealCard,
+  .reveal-card,
+  .challenge-card,
+  .challenge-card-example,
+  .card.challenge {
+    background: linear-gradient(145deg, rgba(24, 36, 52, 0.96), rgba(10, 16, 24, 0.95)) !important;
+  }
+}
