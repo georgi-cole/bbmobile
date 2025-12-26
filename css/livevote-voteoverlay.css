@@ -5,60 +5,54 @@
  * Diary room style with dimmed background for immersive voting experience
  */
 
-/* Ensure TV viewport is positioned and clipped correctly for scrim */
-#tv .tvViewport {
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-/* Full-coverage scrim via ::before to dim the entire TV viewport (diary room style) */
-#tv .lv-overlay::before {
+/* Full-coverage scrim via ::before to dim the entire viewport (diary room style)
+ * Since overlay is now position:fixed, the scrim covers the full viewport too
+ */
+.lv-overlay::before {
   content: '' !important;
-  position: absolute !important;
+  position: fixed !important; /* Fixed to cover full viewport */
   inset: 0 !important;
   background: rgba(0, 0, 0, 0.55) !important;
-  z-index: -1 !important;
+  z-index: -1 !important; /* Behind overlay content but part of overlay stacking */
   pointer-events: none !important;
 }
 
 .lv-overlay {
-  position: absolute !important;
+  position: fixed !important; /* Set in patch file */
   inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  border-radius: inherit;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0; /* No border radius for full-screen overlay */
   overflow: hidden;
   /* COMPACT MODE: Removed background here - now using ::before scrim for full coverage */
-  /* CRITICAL: Maximum z-index required to ensure overlay appears above ALL UI elements
-     including roster (#roster z-index: 11), controls bar, and other game UI.
-     This value is intentional to fix the regression where overlay appeared below UI. */
-  z-index: 2147483647; /* Maximum safe 32-bit integer for z-index */
+  /* CRITICAL: High z-index required to ensure overlay appears above ALL UI elements
+     including roster, controls bar, and other game UI. */
+  z-index: 9999; /* High z-index, set in patch file */
   display: flex !important;
   flex-direction: column !important;
   
-  /* Safe area support - REMOVED for Faux-TV context to prevent asymmetric centering */
-  /* padding-top: env(safe-area-inset-top); */
-  /* padding-left: env(safe-area-inset-left); */
-  /* padding-right: env(safe-area-inset-right); */
-  /* padding-bottom: env(safe-area-inset-bottom); */
-  /* Use minimal symmetric padding instead */
-  padding: 8px;
+  /* Safe area support - handled by header/footer individually */
+  padding: 0;
 }
 
 .lv-overlay__header {
   text-align: center;
-  padding: 8px 16px 4px; /* Increased top padding to prevent overlap with controls bar */
+  /* Padding handled by patch file with safe-area support */
+  padding: 8px 16px 4px;
   color: #ffd96b;
   font-size: clamp(0.9rem, 3vw, 1.1rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
-  flex-shrink: 0;
+  flex-shrink: 0; /* Don't shrink */
   margin-bottom: 8px !important; /* Reduced margin for more compact layout */
   z-index: 10; /* Ensure header stays above other content */
+  /* Sticky positioning set in eviction-layout-containment.css */
 }
 
-/* Panel wrapper for symmetric centering inside TV viewport */
+/* Panel wrapper for symmetric centering inside full viewport
+ * Uses flexbox column layout for proper structure
+ */
 .lv-overlay__panel {
   width: min(92%, 520px) !important;
   margin-inline: auto !important;
@@ -66,7 +60,8 @@
   max-height: 100% !important; /* Prevent overflow */
   display: flex !important;
   flex-direction: column !important;
-  justify-content: space-between !important; /* Distribute space between header, carousel, and CTA */
+  /* Flexbox will distribute space between header, carousel, and CTA */
+  justify-content: flex-start !important;
   overflow: hidden !important; /* Clip any overflow */
 }
 
