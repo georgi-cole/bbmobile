@@ -14,7 +14,8 @@
     overlay: null,
     isTieBreak: false,
     allowClose: false,
-    onCancel: null
+    onCancel: null,
+    scrollLockInfo: null // Store scroll lock info for restoration
   };
 
   // Mobile detection helper
@@ -118,13 +119,36 @@
       console.info('[VoteOverlay] ✓ Added tvOverlay--interactive class');
     }
 
-    // MOBILE FIX: Do not lock body scroll - the overlay itself is scrollable
-    // The overlay uses position:fixed with overflow-y:auto to allow internal scrolling.
-    // This allows the ceremony page to remain accessible and scrollable behind the overlay
-    // while the overlay content can also scroll if needed.
-    // We skip body scroll locking to fix mobile scrolling issues (issue #574).
+    // Lock background scroll to prevent page scrolling behind overlay
+    // Store original INLINE body styles to restore later
+    // Note: We intentionally capture inline styles (not computed styles) because:
+    // 1. We only want to restore what we changed (inline styles)
+    // 2. If no inline styles existed, restoration to '' is correct
+    // 3. This preserves any CSS-defined styles without interference
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalBodyPosition = document.body.style.position;
+    const originalBodyTop = document.body.style.top;
+    const originalBodyWidth = document.body.style.width;
     
-    // Note: Body scroll lock has been intentionally removed to allow page scrolling
+    // Get current scroll position before locking
+    const scrollY = window.scrollY || window.pageYOffset;
+    
+    // Apply scroll lock
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    
+    console.info('[VoteOverlay] ✓ Background scroll locked');
+    
+    // Store scroll lock info in state for restoration
+    state.scrollLockInfo = {
+      originalBodyOverflow,
+      originalBodyPosition,
+      originalBodyTop,
+      originalBodyWidth,
+      scrollY
+    };
 
     // Initialize state
     state.nominees = nominees;
@@ -669,8 +693,22 @@
       console.info('[VoteOverlay] ✓ Removed tvOverlay--interactive class');
     }
     
-    // Note: Body scroll lock was not applied, so no need to unlock
-    // The overlay is self-contained and scrollable without affecting body scroll
+    // Restore background scroll
+    if (state.scrollLockInfo) {
+      const { originalBodyOverflow, originalBodyPosition, originalBodyTop, originalBodyWidth, scrollY } = state.scrollLockInfo;
+      
+      // Restore original body styles
+      document.body.style.overflow = originalBodyOverflow;
+      document.body.style.position = originalBodyPosition;
+      document.body.style.top = originalBodyTop;
+      document.body.style.width = originalBodyWidth;
+      
+      // Restore scroll position
+      window.scrollTo(0, scrollY);
+      
+      console.info('[VoteOverlay] ✓ Background scroll restored');
+      state.scrollLockInfo = null;
+    }
     
     // Reset state
     state.nominees = [];
@@ -682,9 +720,9 @@
     state.onCancel = null;
   }
 
-  // Note: Body scroll lock functions removed in fix for issue #574
-  // The overlay is now self-contained and scrollable without locking body scroll
-  // This allows the ceremony page to remain accessible and scrollable on mobile devices
+  // Note: Background scroll lock is now properly implemented
+  // The overlay locks body scroll when open and restores it when closed
+  // This prevents background scrolling while keeping the overlay accessible
 
   // Dev guardrail: Assert panel is centered within TV viewport
   // Helps catch regression bugs where centering breaks due to refactoring
