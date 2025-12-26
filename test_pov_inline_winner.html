@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: POV Inline Winner Flow</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .test-controls {
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .test-controls h2 {
+      margin-top: 0;
+    }
+    .test-controls button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    .test-log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+    .test-log .log-entry {
+      margin-bottom: 5px;
+    }
+    .test-log .log-info { color: #4ec9b0; }
+    .test-log .log-warn { color: #dcdcaa; }
+    .test-log .log-error { color: #f48771; }
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-indicator.active { background: #4ec9b0; }
+    .status-indicator.inactive { background: #666; }
+  </style>
+</head>
+<body>
+
+<div class="test-controls">
+  <h2>POV Inline Winner Flow Test</h2>
+  <p>This test simulates a POV competition where the human player wins and verifies the inline winner card display.</p>
+  
+  <div>
+    <button id="btnSimulateWin" class="btn primary">1. Simulate POV Win (Human)</button>
+    <button id="btnSimulateSpectator" class="btn">2. Simulate POV Win (Spectator)</button>
+    <button id="btnClearLog" class="btn">Clear Log</button>
+  </div>
+  
+  <div style="margin-top: 15px;">
+    <strong>Status Indicators:</strong><br>
+    <span class="status-indicator" id="indicatorInlineWinner"></span> Inline Winner Card Visible<br>
+    <span class="status-indicator" id="indicatorCountdown"></span> Countdown Running<br>
+    <span class="status-indicator" id="indicatorCeremony"></span> Ceremony Started
+  </div>
+</div>
+
+<div class="test-log" id="testLog">
+  <div class="log-entry log-info">Test initialized. Click buttons above to simulate POV flow.</div>
+</div>
+
+<div id="tvOverlay" style="position: relative; min-height: 400px; background: #2d2d30; border-radius: 8px; padding: 20px;">
+  <div style="color: #fff; text-align: center; padding: 40px;">
+    <h3>TV Container</h3>
+    <p>Inline winner card will appear here</p>
+  </div>
+</div>
+
+<script type="module">
+  // Mock game state and dependencies
+  window.game = {
+    phase: 'veto_comp',
+    vetoHolder: 1,
+    humanId: 1,
+    nominees: [2, 3],
+    players: [
+      { id: 1, name: 'Guest', human: true, evicted: false, avatar: { url: 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest' } },
+      { id: 2, name: 'Alice', human: false, evicted: false, avatar: { url: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' } },
+      { id: 3, name: 'Bob', human: false, evicted: false, avatar: { url: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' } },
+      { id: 4, name: 'Charlie', human: false, evicted: false, avatar: { url: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' } }
+    ],
+    lastCompScores: new Map([[1, 25], [2, 18], [3, 22], [4, 15]]),
+    cfg: { tVeto: 40, tVetoDec: 25 },
+    __vetoInlineWinnerVisible: false,
+    __vetoInlineWinnerTimer: null,
+    __postVetoRevealCalled: false
+  };
+
+  // Mock global functions
+  window.getP = function(id) {
+    return window.game.players.find(p => p.id === id);
+  };
+
+  window.getPlayerById = window.getP;
+
+  window.buildSmallAvatar = function(id) {
+    const player = window.getP(id);
+    if (!player) return null;
+    return `<img src="${player.avatar.url}" alt="${player.name}" style="width: 60px; height: 60px; border-radius: 50%;">`;
+  };
+
+  window.setPhase = function(phase, seconds, callback) {
+    log(`setPhase called: phase=${phase}, seconds=${seconds}`, 'info');
+    updateIndicator('indicatorCountdown', seconds > 0);
+    window.game.phase = phase;
+  };
+
+  window.clearAllVetoTimers = function() {
+    const g = window.game;
+    if (g.__vetoInlineWinnerTimer) {
+      clearTimeout(g.__vetoInlineWinnerTimer);
+      g.__vetoInlineWinnerTimer = null;
+    }
+    log('All veto timers cleared', 'info');
+  };
+
+  window.startVetoCeremony = async function() {
+    log('startVetoCeremony called', 'info');
+    updateIndicator('indicatorCeremony', true);
+    updateIndicator('indicatorInlineWinner', false);
+    
+    // Simulate ceremony UI
+    const tvOverlay = document.getElementById('tvOverlay');
+    tvOverlay.innerHTML = `
+      <div style="color: #fff; text-align: center; padding: 40px;">
+        <h2>Veto Ceremony</h2>
+        <p>Would you like to use the Power of Veto?</p>
+        <button class="btn primary" style="margin: 10px;">Yes — Use the Veto</button>
+        <button class="btn" style="margin: 10px;">No — Keep Nominations the Same</button>
+      </div>
+    `;
+    
+    return Promise.resolve();
+  };
+
+  window.TVInlineStatus = {
+    set: function(msg, tone) {
+      log(`TVInlineStatus.set: "${msg}" (tone: ${tone})`, 'warn');
+    },
+    clear: function() {
+      log('TVInlineStatus.clear called', 'info');
+    }
+  };
+
+  // Test log functions
+  function log(message, level = 'info') {
+    const logDiv = document.getElementById('testLog');
+    const entry = document.createElement('div');
+    entry.className = `log-entry log-${level}`;
+    const timestamp = new Date().toLocaleTimeString();
+    entry.textContent = `[${timestamp}] ${message}`;
+    logDiv.appendChild(entry);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  function updateIndicator(id, active) {
+    const indicator = document.getElementById(id);
+    if (indicator) {
+      indicator.className = `status-indicator ${active ? 'active' : 'inactive'}`;
+    }
+  }
+
+  // Load required modules
+  async function loadModules() {
+    try {
+      log('Loading ui.veto-results.js...', 'info');
+      await import('./js/ui.veto-results.js');
+      log('VetoResultsUI module loaded', 'info');
+      return true;
+    } catch (e) {
+      log(`Error loading modules: ${e.message}`, 'error');
+      return false;
+    }
+  }
+
+  // Simulate POV win flow
+  async function simulatePOVWin(humanWins) {
+    log('=== Starting POV Win Simulation ===', 'info');
+    
+    // Reset state
+    window.game.__vetoInlineWinnerVisible = false;
+    window.game.__postVetoRevealCalled = false;
+    window.game.__vetoInlineWinnerTimer = null;
+    updateIndicator('indicatorInlineWinner', false);
+    updateIndicator('indicatorCountdown', true);
+    updateIndicator('indicatorCeremony', false);
+    
+    // Set winner
+    if (humanWins) {
+      window.game.vetoHolder = 1; // Human wins
+      window.game.humanId = 1;
+      log('Human player wins POV', 'info');
+    } else {
+      window.game.vetoHolder = 2; // AI wins
+      window.game.humanId = 1;
+      log('AI player wins POV (human is spectator)', 'info');
+    }
+    
+    // Simulate handlePostVetoReveal logic
+    const g = window.game;
+    const humanWonPOV = (g.vetoHolder === g.humanId);
+    
+    log(`Human won POV: ${humanWonPOV}`, 'info');
+    
+    if (humanWonPOV) {
+      // Human won - show inline winner card
+      log('Showing inline winner card for 3000ms', 'info');
+      
+      g.__vetoInlineWinnerVisible = true;
+      updateIndicator('indicatorInlineWinner', true);
+      
+      // Stop countdown
+      if (typeof window.setPhase === 'function') {
+        const inlineWinnerDurationSec = Math.ceil(3000 / 1000);
+        window.setPhase(g.phase, inlineWinnerDurationSec, null);
+      }
+      
+      // Clear TVInlineStatus
+      if (window.TVInlineStatus?.clear) {
+        window.TVInlineStatus.clear();
+      }
+      
+      // Show inline winner card
+      if (window.VetoResultsUI?.renderInlinePOVWinner) {
+        try {
+          window.VetoResultsUI.renderInlinePOVWinner(g.vetoHolder, {
+            displayDurationMs: 3000,
+            onDismiss: function() {
+              log('Inline winner card dismissed', 'info');
+              g.__vetoInlineWinnerVisible = false;
+              updateIndicator('indicatorInlineWinner', false);
+              
+              if (g.phase === 'veto_comp' || g.phase === 'veto_ceremony') {
+                log('Starting veto ceremony...', 'info');
+                window.startVetoCeremony();
+              }
+            }
+          });
+          log('Inline winner card rendered successfully', 'info');
+        } catch (e) {
+          log(`Error rendering inline winner: ${e.message}`, 'error');
+        }
+      } else {
+        log('VetoResultsUI.renderInlinePOVWinner not available', 'error');
+      }
+    } else {
+      // Spectator - start ceremony immediately
+      log('Human is spectator - starting ceremony immediately', 'info');
+      window.startVetoCeremony();
+    }
+  }
+
+  // Event handlers
+  document.getElementById('btnSimulateWin').addEventListener('click', () => {
+    simulatePOVWin(true);
+  });
+
+  document.getElementById('btnSimulateSpectator').addEventListener('click', () => {
+    simulatePOVWin(false);
+  });
+
+  document.getElementById('btnClearLog').addEventListener('click', () => {
+    const logDiv = document.getElementById('testLog');
+    logDiv.innerHTML = '<div class="log-entry log-info">Log cleared.</div>';
+  });
+
+  // Initialize
+  window.addEventListener('DOMContentLoaded', async () => {
+    const loaded = await loadModules();
+    if (loaded) {
+      log('Test ready. Click buttons to simulate POV flow.', 'info');
+    } else {
+      log('Failed to load required modules. Check console for errors.', 'error');
+    }
+  });
+</script>
+
+</body>
+</html>
