@@ -2,7 +2,7 @@
  * Styles for the full-screen (in-TV) voting overlay
  * Features center-emphasis carousel, nominee selection, and Evict pill
  * Mobile-first with safe-area support
- * Diary-room style with dimmed background for immersive voting experience
+ * Diary room style with dimmed background for immersive voting experience
  */
 
 /* Ensure TV viewport is positioned and clipped correctly for scrim */
@@ -11,7 +11,7 @@
   overflow: hidden !important;
 }
 
-/* Full-coverage scrim via ::before to dim the entire TV viewport (diary-room style) */
+/* Full-coverage scrim via ::before to dim the entire TV viewport (diary room style) */
 #tv .lv-overlay::before {
   content: '' !important;
   position: absolute !important;

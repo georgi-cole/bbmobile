@@ -189,11 +189,11 @@
     if (humanIsVoter && !hasVoted) {
       // Ensure LiveVoteOverlay is available
       if (!global.LiveVoteOverlay) {
-        console.error('[eviction] LiveVoteOverlay not available');
+        console.error('[eviction] LiveVoteOverlay not available - module may not be loaded');
         if (global.TVInlineStatus?.set) {
-          global.TVInlineStatus.set('Voting overlay not loaded. Please refresh.', 'error');
+          global.TVInlineStatus.set('Voting system unavailable. Please refresh the page.', 'error');
         } else {
-          panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny error">Voting overlay not loaded. Please refresh the page.</div></div>';
+          panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny error">Voting system unavailable. The voting overlay module (livevote-voteoverlay.js) may not be loaded. Please refresh the page.</div></div>';
         }
         return;
       }
