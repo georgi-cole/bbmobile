@@ -84,6 +84,9 @@
   const POV_RESULTS_TO_WINNER_DELAY_MS = 1000; // 1s delay from results to winner display
   const POV_INLINE_WINNER_DURATION_MS = 3000;  // 3s duration for inline winner display
   const VETO_CEREMONY_START_DELAY_MS = 0;      // 0ms - start ceremony immediately (no wait)
+  const POV_RESULTS_INSTANT_DISMISS_MS = 0;    // 0ms - instant dismiss for human winner results
+  const POV_FAST_PATH_DELAY_MS = 50;           // 50ms - minimal delay for human winner fast-path
+  const POV_ANIMATION_BUFFER_MS = 100;         // 100ms - animation completion buffer
 
   function getP(id){ return (global.getP ? global.getP(id) : null); }
   function alivePlayers(){ return (global.alivePlayers ? global.alivePlayers() : []); }
@@ -94,6 +97,13 @@
   function rng(){
     try{ return (global.rng && typeof global.rng==='function') ? global.rng() : Math.random(); }
     catch(e){ return Math.random(); }
+  }
+  
+  // Helper to determine if human won POV - used for fast-path flow optimization
+  function isHumanPOVWinner(vetoHolderId, humanId) {
+    if (vetoHolderId == null || humanId == null) return false;
+    var holder = getP(vetoHolderId);
+    return (holder && holder.human) || (vetoHolderId === humanId);
   }
 
   // Veto decision phrase pools
@@ -976,8 +986,8 @@
     
     console.info('[veto] handlePostVetoReveal - aliveCount:', aliveCount, 'vetoHolder:', g.vetoHolder, 'humanId:', g.humanId, 'skipInlineWinner:', !!g.__skipInlineWinner);
     
-    // Determine if human is the POV winner
-    var humanWonPOV = (g.vetoHolder != null && g.humanId != null && g.vetoHolder === g.humanId);
+    // Determine if human is the POV winner using helper function
+    var humanWonPOV = isHumanPOVWinner(g.vetoHolder, g.humanId);
     
     if(aliveCount === 4){
       console.info('[veto] Final 4 bypass - starting Final 4 eviction immediately (no delay)');
@@ -1121,8 +1131,8 @@
     global.game.vetoHolder = arr[0] && arr[0][0];
     var W = getP(global.game.vetoHolder);
     
-    // Determine if human won POV - used for fast-path flow optimization
-    var humanWonPOV = (W && W.human) || (g.vetoHolder != null && g.humanId != null && g.vetoHolder === g.humanId);
+    // Determine if human won POV using helper function - used for fast-path flow optimization
+    var humanWonPOV = isHumanPOVWinner(g.vetoHolder, g.humanId);
     g.__skipInlineWinner = humanWonPOV; // Flag to skip 3s inline winner wait for human
     
     console.info('[veto] POV Winner determined:', global.game.vetoHolder, 
@@ -1246,8 +1256,8 @@
         
         // Render winner-only result card with auto-dismiss and FFWD support
         // Display duration should align with POV_RESULTS_TO_WINNER_DELAY_MS
-        // For human winner: use 0ms to dismiss immediately and proceed to ceremony
-        var displayDuration = g.__skipInlineWinner ? 0 : POV_RESULTS_TO_WINNER_DELAY_MS;
+        // For human winner: use POV_RESULTS_INSTANT_DISMISS_MS to dismiss immediately and proceed to ceremony
+        var displayDuration = g.__skipInlineWinner ? POV_RESULTS_INSTANT_DISMISS_MS : POV_RESULTS_TO_WINNER_DELAY_MS;
         console.info('[veto] Rendering winner result card (duration: ' + displayDuration + 'ms, skipInlineWinner: ' + !!g.__skipInlineWinner + ')');
         window.VetoResultsUI.renderVetoCompResults(scoresObj, participantIds, { 
           maxResults: 1,  // Cosmetic: Show only winner (not top 3)
@@ -1257,8 +1267,8 @@
         // Track post-reveal timer to allow cleanup on phase transition
         // Continue to ceremony after display duration (using configured constant)
         // Small buffer added to ensure UI completes animation
-        // For human winner: use minimal delay to proceed immediately
-        var postRevealDelay = g.__skipInlineWinner ? 50 : (displayDuration + 100);
+        // For human winner: use POV_FAST_PATH_DELAY_MS for minimal delay to proceed immediately
+        var postRevealDelay = g.__skipInlineWinner ? POV_FAST_PATH_DELAY_MS : (displayDuration + POV_ANIMATION_BUFFER_MS);
         g.__vetoPostRevealTimer = setTimeout(function(){
           // Guard: Only proceed if still in veto phase and not already handled
           // Note: handlePostVetoReveal will set the guard flag itself to prevent duplicates
