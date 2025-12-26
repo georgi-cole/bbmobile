@@ -292,6 +292,44 @@
       return;
     }
 
+    // FEATURE FLAG: enableLiveVoteOverlayOnly
+    // When TRUE (default): Skip all inline UI, use only full-screen overlay
+    // When FALSE: Show legacy inline tally/voter list for rollback safety
+    const overlayOnly = g.cfg?.enableLiveVoteOverlayOnly !== false;
+    
+    if (overlayOnly) {
+      // OVERLAY-ONLY MODE: Show minimal confirmation message after voting
+      // No inline tally, no voter list - everything happens in the overlay
+      console.info('[eviction] enableLiveVoteOverlayOnly=true: Skipping inline UI');
+      
+      if (you && humanIsVoter && hasVoted) {
+        // Human has voted - show confirmation only
+        const votedName = global.safeName(g.__human_vote);
+        const box = document.createElement('div'); 
+        box.className = 'minigame-host';
+        box.innerHTML = `<h3>Live Vote</h3>`;
+        
+        const ok = document.createElement('div'); 
+        ok.className = 'tiny ok'; 
+        ok.textContent = `Your vote is recorded: Evict ${votedName}.`;
+        box.appendChild(ok);
+        
+        const info = document.createElement('div'); 
+        info.className = 'tiny muted';
+        info.style.marginTop = '6px';
+        info.textContent = 'Votes are being cast...';
+        box.appendChild(info);
+        
+        panel.appendChild(box);
+      }
+      // If human hasn't voted yet, the overlay is already shown - no panel content needed
+      return;
+    }
+    
+    // LEGACY MODE (overlayOnly=false): Show full inline UI
+    // This is the rollback path - keeps old behavior with tally and voter list
+    console.info('[eviction] enableLiveVoteOverlayOnly=false: Rendering inline UI');
+    
     // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
     // This prevents overlapping UI layers from lv2 and ensures compact, mobile-friendly layout
     // The LiveVoteOverlay provides a consistent experience across all devices

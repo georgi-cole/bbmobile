@@ -41,7 +41,8 @@
       fxCards:true,fxSound:true,fxAnim:true,fxStyle:'fade',miniMode:'random',
       manualMode:false,doubleChance:10,tripleChance:3,enableJuryHouse:true,autoMusic:true,
       returnChance:50,selfEvictChance:0,enablePublicFav:false,adaptiveBackground:true,
-      preloadAvatars:true // Enable avatar preloading in intro hub (default: true)
+      preloadAvatars:true, // Enable avatar preloading in intro hub (default: true)
+      enableLiveVoteOverlayOnly: true // Force full-screen overlay for live voting (default: true)
     };
   }
 
