@@ -614,7 +614,6 @@
     g.__vetoAutoTimer = null;
     g.__vetoInlineWinnerTimer = null; // Track inline winner display timer
     g.__vetoPostRevealTimer = null; // Track post-reveal transition timer
-    g.__vetoInlineWinnerVisible = false; // Track if inline winner card is currently visible
     g.__replacementCommitted = false;
     g.__replacementApplied = false;
     g.__finishVetoCompCalled = false;
@@ -998,85 +997,33 @@
         console.warn('[veto] Phase changed before Final 4 eviction start - aborting');
       }
     } else if(humanWonPOV){
-      // Human won POV - show inline winner card before ceremony
-      console.info('[veto] Human won POV - showing inline winner card for ' + POV_INLINE_WINNER_DURATION_MS + 'ms');
+      // Human won POV - show inline winner UI before ceremony
+      console.info('[veto] Human won POV - showing inline winner UI for ' + POV_INLINE_WINNER_DURATION_MS + 'ms');
       
-      // Suppress TVInlineStatus HUD message while inline winner card is visible
-      // Set flag to indicate inline winner is being displayed
-      g.__vetoInlineWinnerVisible = true;
-      
-      // Stop/pause the main countdown while inline winner is displayed
-      // Set countdown to exactly the inline winner duration (in seconds)
-      if(typeof global.setPhase === 'function'){
-        try{
-          var inlineWinnerDurationSec = Math.ceil(POV_INLINE_WINNER_DURATION_MS / 1000);
-          console.info('[veto] Setting phase countdown to ' + inlineWinnerDurationSec + 's for inline winner display');
-          global.setPhase(g.phase, inlineWinnerDurationSec, null);
-        }catch(e){
-          console.warn('[veto] Failed to set phase countdown for inline winner:', e);
-        }
+      // Show inline winner message on main UI
+      if(window.TVInlineStatus && typeof window.TVInlineStatus.set === 'function'){
+        var winnerMsg = 'You won the Power of Veto! 🛡️';
+        window.TVInlineStatus.set(winnerMsg, 'veto');
       }
       
-      // Clear any existing TVInlineStatus messages
-      if(window.TVInlineStatus && typeof window.TVInlineStatus.clear === 'function'){
-        window.TVInlineStatus.clear();
-      }
-      
-      // Show inline winner card using VetoResultsUI
-      if(window.VetoResultsUI && typeof window.VetoResultsUI.renderInlinePOVWinner === 'function'){
-        try{
-          window.VetoResultsUI.renderInlinePOVWinner(g.vetoHolder, {
-            displayDurationMs: POV_INLINE_WINNER_DURATION_MS,
-            onDismiss: function(){
-              // Clear flag when card is dismissed
-              g.__vetoInlineWinnerVisible = false;
-              
-              // Guard: Only proceed if still in veto phase
-              if(g && (g.phase === 'veto_comp' || g.phase === 'veto_ceremony')){
-                console.info('[veto] Inline winner card dismissed - starting ceremony');
-                startVetoCeremony().catch(function(err){
-                  console.error('[veto] startVetoCeremony error:', err);
-                });
-              } else {
-                console.warn('[veto] Phase changed before ceremony start - aborting');
-              }
-            }
-          });
-        }catch(e){
-          console.error('[veto] Failed to render inline POV winner card:', e);
-          // Fallback: start ceremony immediately if rendering fails
-          g.__vetoInlineWinnerVisible = false;
+      // Schedule ceremony start after inline winner duration
+      g.__vetoInlineWinnerTimer = setTimeout(function(){
+        // Guard: Only proceed if still in veto phase
+        if(g && (g.phase === 'veto_comp' || g.phase === 'veto_ceremony')){
+          console.info('[veto] Inline winner duration complete - starting ceremony');
+          
+          // Clear inline status before ceremony starts
+          if(window.TVInlineStatus && typeof window.TVInlineStatus.clear === 'function'){
+            window.TVInlineStatus.clear();
+          }
+          
           startVetoCeremony().catch(function(err){
             console.error('[veto] startVetoCeremony error:', err);
           });
+        } else {
+          console.warn('[veto] Phase changed before ceremony start - aborting');
         }
-      } else {
-        console.warn('[veto] VetoResultsUI.renderInlinePOVWinner not available - using fallback');
-        // Fallback to TVInlineStatus if new card renderer not available
-        if(window.TVInlineStatus && typeof window.TVInlineStatus.set === 'function'){
-          window.TVInlineStatus.set('You won the Power of Veto! 🛡️', 'veto');
-        }
-        
-        // Schedule ceremony start after inline winner duration
-        g.__vetoInlineWinnerTimer = setTimeout(function(){
-          g.__vetoInlineWinnerVisible = false;
-          // Guard: Only proceed if still in veto phase
-          if(g && (g.phase === 'veto_comp' || g.phase === 'veto_ceremony')){
-            console.info('[veto] Inline winner duration complete - starting ceremony');
-            
-            // Clear inline status before ceremony starts
-            if(window.TVInlineStatus && typeof window.TVInlineStatus.clear === 'function'){
-              window.TVInlineStatus.clear();
-            }
-            
-            startVetoCeremony().catch(function(err){
-              console.error('[veto] startVetoCeremony error:', err);
-            });
-          } else {
-            console.warn('[veto] Phase changed before ceremony start - aborting');
-          }
-        }, POV_INLINE_WINNER_DURATION_MS);
-      }
+      }, POV_INLINE_WINNER_DURATION_MS);
     } else {
       // Spectator flow or AI won - start ceremony immediately
       console.info('[veto] Starting veto ceremony immediately (spectator or AI winner)');
