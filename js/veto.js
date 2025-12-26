@@ -778,25 +778,9 @@
           // Determine if we should show inline wait card (mobile-first)
           var shouldShowInlineCard = false;
           
-          // Check config flag first
-          if(g.cfg && g.cfg.fastForwardInlineWaitCard === true){
-            shouldShowInlineCard = true;
-            console.info('[veto.js] Using inline wait card (config flag enabled)');
-          }
-          // Otherwise check viewport width for mobile
-          else if(window.innerWidth <= MOBILE_VIEWPORT_THRESHOLD){
-            shouldShowInlineCard = true;
-            console.info('[veto.js] Using inline wait card (mobile viewport detected)');
-          }
-          
-          // Show inline wait card or fallback to IntermissionFlow
-          if(shouldShowInlineCard && typeof global.showVetoWaitCard === 'function'){
-            console.info('[veto.js] Showing veto wait card');
-            global.showVetoWaitCard();
-          }
-          else if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
-            // Fallback to original IntermissionFlow for desktop
-            console.info('[veto.js] Starting intermission flow for ineligible player (desktop fallback)');
+          // Always use IntermissionFlow for consistent transparent styling
+          if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
+            console.info('[veto.js] Starting intermission flow for ineligible player');
             var reason = you.evicted ? 'evicted' : 'not_selected';
             global.IntermissionFlow.start({
               compType: 'Veto',
@@ -806,8 +790,8 @@
               }
             });
           } else {
-            // Final fallback: just show status message
-            console.info('[veto.js] No wait card or intermission flow available, showing status only');
+            // Fallback: just show status message
+            console.info('[veto.js] No intermission flow available, showing status only');
             if(window.TVInlineStatus?.set){
               var participantNames = list.join(', ');
               window.TVInlineStatus.set('You are not playing Veto. Participants: ' + participantNames, 'muted');
