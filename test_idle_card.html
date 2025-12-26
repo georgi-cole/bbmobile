@@ -155,12 +155,9 @@
   <script src="js/bootstrap.idleClockListener.js"></script>
 
   <!-- Load IdleCard module -->
-  <script type="module">
-    import { IdleCard } from './js/ui/idleCard.js';
-    
-    // Make IdleCard available globally for test functions
-    window.IdleCard = IdleCard;
+  <script src="js/ui/idleCard.js"></script>
 
+  <script>
     // Initialize game object with event bus
     if (!window.game) {
       window.game = {};

@@ -1,6 +1,9 @@
 // Canonical idle card modal used across the game.
 // Usage: IdleCard.show({ title, message, gameName, onYes, onNo })
-export const IdleCard = (() => {
+(function(global) {
+  'use strict';
+
+  const IdleCard = (() => {
   // Private DOM references
   let container = null;
 
@@ -83,11 +86,6 @@ export const IdleCard = (() => {
       if (window.game && window.game.bus && window.game.bus.emit) window.game.bus.emit('idle:choice:callback', { choice: 'no' });
     };
 
-    // remove previous attached extra handlers if any, then attach small wrap that triggers orig callbacks
-    const yesWrapper = () => { origYes(); };
-    const noWrapper = () => { origNo(); };
-
-    // For simplicity, call the callback immediately after the internal handlers are executed (the existing internal handlers also emit events)
     // Show modal
     modal.classList.add('visible');
 
@@ -114,3 +112,8 @@ export const IdleCard = (() => {
     hide
   };
 })();
+
+  // Export to global namespace
+  global.IdleCard = IdleCard;
+
+})(window);
