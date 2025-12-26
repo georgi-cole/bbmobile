@@ -292,15 +292,6 @@
       return;
     }
 
-    // Get nominees data for UI rendering
-    const nominees = (g.eviction?.nominees || [])
-      .map(id => ({ id, name: global.safeName?.(id) || 'Unknown' }))
-      .filter(n => n.id != null);
-
-    // DISABLED: lv2 triple UI (force use of LiveVoteOverlay for all nominee counts)
-    // This ensures a single, consistent voting UI across all eviction scenarios
-    const useTriple = false;
-
     // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
     // This prevents overlapping UI layers from lv2 and ensures compact, mobile-friendly layout
     // The LiveVoteOverlay provides a consistent experience across all devices
