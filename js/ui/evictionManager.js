@@ -361,6 +361,7 @@
     }
 
     const { nominees, evictCount, onVote } = options;
+    // Note: container parameter is deprecated and ignored - overlay always uses document.body
 
     // STRICT VALIDATION: nominees.length must equal evictCount + 1
     if (nominees.length !== evictCount + 1) {
@@ -392,7 +393,7 @@
     state.selectedNomineeId = null;
     state.onVote = onVote || null;
     state.voteSubmitted = false;
-    state.container = document.body; // FIXED: Always use document.body to avoid stacking context issues
+    state.container = null; // DEPRECATED: No longer used, overlay always appends to document.body
 
     // Render UI
     state.rootElement = render();
@@ -408,8 +409,8 @@
     // Add body class to signal overlay is open
     document.documentElement.classList.add('live-vote-overlay-open');
     
-    // Append to document.body (not container)
-    state.container.appendChild(state.rootElement);
+    // Append directly to document.body to avoid stacking context issues
+    document.body.appendChild(state.rootElement);
 
     emitEvent('eviction:opened', { nominees, evictCount });
 

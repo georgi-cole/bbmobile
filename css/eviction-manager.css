@@ -301,8 +301,3 @@ html.live-vote-overlay-open {
   /* Prevent scrolling when overlay is open */
   overflow: hidden;
 }
-
-html.live-vote-overlay-open body {
-  /* Prevent scrolling when overlay is open */
-  overflow: hidden;
-}
