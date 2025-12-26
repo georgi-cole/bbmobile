@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Live Vote Overlay - In-Game Demo</title>
+  
+  <!-- Load all necessary styles -->
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css?v=d4c21df">
+  <link rel="stylesheet" href="css/livevote-voteoverlay-patch.css?v=centering-fix-1">
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 0;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .demo-header {
+      text-align: center;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .demo-header h1 {
+      color: #00e0cc;
+      font-size: 2rem;
+      margin: 0 0 10px 0;
+      text-shadow: 0 0 20px rgba(0, 224, 204, 0.5);
+    }
+    
+    .demo-header p {
+      color: #8fb3d3;
+      font-size: 1.1rem;
+      margin: 0;
+    }
+    
+    .game-container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    
+    /* TV styling to match game appearance */
+    #tv {
+      margin: 0 auto;
+      box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+    }
+    
+    .tvViewport {
+      background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+    }
+    
+    .tvNow {
+      padding: 40px 20px;
+      text-align: center;
+      font-size: 1.8rem;
+      color: #00e0cc;
+      text-shadow: 0 0 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .game-status {
+      background: rgba(20, 35, 55, 0.95);
+      border: 2px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .game-status h2 {
+      color: #ffd96b;
+      margin: 0 0 10px 0;
+      font-size: 1.4rem;
+    }
+    
+    .game-status p {
+      margin: 8px 0;
+      color: #b8d4e6;
+      line-height: 1.6;
+    }
+    
+    .game-status strong {
+      color: #00e0cc;
+    }
+    
+    .demo-controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    
+    .demo-button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(0, 224, 204, 0.3);
+    }
+    
+    .demo-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 224, 204, 0.5);
+    }
+    
+    .demo-button.secondary {
+      background: linear-gradient(135deg, #415a77, #2d4152);
+      color: #e8f4ff;
+    }
+    
+    .demo-button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+      color: white;
+    }
+    
+    .info-panel {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 20px 0;
+    }
+    
+    .info-panel h3 {
+      color: #00e0cc;
+      margin: 0 0 12px 0;
+      font-size: 1.2rem;
+    }
+    
+    .info-panel ul {
+      margin: 0;
+      padding-left: 24px;
+      color: #b8d4e6;
+    }
+    
+    .info-panel li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .demo-header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .demo-header p {
+        font-size: 1rem;
+      }
+      
+      .tvNow {
+        font-size: 1.3rem;
+        padding: 30px 15px;
+      }
+      
+      .game-status h2 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="demo-header">
+      <h1>🎮 Live Vote Overlay - In-Game Demo</h1>
+      <p>Experience the voting interface as it appears in the actual Big Brother game</p>
+    </div>
+    
+    <div class="game-status">
+      <h2>🏠 Eviction Week 3</h2>
+      <p><strong>HOH:</strong> Diana | <strong>Nominees:</strong> Alice, Bob, Charlie, Eve</p>
+      <p>The house has voted. It's time for you to cast your vote to evict.</p>
+    </div>
+    
+    <div class="demo-controls">
+      <button class="demo-button" onclick="startVotingSequence()">▶️ Start Voting Sequence</button>
+      <button class="demo-button secondary" onclick="showVoteOverlay(2)">2 Nominees</button>
+      <button class="demo-button secondary" onclick="showVoteOverlay(4)">4 Nominees</button>
+      <button class="demo-button danger" onclick="closeVoteOverlay()">Close Overlay</button>
+    </div>
+    
+    <!-- Faux TV Container (matches game styling) -->
+    <div id="tv">
+      <div class="tvViewport">
+        <div class="tvNow" id="tvNow">
+          Big Brother House
+        </div>
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+    
+    <div class="info-panel">
+      <h3>📋 Demo Features</h3>
+      <ul>
+        <li><strong>Voting Sequence:</strong> Simulates the full in-game voting experience with intro message</li>
+        <li><strong>Realistic Context:</strong> Shows overlay within the TV viewport as it appears in actual gameplay</li>
+        <li><strong>Responsive Design:</strong> Works on mobile and desktop viewports</li>
+        <li><strong>All Fixes Applied:</strong> Transparent backdrop, compact pill button, immediate centering, layout-pixel-safe scrolling</li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Load necessary JavaScript modules -->
+  <script>
+    // Mock global namespace
+    window.global = window;
+    window.game = window.game || {};
+    
+    // Mock player data with more realistic Big Brother houseguests
+    window.players = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' },
+      { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Frank' }
+    ];
+    
+    // Mock getP function
+    window.getP = function(id) {
+      return window.players.find(p => p.id === id);
+    };
+    
+    // Mock safeName function
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Player';
+    };
+    
+    // Mock resolveAvatar function
+    window.resolveAvatar = function(player) {
+      return player.avatar;
+    };
+  </script>
+  
+  <script src="js/tv-container.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+  
+  <script>
+    // State management
+    let currentOverlay = null;
+    
+    // Show vote overlay with specified number of nominees
+    function showVoteOverlay(nomineeCount) {
+      // Close existing overlay if any
+      if (currentOverlay) {
+        closeVoteOverlay();
+      }
+      
+      // Select nominees based on count
+      const allNominees = [1, 2, 3, 5]; // Alice, Bob, Charlie, Eve (Diana is HOH)
+      const nominees = allNominees.slice(0, nomineeCount);
+      
+      // Update TV display
+      const tvNow = document.getElementById('tvNow');
+      tvNow.textContent = 'Cast your vote to evict.';
+      
+      // Show the overlay
+      currentOverlay = window.LiveVoteOverlay.show({
+        nominees: nominees,
+        isTieBreak: false,
+        allowClose: true,
+        onSubmit: (selectedId) => {
+          const player = window.getP(selectedId);
+          console.log(`[Demo] Vote submitted for: ${player.name}`);
+          
+          // Update TV display with vote result
+          tvNow.textContent = `Vote cast to evict ${player.name}`;
+          
+          // Show confirmation message
+          setTimeout(() => {
+            tvNow.textContent = 'Thank you for voting.';
+            setTimeout(() => {
+              tvNow.textContent = 'Big Brother House';
+            }, 2000);
+          }, 1500);
+        },
+        onCancel: () => {
+          console.log('[Demo] Vote cancelled');
+          tvNow.textContent = 'Big Brother House';
+        }
+      });
+      
+      console.log(`[Demo] Showing vote overlay with ${nomineeCount} nominees`);
+    }
+    
+    // Close vote overlay
+    function closeVoteOverlay() {
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      currentOverlay = null;
+      
+      const tvNow = document.getElementById('tvNow');
+      tvNow.textContent = 'Big Brother House';
+      
+      console.log('[Demo] Vote overlay closed');
+    }
+    
+    // Start voting sequence (simulates game flow)
+    function startVotingSequence() {
+      const tvNow = document.getElementById('tvNow');
+      
+      // Step 1: Introduction
+      tvNow.textContent = 'The power is in your hands...';
+      console.log('[Demo] Starting voting sequence...');
+      
+      // Step 2: Prepare to vote
+      setTimeout(() => {
+        tvNow.textContent = 'Time to cast your vote to evict.';
+      }, 2000);
+      
+      // Step 3: Show overlay
+      setTimeout(() => {
+        showVoteOverlay(4); // Show all 4 nominees
+      }, 3500);
+    }
+    
+    // Auto-start demo after page load (optional)
+    window.addEventListener('load', () => {
+      console.log('[Demo] In-game voting demo loaded');
+      console.log('[Demo] Click "Start Voting Sequence" to begin');
+      
+      // Uncomment to auto-start the voting sequence
+      // setTimeout(() => startVotingSequence(), 1000);
+    });
+  </script>
+</body>
+</html>

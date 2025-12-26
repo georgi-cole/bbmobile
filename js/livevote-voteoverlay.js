@@ -44,6 +44,44 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   }
 
+  // Helper: Get the shared overlay container
+  // Always prefer #tvOverlay for unambiguous mounting inside the TV viewport
+  function getContainer() {
+    // First priority: #tvOverlay (dedicated overlay layer inside .tvViewport)
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      console.info('[VoteOverlay] ✓ Using #tvOverlay');
+      return tvOverlay;
+    }
+    
+    // Try TVContainer helper if available
+    if (global.TVContainer?.getOrCreateTvOverlay) {
+      try {
+        const tvContainer = global.TVContainer.getTvContainer?.() || 
+                           document.querySelector('#tv') || 
+                           document.body;
+        const overlay = global.TVContainer.getOrCreateTvOverlay(tvContainer, 'tv-overlay-mount');
+        if (overlay) {
+          console.info('[VoteOverlay] ✓ Using TVContainer.getOrCreateTvOverlay()');
+          return overlay;
+        }
+      } catch (e) {
+        console.warn('[VoteOverlay] TVContainer.getOrCreateTvOverlay() failed:', e);
+      }
+    }
+    
+    // Fallback to .tvViewport inside #tv
+    const tvViewport = document.querySelector('#tv .tvViewport');
+    if (tvViewport) {
+      console.info('[VoteOverlay] ⚠ Falling back to .tvViewport');
+      return tvViewport;
+    }
+    
+    // Final fallback: #tv or body
+    console.warn('[VoteOverlay] ⚠ Using #tv or body as last resort');
+    return document.querySelector('#tv') || document.body;
+  }
+
   // Create and show the voting overlay
   async function show(options = {}) {
     // Idempotency guard: if already open, return early (no-op)
@@ -66,14 +104,18 @@
       return null;
     }
 
-    // Find container (either provided or default to TV viewport for proper centering)
-    // Prefer .tvViewport inside #tv for proper layout integration
-    const targetContainer = container || 
-      document.querySelector('#tv .tvViewport') || 
-      document.querySelector('#tv');
+    // Find container using shared overlay layer (prefer TVContainer or #tvOverlay)
+    const targetContainer = container || getContainer();
     if (!targetContainer) {
       console.warn('[VoteOverlay] No container found');
       return null;
+    }
+    
+    // Enable pointer events on tvOverlay layer if it exists
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      tvOverlay.classList.add('tvOverlay--interactive');
+      console.info('[VoteOverlay] ✓ Added tvOverlay--interactive class');
     }
 
     // MOBILE FIX: Do not lock body scroll - the overlay itself is scrollable
@@ -257,6 +299,17 @@
     // Initialize nav button states
     updateNavButtons();
 
+    // Force initial centering immediately after mount (immediate, not smooth)
+    // This ensures the selected nominee starts centered, not off to the left
+    requestAnimationFrame(() => {
+      scrollToNomineeCenter(state.selectedIndex, true); // immediate=true
+      
+      // Dev guardrail: Check panel centering if debug enabled
+      if (global.location?.search?.includes('debug_overlay=1')) {
+        setTimeout(() => assertPanelCentered(), 100);
+      }
+    });
+
     // Focus the first nominee
     const firstNominee = track.querySelector('.lv-overlay__nominee[data-index="0"]');
     if (firstNominee) {
@@ -267,6 +320,9 @@
   }
 
   // Helper: Scroll carousel to center a nominee
+  // FIXED: Use layout-pixel-safe implementation with offsetLeft/offsetWidth/clientWidth
+  // instead of getBoundingClientRect() which returns scaled (visual) pixels.
+  // This prevents mis-centering/drift on iPhone when TV viewport is scaled via transform.
   function scrollToNomineeCenter(index, immediate = false) {
     if (!state.overlay) return;
 
@@ -275,24 +331,23 @@
     if (!carousel || !track) return;
 
     const nominees = track.querySelectorAll('.lv-overlay__nominee');
-    const targetNominee = nominees[index];
-    if (!targetNominee) return;
+    const target = nominees[index];
+    if (!target) return;
 
-    // Calculate the delta to center the nominee
-    const carouselRect = carousel.getBoundingClientRect();
-    const nomineeRect = targetNominee.getBoundingClientRect();
+    // Use layout pixels only - no getBoundingClientRect()
+    const carouselWidth = carousel.clientWidth;
+    const carouselCenter = carouselWidth / 2;
     
-    // Calculate the center of the carousel
-    const carouselCenter = carouselRect.left + carouselRect.width / 2;
-    // Calculate the center of the nominee
-    const nomineeCenter = nomineeRect.left + nomineeRect.width / 2;
+    // Nominee's absolute position includes track's offset
+    const nomineeOffsetLeft = track.offsetLeft + target.offsetLeft;
+    const nomineeCenter = nomineeOffsetLeft + (target.offsetWidth / 2);
     
-    // Calculate the delta needed to center the nominee
-    const delta = nomineeCenter - carouselCenter;
+    // Calculate scroll position to center nominee in carousel
+    const left = Math.max(0, nomineeCenter - carouselCenter);
     
-    // Scroll the carousel by the delta
+    // Scroll the carousel to center the nominee
     carousel.scrollTo({
-      left: carousel.scrollLeft + delta,
+      left,
       behavior: immediate ? 'auto' : 'smooth'
     });
   }
@@ -607,6 +662,13 @@
     state.overlay.remove();
     state.overlay = null;
     
+    // Disable pointer events on tvOverlay layer if it exists
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      tvOverlay.classList.remove('tvOverlay--interactive');
+      console.info('[VoteOverlay] ✓ Removed tvOverlay--interactive class');
+    }
+    
     // Note: Body scroll lock was not applied, so no need to unlock
     // The overlay is self-contained and scrollable without affecting body scroll
     
@@ -624,11 +686,34 @@
   // The overlay is now self-contained and scrollable without locking body scroll
   // This allows the ceremony page to remain accessible and scrollable on mobile devices
 
+  // Dev guardrail: Assert panel is centered within TV viewport
+  // Helps catch regression bugs where centering breaks due to refactoring
+  // Enable with ?debug_overlay=1 in URL or when debug flag is set
+  function assertPanelCentered() {
+    const vp = document.querySelector('#tv .tvViewport');
+    const panel = document.querySelector('#tvOverlay .lv-overlay__panel') 
+               || document.querySelector('#tv .lv-overlay__panel');
+    if (!vp || !panel) return;
+
+    const vr = vp.getBoundingClientRect();
+    const pr = panel.getBoundingClientRect();
+    const dx = (pr.left + pr.width/2) - (vr.left + vr.width/2);
+    const dy = (pr.top  + pr.height/2) - (vr.top  + vr.height/2);
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+      console.warn('[LiveVote] Panel off-center (px):', dx.toFixed(2), dy.toFixed(2));
+    } else {
+      console.debug('[LiveVote] Panel centered (delta px):', dx.toFixed(2), dy.toFixed(2));
+    }
+  }
+
   // Export public API
   global.LiveVoteOverlay = {
     show,
     hide,
-    isOpen: () => state.overlay !== null
+    isOpen: () => state.overlay !== null,
+    // Dev/debug utilities
+    assertPanelCentered: assertPanelCentered
   };
 
 })(window);

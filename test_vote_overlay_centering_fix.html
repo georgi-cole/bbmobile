@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Vote Overlay Centering Fix - Test Harness</title>
+  
+  <!-- Load all necessary styles -->
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css?v=d4c21df">
+  <link rel="stylesheet" href="css/livevote-voteoverlay-patch.css?v=centering-fix-1">
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+      color: white;
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    .test-info strong {
+      color: #ffd96b;
+    }
+    
+    .checkbox-row {
+      margin: 10px 0;
+    }
+    
+    .checkbox-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    
+    .checkbox-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+    
+    /* Smoke test outline (temporary for verification) */
+    .lv-overlay.smoke-test {
+      outline: 4px solid lime !important;
+    }
+    
+    /* TV viewport container for testing */
+    #tv {
+      width: min(90vw, 800px);
+      height: min(80vh, 600px);
+      margin: 20px auto;
+      position: relative;
+      background: #142337;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 3px solid rgba(143,211,255,0.3);
+    }
+    
+    .tvViewport {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+    
+    #tvOverlay.tvOverlay--interactive {
+      pointer-events: auto !important;
+    }
+    
+    .tvNow {
+      padding: 20px;
+      text-align: center;
+      color: #e8f4ff;
+    }
+    
+    /* Transform test modes */
+    #tv.scaled-50 .tvViewport {
+      transform: scale(0.5);
+      transform-origin: center;
+    }
+    
+    #tv.scaled-75 .tvViewport {
+      transform: scale(0.75);
+      transform-origin: center;
+    }
+    
+    #tv.scaled-125 .tvViewport {
+      transform: scale(1.25);
+      transform-origin: center;
+    }
+    
+    .verification-notes {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: rgba(255, 107, 107, 0.1);
+      border-radius: 12px;
+      border: 2px solid rgba(255, 107, 107, 0.3);
+    }
+    
+    .verification-notes h2 {
+      margin: 0 0 12px 0;
+      color: #ff6b6b;
+      font-size: 1.2rem;
+    }
+    
+    .verification-notes ul {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    
+    .verification-notes li {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎯 Vote Overlay Centering Fix - Test Harness</h1>
+    
+    <div style="margin-bottom: 16px;">
+      <strong>Test Scenarios:</strong>
+    </div>
+    
+    <button onclick="test2Nominees()">Test 2 Nominees</button>
+    <button onclick="test4Nominees()">Test 4 Nominees</button>
+    <button onclick="test6Nominees()">Test 6 Nominees</button>
+    <button onclick="closeOverlay()">Close Overlay</button>
+    
+    <div style="margin: 16px 0;">
+      <strong>Transform Tests (iPhone scaling simulation):</strong>
+    </div>
+    
+    <button onclick="setScale('none')">No Scale (1.0x)</button>
+    <button onclick="setScale('50')">Scale 50%</button>
+    <button onclick="setScale('75')">Scale 75%</button>
+    <button onclick="setScale('125')">Scale 125%</button>
+    
+    <div style="margin: 16px 0;">
+      <strong>Verification Tools:</strong>
+    </div>
+    
+    <div class="checkbox-row">
+      <label>
+        <input type="checkbox" id="toggleSmoke" onchange="toggleSmokeTest()">
+        <span>Enable Smoke Test Outline (Lime border on overlay)</span>
+      </label>
+    </div>
+    
+    <button class="danger" onclick="clearLogs()">Clear Console Logs</button>
+    <button onclick="runPanelCenterCheck()">Check Panel Centering</button>
+    
+    <div style="margin: 16px 0;">
+      <strong>Stress Tests:</strong>
+    </div>
+    
+    <button onclick="rapidArrowTest()">Rapid Arrow Test (40 clicks)</button>
+    <button onclick="scaleRotationTest()">Scale Rotation Test</button>
+    
+    <div class="test-info">
+      <strong>Current Test:</strong> <span id="testStatus">Ready to test</span><br>
+      <strong>Scale:</strong> <span id="scaleStatus">1.0x (No scaling)</span><br>
+      <strong>Container:</strong> <span id="containerStatus">Not shown yet</span><br>
+      <strong>Layer:</strong> <span id="layerStatus">-</span>
+    </div>
+  </div>
+  
+  <div class="verification-notes">
+    <h2>✅ Verification Checklist</h2>
+    <ul>
+      <li><strong>Layout pixels:</strong> Confirm no getBoundingClientRect() in scroll-centering path (check console logs)</li>
+      <li><strong>Shared overlay:</strong> Check console for "Using TVContainer" or "Using #tvOverlay" messages</li>
+      <li><strong>Smoke test:</strong> Enable lime outline and verify overlay aligns with TV screen borders</li>
+      <li><strong>Centering (no scale):</strong> Selected nominee should be centered in carousel</li>
+      <li><strong>Centering (scaled):</strong> Try 50%, 75%, 125% scales - centering should still work correctly</li>
+      <li><strong>No drift:</strong> Navigate arrows left/right - no mis-alignment or drift should occur</li>
+      <li><strong>CTA pinned:</strong> Evict button and arrows should stay at bottom with safe-area padding</li>
+      <li><strong>Arrows static:</strong> Nav arrows should stay in fixed grid positions (left/right of Evict button)</li>
+      <li><strong>Avatar visible:</strong> Selected avatar should not be clipped (check top edge)</li>
+      <li><strong>Avatar gap:</strong> Name should be ~6px below avatar (tight but not touching)</li>
+      <li><strong>iPhone 6s (375×667):</strong> Test in DevTools mobile emulator - no uncovered strips</li>
+      <li><strong>iPhone 13 (390×844):</strong> Test in DevTools mobile emulator - no overlap</li>
+    </ul>
+  </div>
+  
+  <!-- TV Container -->
+  <div id="tv">
+    <div class="tvViewport">
+      <div class="tvNow" id="tvNow">
+        Big Brother House Network - Vote Overlay Test
+      </div>
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+  
+  <!-- Load necessary JavaScript modules -->
+  <script>
+    // Mock global namespace
+    window.global = window;
+    window.game = window.game || {};
+    
+    // Mock player data
+    window.players = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' },
+      { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Frank' }
+    ];
+    
+    // Mock getP function
+    window.getP = function(id) {
+      return window.players.find(p => p.id === id);
+    };
+    
+    // Mock safeName function
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Player';
+    };
+    
+    // Mock resolveAvatar function
+    window.resolveAvatar = function(player) {
+      return player.avatar;
+    };
+  </script>
+  
+  <script src="js/tv-container.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+  
+  <script>
+    let currentOverlay = null;
+    
+    function updateStatus(test, scale, container, layer) {
+      if (test) document.getElementById('testStatus').textContent = test;
+      if (scale !== undefined) document.getElementById('scaleStatus').textContent = scale;
+      if (container) document.getElementById('containerStatus').textContent = container;
+      if (layer) document.getElementById('layerStatus').textContent = layer;
+    }
+    
+    async function test2Nominees() {
+      closeOverlay();
+      updateStatus('2 Nominees', undefined, 'Pending...', 'Pending...');
+      
+      const nominees = [1, 2];
+      currentOverlay = await window.LiveVoteOverlay.show({
+        nominees: nominees,
+        isTieBreak: false,
+        allowClose: true,
+        onSubmit: (id) => {
+          console.log('Vote submitted for player:', id);
+          alert(`Voted for: ${window.getP(id).name}`);
+        },
+        onCancel: () => {
+          console.log('Vote cancelled');
+        }
+      });
+      
+      detectContainer();
+    }
+    
+    async function test4Nominees() {
+      closeOverlay();
+      updateStatus('4 Nominees', undefined, 'Pending...', 'Pending...');
+      
+      const nominees = [1, 2, 3, 4];
+      currentOverlay = await window.LiveVoteOverlay.show({
+        nominees: nominees,
+        isTieBreak: false,
+        allowClose: true,
+        onSubmit: (id) => {
+          console.log('Vote submitted for player:', id);
+          alert(`Voted for: ${window.getP(id).name}`);
+        },
+        onCancel: () => {
+          console.log('Vote cancelled');
+        }
+      });
+      
+      detectContainer();
+    }
+    
+    async function test6Nominees() {
+      closeOverlay();
+      updateStatus('6 Nominees', undefined, 'Pending...', 'Pending...');
+      
+      const nominees = [1, 2, 3, 4, 5, 6];
+      currentOverlay = await window.LiveVoteOverlay.show({
+        nominees: nominees,
+        isTieBreak: false,
+        allowClose: true,
+        onSubmit: (id) => {
+          console.log('Vote submitted for player:', id);
+          alert(`Voted for: ${window.getP(id).name}`);
+        },
+        onCancel: () => {
+          console.log('Vote cancelled');
+        }
+      });
+      
+      detectContainer();
+    }
+    
+    function closeOverlay() {
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      currentOverlay = null;
+      updateStatus('Closed', undefined, '-', '-');
+    }
+    
+    function setScale(scale) {
+      const tv = document.getElementById('tv');
+      tv.classList.remove('scaled-50', 'scaled-75', 'scaled-125');
+      
+      let scaleText = '1.0x (No scaling)';
+      if (scale === '50') {
+        tv.classList.add('scaled-50');
+        scaleText = '0.5x (50% scale)';
+      } else if (scale === '75') {
+        tv.classList.add('scaled-75');
+        scaleText = '0.75x (75% scale)';
+      } else if (scale === '125') {
+        tv.classList.add('scaled-125');
+        scaleText = '1.25x (125% scale)';
+      }
+      
+      updateStatus(undefined, scaleText, undefined, undefined);
+      console.log(`[Test] Scale changed to: ${scaleText}`);
+    }
+    
+    function toggleSmokeTest() {
+      const enabled = document.getElementById('toggleSmoke').checked;
+      const overlays = document.querySelectorAll('.lv-overlay');
+      
+      overlays.forEach(overlay => {
+        if (enabled) {
+          overlay.classList.add('smoke-test');
+        } else {
+          overlay.classList.remove('smoke-test');
+        }
+      });
+      
+      console.log(`[Test] Smoke test outline: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    }
+    
+    function detectContainer() {
+      setTimeout(() => {
+        const overlay = document.querySelector('.lv-overlay');
+        if (overlay) {
+          const parent = overlay.parentElement;
+          let containerName = 'Unknown';
+          
+          if (parent.id) {
+            containerName = `#${parent.id}`;
+          } else if (parent.classList.length > 0) {
+            containerName = `.${Array.from(parent.classList).join('.')}`;
+          }
+          
+          const tvOverlay = document.getElementById('tvOverlay');
+          const hasInteractive = tvOverlay && tvOverlay.classList.contains('tvOverlay--interactive');
+          const layerInfo = hasInteractive ? 'tvOverlay--interactive ✓' : 'No interactive class';
+          
+          updateStatus(undefined, undefined, containerName, layerInfo);
+          
+          console.log('[Test] Overlay container:', containerName);
+          console.log('[Test] tvOverlay--interactive:', hasInteractive);
+        }
+      }, 100);
+    }
+    
+    function clearLogs() {
+      console.clear();
+      console.log('[Test] Console cleared');
+    }
+    
+    function runPanelCenterCheck() {
+      if (window.LiveVoteOverlay && window.LiveVoteOverlay.assertPanelCentered) {
+        console.log('[Test] Running panel center check...');
+        window.LiveVoteOverlay.assertPanelCentered();
+      } else {
+        console.warn('[Test] assertPanelCentered not available');
+      }
+    }
+    
+    function rapidArrowTest() {
+      if (!window.LiveVoteOverlay || !window.LiveVoteOverlay.isOpen()) {
+        alert('Please open an overlay first (test with 4+ nominees)');
+        return;
+      }
+      
+      console.log('[Test] Starting rapid arrow test (40 clicks)...');
+      const overlay = document.querySelector('.lv-overlay');
+      if (!overlay) return;
+      
+      const nextArrow = overlay.querySelector('.lv-overlay__arrow.next');
+      const prevArrow = overlay.querySelector('.lv-overlay__arrow.prev');
+      
+      if (!nextArrow || !prevArrow) {
+        console.error('[Test] Arrows not found');
+        return;
+      }
+      
+      let clickCount = 0;
+      const totalClicks = 40;
+      
+      const clickInterval = setInterval(() => {
+        if (clickCount >= totalClicks) {
+          clearInterval(clickInterval);
+          console.log('[Test] Rapid arrow test complete. Check for drift!');
+          // Run center check after test
+          setTimeout(() => runPanelCenterCheck(), 500);
+          return;
+        }
+        
+        // Alternate between next and prev
+        const arrow = (clickCount % 2 === 0) ? nextArrow : prevArrow;
+        arrow.click();
+        clickCount++;
+        
+        if (clickCount % 10 === 0) {
+          console.log(`[Test] Click ${clickCount}/${totalClicks}...`);
+        }
+      }, 50); // 50ms between clicks (very fast)
+    }
+    
+    function scaleRotationTest() {
+      if (!window.LiveVoteOverlay || !window.LiveVoteOverlay.isOpen()) {
+        alert('Please open an overlay first');
+        return;
+      }
+      
+      console.log('[Test] Starting scale rotation test...');
+      const scales = ['75', '50', '125', 'none', '75'];
+      let index = 0;
+      
+      const rotateInterval = setInterval(() => {
+        if (index >= scales.length) {
+          clearInterval(rotateInterval);
+          console.log('[Test] Scale rotation test complete');
+          setTimeout(() => runPanelCenterCheck(), 500);
+          return;
+        }
+        
+        const scale = scales[index];
+        setScale(scale);
+        console.log(`[Test] Rotated to scale: ${scale}`);
+        index++;
+      }, 1500); // 1.5s per scale change
+    }
+    
+    // Log when page loads
+    console.log('=== Vote Overlay Centering Fix Test Harness ===');
+    console.log('✓ LiveVoteOverlay loaded:', typeof window.LiveVoteOverlay !== 'undefined');
+    console.log('✓ TVContainer loaded:', typeof window.TVContainer !== 'undefined');
+    console.log('✓ Ready for testing');
+  </script>
+</body>
+</html>
