@@ -186,7 +186,18 @@
     }
     
     // If human is eligible voter and hasn't voted yet, show voting overlay directly
-    if (humanIsVoter && !hasVoted && global.LiveVoteOverlay) {
+    if (humanIsVoter && !hasVoted) {
+      // Ensure LiveVoteOverlay is available
+      if (!global.LiveVoteOverlay) {
+        console.error('[eviction] LiveVoteOverlay not available');
+        if (global.TVInlineStatus?.set) {
+          global.TVInlineStatus.set('Voting overlay not loaded. Please refresh.', 'error');
+        } else {
+          panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny error">Voting overlay not loaded. Please refresh the page.</div></div>';
+        }
+        return;
+      }
+      
       // Check if overlay is already open (prevents duplicate modals)
       const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
       
@@ -359,46 +370,15 @@
       box.appendChild(ul);
     }
 
-    // Human voting UI (2-nom or multi-nom), locked after vote
-    const votedName = hasVoted ? global.safeName(g.__human_vote) : null;
-
-    if(you && humanIsVoter){
-      if(g.eviction.nominees.length===2){
-        const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
-        if(!hasVoted){
-          g.eviction.nominees.forEach(nid=>{
-            const btn=document.createElement('button'); btn.className='btn danger';
-            btn.textContent=`Evict ${global.safeName(nid)}`;
-            btn.onclick=()=>{ lockHumanVote(nid); row.querySelectorAll('button').forEach(b=>b.disabled=true); };
-            row.appendChild(btn);
-          });
-          box.appendChild(row);
-          const hint=document.createElement('div'); hint.className='tiny muted';
-          hint.textContent='Vote before your Diary Room turn. The sequence will pause for you.';
-          box.appendChild(hint);
-        } else {
-          const ok=document.createElement('div'); ok.className='tiny ok'; ok.textContent=`Your vote is recorded: Evict ${votedName}.`;
-          box.appendChild(ok);
-        }
-      } else {
-        const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
-        if(!hasVoted){
-          const sel=document.createElement('select');
-          g.eviction.nominees.forEach(id=>{
-            const o=document.createElement('option'); o.value=id; o.textContent=global.safeName(id);
-            sel.appendChild(o);
-          });
-          const btn=document.createElement('button'); btn.className='btn danger'; btn.textContent='Cast Vote';
-          btn.onclick=()=>{ lockHumanVote(+sel.value); btn.disabled=true; sel.disabled=true; };
-          row.append(sel,btn); box.appendChild(row);
-          const hint=document.createElement('div'); hint.className='tiny muted';
-          hint.textContent='Pick who to evict. The sequence will pause for you.';
-          box.appendChild(hint);
-        } else {
-          const ok=document.createElement('div'); ok.className='tiny ok'; ok.textContent=`Your vote is recorded: Evict ${votedName}.`;
-          box.appendChild(ok);
-        }
-      }
+    // Show post-vote confirmation if human has voted
+    // NOTE: Inline voting buttons/select have been removed - voting now happens exclusively via LiveVoteOverlay
+    // This ensures a consistent, mobile-friendly voting experience without overlap/scroll issues
+    if(you && humanIsVoter && hasVoted){
+      const votedName = global.safeName(g.__human_vote);
+      const ok=document.createElement('div'); 
+      ok.className='tiny ok'; 
+      ok.textContent=`Your vote is recorded: Evict ${votedName}.`;
+      box.appendChild(ok);
     }
 
     panel.appendChild(box);
