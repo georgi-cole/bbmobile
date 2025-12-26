@@ -280,6 +280,7 @@
   </script>
   
   <script src="js/tv-container.js"></script>
+  <script src="js/ui/fullscreen-grid-selector.js"></script>
   <script src="js/livevote-voteoverlay.js"></script>
   
   <script>
@@ -301,38 +302,75 @@
       const tvNow = document.getElementById('tvNow');
       tvNow.textContent = 'Cast your vote to evict.';
       
-      // Show the overlay
-      currentOverlay = window.LiveVoteOverlay.show({
-        nominees: nominees,
-        isTieBreak: false,
-        allowClose: true,
-        onSubmit: (selectedId) => {
-          const player = window.getP(selectedId);
-          console.log(`[Demo] Vote submitted for: ${player.name}`);
-          
-          // Update TV display with vote result
-          tvNow.textContent = `Vote cast to evict ${player.name}`;
-          
-          // Show confirmation message
-          setTimeout(() => {
-            tvNow.textContent = 'Thank you for voting.';
+      // Use Fullscreen Grid Selector (matches nomination ceremony UX)
+      if (window.FullscreenGridSelector) {
+        window.FullscreenGridSelector.show({
+          candidates: nominees,
+          required: 1,
+          title: 'Cast your vote to evict.',
+          confirmText: 'Evict',
+          actorId: 4, // Diana is the actor
+          showRelations: false,
+          onConfirm: (selectedIds) => {
+            const selectedId = selectedIds[0];
+            const player = window.getP(selectedId);
+            console.log(`[Demo] Vote submitted for: ${player.name}`);
+            
+            // Update TV display with vote result
+            tvNow.textContent = `Vote cast to evict ${player.name}`;
+            
+            // Show confirmation message
             setTimeout(() => {
-              tvNow.textContent = 'Big Brother House';
-            }, 2000);
-          }, 1500);
-        },
-        onCancel: () => {
-          console.log('[Demo] Vote cancelled');
-          tvNow.textContent = 'Big Brother House';
-        }
-      });
+              tvNow.textContent = 'Thank you for voting.';
+              setTimeout(() => {
+                tvNow.textContent = 'Big Brother House';
+              }, 2000);
+            }, 1500);
+          },
+          onCancel: () => {
+            console.log('[Demo] Vote cancelled');
+            tvNow.textContent = 'Big Brother House';
+          }
+        });
+      } else {
+        console.warn('[Demo] FullscreenGridSelector not loaded, falling back to LiveVoteOverlay');
+        // Fallback to original carousel overlay
+        currentOverlay = window.LiveVoteOverlay.show({
+          nominees: nominees,
+          isTieBreak: false,
+          allowClose: true,
+          onSubmit: (selectedId) => {
+            const player = window.getP(selectedId);
+            console.log(`[Demo] Vote submitted for: ${player.name}`);
+            
+            // Update TV display with vote result
+            tvNow.textContent = `Vote cast to evict ${player.name}`;
+            
+            // Show confirmation message
+            setTimeout(() => {
+              tvNow.textContent = 'Thank you for voting.';
+              setTimeout(() => {
+                tvNow.textContent = 'Big Brother House';
+              }, 2000);
+            }, 1500);
+          },
+          onCancel: () => {
+            console.log('[Demo] Vote cancelled');
+            tvNow.textContent = 'Big Brother House';
+          }
+        });
+      }
       
       console.log(`[Demo] Showing vote overlay with ${nomineeCount} nominees`);
     }
     
     // Close vote overlay
     function closeVoteOverlay() {
-      if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
+      if (window.FullscreenGridSelector && window.FullscreenGridSelector.isOpen()) {
+        // Grid selector cleanup is handled internally
+        const tvNow = document.getElementById('tvNow');
+        tvNow.textContent = 'Big Brother House';
+      } else if (window.LiveVoteOverlay && window.LiveVoteOverlay.isOpen()) {
         window.LiveVoteOverlay.hide();
       }
       currentOverlay = null;

@@ -198,10 +198,11 @@
         return;
       }
       
-      // Check if overlay is already open (prevents duplicate modals)
+      // Check if grid selector or legacy overlay is already open (prevents duplicate modals)
+      const selectorOpen = global.FullscreenGridSelector?.isOpen?.() || false;
       const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
       
-      if (overlayOpen) {
+      if (selectorOpen || overlayOpen) {
         console.debug('[eviction] Skipping overlay show: already open');
         return;
       }
@@ -220,11 +221,17 @@
         panel.classList.add('voteOverlayOpen');
       }
       
-      // Show Voting Overlay directly (no pre-vote modal)
-      global.LiveVoteOverlay.show({
-        nominees: g.eviction.nominees,
-        isTieBreak: false,
-        onSubmit: (selectedId) => {
+      // Show Fullscreen Grid Selector (matches nomination ceremony UX)
+      // This provides a consistent selection experience across nomination and voting
+      global.FullscreenGridSelector.show({
+        candidates: g.eviction.nominees,
+        required: 1,
+        title: 'Cast your vote to evict.',
+        confirmText: 'Evict',
+        actorId: g.humanId,
+        showRelations: false, // Could enable to show affinity indicators
+        onConfirm: (selectedIds) => {
+          const selectedId = selectedIds[0]; // Single selection for voting
           // Clear countdown timer using shared helper
           if (global.clearVoteCountdown) {
             global.clearVoteCountdown();
@@ -973,8 +980,29 @@
       };
       
       try{
-        // Check if two-step overlay is available
-        if (global.LiveVoteOverlay && !useLv2) {
+        // Use Fullscreen Grid Selector for tie-break (matches regular voting UI)
+        if (global.FullscreenGridSelector) {
+          global.FullscreenGridSelector.show({
+            candidates: cIds,
+            required: 1,
+            title: 'Break the tie.',
+            confirmText: 'Evict',
+            actorId: g.humanId,
+            showRelations: false,
+            onConfirm: (selectedIds) => {
+              const pickId = selectedIds[0];
+              // Close all vote UI immediately before resolving
+              if (global.closeAllVoteUI) {
+                global.closeAllVoteUI();
+              }
+              safeResolve(pickId);
+            },
+            onCancel: () => {
+              // If cancelled, use auto-resolution
+              console.log('[tie] User cancelled tie-break, using auto-resolution');
+            }
+          });
+        } else if (global.LiveVoteOverlay && !useLv2) {
           // Use two-step voting overlay for tie-break
           global.LiveVoteOverlay.show({
             nominees: cIds,
