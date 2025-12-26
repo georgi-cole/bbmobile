@@ -368,125 +368,32 @@
       return;
     }
 
-    // FEATURE FLAG: enableLiveVoteOverlayOnly
-    // When TRUE (default): Skip all inline UI, use only full-screen overlay
-    // When FALSE: Show legacy inline tally/voter list for rollback safety
-    const overlayOnly = g.cfg?.enableLiveVoteOverlayOnly !== false;
+    // OVERLAY-ONLY MODE: Always use full-screen overlay for voting
+    // Legacy inline UI removed - voting now happens exclusively via overlay
+    // No inline tally, no voter list - everything happens in the overlay
+    console.info('[eviction] Using overlay-only mode: No inline UI');
     
-    if (overlayOnly) {
-      // OVERLAY-ONLY MODE: Show minimal confirmation message after voting
-      // No inline tally, no voter list - everything happens in the overlay
-      console.info('[eviction] enableLiveVoteOverlayOnly=true: Skipping inline UI');
-      
-      if (you && humanIsVoter && hasVoted) {
-        // Human has voted - show confirmation only
-        const votedName = global.safeName(g.__human_vote);
-        const box = document.createElement('div'); 
-        box.className = 'minigame-host';
-        box.innerHTML = `<h3>Live Vote</h3>`;
-        
-        const ok = document.createElement('div'); 
-        ok.className = 'tiny ok'; 
-        ok.textContent = `Your vote is recorded: Evict ${votedName}.`;
-        box.appendChild(ok);
-        
-        const info = document.createElement('div'); 
-        info.className = 'tiny muted';
-        info.style.marginTop = '6px';
-        info.textContent = 'Votes are being cast...';
-        box.appendChild(info);
-        
-        panel.appendChild(box);
-      }
-      // If human hasn't voted yet, the overlay is already shown - no panel content needed
-      return;
-    }
-    
-    // LEGACY MODE (overlayOnly=false): Show full inline UI
-    // This is the rollback path - keeps old behavior with tally and voter list
-    console.info('[eviction] enableLiveVoteOverlayOnly=false: Rendering inline UI');
-    
-    // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
-    // This prevents overlapping UI layers from lv2 and ensures compact, mobile-friendly layout
-    // The LiveVoteOverlay provides a consistent experience across all devices
-    const useLv2 = false; // DO NOT CHANGE: lv2 is permanently disabled
-
-    const box=document.createElement('div'); box.className='minigame-host'; 
-    if (!useLv2) {
-      box.innerHTML='<h3>Live Vote</h3>';
-    }
-    const remain=global.alivePlayers().length;
-
-    const info=document.createElement('div'); info.className='tiny';
-    info.textContent=`Nominees: ${global.fmtList(g.eviction.nominees)}. HOH: ${global.safeName(g.hohId)}${remain===4?' (does not vote at Final 4)':' (votes in tie only)'}.`;
-    box.appendChild(info);
-
-    const list=document.createElement('div'); list.className='tiny muted'; list.style.marginTop='6px';
-    list.textContent=`Voters: ${voters.length? voters.map(p=>p.name).join(', ') : 'none'}`;
-    box.appendChild(list);
-
-    if(remain===4){
-      const note=document.createElement('div'); note.className='tiny warn';
-      note.textContent='Final 4: The Veto winner casts the sole vote to evict.';
-      box.appendChild(note);
-    }
-
-    // Live tally (handles 2 or >2 automatically) - only show if NOT using lv2
-    if (!useLv2) {
-      if(g.eviction.nominees.length===2){
-        const [A,B]=g.eviction.nominees;
-        const tally=document.createElement('div');
-        tally.innerHTML=`
-          <div class="tiny" style="margin-top:8px;margin-bottom:4px">Live Tally</div>
-          <div style="display:flex; gap:8px; align-items:flex-end">
-            <div class="lvCol">
-              <div class="tiny muted" id="lvNameA">${global.safeName(A)}</div>
-              <div class="lvBarWrap"><div id="lvBarA" class="lvBar"></div></div>
-              <div class="tiny" id="lvCountA">0</div>
-            </div>
-            <div class="lvCol">
-              <div class="tiny muted" id="lvNameB">${global.safeName(B)}</div>
-              <div class="lvBarWrap"><div id="lvBarB" class="lvBar alt"></div></div>
-              <div class="tiny" id="lvCountB">0</div>
-            </div>
-          </div>`;
-        box.appendChild(tally);
-      } else {
-        const hdr=document.createElement('div');
-        hdr.className='tiny'; hdr.style.margin='8px 0 4px';
-        hdr.textContent='Live Tally';
-        box.appendChild(hdr);
-        const ul=document.createElement('ul'); ul.id='lvMultiList'; ul.className='tiny';
-        g.eviction.nominees.forEach(id=>{
-          const li=document.createElement('li'); li.dataset.candId=String(id);
-          li.textContent=`${global.safeName(id)} — 0`;
-          ul.appendChild(li);
-        });
-        box.appendChild(ul);
-      }
-
-      // Voter checklist
-      const ul=document.createElement('ul'); ul.id='liveVoteList'; ul.className='tiny'; ul.style.marginTop='6px';
-      voters.forEach(v=>{
-        const li=document.createElement('li'); li.dataset.voterId=String(v.id);
-        li.textContent=`${v.name} — waiting`;
-        ul.appendChild(li);
-      });
-      box.appendChild(ul);
-    }
-
-    // Show post-vote confirmation if human has voted
-    // NOTE: Inline voting buttons/select have been removed - voting now happens exclusively via LiveVoteOverlay
-    // This ensures a consistent, mobile-friendly voting experience without overlap/scroll issues
-    if(you && humanIsVoter && hasVoted){
+    if (you && humanIsVoter && hasVoted) {
+      // Human has voted - show minimal confirmation message
       const votedName = global.safeName(g.__human_vote);
-      const ok=document.createElement('div'); 
-      ok.className='tiny ok'; 
-      ok.textContent=`Your vote is recorded: Evict ${votedName}.`;
+      const box = document.createElement('div'); 
+      box.className = 'minigame-host';
+      box.innerHTML = `<h3>Live Vote</h3>`;
+      
+      const ok = document.createElement('div'); 
+      ok.className = 'tiny ok'; 
+      ok.textContent = `Your vote is recorded: Evict ${votedName}.`;
       box.appendChild(ok);
+      
+      const info = document.createElement('div'); 
+      info.className = 'tiny muted';
+      info.style.marginTop = '6px';
+      info.textContent = 'Votes are being cast...';
+      box.appendChild(info);
+      
+      panel.appendChild(box);
     }
-
-    panel.appendChild(box);
+    // If human hasn't voted yet, the overlay is already shown - no panel content needed
   }
   global.renderLiveVotePanel=renderLiveVotePanel;
 
