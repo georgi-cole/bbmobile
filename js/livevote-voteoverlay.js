@@ -120,7 +120,11 @@
     }
 
     // Lock background scroll to prevent page scrolling behind overlay
-    // Store original body styles to restore later
+    // Store original INLINE body styles to restore later
+    // Note: We intentionally capture inline styles (not computed styles) because:
+    // 1. We only want to restore what we changed (inline styles)
+    // 2. If no inline styles existed, restoration to '' is correct
+    // 3. This preserves any CSS-defined styles without interference
     const originalBodyOverflow = document.body.style.overflow;
     const originalBodyPosition = document.body.style.position;
     const originalBodyTop = document.body.style.top;

@@ -29,7 +29,10 @@
   border-radius: inherit;
   overflow: hidden;
   /* COMPACT MODE: Removed background here - now using ::before scrim for full coverage */
-  z-index: 2147483647; /* Maximum safe z-index to ensure overlay appears on top */
+  /* CRITICAL: Maximum z-index required to ensure overlay appears above ALL UI elements
+     including roster (#roster z-index: 11), controls bar, and other game UI.
+     This value is intentional to fix the regression where overlay appeared below UI. */
+  z-index: 2147483647; /* Maximum safe 32-bit integer for z-index */
   display: flex !important;
   flex-direction: column !important;
   
@@ -85,7 +88,10 @@
   align-items: center;
   position: relative;
   overflow-x: auto !important; /* Allow horizontal scrolling for nominees */
-  overflow-y: hidden !important; /* Prevent vertical scrolling */
+  /* DESIGN REQUIREMENT: No vertical scrolling - nominees must be visible without scroll
+     per acceptance criteria. Layout is optimized to fit within viewport with max-height
+     constraints and flexible spacing. If content doesn't fit, it's a layout bug to fix. */
+  overflow-y: hidden !important; /* Prevent vertical scrolling in carousel */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
   padding-top: 8px !important; /* Minimal top padding */
