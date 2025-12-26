@@ -10,8 +10,8 @@
   gap: 12px;
   justify-content: center;
   align-items: center;
-  /* NEVER wrap - keep buttons on one row */
-  flex-wrap: nowrap;
+  /* allow wrap when width isn't enough */
+  flex-wrap: wrap;
   padding: 10px;
 }
 
@@ -23,8 +23,14 @@
   text-align: center; /* ensure multi-line centering */
   white-space: nowrap; /* try to keep label on a single line */
   box-sizing: border-box;
-  min-width: 110px; /* good default so buttons look stable on mobile */
-  padding: 10px 18px;
+
+  /* make buttons flexible so two buttons can share one row on narrow screens */
+  flex: 1 1 0;
+  min-width: 0; /* allow flex-shrink to reduce width below intrinsic size */
+
+  /* slightly smaller defaults so they fit side-by-side */
+  min-width: 80px;
+  padding: 8px 14px;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
@@ -52,27 +58,12 @@
 
 @media (max-width: 480px) {
   .game-modal .btn {
-    min-width: 70px;
+    /* smaller on tiny screens */
+    min-width: 72px;
     padding: 8px 10px;
-    font-size: 14px;
-    flex: 1;
-    max-width: 120px;
+    font-size: 15px;
   }
   .game-modal .action-row {
-    gap: 8px;
-    padding: 8px;
-  }
-}
-
-/* Extra small screens - even more compact */
-@media (max-width: 360px) {
-  .game-modal .btn {
-    min-width: 60px;
-    padding: 6px 8px;
-    font-size: 13px;
-  }
-  .game-modal .action-row {
-    gap: 6px;
-    padding: 6px;
+    gap: 10px;
   }
 }
