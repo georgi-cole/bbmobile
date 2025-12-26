@@ -79,7 +79,7 @@
   /* Stage (purple box) should not glue content to top */
   display: flex;
   flex-direction: column;
-  justify-content: center; /* uses space wisely */
+  justify-content: flex-start; /* FIXED: Start at top to prevent excessive gap */
   align-items: center;
   position: relative;
   overflow-x: auto !important; /* Allow horizontal scrolling for nominees */
@@ -89,13 +89,13 @@
   overflow-y: hidden !important; /* Prevent vertical scrolling in carousel */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
-  padding-top: 8px !important; /* Minimal top padding */
-  padding-bottom: 8px !important; /* Minimal bottom padding */
+  padding-top: 16px !important; /* Increased from 8px for better spacing */
+  padding-bottom: 12px !important; /* Minimal bottom padding */
   padding-left: 16px;
   padding-right: 16px;
-  min-height: calc(var(--avatarSelected) + var(--nameH) + var(--avatarNameGap) + 16px) !important;
-  max-height: calc(100% - 120px) !important; /* Leave room for header and CTA */
-  flex: 1 1 auto !important; /* Allow carousel to grow but not overflow */
+  min-height: calc(var(--avatarSelected) + var(--nameH) + var(--avatarNameGap) + 32px) !important;
+  max-height: calc(var(--avatarSelected) + var(--nameH) + var(--avatarNameGap) + 64px) !important; /* FIXED: Limit to content size + breathing room */
+  flex: 0 1 auto !important; /* FIXED: Don't grow, only shrink if needed */
   /* Symmetric centering - remove any hidden translate/left offsets */
   margin-inline: auto !important;
   left: auto !important;
@@ -148,6 +148,7 @@
   /* No transform scale - use real size changes only */
   filter: blur(2px);
   cursor: pointer;
+  pointer-events: auto !important; /* FIXED: Ensure nominees are always clickable/tappable */
   scroll-snap-align: center; /* Snap to center of carousel */
   padding: 8px; /* Breathing room for avatar circle */
   min-width: 0; /* Allow shrinking if needed */
@@ -477,11 +478,13 @@
   }
   
   .lv-overlay__carousel {
-    padding-top: 8px;
+    padding-top: 12px;
     padding-bottom: 8px;
     padding-left: 12px;
     padding-right: 12px;
-    max-height: calc(100% - 100px) !important; /* More room for header on mobile */
+    /* FIXED: Limit carousel height to content size + breathing room */
+    max-height: calc(var(--avatarSelected) + var(--nameH) + var(--avatarNameGap) + 48px) !important;
+    justify-content: flex-start !important; /* Start at top to prevent gap */
   }
   
   .lv-overlay__track {
@@ -515,11 +518,13 @@
   }
   
   .lv-overlay__carousel {
-    padding-top: 6px;
+    padding-top: 8px;
     padding-bottom: 6px;
     padding-left: 16px;
     padding-right: 16px;
-    max-height: calc(100% - 90px) !important; /* Adjust for landscape */
+    /* FIXED: Limit carousel height to content size + breathing room */
+    max-height: calc(var(--avatarSelected) + var(--nameH) + var(--avatarNameGap) + 40px) !important;
+    justify-content: flex-start !important; /* Start at top to prevent gap */
   }
   
   .lv-overlay__carousel {
@@ -621,7 +626,9 @@
 
   /* Ensure carousel doesn't overflow */
   .lv-overlay__carousel {
-    max-height: calc(100% - 110px) !important;
+    /* FIXED: Limit carousel height to content size + breathing room */
+    max-height: calc(var(--avatarSelected) + var(--nameH) + var(--avatarNameGap) + 48px) !important;
+    justify-content: flex-start !important; /* Start at top to prevent gap */
   }
 
   /* Push CTA lower + safe area */

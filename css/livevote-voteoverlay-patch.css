@@ -98,11 +98,11 @@
 }
 
 /* Carousel: flexible content area that can scroll if needed
- * Uses flex: 1 1 auto to grow and take available space
+ * Uses flex: 0 1 auto to not grow excessively and prevent gap
  * Allows horizontal scroll for nominees, vertical scroll only if absolutely needed
  */
 .lv-overlay__carousel {
-  flex: 1 1 auto !important; /* Grow to fill available space */
+  flex: 0 1 auto !important; /* FIXED: Don't grow excessively */
   min-height: 0 !important; /* Allow flexbox to shrink below content size */
   overflow-x: auto !important;
   overflow-y: auto !important; /* Allow vertical scroll if nominees don't fit */
@@ -115,7 +115,7 @@
   /* Center content */
   display: flex !important;
   flex-direction: column !important;
-  justify-content: center !important;
+  justify-content: flex-start !important; /* FIXED: Start at top to prevent gap */
   align-items: center !important;
 }
 
