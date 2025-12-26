@@ -187,13 +187,13 @@
     
     // If human is eligible voter and hasn't voted yet, show voting overlay directly
     if (humanIsVoter && !hasVoted) {
-      // Ensure LiveVoteOverlay is available
-      if (!global.LiveVoteOverlay) {
-        console.error('[eviction] LiveVoteOverlay not available - module may not be loaded');
+      // Ensure voting system is available (prefer FullscreenGridSelector, fallback to LiveVoteOverlay)
+      if (!global.FullscreenGridSelector && !global.LiveVoteOverlay) {
+        console.error('[eviction] Voting system not available - modules may not be loaded');
         if (global.TVInlineStatus?.set) {
           global.TVInlineStatus.set('Voting system unavailable. Please refresh the page.', 'error');
         } else {
-          panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny error">Voting system unavailable. The voting overlay module (livevote-voteoverlay.js) may not be loaded. Please refresh the page.</div></div>';
+          panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny error">Voting system unavailable. The voting modules may not be loaded. Please refresh the page.</div></div>';
         }
         return;
       }
@@ -221,17 +221,20 @@
         panel.classList.add('voteOverlayOpen');
       }
       
-      // Show Fullscreen Grid Selector (matches nomination ceremony UX)
-      // This provides a consistent selection experience across nomination and voting
-      global.FullscreenGridSelector.show({
-        candidates: g.eviction.nominees,
-        required: 1,
-        title: 'Cast your vote to evict.',
-        confirmText: 'Evict',
-        actorId: g.humanId,
-        showRelations: false, // Could enable to show affinity indicators
-        onConfirm: (selectedIds) => {
-          const selectedId = selectedIds[0]; // Single selection for voting
+      // Prefer Fullscreen Grid Selector (matches nomination ceremony UX)
+      // Fallback to LiveVoteOverlay (carousel) if grid selector unavailable
+      if (global.FullscreenGridSelector) {
+        // Show Fullscreen Grid Selector
+        // This provides a consistent selection experience across nomination and voting
+        global.FullscreenGridSelector.show({
+          candidates: g.eviction.nominees,
+          required: 1,
+          title: 'Cast your vote to evict.',
+          confirmText: 'Evict',
+          actorId: g.humanId,
+          showRelations: false, // Could enable to show affinity indicators
+          onConfirm: (selectedIds) => {
+            const selectedId = selectedIds[0]; // Single selection for voting
           // Clear countdown timer using shared helper
           if (global.clearVoteCountdown) {
             global.clearVoteCountdown();
@@ -290,6 +293,72 @@
           }
         }
       });
+      } else {
+        // Fallback to LiveVoteOverlay (carousel) if FullscreenGridSelector unavailable
+        console.info('[eviction] Using LiveVoteOverlay fallback (carousel)');
+        global.LiveVoteOverlay.show({
+          nominees: g.eviction.nominees,
+          isTieBreak: false,
+          onSubmit: (selectedId) => {
+            // Clear countdown timer using shared helper
+            if (global.clearVoteCountdown) {
+              global.clearVoteCountdown();
+            }
+            
+            // Close all vote UI immediately
+            if (global.closeAllVoteUI) {
+              global.closeAllVoteUI();
+            }
+            
+            // Clear any TV overlay content
+            try {
+              if (typeof global.clearTVOverlayContent === 'function') {
+                global.clearTVOverlayContent();
+              }
+            } catch (e) {
+              console.warn('[eviction] clearTVOverlayContent failed', e);
+            }
+            
+            // Enter external overlay mode (hide lv2 children except stage)
+            try {
+              if (global.lv2?.enterExternalOverlayMode) {
+                global.lv2.enterExternalOverlayMode();
+              }
+            } catch (e) {
+              console.warn('[eviction] enterExternalOverlayMode failed', e);
+            }
+            
+            // COMMIT 4: Restore panel visibility (remove CSS class)
+            if (panel) {
+              panel.classList.remove('voteOverlayOpen');
+            }
+            
+            // Lock the vote
+            lockHumanVote(selectedId);
+            
+            // Show rollout overlay to display remaining votes
+            if (global.LiveVoteRollout) {
+              const expectedVotes = voters.length;
+              global.LiveVoteRollout.show({
+                expectedVotes: expectedVotes,
+                nominees: g.eviction.nominees
+              });
+              
+              // Mark user vote as first vote in rollout
+              const userPlayer = global.getP?.(g.humanId);
+              const targetPlayer = global.getP?.(selectedId);
+              if (userPlayer && targetPlayer) {
+                global.LiveVoteRollout.addVote({
+                  voterId: g.humanId,
+                  voterName: userPlayer.name,
+                  targetId: selectedId,
+                  targetName: targetPlayer.name
+                });
+              }
+            }
+          }
+        });
+      }
       
       // Start countdown immediately to align with HUD timer
       // Use same duration as phase timer (tVote) for synchronization

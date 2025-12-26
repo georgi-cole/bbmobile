@@ -70,6 +70,9 @@
     <div id="log"></div>
   </div>
   
+  
+  <script src="js/ui/fullscreen-grid-selector.js"></script>
+  
   <script>
     // Mock global namespace
     window.global = window;
@@ -107,96 +110,98 @@
       console.log(msg);
     }
     
-    // Test functions
-    function testVoting2() {
-      log('Testing voting UI with 2 nominees');
-      document.getElementById('tvNow').textContent = 'Cast your vote to evict.';
+    // Test functions - wrapped in DOMContentLoaded to ensure FullscreenGridSelector is loaded
+    window.addEventListener('DOMContentLoaded', () => {
+      window.testVoting2 = function() {
+        log('Testing voting UI with 2 nominees');
+        document.getElementById('tvNow').textContent = 'Cast your vote to evict.';
+        
+        window.FullscreenGridSelector.show({
+          candidates: [1, 2], // Alice, Bob
+          required: 1,
+          title: 'Cast your vote to evict.',
+          confirmText: 'Evict',
+          actorId: 4, // Diana voting
+          showRelations: false,
+          onConfirm: (selectedIds) => {
+            log(`Vote confirmed: ${window.safeName(selectedIds[0])}`);
+            document.getElementById('tvNow').textContent = `Voted to evict ${window.safeName(selectedIds[0])}`;
+          },
+          onCancel: () => {
+            log('Vote cancelled');
+            document.getElementById('tvNow').textContent = 'Ready to test';
+          }
+        });
+      };
       
-      window.FullscreenGridSelector.show({
-        candidates: [1, 2], // Alice, Bob
-        required: 1,
-        title: 'Cast your vote to evict.',
-        confirmText: 'Evict',
-        actorId: 4, // Diana voting
-        showRelations: false,
-        onConfirm: (selectedIds) => {
-          log(`Vote confirmed: ${window.safeName(selectedIds[0])}`);
-          document.getElementById('tvNow').textContent = `Voted to evict ${window.safeName(selectedIds[0])}`;
-        },
-        onCancel: () => {
-          log('Vote cancelled');
-          document.getElementById('tvNow').textContent = 'Ready to test';
-        }
-      });
-    }
-    
-    function testVoting4() {
-      log('Testing voting UI with 4 nominees');
-      document.getElementById('tvNow').textContent = 'Cast your vote to evict.';
+      window.testVoting4 = function() {
+        log('Testing voting UI with 4 nominees');
+        document.getElementById('tvNow').textContent = 'Cast your vote to evict.';
+        
+        window.FullscreenGridSelector.show({
+          candidates: [1, 2, 3, 5], // Alice, Bob, Charlie, Eve
+          required: 1,
+          title: 'Cast your vote to evict.',
+          confirmText: 'Evict',
+          actorId: 4, // Diana voting
+          showRelations: false,
+          onConfirm: (selectedIds) => {
+            log(`Vote confirmed: ${window.safeName(selectedIds[0])}`);
+            document.getElementById('tvNow').textContent = `Voted to evict ${window.safeName(selectedIds[0])}`;
+          },
+          onCancel: () => {
+            log('Vote cancelled');
+            document.getElementById('tvNow').textContent = 'Ready to test';
+          }
+        });
+      };
       
-      window.FullscreenGridSelector.show({
-        candidates: [1, 2, 3, 5], // Alice, Bob, Charlie, Eve
-        required: 1,
-        title: 'Cast your vote to evict.',
-        confirmText: 'Evict',
-        actorId: 4, // Diana voting
-        showRelations: false,
-        onConfirm: (selectedIds) => {
-          log(`Vote confirmed: ${window.safeName(selectedIds[0])}`);
-          document.getElementById('tvNow').textContent = `Voted to evict ${window.safeName(selectedIds[0])}`;
-        },
-        onCancel: () => {
-          log('Vote cancelled');
-          document.getElementById('tvNow').textContent = 'Ready to test';
-        }
-      });
-    }
-    
-    function testNomination2() {
-      log('Testing nomination UI with 2 nominees required');
-      document.getElementById('tvNow').textContent = 'Select 2 nominees.';
+      window.testNomination2 = function() {
+        log('Testing nomination UI with 2 nominees required');
+        document.getElementById('tvNow').textContent = 'Select 2 nominees.';
+        
+        window.FullscreenGridSelector.show({
+          candidates: [1, 2, 3, 5], // All except HOH (Diana)
+          required: 2,
+          title: 'Select your nominees',
+          confirmText: 'Nominate',
+          actorId: 4, // Diana is HOH
+          showRelations: true, // Show ally/enemy indicators
+          onConfirm: (selectedIds) => {
+            log(`Nominations confirmed: ${selectedIds.map(id => window.safeName(id)).join(', ')}`);
+            document.getElementById('tvNow').textContent = `Nominated: ${selectedIds.map(id => window.safeName(id)).join(', ')}`;
+          },
+          onCancel: () => {
+            log('Nomination cancelled');
+            document.getElementById('tvNow').textContent = 'Ready to test';
+          }
+        });
+      };
       
-      window.FullscreenGridSelector.show({
-        candidates: [1, 2, 3, 5], // All except HOH (Diana)
-        required: 2,
-        title: 'Select your nominees',
-        confirmText: 'Nominate',
-        actorId: 4, // Diana is HOH
-        showRelations: true, // Show ally/enemy indicators
-        onConfirm: (selectedIds) => {
-          log(`Nominations confirmed: ${selectedIds.map(id => window.safeName(id)).join(', ')}`);
-          document.getElementById('tvNow').textContent = `Nominated: ${selectedIds.map(id => window.safeName(id)).join(', ')}`;
-        },
-        onCancel: () => {
-          log('Nomination cancelled');
-          document.getElementById('tvNow').textContent = 'Ready to test';
-        }
-      });
-    }
-    
-    function testNomination3() {
-      log('Testing nomination UI with 3 nominees required');
-      document.getElementById('tvNow').textContent = 'Select 3 nominees.';
+      window.testNomination3 = function() {
+        log('Testing nomination UI with 3 nominees required');
+        document.getElementById('tvNow').textContent = 'Select 3 nominees.';
+        
+        window.FullscreenGridSelector.show({
+          candidates: [1, 2, 3, 5], // All except HOH (Diana)
+          required: 3,
+          title: 'Select your nominees',
+          confirmText: 'Nominate',
+          actorId: 4, // Diana is HOH
+          showRelations: true, // Show ally/enemy indicators
+          onConfirm: (selectedIds) => {
+            log(`Nominations confirmed: ${selectedIds.map(id => window.safeName(id)).join(', ')}`);
+            document.getElementById('tvNow').textContent = `Nominated: ${selectedIds.map(id => window.safeName(id)).join(', ')}`;
+          },
+          onCancel: () => {
+            log('Nomination cancelled');
+            document.getElementById('tvNow').textContent = 'Ready to test';
+          }
+        });
+      };
       
-      window.FullscreenGridSelector.show({
-        candidates: [1, 2, 3, 5], // All except HOH (Diana)
-        required: 3,
-        title: 'Select your nominees',
-        confirmText: 'Nominate',
-        actorId: 4, // Diana is HOH
-        showRelations: true, // Show ally/enemy indicators
-        onConfirm: (selectedIds) => {
-          log(`Nominations confirmed: ${selectedIds.map(id => window.safeName(id)).join(', ')}`);
-          document.getElementById('tvNow').textContent = `Nominated: ${selectedIds.map(id => window.safeName(id)).join(', ')}`;
-        },
-        onCancel: () => {
-          log('Nomination cancelled');
-          document.getElementById('tvNow').textContent = 'Ready to test';
-        }
-      });
-    }
+      log('Test page loaded - click buttons to test grid selector');
+    });
   </script>
-  
-  <script src="js/ui/fullscreen-grid-selector.js"></script>
 </body>
 </html>
