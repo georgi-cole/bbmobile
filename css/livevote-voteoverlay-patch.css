@@ -17,12 +17,15 @@
   z-index: 2147483640 !important;
 }
 
-/* Make overlay fill its container with absolute positioning */
+/* Make overlay fill its container with absolute positioning and transparent backdrop */
 .lv-overlay {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  /* Completely transparent backdrop */
+  background: transparent !important;
+  backdrop-filter: none !important;
   /* Remove any vw/vh sizing - use container-relative only */
   max-width: none !important;
   max-height: none !important;
@@ -40,9 +43,18 @@
   max-height: none !important;
 }
 
-/* Carousel should allow overflow for avatars (prevent clipping) */
+/* Faux-TV mounted overlays must NOT use device safe-area insets (causes asymmetric centering) */
+#tv .tvViewport .lv-overlay,
+#tvOverlay .lv-overlay {
+  padding: clamp(12px, 2vh, 20px) !important;
+  padding-left: clamp(12px, 2vh, 20px) !important;
+  padding-right: clamp(12px, 2vh, 20px) !important;
+}
+
+/* Carousel overflow: allow horizontal scroll, vertical overflow for avatars */
 .lv-overlay__carousel {
-  overflow: visible !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
   /* Symmetric centering - no hidden offsets */
   margin-inline: auto !important;
   left: auto !important;
@@ -84,7 +96,7 @@
   flex-shrink: 0 !important;
 }
 
-/* CTA row grid layout with static arrows */
+/* CTA row grid layout with static arrows - all aligned and centered within the CTA area */
 .lv-overlay__cta-row,
 .lv-overlay__confirm-inner {
   display: grid !important;
@@ -93,6 +105,7 @@
   justify-items: center !important;
   width: 100% !important;
   padding: 0 12px !important;
+  gap: 8px !important;
 }
 
 /* Arrows must stay static in grid, never move */
@@ -103,6 +116,8 @@
   /* Never remove from DOM, only disable */
   display: flex !important;
   visibility: visible !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .lv-overlay__arrow.prev {
@@ -113,10 +128,23 @@
   grid-column: 3 !important;
 }
 
-/* Evict button in center column */
+/* Evict button: compact pill shape, centered in CTA */
 .lv-overlay__evict-btn {
   grid-column: 2 !important;
-  width: clamp(140px, 40vw, 200px) !important;
+  /* Compact pill sizing */
+  width: clamp(100px, 28vw, 140px) !important;
+  min-width: 100px !important;
+  max-width: 140px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 20px !important;
+  /* Tight pill shape */
+  border-radius: 999px !important;
+  /* Typography */
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
 }
 
 /* Close button: small circle, fixed size, never oval */
@@ -126,8 +154,8 @@
   right: 10px !important;
   width: 34px !important;
   height: 34px !important;
-  min-width: 44px !important;
-  min-height: 44px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
   border-radius: 999px !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -139,6 +167,11 @@
 /* Mobile-specific adjustments */
 @media (max-width: 480px) {
   .lv-overlay__evict-btn {
-    width: clamp(120px, 34vw, 160px) !important;
+    width: clamp(90px, 26vw, 120px) !important;
+    min-width: 90px !important;
+    max-width: 120px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 13px !important;
   }
 }

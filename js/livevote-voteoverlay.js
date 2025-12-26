@@ -45,8 +45,15 @@
   }
 
   // Helper: Get the shared overlay container
-  // Prefers TVContainer.getOrCreateTvOverlay() or falls back to #tvOverlay or TV viewport
+  // Always prefer #tvOverlay for unambiguous mounting inside the TV viewport
   function getContainer() {
+    // First priority: #tvOverlay (dedicated overlay layer inside .tvViewport)
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      console.info('[VoteOverlay] ✓ Using #tvOverlay');
+      return tvOverlay;
+    }
+    
     // Try TVContainer helper if available
     if (global.TVContainer?.getOrCreateTvOverlay) {
       try {
@@ -63,14 +70,7 @@
       }
     }
     
-    // Fallback to #tvOverlay if it exists
-    const tvOverlay = document.getElementById('tvOverlay');
-    if (tvOverlay) {
-      console.info('[VoteOverlay] ✓ Using #tvOverlay');
-      return tvOverlay;
-    }
-    
-    // Last resort: use .tvViewport inside #tv
+    // Fallback to .tvViewport inside #tv
     const tvViewport = document.querySelector('#tv .tvViewport');
     if (tvViewport) {
       console.info('[VoteOverlay] ⚠ Falling back to .tvViewport');
@@ -320,26 +320,23 @@
     if (!carousel || !track) return;
 
     const nominees = track.querySelectorAll('.lv-overlay__nominee');
-    const targetNominee = nominees[index];
-    if (!targetNominee) return;
+    const target = nominees[index];
+    if (!target) return;
 
-    // Use layout pixels (offsetLeft, offsetWidth, clientWidth) instead of
-    // getBoundingClientRect() to avoid transform/scale issues on mobile
+    // Use layout pixels only - no getBoundingClientRect()
     const carouselWidth = carousel.clientWidth;
     const carouselCenter = carouselWidth / 2;
     
-    // Nominee's position relative to track (layout pixels)
-    const nomineeOffsetLeft = targetNominee.offsetLeft;
-    const nomineeWidth = targetNominee.offsetWidth;
-    const nomineeCenter = nomineeOffsetLeft + nomineeWidth / 2;
+    // Nominee's absolute position includes track's offset
+    const nomineeOffsetLeft = track.offsetLeft + target.offsetLeft;
+    const nomineeCenter = nomineeOffsetLeft + (target.offsetWidth / 2);
     
     // Calculate scroll position to center nominee in carousel
-    // scrollLeft is the distance from track's left edge to carousel's left edge
-    const targetScrollLeft = nomineeCenter - carouselCenter;
+    const left = Math.max(0, nomineeCenter - carouselCenter);
     
     // Scroll the carousel to center the nominee
     carousel.scrollTo({
-      left: targetScrollLeft,
+      left,
       behavior: immediate ? 'auto' : 'smooth'
     });
   }
