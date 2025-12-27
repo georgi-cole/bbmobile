@@ -23,8 +23,8 @@
 .bigCard.challenge {
   background: linear-gradient(145deg, rgba(28, 43, 62, 0.92), rgba(12, 22, 36, 0.90)) !important;
   color: #e3ecf5 !important;
-  backdrop-filter: blur(14px) saturate(1.15) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(1.15) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
   border: 1px solid rgba(110, 160, 220, 0.18) !important;
   border-radius: 16px !important;
   padding: 18px 22px !important;

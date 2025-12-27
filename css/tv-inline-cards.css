@@ -17,10 +17,10 @@
   --theme-primary: var(--accent, #2d3b55);
   --theme-on-primary: #ffffff;
   --tv-inline-focus-ring: var(--accent, #4a90e2);
-  /* 75% transparency background (as per TV overlay card spec) 
+  /* Enhanced 92% transparency background for better readability
      Use color-mix with rgba fallback for browsers without support */
-  --tv-inline-card-bg: color-mix(in srgb, var(--theme-primary) 75%, transparent);
-  --tv-inline-card-backdrop: blur(6px);
+  --tv-inline-card-bg: color-mix(in srgb, var(--theme-primary) 92%, transparent);
+  --tv-inline-card-backdrop: blur(20px);
   /* Max width for TV inline cards */
   --tv-inline-card-max-width: 780px;
 }
@@ -28,7 +28,7 @@
 /* Fallback for browsers without color-mix support */
 @supports not (background: color-mix(in srgb, red 50%, blue)) {
   :root {
-    --tv-inline-card-bg: rgba(28, 43, 62, 0.75);
+    --tv-inline-card-bg: rgba(28, 43, 62, 0.92);
   }
 }
 
@@ -261,8 +261,8 @@
   border: none !important;
   outline: none !important;
   
-  /* 75% background transparency - use popup token for theme consistency */
-  background: var(--popup-bg-start, rgba(28, 43, 62, 0.75)) !important;
+  /* Enhanced background opacity (92%) for better readability - use popup token for theme consistency */
+  background: linear-gradient(145deg, rgba(28, 43, 62, 0.92), rgba(12, 22, 36, 0.90)) !important;
   
   /* Enforce max-width constraint */
   max-width: min(var(--tv-inline-card-max-width, 780px), 92%);
@@ -273,15 +273,15 @@
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   
-  /* Maintain existing shadows/blur (do not reduce) */
-  backdrop-filter: var(--tv-inline-card-backdrop, blur(6px));
-  -webkit-backdrop-filter: var(--tv-inline-card-backdrop, blur(6px));
+  /* Enhanced backdrop blur for glass effect */
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
 }
 
 /* Ensure ceremony-card class also gets proper styling */
 #tvOverlay .ceremony-card {
   border: none !important;
   outline: none !important;
-  background: var(--popup-bg-start, rgba(28, 43, 62, 0.75)) !important;
+  background: linear-gradient(145deg, rgba(28, 43, 62, 0.92), rgba(12, 22, 36, 0.90)) !important;
   max-width: min(var(--tv-inline-card-max-width, 780px), 92%);
 }
