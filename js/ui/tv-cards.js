@@ -893,6 +893,27 @@
           label.textContent = p.name;
           tile.appendChild(label);
           
+          // Info button
+          var infoBtn = document.createElement('button');
+          infoBtn.className = 'tv-tile-info-btn';
+          infoBtn.setAttribute('aria-label', 'View ' + p.name + ' profile');
+          infoBtn.innerHTML = 'ℹ️';
+          infoBtn.onclick = function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Show profile modal (no timer for TV veto selector)
+            if(typeof global.showHouseguestProfile === 'function'){
+              global.showHouseguestProfile(nomId, {
+                pauseTimerCallback: function(){}, // No-op - no timer for TV selector
+                resumeTimerCallback: function(){}
+              });
+            } else {
+              console.warn('[tv-cards] showHouseguestProfile not available');
+            }
+          };
+          tile.appendChild(infoBtn);
+          
           var btn = document.createElement('button');
           btn.className = 'btn primary veto-save-btn';
           btn.textContent = 'Save';

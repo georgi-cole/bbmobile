@@ -322,6 +322,38 @@
         word-break: break-word;
       }
       
+      /* Info button for nomination tiles */
+      .noms-fs-info-btn {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(131, 191, 255, 0.9);
+        color: #0d151f;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 10;
+        pointer-events: auto !important;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .noms-fs-info-btn:hover {
+        background: rgba(131, 191, 255, 1);
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(131, 191, 255, 0.5);
+      }
+      
+      .noms-fs-info-btn:active {
+        transform: scale(0.95);
+      }
+      
       /* Selected indicator */
       .noms-fs-tile.selected::after {
         content: '✓';
@@ -713,6 +745,27 @@
           name.className = 'noms-fs-tile-name';
           name.textContent = player.name;
           tile.appendChild(name);
+          
+          // Info button
+          const infoBtn = document.createElement('button');
+          infoBtn.className = 'noms-fs-info-btn';
+          infoBtn.setAttribute('aria-label', 'View ' + player.name + ' profile');
+          infoBtn.innerHTML = 'ℹ️';
+          infoBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Show profile modal (no timer for nomination selector)
+            if (typeof global.showHouseguestProfile === 'function') {
+              global.showHouseguestProfile(playerId, {
+                pauseTimerCallback: function(){}, // No-op - no timer for nominations selector
+                resumeTimerCallback: function(){}
+              });
+            } else {
+              console.warn('[noms-fs] showHouseguestProfile not available');
+            }
+          };
+          tile.appendChild(infoBtn);
           
           // Click handler
           const toggleSelection = () => {
