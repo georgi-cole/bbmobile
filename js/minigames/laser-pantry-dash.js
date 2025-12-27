@@ -189,10 +189,10 @@
     let playerX = 0;
     let playerY = 0;
     let items = [];
-    let lasers = [];
     let animationFrame = null;
     let isInvulnerable = false;
     let invulnerableUntil = 0;
+    let itemSpawnInterval, laserSpawnInterval;
     
     // Update recipe display
     function updateRecipeDisplay(){
@@ -695,8 +695,6 @@
       
       gameLoop();
     }
-    
-    let itemSpawnInterval, laserSpawnInterval;
     
     // Touch/mouse controls
     let isDragging = false;
