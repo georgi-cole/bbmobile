@@ -147,11 +147,13 @@
       gameContainer.innerHTML = '';
       resultsDiv.classList.remove('visible');
       
-      // Update button states
+      // Update button states - highlight the active game button
       document.querySelectorAll('.game-btn').forEach(btn => {
         btn.classList.remove('active');
+        if(btn.textContent.includes(gameKey === 'confettiCannon' ? 'Confetti' : 'Laser')){
+          btn.classList.add('active');
+        }
       });
-      event.target.classList.add('active');
       
       // Listen for game end event
       window.addEventListener('minigame:end', handleGameEnd);

@@ -579,7 +579,10 @@
           spawnTarget();
         }
         
-        setTimeout(scheduleNextSpawn, spawnIntervalTime);
+        // Only schedule next spawn if game is still active
+        if(gameActive){
+          setTimeout(scheduleNextSpawn, spawnIntervalTime);
+        }
       }
       
       // Initial targets
