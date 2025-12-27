@@ -17,6 +17,7 @@
   justify-content: center !important;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   box-sizing: border-box;
+  pointer-events: auto !important; /* FIXED: Ensure overlay is always interactive */
 }
 
 .eviction-manager-header {
@@ -78,6 +79,7 @@
   /* Ensure entire nominee card is a tappable target */
   min-height: 44px !important; /* Meet accessibility touch target size */
   touch-action: manipulation; /* Prevent accidental zooming on double-tap */
+  pointer-events: auto !important; /* FIXED: Ensure nominee tiles are always clickable/tappable */
 }
 
 .eviction-manager-item:hover {
@@ -155,6 +157,8 @@
   letter-spacing: 0.05em;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
   z-index: 100000 !important; /* Above everything else */
+  pointer-events: auto !important; /* FIXED: Ensure Evict CTA is always tappable */
+  touch-action: manipulation; /* Prevent accidental zooming on double-tap */
 }
 
 .eviction-manager-evict-btn:hover:not(:disabled) {
@@ -290,4 +294,10 @@
     outline: 3px solid currentColor;
     outline-offset: 2px;
   }
+}
+
+/* Body class applied when overlay is open */
+html.live-vote-overlay-open {
+  /* Prevent scrolling when overlay is open */
+  overflow: hidden;
 }
