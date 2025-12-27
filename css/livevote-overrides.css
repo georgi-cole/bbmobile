@@ -1,13 +1,6 @@
 /* Live Vote V2 - Override Styles to Prevent Legacy Panel Overlap */
 /* Hides legacy live vote/summary panel elements while lv2 is active */
 
-/* HOTFIX: Hide #panel entirely when live vote overlay is open to prevent pointer-event blocking */
-html.live-vote-overlay-open #panel,
-body.lv-active-livevote #panel {
-  display: none !important;
-  pointer-events: none !important;
-}
-
 /* Hide legacy live-vote summary panel while lv2 is active */
 body.lv-active-livevote #panel .live-vote,
 body.lv-active-livevote #panel .liveVote,
@@ -161,76 +154,4 @@ body.lv-dock-livevote #panel .legacy-live-vote {
   .lv2-name {
     font-size: clamp(0.75rem, 2.2vw, 0.9rem);
   }
-}
-
-/* ========================================
- * HOTFIX: Defensive Rules for Live Vote Overlay Interactivity
- * Ensures overlays are always interactive and on top of all UI elements
- * ======================================== */
-
-/* Force all live vote overlays to be interactive with highest z-index */
-.lv-overlay,
-.lv2-overlay,
-.eviction-manager-root,
-#tvOverlay.live-vote-active,
-.voteOverlay {
-  position: fixed !important;
-  pointer-events: auto !important;
-  z-index: 2147483000 !important; /* Maximum safe z-index */
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-}
-
-/* Ensure overlay backgrounds don't block clicks */
-.lv-overlay::before,
-.lv2-overlay::before,
-.eviction-manager-root::before {
-  pointer-events: none !important;
-}
-
-/* Force all children of overlays to be interactive */
-.lv-overlay *,
-.lv2-overlay *,
-.eviction-manager-root * {
-  pointer-events: auto !important;
-}
-
-/* Ensure nominee tiles are always tappable */
-.lv-overlay .lv-nominee,
-.lv2-overlay .lv2-contestant,
-.eviction-manager-item {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  touch-action: manipulation !important;
-}
-
-/* Ensure CTA buttons are always tappable */
-.lv-overlay__evict-btn,
-.lv2-cta-btn,
-.lv2-name-btn,
-.eviction-manager-evict-btn,
-.lv-overlay__confirm-btn {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  touch-action: manipulation !important;
-}
-
-/* Force tvOverlay to be interactive when it contains live vote UI */
-#tvOverlay:has(.lv-overlay),
-#tvOverlay:has(.lv2-overlay),
-#tvOverlay:has(.eviction-manager-root) {
-  pointer-events: auto !important;
-  z-index: 2147483000 !important;
-}
-
-/* Ensure TV viewport doesn't block clicks when overlay is active */
-.tvViewport:has(.lv-overlay),
-.tvViewport:has(.lv2-overlay) {
-  pointer-events: none !important;
-}
-
-.tvViewport:has(.lv-overlay) .lv-overlay,
-.tvViewport:has(.lv2-overlay) .lv2-overlay {
-  pointer-events: auto !important;
 }
