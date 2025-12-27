@@ -190,6 +190,38 @@
   }
 
   /**
+   * Ensure overlay is interactive by removing any pointer-events:none styles
+   * This is a defensive helper to fix stuck overlays
+   * @param {HTMLElement} overlay - The overlay element to fix
+   */
+  function ensureOverlayInteractive(overlay) {
+    if (!overlay) return;
+    
+    // Remove inline pointer-events:none
+    if (overlay.style.pointerEvents === 'none') {
+      overlay.style.pointerEvents = 'auto';
+      console.debug('[livevote-helpers] Fixed overlay pointer-events to auto');
+    }
+    
+    // Ensure overlay is on top
+    const currentZIndex = parseInt(window.getComputedStyle(overlay).zIndex, 10);
+    if (isNaN(currentZIndex) || currentZIndex < 2147483000) {
+      overlay.style.zIndex = '2147483000';
+      console.debug('[livevote-helpers] Fixed overlay z-index');
+    }
+    
+    // Ensure fixed positioning
+    const position = window.getComputedStyle(overlay).position;
+    if (position !== 'fixed') {
+      overlay.style.position = 'fixed';
+      overlay.style.inset = '0';
+      overlay.style.width = '100vw';
+      overlay.style.height = '100vh';
+      console.debug('[livevote-helpers] Fixed overlay positioning');
+    }
+  }
+
+  /**
    * Close all live vote UI components and ensure body scroll is unlocked
    * This is the single source of truth for cleanup - call it whenever:
    * - Starting a new vote flow
@@ -226,10 +258,12 @@
     }
 
     // Remove all known overlay types (belt-and-suspenders cleanup)
+    // HOTFIX: Fully remove elements instead of just hiding/disabling them
     const overlaySelectors = [
       '.lv-root',              // Live vote modal root
       '.lv-choice-card',       // Live vote choice card (legacy)
       '.lv-overlay',           // Live vote overlay
+      '.lv2-overlay',          // Live vote v2 overlay
       '.carousel-picker-overlay', // POV carousel picker
       '.fullscreen-pov-selector',  // POV fullscreen selector
       '.eviction-manager-root' // EvictionManager UI
@@ -239,6 +273,8 @@
       try {
         const elements = document.querySelectorAll(selector);
         elements.forEach(el => {
+          // HOTFIX: Remove entirely instead of setting display:none or pointer-events:none
+          // This prevents stale disabled overlays from blocking UI
           el.remove();
           console.debug(`[livevote-helpers] Removed ${selector}`);
         });
@@ -246,6 +282,9 @@
         console.warn(`[livevote-helpers] Error removing ${selector}:`, e);
       }
     });
+    
+    // Remove marker class from documentElement
+    document.documentElement.classList.remove('live-vote-overlay-open');
 
     // Close Rollout UI if showing
     try {
@@ -325,6 +364,7 @@
   global.lockBodyScroll = lockBodyScroll;
   global.unlockBodyScroll = unlockBodyScroll;
   global.closeAllVoteUI = closeAllVoteUI;
+  global.ensureOverlayInteractive = ensureOverlayInteractive;
 
   console.info('[livevote-helpers] Initialized');
 

@@ -565,6 +565,14 @@
           }
           const content = ov.querySelector('.tvOverlayContent');
           const hasActiveContent = !!(content && content.childElementCount > 0);
+          
+          // HOTFIX: Don't neutralize tvOverlay if it contains live vote UI
+          const hasLiveVoteUI = ov.querySelector('.lv-overlay, .lv2-overlay, .eviction-manager-root');
+          if (hasLiveVoteUI) {
+            console.info('[Competition] #tvOverlay has live vote UI, not neutralizing');
+            return;
+          }
+          
           if (!hasActiveContent) {
             ov.style.pointerEvents = 'none';
             console.info('[Competition] ✓ Neutralized empty #tvOverlay (pointer-events: none)');

@@ -176,6 +176,10 @@
       global.TVFit.applySafeAreaConstraints(overlay);
     }
     
+    // HOTFIX: Apply defensive inline styles to ensure overlay is always interactive
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.zIndex = '2147483000';
+    
     overlay.setAttribute('role', 'region');
     overlay.setAttribute('aria-label', 'Live Vote');
 
@@ -302,6 +306,17 @@
 
     // Setup ResizeObserver for responsive scaling
     setupResizeObserver(tvViewport, fitWrapper);
+    
+    // HOTFIX: Call defensive helper to ensure overlay stays interactive
+    if (typeof global.ensureOverlayInteractive === 'function') {
+      setTimeout(() => {
+        global.ensureOverlayInteractive(overlay);
+      }, 100);
+      // Double-check after animation frames
+      setTimeout(() => {
+        global.ensureOverlayInteractive(overlay);
+      }, 500);
+    }
     
     // Initialize carousel view if in carousel mode
     if (state.useCarousel) {
