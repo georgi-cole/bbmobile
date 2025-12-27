@@ -8756,7 +8756,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 .houseguest-profile-modal {
   position: fixed;
   inset: 0;
-  z-index: 2147483646; /* Just below fullscreen eviction vote */
+  z-index: 2147483647; /* Same as fullscreen eviction vote - should be on top since appended later */
   display: flex;
   align-items: center;
   justify-content: center;
