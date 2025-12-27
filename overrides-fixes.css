@@ -313,3 +313,74 @@ tvViewport > .tv-content,
   min-height: 0 !important;
   overflow: hidden !important;
 }
+
+/* HORIZONTAL SPACE RECLAMATION: eliminate all side margins/padding */
+/* Root/body level - ensure no horizontal insets */
+body,
+html,
+#app,
+.app-container,
+main,
+.main-container {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Panel and overlay containers - eliminate horizontal constraints */
+.lv-overlay,
+.lv-overlay__wrapper,
+.lv-overlay__container,
+.lv-overlay__content,
+#panel,
+.panel,
+.tvViewport,
+.tv,
+.faux-tv,
+[data-faux-tv],
+[data-sm-faux-tv] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+/* Avatar tiles container - use full width */
+.lv-overlay__carousel,
+.lv-overlay__carousel .tiles-grid,
+.tiles-grid,
+housemates-grid,
+.lv2-grid,
+.lv-overlay__track,
+.housemates-container,
+.players-container {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Stage and wrapper elements - full width */
+.faux-tv-wrapper,
+.lv2-stage,
+.lv2-stage__viewport,
+.tv-content,
+tvViewport > .tv-content,
+[data-faux-tv] > .tv-content,
+[data-sm-faux-tv] > .tv-content {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+}
