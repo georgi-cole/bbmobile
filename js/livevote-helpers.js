@@ -232,7 +232,8 @@
       '.lv-overlay',           // Live vote overlay
       '.carousel-picker-overlay', // POV carousel picker
       '.fullscreen-pov-selector',  // POV fullscreen selector
-      '.eviction-manager-root' // EvictionManager UI
+      '.eviction-manager-root', // EvictionManager UI
+      '.fullscreen-eviction-vote'  // NEW: Fullscreen eviction vote overlay
     ];
 
     overlaySelectors.forEach(selector => {
@@ -310,6 +311,14 @@
       }
     } catch (e) {
       console.warn('[livevote-helpers] Error restoring panel visibility:', e);
+    }
+    
+    // Remove eviction-vote-open class from html element (body scroll lock)
+    try {
+      document.documentElement.classList.remove('eviction-vote-open');
+      console.debug('[livevote-helpers] eviction-vote-open class removed');
+    } catch (e) {
+      console.warn('[livevote-helpers] Error removing eviction-vote-open class:', e);
     }
 
     // Always force-unlock body scroll as final step
