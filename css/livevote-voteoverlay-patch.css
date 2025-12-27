@@ -11,16 +11,10 @@
  * Load this file AFTER existing livevote CSS to apply overrides.
  */
 
-/* Ensure #tvOverlay layer has proper z-index to appear above all UI elements */
-#tvOverlay {
-  z-index: 2147483647 !important; /* Maximum safe z-index */
-  pointer-events: none !important; /* Allow clicks to pass through when not interactive */
-}
-
 /* Enable pointer events on tvOverlay layer when interactive class is added */
 #tvOverlay.tvOverlay--interactive {
   pointer-events: auto !important;
-  z-index: 2147483647 !important; /* Ensure maximum z-index when interactive */
+  z-index: 2147483640 !important;
 }
 
 /* Make overlay fill its container with absolute positioning and transparent backdrop */
@@ -37,8 +31,6 @@
   max-height: none !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  /* Ensure overlay appears on top */
-  z-index: 2147483647 !important;
 }
 
 /* Panel uses container-relative sizing instead of vw/vh */
@@ -54,17 +46,15 @@
 /* Faux-TV mounted overlays must NOT use device safe-area insets (causes asymmetric centering) */
 #tv .tvViewport .lv-overlay,
 #tvOverlay .lv-overlay {
-  padding: 8px !important; /* Minimal symmetric padding */
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-  padding-top: 8px !important;
-  padding-bottom: 8px !important;
+  padding: clamp(12px, 2vh, 20px) !important;
+  padding-left: clamp(12px, 2vh, 20px) !important;
+  padding-right: clamp(12px, 2vh, 20px) !important;
 }
 
 /* Carousel overflow: allow horizontal scroll, vertical overflow for avatars */
 .lv-overlay__carousel {
   overflow-x: auto !important;
-  overflow-y: hidden !important; /* Prevent vertical scrolling in carousel */
+  overflow-y: visible !important;
   /* Symmetric centering - no hidden offsets */
   margin-inline: auto !important;
   left: auto !important;
@@ -102,7 +92,7 @@
 /* CTA container pinned to bottom with safe-area support */
 .lv-overlay__confirm-container {
   margin-top: auto !important;
-  padding: 8px 12px 12px !important;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
   flex-shrink: 0 !important;
 }
 
@@ -183,12 +173,5 @@
     height: 36px !important;
     min-height: 36px !important;
     font-size: 13px !important;
-  }
-  
-  /* More padding on mobile to prevent header overlap */
-  #tv .tvViewport .lv-overlay,
-  #tvOverlay .lv-overlay {
-    padding: 4px !important;
-    padding-top: 12px !important; /* Extra top padding on mobile */
   }
 }
