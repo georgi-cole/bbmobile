@@ -67,3 +67,121 @@
     gap: 10px;
   }
 }
+
+/* ============================================================================
+   CARD BUTTON STYLING (for .revealCard, .diaryRoomCard, .decisionCard)
+   Ensures consistent button appearance across all ceremony and decision cards
+   ============================================================================ */
+
+/* Base button styling for all card types */
+.revealCard .btn,
+.diaryRoomCard .btn,
+.decisionCard .btn,
+.tvCardBody .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 44px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+/* Primary button (green/success) */
+.revealCard .btn.primary,
+.diaryRoomCard .btn.primary,
+.decisionCard .btn.primary,
+.revealCard .btn.ok,
+.diaryRoomCard .btn.ok,
+.tvCardBody .btn.primary,
+.tvCardBody .btn.ok {
+  background: linear-gradient(180deg, #1fc884 0%, #13a26e 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px -4px rgba(31, 200, 132, 0.4);
+}
+
+.revealCard .btn.primary:hover:not(:disabled),
+.diaryRoomCard .btn.primary:hover:not(:disabled),
+.decisionCard .btn.primary:hover:not(:disabled),
+.revealCard .btn.ok:hover:not(:disabled),
+.diaryRoomCard .btn.ok:hover:not(:disabled),
+.tvCardBody .btn.primary:hover:not(:disabled),
+.tvCardBody .btn.ok:hover:not(:disabled) {
+  background: linear-gradient(180deg, #22d491 0%, #15b57c 100%);
+  transform: translateY(-1px);
+}
+
+/* Secondary button (gray) */
+.revealCard .btn.secondary,
+.diaryRoomCard .btn.secondary,
+.decisionCard .btn.secondary,
+.revealCard .btn:not(.primary):not(.ok):not(.danger),
+.diaryRoomCard .btn:not(.primary):not(.ok):not(.danger),
+.tvCardBody .btn.secondary,
+.tvCardBody .btn:not(.primary):not(.ok):not(.danger) {
+  background: #4a5568;
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.3);
+}
+
+.revealCard .btn.secondary:hover:not(:disabled),
+.diaryRoomCard .btn.secondary:hover:not(:disabled),
+.decisionCard .btn.secondary:hover:not(:disabled),
+.tvCardBody .btn.secondary:hover:not(:disabled) {
+  background: #5a6578;
+  transform: translateY(-1px);
+}
+
+/* Danger button (red) */
+.revealCard .btn.danger,
+.diaryRoomCard .btn.danger,
+.decisionCard .btn.danger,
+.tvCardBody .btn.danger {
+  background: linear-gradient(180deg, #ff6b6b 0%, #d64545 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px -4px rgba(255, 107, 107, 0.4);
+}
+
+.revealCard .btn.danger:hover:not(:disabled),
+.diaryRoomCard .btn.danger:hover:not(:disabled),
+.decisionCard .btn.danger:hover:not(:disabled),
+.tvCardBody .btn.danger:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ff7f7f 0%, #e65555 100%);
+  transform: translateY(-1px);
+}
+
+/* Disabled state for all card buttons */
+.revealCard .btn:disabled,
+.diaryRoomCard .btn:disabled,
+.decisionCard .btn:disabled,
+.tvCardBody .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Active state for all card buttons */
+.revealCard .btn:active:not(:disabled),
+.diaryRoomCard .btn:active:not(:disabled),
+.decisionCard .btn:active:not(:disabled),
+.tvCardBody .btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Mobile adjustments for card buttons */
+@media (max-width: 480px) {
+  .revealCard .btn,
+  .diaryRoomCard .btn,
+  .decisionCard .btn,
+  .tvCardBody .btn {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+}
+

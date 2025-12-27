@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Card Styling Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <link rel="stylesheet" href="css/ui/buttons.css">
+  <link rel="stylesheet" href="css/cards-theme-fix.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0d151f 0%, #1a2a3f 100%);
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .test-section {
+      margin-bottom: 30px;
+    }
+    .test-section h2 {
+      color: #83bfff;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+    #tvOverlay {
+      position: relative;
+      background: rgba(13, 21, 31, 0.8);
+      padding: 20px;
+      border-radius: 12px;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  
+  <h1 style="color: #83bfff; text-align: center; font-size: 1.5rem;">Unified Card Styling Test</h1>
+  
+  <!-- Test 1: Regular reveal card with diaryRoomCard -->
+  <div class="test-section">
+    <h2>1. Regular Reveal Card (.revealCard.diaryRoomCard)</h2>
+    <div class="revealCard diaryRoomCard">
+      <h3>Head of Household Competition</h3>
+      <p>You competed in the HOH competition and placed 3rd with a time of 2:45.</p>
+      <div style="display: flex; gap: 12px; margin-top: 16px; justify-content: center;">
+        <button class="btn primary">Continue</button>
+        <button class="btn secondary">View Details</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 2: Decision Card -->
+  <div class="test-section">
+    <h2>2. Decision Card (.revealCard.diaryRoomCard.decisionCard)</h2>
+    <div class="revealCard diaryRoomCard decisionCard">
+      <h3>Social Maneuver</h3>
+      <p>Choose which houseguest to approach for a social interaction.</p>
+      <div style="display: flex; gap: 12px; margin-top: 16px; justify-content: center;">
+        <button class="btn ok">Confirm</button>
+        <button class="btn danger">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 3: TV Overlay Card -->
+  <div class="test-section">
+    <h2>3. TV Overlay Card (#tvOverlay .revealCard.diaryRoomCard)</h2>
+    <div id="tvOverlay">
+      <div class="revealCard diaryRoomCard">
+        <h3>Power of Veto Ceremony</h3>
+        <p>Will you use the Power of Veto to save someone from the block?</p>
+        <div style="display: flex; gap: 12px; margin-top: 16px; justify-content: center;">
+          <button class="btn primary">Use Veto</button>
+          <button class="btn secondary">Keep Noms Same</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 4: TV Inline Card -->
+  <div class="test-section">
+    <h2>4. TV Inline Card (.tv-inline-card)</h2>
+    <div id="tvOverlay">
+      <div class="tv-inline-card">
+        <h3>Nomination Ceremony</h3>
+        <p>The Head of Household has made their nominations for eviction.</p>
+        <div style="display: flex; gap: 12px; margin-top: 16px; justify-content: center;">
+          <button class="btn primary">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 5: Button States -->
+  <div class="test-section">
+    <h2>5. Button States Test</h2>
+    <div class="revealCard diaryRoomCard">
+      <h3>Button Variations</h3>
+      <p>Testing all button states and variations.</p>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button class="btn primary">Primary Button</button>
+          <button class="btn secondary">Secondary Button</button>
+          <button class="btn danger">Danger Button</button>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button class="btn ok">OK Button</button>
+          <button class="btn primary" disabled>Disabled Primary</button>
+          <button class="btn secondary" disabled>Disabled Secondary</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 6: tvCardBody -->
+  <div class="test-section">
+    <h2>6. TV Card Body (.tvCardBody)</h2>
+    <div id="tvOverlay">
+      <div class="tvCardBody revealCard diaryRoomCard">
+        <h3>Eviction Results</h3>
+        <p class="big">By a vote of 5-2, the houseguest evicted is...</p>
+        <div style="display: flex; gap: 12px; margin-top: 16px; justify-content: center;">
+          <button class="btn primary">Reveal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Add some interactivity to show hover states
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('✅ Unified Card Styling Test Loaded');
+      console.log('📊 Testing card opacity: 0.92/0.90');
+      console.log('🌫️ Testing backdrop-filter: blur(20px)');
+      console.log('🎨 Testing button styling consistency');
+      
+      // Log button styles
+      const buttons = document.querySelectorAll('.btn');
+      console.log(`Found ${buttons.length} buttons to test`);
+      
+      buttons.forEach((btn, i) => {
+        btn.addEventListener('click', (e) => {
+          console.log(`Button ${i+1} clicked:`, btn.className);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
