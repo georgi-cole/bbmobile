@@ -1,52 +1,6 @@
 /* Live Vote V2 - Override Styles to Prevent Legacy Panel Overlap */
 /* Hides legacy live vote/summary panel elements while lv2 is active */
 
-/* CRITICAL FIX: Force all voting overlays to be interactive and on top */
-/* These rules cannot be overridden by any other CSS */
-.lv-overlay,
-.lv2-overlay,
-.eviction-manager-root,
-#tvOverlay.live-vote-active,
-.live-vote-overlay {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 2147483647 !important; /* Maximum 32-bit integer */
-  pointer-events: auto !important;
-}
-
-/* Ensure nominee tiles are clickable */
-.lv-overlay__nominee,
-.lv2-contestant,
-.eviction-nominee-tile,
-.eviction-manager-item {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-/* Ensure Evict button is visible and clickable */
-.lv-overlay__evict-btn,
-.lv2-evict-btn,
-.eviction-manager-root button[data-action="evict"],
-.eviction-manager-evict-btn {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-/* Hide #panel when voting overlay is active */
-html.live-vote-overlay-open #panel,
-body.live-vote-overlay-open #panel {
-  display: none !important;
-  pointer-events: none !important;
-}
-
-/* Prevent body scroll when overlay is open */
-html.live-vote-overlay-open,
-body.live-vote-overlay-open {
-  overflow: hidden !important;
-}
-
 /* Hide legacy live-vote summary panel while lv2 is active */
 body.lv-active-livevote #panel .live-vote,
 body.lv-active-livevote #panel .liveVote,

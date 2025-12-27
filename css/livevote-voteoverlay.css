@@ -25,13 +25,12 @@
   border-radius: 0; /* No border radius for full-screen overlay */
   overflow: hidden;
   /* COMPACT MODE: Removed background here - now using ::before scrim for full coverage */
-  /* CRITICAL: Maximum z-index required to ensure overlay appears above ALL UI elements
+  /* CRITICAL: High z-index required to ensure overlay appears above ALL UI elements
      including roster, controls bar, and other game UI. This ensures nominees
      and the Evict button are always tappable/clickable on mobile. */
-  z-index: 2147483647 !important; /* Maximum 32-bit integer for absolute top priority */
+  z-index: 99999 !important; /* Very high z-index to ensure always on top */
   display: flex !important;
   flex-direction: column !important;
-  pointer-events: auto !important; /* FIXED: Ensure overlay is always interactive */
   
   /* Safe area support - handled by header/footer individually */
   padding: 0;
