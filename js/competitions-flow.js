@@ -493,7 +493,8 @@
     container.innerHTML = '';
 
     // Create instructions card (no full-page overlay, just the card in the TV area)
-    // Style: Uses unified card styling from cards-theme-fix.css (0.92 opacity)
+    // Style: Uses unified card styling from cards-theme-fix.css
+    // (0.92 background opacity in gradient, 20px backdrop blur)
     const card = document.createElement('div');
     card.className = 'competition-instructions-card';
     // Minimal inline styles - most styling comes from CSS

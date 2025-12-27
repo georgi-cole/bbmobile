@@ -439,7 +439,8 @@
             if (overlay.parentNode) {
               overlay.parentNode.removeChild(overlay);
             }
-            // Reject the promise on error
+            // Resolve with null to indicate no vote was cast (graceful degradation)
+            // Not rejecting to avoid breaking the game flow
             resolve(null);
           }, 200);
         });
