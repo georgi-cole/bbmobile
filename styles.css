@@ -9188,6 +9188,14 @@ html.eviction-vote-open body {
   touch-action: none !important;
 }
 
+/* CRITICAL: Ensure topbar and its interactive elements are ALWAYS clickable */
+/* This prevents mobile UI from becoming unresponsive when overlay classes are stuck */
+.topbar,
+.topbar * {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}
+
 /* ==== Veto/ceremony inline card containment (TV-only) ==== */
 /* Keep the overlay inside the TV safe area and center content */
 #tvOverlay {
