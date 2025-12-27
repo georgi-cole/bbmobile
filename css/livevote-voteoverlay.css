@@ -18,7 +18,7 @@
 }
 
 .lv-overlay {
-  position: fixed !important;
+  position: fixed !important; /* Set in patch file */
   inset: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
@@ -26,9 +26,8 @@
   overflow: hidden;
   /* COMPACT MODE: Removed background here - now using ::before scrim for full coverage */
   /* CRITICAL: High z-index required to ensure overlay appears above ALL UI elements
-     including roster, controls bar, and other game UI. This ensures nominees
-     and the Evict button are always tappable/clickable on mobile. */
-  z-index: 99999 !important; /* Very high z-index to ensure always on top */
+     including roster, controls bar, and other game UI. */
+  z-index: 9999; /* High z-index, set in patch file */
   display: flex !important;
   flex-direction: column !important;
   
@@ -154,8 +153,6 @@
   padding: 8px; /* Breathing room for avatar circle */
   min-width: 0; /* Allow shrinking if needed */
   overflow: visible !important; /* Ensure the avatar circle cannot be clipped */
-  /* Ensure entire nominee card (avatar + name) is a tappable target */
-  min-height: 44px !important; /* Meet accessibility touch target size */
 }
 
 .lv-overlay__nominee.center {
@@ -289,9 +286,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(8px, 2vh, 12px); /* Compact spacing between status and CTA row */
+  gap: 8px; /* Spacing between status and CTA row */
   padding: 8px 12px 12px !important; /* Minimal padding, slightly more at bottom */
-  padding-bottom: max(12px, env(safe-area-inset-bottom)) !important; /* Respect iPhone home indicator */
   margin-top: auto !important; /* Push CTA to bottom of panel */
   flex-shrink: 0 !important;
   animation: fadeIn 0.3s ease-out;
@@ -374,7 +370,7 @@
   
   /* Narrower Evict button on mobile */
   width: clamp(140px, 40vw, 200px) !important;
-  min-height: 44px !important; /* Ensure 44px touch target for accessibility */
+  min-height: 40px !important;
   /* Grid places this in center column */
   grid-column: 2;
 }
