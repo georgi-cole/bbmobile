@@ -186,18 +186,7 @@
     }
     
     // If human is eligible voter and hasn't voted yet, show voting overlay directly
-    if (humanIsVoter && !hasVoted) {
-      // Ensure LiveVoteOverlay is available
-      if (!global.LiveVoteOverlay) {
-        console.error('[eviction] LiveVoteOverlay not available - module may not be loaded');
-        if (global.TVInlineStatus?.set) {
-          global.TVInlineStatus.set('Voting system unavailable. Please refresh the page.', 'error');
-        } else {
-          panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny error">Voting system unavailable. The voting overlay module (livevote-voteoverlay.js) may not be loaded. Please refresh the page.</div></div>';
-        }
-        return;
-      }
-      
+    if (humanIsVoter && !hasVoted && global.LiveVoteOverlay) {
       // Check if overlay is already open (prevents duplicate modals)
       const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
       
@@ -292,6 +281,15 @@
       return;
     }
 
+    // Get nominees data for UI rendering
+    const nominees = (g.eviction?.nominees || [])
+      .map(id => ({ id, name: global.safeName?.(id) || 'Unknown' }))
+      .filter(n => n.id != null);
+
+    // DISABLED: lv2 triple UI (force use of LiveVoteOverlay for all nominee counts)
+    // This ensures a single, consistent voting UI across all eviction scenarios
+    const useTriple = false;
+
     // FORCE LEGACY OVERLAY: Always use LiveVoteOverlay (useLv2 = false)
     // This prevents overlapping UI layers from lv2 and ensures compact, mobile-friendly layout
     // The LiveVoteOverlay provides a consistent experience across all devices
@@ -361,15 +359,46 @@
       box.appendChild(ul);
     }
 
-    // Show post-vote confirmation if human has voted
-    // NOTE: Inline voting buttons/select have been removed - voting now happens exclusively via LiveVoteOverlay
-    // This ensures a consistent, mobile-friendly voting experience without overlap/scroll issues
-    if(you && humanIsVoter && hasVoted){
-      const votedName = global.safeName(g.__human_vote);
-      const ok=document.createElement('div'); 
-      ok.className='tiny ok'; 
-      ok.textContent=`Your vote is recorded: Evict ${votedName}.`;
-      box.appendChild(ok);
+    // Human voting UI (2-nom or multi-nom), locked after vote
+    const votedName = hasVoted ? global.safeName(g.__human_vote) : null;
+
+    if(you && humanIsVoter){
+      if(g.eviction.nominees.length===2){
+        const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+        if(!hasVoted){
+          g.eviction.nominees.forEach(nid=>{
+            const btn=document.createElement('button'); btn.className='btn danger';
+            btn.textContent=`Evict ${global.safeName(nid)}`;
+            btn.onclick=()=>{ lockHumanVote(nid); row.querySelectorAll('button').forEach(b=>b.disabled=true); };
+            row.appendChild(btn);
+          });
+          box.appendChild(row);
+          const hint=document.createElement('div'); hint.className='tiny muted';
+          hint.textContent='Vote before your Diary Room turn. The sequence will pause for you.';
+          box.appendChild(hint);
+        } else {
+          const ok=document.createElement('div'); ok.className='tiny ok'; ok.textContent=`Your vote is recorded: Evict ${votedName}.`;
+          box.appendChild(ok);
+        }
+      } else {
+        const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+        if(!hasVoted){
+          const sel=document.createElement('select');
+          g.eviction.nominees.forEach(id=>{
+            const o=document.createElement('option'); o.value=id; o.textContent=global.safeName(id);
+            sel.appendChild(o);
+          });
+          const btn=document.createElement('button'); btn.className='btn danger'; btn.textContent='Cast Vote';
+          btn.onclick=()=>{ lockHumanVote(+sel.value); btn.disabled=true; sel.disabled=true; };
+          row.append(sel,btn); box.appendChild(row);
+          const hint=document.createElement('div'); hint.className='tiny muted';
+          hint.textContent='Pick who to evict. The sequence will pause for you.';
+          box.appendChild(hint);
+        } else {
+          const ok=document.createElement('div'); ok.className='tiny ok'; ok.textContent=`Your vote is recorded: Evict ${votedName}.`;
+          box.appendChild(ok);
+        }
+      }
     }
 
     panel.appendChild(box);
