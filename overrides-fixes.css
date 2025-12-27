@@ -246,3 +246,65 @@ body[data-phase="social_intermission"] {
     min-height: 0 !important;
   }
 }
+
+/* === Layout fix: pack avatar rows & let faux-TV take remaining space ===
+   Purpose: remove the unused vertical gap inside the purple panel so
+   avatars (tiles) + faux-TV occupy the panel cleanly.
+   Add to the end of overrides-fixes.css so it overrides existing rules.
+*/
+
+/* Ensure TV/panel wrappers use column layout and don't distribute space */
+.lv-overlay__panel,
+#panel,
+.tvViewport,
+.tv,
+.faux-tv,
+.tvViewport[data-sm-faux-tv],
+[data-faux-tv],
+[data-sm-faux-tv] {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important; /* pack children to top */
+  align-items: stretch !important;
+  height: auto !important;
+  min-height: 0 !important; /* allow shrinking when parent is flex */
+}
+
+/* Avatar/tiles row: do not stretch rows to fill free vertical space */
+.lv-overlay__carousel,
+.lv2-grid,
+.lv-overlay__track,
+.tiles-grid,
+.housemates-grid,
+.lv2-grid,
+.lv-overlay__carousel .tiles-grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-content: flex-start !important; /* IMPORTANT: pack rows at top */
+  align-items: flex-start !important;
+  gap: 12px !important;
+  flex: 0 0 auto !important; /* do not grow; take only needed height */
+  min-height: 0 !important;
+}
+
+/* Faux-TV / stage area should take remaining vertical space */
+.faux-tv-wrapper,
+.final4-inline-tv,
+.lv2-stage,
+.lv2-panel__stage,
+.lv2-stage__viewport,
+.tvViewport > .tv-content,
+[data-faux-tv] > .tv-content,
+[data-sm-faux-tv] > .tv-content {
+  flex: 1 1 auto !important; /* grow to fill leftover space */
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Defensive: if a column-flex parent used space-between, override it */
+body .some-flex-parent,
+.is-social-phase .tv,
+.is-social-phase #panel {
+  justify-content: flex-start !important;
+  min-height: 0 !important;
+}
