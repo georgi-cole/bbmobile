@@ -50,63 +50,33 @@
       `;
     }
 
-    // Create card - compact styling for TV overlay using TV inline card standards
+    // Create card - compact styling for TV overlay using unified popup card design system
     const card = document.createElement('div');
-    card.className = 'intermission-offer-card in-tv tv-inline-card game-modal';
-    card.style.cssText = `
-      background: rgba(30, 41, 59, 0.75);
-      border: none;
-      outline: none;
-      border-radius: 12px;
-      padding: 12px;
-      width: min(360px, 100%);
-      max-height: calc(100% - 16px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      box-sizing: border-box;
-      pointer-events: auto;
-      overflow: auto;
-    `;
+    card.className = 'intermission-offer-card unified-card unified-card--compact in-tv tv-inline-card game-modal';
 
     // Title - unified text for both competition types
     const title = document.createElement('div');
-    title.className = 'intermission-offer-title';
+    title.className = 'intermission-offer-title unified-card__header';
     title.textContent = 'You cannot compete';
-    title.style.cssText = `
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #60a5fa;
-      text-align: center;
-      margin-bottom: 8px;
-      text-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
-    `;
     card.appendChild(title);
 
     // Message - dynamic based on compType per spec
     const message = document.createElement('div');
-    message.className = 'intermission-offer-message';
+    message.className = 'intermission-offer-message unified-card__body';
     // HOH → Tic Tac Toe, Veto → Dots and Boxes (per design spec)
     const messageText = compType === 'Veto'
       ? 'Play Dots and Boxes while you wait?'
       : 'Play Tic Tac Toe while you wait?';
     message.textContent = messageText;
-    message.style.cssText = `
-      font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.9);
-      text-align: center;
-      line-height: 1.4;
-      margin-bottom: 12px;
-    `;
     card.appendChild(message);
 
-    // Buttons container - use CSS classes from buttons.css
+    // Buttons container - use unified button system
     const buttons = document.createElement('div');
-    buttons.className = 'intermission-offer-buttons action-row';
+    buttons.className = 'intermission-offer-buttons unified-card__buttons action-row';
 
-    // Yes button - use consistent button CSS
+    // Yes button - use unified button CSS
     const yesBtn = document.createElement('button');
-    yesBtn.className = 'intermission-offer-button yes btn btn-primary';
+    yesBtn.className = 'intermission-offer-button yes unified-card-btn unified-card-btn--primary btn btn-primary';
     const yesLabel = document.createElement('span');
     yesLabel.className = 'btn-label';
     yesLabel.textContent = 'Yes';
@@ -117,9 +87,9 @@
     });
     buttons.appendChild(yesBtn);
 
-    // No button - use consistent button CSS and emit clock fast-forward event
+    // No button - use unified button CSS and emit clock fast-forward event
     const noBtn = document.createElement('button');
-    noBtn.className = 'intermission-offer-button no btn btn-secondary';
+    noBtn.className = 'intermission-offer-button no unified-card-btn unified-card-btn--secondary btn btn-secondary';
     const noLabel = document.createElement('span');
     noLabel.className = 'btn-label';
     noLabel.textContent = 'No';

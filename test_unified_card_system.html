@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Card System Test</title>
+  
+  <!-- Include unified card CSS -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/ui/unified-popup-card.css">
+  <link rel="stylesheet" href="css/veto-wait-card.css">
+  <link rel="stylesheet" href="css/tictactoe-intermission.css">
+  <link rel="stylesheet" href="css/livevote-choice-card.css">
+  
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #0a0e1a 0%, #1a2438 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #60a5fa;
+      margin-bottom: 40px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 30px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #83bfff;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+    .card-demo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    .comparison {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .comparison-item {
+      flex: 1;
+      text-align: center;
+    }
+    .comparison-label {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #60a5fa;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎨 Unified Popup Card Design System</h1>
+    
+    <div class="card-grid">
+      <!-- Test 1: Basic Unified Card -->
+      <div class="test-section">
+        <h2>1. Basic Unified Card</h2>
+        <div class="card-demo">
+          <div class="unified-card unified-card--compact">
+            <div class="unified-card__header">Test Card Header</div>
+            <div class="unified-card__body">
+              This is a unified card with consistent styling across all popup cards.
+              It has proper opacity (0.90-0.92) for better readability.
+            </div>
+            <div class="unified-card__buttons">
+              <button class="unified-card-btn unified-card-btn--primary">Primary Action</button>
+              <button class="unified-card-btn unified-card-btn--secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="status">
+          ✓ Uses .unified-card base class<br>
+          ✓ 24px border-radius<br>
+          ✓ Enhanced opacity for readability<br>
+          ✓ Consistent button styling
+        </div>
+      </div>
+
+      <!-- Test 2: Intermission Offer Card -->
+      <div class="test-section">
+        <h2>2. Intermission Offer Card</h2>
+        <div class="card-demo">
+          <div class="intermission-offer-card unified-card unified-card--compact">
+            <div class="intermission-offer-title unified-card__header">
+              You cannot compete
+            </div>
+            <div class="intermission-offer-message unified-card__body">
+              Play Tic Tac Toe while you wait?
+            </div>
+            <div class="intermission-offer-buttons unified-card__buttons">
+              <button class="unified-card-btn unified-card-btn--primary">Yes</button>
+              <button class="unified-card-btn unified-card-btn--secondary">No</button>
+            </div>
+          </div>
+        </div>
+        <div class="status">
+          ✓ Inherits unified card styling<br>
+          ✓ Consistent with other cards<br>
+          ✓ Mobile-friendly button layout
+        </div>
+      </div>
+
+      <!-- Test 3: Veto Wait Card -->
+      <div class="test-section">
+        <h2>3. Veto Wait Card</h2>
+        <div class="card-demo">
+          <div class="veto-wait-card unified-card unified-card--compact">
+            <div class="vwc-inner">
+              <p class="vwc-heading unified-card__header">You are ineligible to compete.</p>
+              <p class="vwc-desc unified-card__body">Play Dots and Boxes instead?</p>
+              <div class="vwc-buttons unified-card__buttons">
+                <button class="unified-card-btn unified-card-btn--primary">Yes</button>
+                <button class="unified-card-btn unified-card-btn--secondary">No</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="status">
+          ✓ Uses unified system<br>
+          ✓ Compact variant for TV overlay<br>
+          ✓ Consistent button styling
+        </div>
+      </div>
+
+      <!-- Test 4: Live Vote Choice Card -->
+      <div class="test-section">
+        <h2>4. Live Vote Choice Card</h2>
+        <div class="card-demo">
+          <div class="lv-choice-card unified-card unified-card--compact">
+            <div class="lv-choice-card__header unified-card__header">
+              Make your choice.
+            </div>
+            <div class="lv-choice-card__nominees">
+              <div class="lv-choice-card__nominee">
+                <div class="lv-choice-card__avatar" style="background: #4CAF50; width: 64px; height: 64px; border-radius: 50%;"></div>
+                <div class="lv-choice-card__name">Player 1</div>
+              </div>
+              <div class="lv-choice-card__nominee">
+                <div class="lv-choice-card__avatar" style="background: #f44336; width: 64px; height: 64px; border-radius: 50%;"></div>
+                <div class="lv-choice-card__name">Player 2</div>
+              </div>
+            </div>
+            <button class="lv-choice-card__vote-btn unified-card-btn unified-card-btn--danger">Vote</button>
+          </div>
+        </div>
+        <div class="status">
+          ✓ Danger button variant for eviction<br>
+          ✓ Proper nominee display<br>
+          ✓ Mobile-optimized layout
+        </div>
+      </div>
+
+      <!-- Test 5: Button Variants -->
+      <div class="test-section">
+        <h2>5. Button Variants</h2>
+        <div class="card-demo">
+          <div class="unified-card">
+            <div class="unified-card__header">Button Showcase</div>
+            <div class="unified-card__body">
+              All buttons are centered and have minimum 44px tap targets for mobile accessibility.
+            </div>
+            <div class="unified-card__buttons">
+              <button class="unified-card-btn unified-card-btn--primary">Primary (Green)</button>
+              <button class="unified-card-btn unified-card-btn--secondary">Secondary (Gray)</button>
+              <button class="unified-card-btn unified-card-btn--danger">Danger (Red)</button>
+            </div>
+            <div class="unified-card__buttons" style="margin-top: 12px;">
+              <button class="unified-card-btn unified-card-btn--primary unified-card-btn--compact">Compact Primary</button>
+              <button class="unified-card-btn unified-card-btn--secondary unified-card-btn--compact">Compact Secondary</button>
+            </div>
+          </div>
+        </div>
+        <div class="status">
+          ✓ Consistent padding and sizing<br>
+          ✓ Flexbox centering<br>
+          ✓ Accessible tap targets (44px min)<br>
+          ✓ Compact variant available
+        </div>
+      </div>
+
+      <!-- Test 6: Theme Support -->
+      <div class="test-section">
+        <h2>6. Theme Support</h2>
+        <div class="card-demo">
+          <div class="unified-card unified-card--compact">
+            <div class="unified-card__header">Theme-Aware Styling</div>
+            <div class="unified-card__body">
+              Cards adapt to theme changes using CSS custom properties (--popup-* tokens).
+              Backgrounds, borders, and shadows adjust automatically.
+            </div>
+            <div class="unified-card__buttons">
+              <button class="unified-card-btn unified-card-btn--primary">Understood</button>
+            </div>
+          </div>
+        </div>
+        <div class="status">
+          ✓ Uses --popup-* CSS tokens<br>
+          ✓ Theme-aware colors<br>
+          ✓ Backdrop blur support<br>
+          ✓ High contrast mode support
+        </div>
+      </div>
+    </div>
+
+    <div class="comparison">
+      <div class="comparison-item">
+        <div class="comparison-label">Before: Inconsistent Cards</div>
+        <ul style="text-align: left; color: #ff6b6b;">
+          <li>Different background opacities</li>
+          <li>Varying border-radius values</li>
+          <li>Inconsistent button styles</li>
+          <li>Multiple shadow patterns</li>
+          <li>No unified spacing</li>
+        </ul>
+      </div>
+      <div class="comparison-item">
+        <div class="comparison-label">After: Unified System</div>
+        <ul style="text-align: left; color: #4CAF50;">
+          <li>Consistent 0.90-0.92 opacity</li>
+          <li>Standard 24px border-radius</li>
+          <li>Unified button classes</li>
+          <li>Consistent shadow system</li>
+          <li>Standardized spacing (--popup-* tokens)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Add some interactivity to demonstrate functionality
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Button clicked:', this.textContent);
+        
+        // Show visual feedback
+        const originalText = this.textContent;
+        this.textContent = '✓ ' + originalText;
+        this.disabled = true;
+        
+        setTimeout(() => {
+          this.textContent = originalText;
+          this.disabled = false;
+        }, 1000);
+      });
+    });
+    
+    console.log('✅ Unified Card System Test Loaded');
+    console.log('📝 All cards use .unified-card base class');
+    console.log('🎨 Buttons use .unified-card-btn variants');
+    console.log('📱 Mobile-first with 44px tap targets');
+  </script>
+</body>
+</html>

@@ -2,11 +2,11 @@
  * Styles for the small in-TV Choice Card shown during eviction voting
  * Mobile-first, safe-area aware, centered within TV viewport
  * Updated: Modal now mounts to document.body with full-viewport backdrop
+ * Uses unified popup card design system for consistency
  *
- * STABILITY FEATURES (TV Inline Card Spec):
- * - No border/outline for cleaner look
- * - 75% background transparency
- * - Max-width: 780px (TV inline card standard)
+ * STABILITY FEATURES (Unified Card Spec):
+ * - Consistent background with 0.90-0.92 opacity
+ * - Max-width: 780px (unified card standard)
  * - Fixed avatar dimensions with object-fit: cover to prevent reflow
  * - CSS containment to prevent layout propagation
  */
@@ -34,18 +34,8 @@
 }
 
 .lv-choice-card {
+  /* Uses unified-card as base - inherits all unified styling */
   position: relative;
-  /* TV Inline Card Spec: 75% transparency background */
-  background: rgba(20, 35, 55, 0.75);
-  /* TV Inline Card Spec: No border/outline for cleaner look */
-  border: none;
-  outline: none;
-  border-radius: 16px;
-  padding: 24px;
-  /* TV Inline Card Spec: max-width 780px */
-  max-width: min(780px, calc(100% - 32px));
-  width: 100%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   z-index: 1;
   text-align: center;
   pointer-events: auto; /* Card intercepts clicks */
@@ -57,6 +47,7 @@
 }
 
 .lv-choice-card__header {
+  /* Uses unified-card__header styling */
   font-size: clamp(1.1rem, 4vw, 1.3rem);
   font-weight: 700;
   color: #00e0cc;
@@ -101,6 +92,7 @@
 }
 
 .lv-choice-card__vote-btn {
+  /* Uses unified-card-btn--danger for eviction vote */
   background: linear-gradient(135deg, #ff6b6b, #d63031);
   border: none;
   border-radius: 24px;

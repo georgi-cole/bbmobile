@@ -49,7 +49,7 @@
 
     // Create card element
     const card = document.createElement('div');
-    card.className = 'veto-wait-card';
+    card.className = 'veto-wait-card unified-card unified-card--compact';
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-labelledby', 'vetoWaitHeading');
     card.setAttribute('aria-describedby', 'vetoWaitDesc');
@@ -57,11 +57,11 @@
     // Build card content - keep it simple and compact
     card.innerHTML = `
       <div class="vwc-inner">
-        <p id="vetoWaitHeading" class="vwc-heading">You are ineligible to compete.</p>
-        <p id="vetoWaitDesc" class="vwc-desc">Play Dots and Boxes instead?</p>
-        <div class="vwc-buttons">
-          <button type="button" class="btn primary" aria-label="Yes, play game">Yes</button>
-          <button type="button" class="btn" aria-label="No, just wait">No</button>
+        <p id="vetoWaitHeading" class="vwc-heading unified-card__header">You are ineligible to compete.</p>
+        <p id="vetoWaitDesc" class="vwc-desc unified-card__body">Play Dots and Boxes instead?</p>
+        <div class="vwc-buttons unified-card__buttons">
+          <button type="button" class="btn primary unified-card-btn unified-card-btn--primary" aria-label="Yes, play game">Yes</button>
+          <button type="button" class="btn unified-card-btn unified-card-btn--secondary" aria-label="No, just wait">No</button>
         </div>
       </div>
     `;

@@ -1,0 +1,415 @@
+/* ============================================================================
+   UNIFIED POPUP CARD DESIGN SYSTEM
+   
+   Purpose: Centralized styling for all inline popup cards (NOT fullscreen modals)
+   This system provides consistent visual treatment across all game phases.
+   
+   IMPORTANT: This does NOT affect .bigAnnounce fullscreen modals - those remain
+   fullscreen for dramatic effect.
+   
+   Features:
+   - Consistent background opacity (0.90-0.92) for better readability
+   - Unified border-radius, shadows, and backdrop blur
+   - Consistent button styling with centered text
+   - Mobile-first with minimum 16px font-size and 44px tap targets
+   - Theme-aware using existing --popup-* CSS tokens
+   
+   Cards using this system:
+   - Intermission offer/result cards
+   - Veto wait cards
+   - Live vote choice cards
+   - Ceremony cards (nominations, veto)
+   - Social maneuver cards
+   - TV inline cards
+   ============================================================================ */
+
+/* ============================================================================
+   BASE CARD STYLES
+   ============================================================================ */
+
+.unified-card {
+  /* Layout */
+  position: relative;
+  margin: 8px auto;
+  padding: var(--popup-padding, 22px 26px 24px);
+  box-sizing: border-box;
+  
+  /* Enhanced background with better opacity for readability */
+  background: linear-gradient(145deg, 
+    rgba(28, 43, 62, 0.92),  /* 92% opacity for better readability */
+    rgba(12, 22, 36, 0.90)   /* 90% opacity at gradient end */
+  );
+  
+  /* Theme-aware border */
+  border: 1px solid var(--popup-border, rgba(110, 160, 220, 0.25));
+  border-radius: var(--popup-radius, 24px);
+  
+  /* Enhanced shadows for depth */
+  box-shadow: var(--popup-shadow, 
+    0 12px 36px -16px rgba(0, 0, 0, 0.8),
+    0 6px 20px -8px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(120, 180, 255, 0.15)
+  );
+  
+  /* Backdrop blur for glass effect */
+  backdrop-filter: blur(var(--popup-backdrop-blur, 20px)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--popup-backdrop-blur, 20px)) saturate(1.4);
+  
+  /* Typography */
+  color: var(--ink, #e3ecf5);
+  font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  
+  /* Sizing constraints */
+  width: auto;
+  max-width: var(--popup-max-width, min(780px, 92vw));
+  
+  /* Smooth transitions */
+  transition: opacity var(--popup-transition-duration, 0.3s) ease,
+              transform var(--popup-transition-duration, 0.3s) ease;
+  
+  /* Entrance animation */
+  animation: unifiedCardFadeIn 0.4s ease-out;
+}
+
+/* Compact variant for smaller cards */
+.unified-card--compact {
+  max-width: min(360px, 90%);
+  padding: 16px 20px;
+}
+
+/* Wide variant for cards that need more space */
+.unified-card--wide {
+  max-width: var(--popup-max-width, min(780px, 92vw));
+}
+
+/* ============================================================================
+   CARD HEADER
+   ============================================================================ */
+
+.unified-card__header {
+  margin: 0 0 16px 0;
+  font-size: clamp(1.1rem, 4vw, 1.3rem);
+  font-weight: 700;
+  color: var(--accent, #83bfff);
+  text-align: center;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+/* ============================================================================
+   CARD BODY
+   ============================================================================ */
+
+.unified-card__body {
+  margin: 0 0 var(--popup-content-gap, 18px) 0;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  color: var(--ink, #e3ecf5);
+  text-align: center;
+  line-height: var(--line-height-normal, 1.4);
+  opacity: 0.95;
+  overflow-wrap: anywhere;
+}
+
+/* ============================================================================
+   BUTTON CONTAINER
+   ============================================================================ */
+
+.unified-card__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--popup-button-gap, 14px);
+  margin-top: var(--popup-content-gap, 18px);
+  justify-content: center;
+  align-items: center;
+}
+
+/* Stack buttons vertically on very narrow screens */
+@media (max-width: 360px) {
+  .unified-card__buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ============================================================================
+   UNIFIED BUTTON STYLES
+   ============================================================================ */
+
+.unified-card-btn {
+  /* Layout - flexbox for perfect centering */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  
+  /* Sizing */
+  padding: 12px 24px;
+  min-width: 100px;
+  min-height: 44px; /* Mobile tap target minimum */
+  
+  /* Typography */
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  font-weight: 600;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  line-height: 1.2;
+  white-space: nowrap;
+  
+  /* Appearance */
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #424242 0%, #616161 100%);
+  color: #ffffff;
+  
+  /* Shadows */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  
+  /* Interaction */
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Primary button - green gradient for positive actions */
+.unified-card-btn--primary {
+  background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
+  border-color: #4caf50;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.unified-card-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #388e3c 0%, #43a047 100%);
+  border-color: #66bb6a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+/* Secondary button - gray for cancel/dismiss */
+.unified-card-btn--secondary {
+  background: linear-gradient(135deg, #424242 0%, #616161 100%);
+  border-color: #757575;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.unified-card-btn--secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #616161 0%, #757575 100%);
+  border-color: #9e9e9e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Danger button - red for eviction/dangerous actions */
+.unified-card-btn--danger {
+  background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);
+  border-color: #e57373;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+}
+
+.unified-card-btn--danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d32f2f 0%, #e53935 100%);
+  border-color: #ef5350;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4);
+}
+
+/* Compact button variant */
+.unified-card-btn--compact {
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  min-width: 80px;
+}
+
+/* Button hover states */
+.unified-card-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.unified-card-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.unified-card-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: grayscale(0.5);
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes unifiedCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes unifiedCardFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+}
+
+/* Exit animation class */
+.unified-card--exit {
+  animation: unifiedCardFadeOut 0.3s ease-in forwards;
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .unified-card {
+    padding: 18px 22px 20px;
+    max-width: min(360px, 92%);
+  }
+  
+  .unified-card__header {
+    font-size: clamp(1rem, 4vw, 1.2rem);
+    margin-bottom: 14px;
+  }
+  
+  .unified-card__body {
+    font-size: clamp(0.85rem, 2.8vw, 0.95rem);
+  }
+  
+  .unified-card-btn {
+    padding: 11px 22px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .unified-card {
+    padding: 16px 18px;
+    max-width: calc(100% - 24px);
+  }
+  
+  .unified-card__header {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  
+  .unified-card__body {
+    font-size: 0.85rem;
+  }
+  
+  .unified-card-btn {
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    min-width: 90px;
+  }
+  
+  .unified-card__buttons {
+    gap: 12px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .unified-card {
+    padding: 14px 16px;
+  }
+  
+  .unified-card-btn {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+/* Focus states */
+.unified-card-btn:focus-visible {
+  outline: 2px solid var(--accent, #83bfff);
+  outline-offset: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4),
+              0 0 0 3px var(--accent, #83bfff);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .unified-card {
+    animation: none;
+    transition: none;
+  }
+  
+  .unified-card-btn:hover:not(:disabled),
+  .unified-card-btn:active:not(:disabled) {
+    transform: none;
+  }
+  
+  @keyframes unifiedCardFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes unifiedCardFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .unified-card {
+    border: 2px solid var(--accent, #83bfff);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  
+  .unified-card-btn {
+    border-width: 2px;
+  }
+}
+
+/* ============================================================================
+   THEME SUPPORT
+   ============================================================================ */
+
+/* Light theme adjustments */
+body[data-theme="modernhouse"] .unified-card {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.92),
+    rgba(248, 248, 252, 0.90)
+  );
+  color: var(--ink, #1a1a2e);
+  border-color: rgba(107, 143, 255, 0.3);
+}
+
+body[data-theme="modernhouse"] .unified-card__header {
+  color: var(--accent, #6b8fff);
+}
+
+body[data-theme="modernhouse"] .unified-card__body {
+  color: var(--ink, #1a1a2e);
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  .unified-card {
+    display: none;
+  }
+}
