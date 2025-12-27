@@ -9,13 +9,26 @@
   const TARGET_LIFETIME_START = 2000; // 2 seconds
   const TARGET_LIFETIME_MIN = 800; // 0.8 seconds
   const CORRECT_TARGET_POINTS = 10;
-  const DECOY_PENALTY = 15;
+  const WRONG_COLOR_PENALTY = 5;
   const COMBO_MULTIPLIER = 1.5;
   const OVERHEAT_THRESHOLD = 8; // taps per second
   const OVERHEAT_LOCKOUT_MS = 500;
   const TARGET_SIZE = 50;
   const REGION_SPAM_THRESHOLD = 5; // taps in same region
   const REGION_RADIUS = 80;
+  const TARGET_COLOR_CHANGE_MS = 5000; // 5 seconds
+  const SPAWN_INTERVAL_START = 1500; // 1.5 seconds
+  const SPAWN_INTERVAL_MIN = 600; // 0.6 seconds
+  
+  // Color palette for targets
+  const COLOR_PALETTE = [
+    { name: 'Red', hex: '#ff3366', lightHex: '#ff6b6b' },
+    { name: 'Blue', hex: '#3366ff', lightHex: '#6b8fff' },
+    { name: 'Green', hex: '#33ff66', lightHex: '#74e48b' },
+    { name: 'Yellow', hex: '#ffcc33', lightHex: '#f7b955' },
+    { name: 'Purple', hex: '#9933ff', lightHex: '#a78bfa' },
+    { name: 'Orange', hex: '#ff6633', lightHex: '#ff8c5a' }
+  ];
 
   /**
    * Generate confetti particles
@@ -90,10 +103,12 @@
     instructionsBox.innerHTML = `
       <h2 style="color:#6fd3ff;margin:0 0 20px 0;">How to Play</h2>
       <p style="color:#e3ecf5;margin:10px 0;line-height:1.6;">
-        • Tap the <span style="color:#74e48b;">green targets</span> for points<br>
-        • Avoid <span style="color:#ff6b6b;">red decoy targets</span><br>
-        • Build combos with consecutive hits<br>
+        • Tap targets that match the <strong>required color</strong><br>
+        • The required color changes every 5 seconds<br>
+        • Wrong color targets give penalties<br>
+        • Build combos with consecutive correct hits<br>
         • Targets disappear quickly - be fast!<br>
+        • Game gets faster and harder over time<br>
         • Don't tap too fast or you'll overheat<br>
         • 60 seconds to get the highest score
       </p>
@@ -122,6 +137,24 @@
     hudDiv.appendChild(comboDiv);
     hudDiv.appendChild(timerDiv);
     
+    // Color badge - shows current required color
+    const colorBadge = document.createElement('div');
+    colorBadge.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:12px 20px;background:#2c3a4d;border-radius:8px;width:100%;';
+    
+    const colorLabel = document.createElement('div');
+    colorLabel.style.cssText = 'color:#95a9c0;font-size:0.9rem;font-weight:bold;';
+    colorLabel.textContent = 'TAP THIS COLOR:';
+    
+    const colorSwatch = document.createElement('div');
+    colorSwatch.style.cssText = 'width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 12px rgba(0,0,0,0.5);';
+    
+    const colorName = document.createElement('div');
+    colorName.style.cssText = 'font-size:1.1rem;font-weight:bold;color:#fff;';
+    
+    colorBadge.appendChild(colorLabel);
+    colorBadge.appendChild(colorSwatch);
+    colorBadge.appendChild(colorName);
+    
     // Game area
     const gameArea = document.createElement('div');
     gameArea.style.cssText = 'position:relative;width:100%;height:400px;background:#0a1420;border:2px solid #2c3a4d;border-radius:8px;overflow:hidden;touch-action:none;';
@@ -138,6 +171,7 @@
     
     wrapper.appendChild(title);
     wrapper.appendChild(hudDiv);
+    wrapper.appendChild(colorBadge);
     wrapper.appendChild(gameArea);
     wrapper.appendChild(statsDiv);
     container.appendChild(wrapper);
@@ -150,15 +184,28 @@
     let maxCombo = 0;
     let targetsHit = 0;
     let targetsMissed = 0;
-    let decoysHit = 0;
+    let wrongColorHits = 0;
     let totalTargets = 0;
     let targets = [];
     let animationFrame = null;
     let spawnInterval = null;
+    let colorChangeInterval = null;
     let recentTaps = [];
     let regionTaps = [];
     let isOverheated = false;
     let targetLifetime = TARGET_LIFETIME_START;
+    let spawnIntervalTime = SPAWN_INTERVAL_START;
+    let activeColor = COLOR_PALETTE[0];
+    
+    // Update color badge display
+    function updateColorBadge(){
+      colorSwatch.style.background = activeColor.hex;
+      colorSwatch.style.borderColor = activeColor.lightHex;
+      colorSwatch.style.boxShadow = `0 0 16px ${activeColor.hex}`;
+      colorName.textContent = activeColor.name;
+      colorName.style.color = activeColor.lightHex;
+    }
+    updateColorBadge();
     
     // Spawn target
     function spawnTarget(){
@@ -174,11 +221,19 @@
         return dist < REGION_RADIUS && Date.now() - tap.time < 5000;
       }).length >= REGION_SPAM_THRESHOLD;
       
-      // Determine if decoy (more decoys over time and in spammed regions)
+      // Select color (more likely to match active color if not region spammed)
       const elapsed = Date.now() - startTime;
-      const baseDecoyChance = 0.15 + (elapsed / GAME_DURATION) * 0.25; // 15% -> 40%
-      const decoyChance = regionSpammed ? baseDecoyChance + 0.3 : baseDecoyChance;
-      const isDecoy = Math.random() < decoyChance;
+      const correctChance = regionSpammed ? 0.4 : 0.6; // 60% correct normally, 40% if spammed
+      const isCorrectColor = Math.random() < correctChance;
+      
+      let targetColor;
+      if(isCorrectColor){
+        targetColor = activeColor;
+      } else {
+        // Pick a random different color
+        const otherColors = COLOR_PALETTE.filter(c => c.name !== activeColor.name);
+        targetColor = otherColors[Math.floor(Math.random() * otherColors.length)];
+      }
       
       const targetDiv = document.createElement('div');
       targetDiv.style.cssText = `
@@ -188,9 +243,9 @@
         width:${TARGET_SIZE}px;
         height:${TARGET_SIZE}px;
         border-radius:50%;
-        background:${isDecoy ? '#ff3366' : '#74e48b'};
-        border:3px solid ${isDecoy ? '#ff6b6b' : '#a7f3b9'};
-        box-shadow:0 0 12px ${isDecoy ? '#ff3366' : '#74e48b'};
+        background:${targetColor.hex};
+        border:3px solid ${targetColor.lightHex};
+        box-shadow:0 0 12px ${targetColor.hex};
         cursor:pointer;
         display:flex;
         align-items:center;
@@ -199,7 +254,7 @@
         transition:transform 0.1s;
         z-index:100;
       `;
-      targetDiv.textContent = isDecoy ? '✕' : '✓';
+      targetDiv.textContent = '✓';
       
       gameArea.appendChild(targetDiv);
       
@@ -207,7 +262,8 @@
         div: targetDiv,
         x,
         y,
-        isDecoy,
+        color: targetColor,
+        isCorrectColor,
         spawnTime: Date.now(),
         lifetime: targetLifetime
       };
@@ -254,11 +310,11 @@
         gameArea.removeChild(target.div);
       }
       
-      if(target.isDecoy){
-        // Hit decoy - bad!
-        score = Math.max(0, score - DECOY_PENALTY);
+      if(!target.isCorrectColor){
+        // Hit wrong color - penalty!
+        score = Math.max(0, score - WRONG_COLOR_PENALTY);
         currentCombo = 0;
-        decoysHit++;
+        wrongColorHits++;
         
         // Flash screen red
         gameArea.style.background = '#ff3366';
@@ -275,7 +331,7 @@
           }, 50);
         }, 50);
       } else {
-        // Hit correct target!
+        // Hit correct color!
         currentCombo++;
         maxCombo = Math.max(maxCombo, currentCombo);
         
@@ -293,7 +349,7 @@
           position:absolute;
           left:${target.x}px;
           top:${target.y}px;
-          color:#74e48b;
+          color:${activeColor.lightHex};
           font-weight:bold;
           font-size:1.2rem;
           pointer-events:none;
@@ -341,9 +397,10 @@
       timerDiv.textContent = `${Math.ceil(remaining/1000)}s`;
       
       // Update target lifetime (gets shorter over time)
+      const progressRatio = elapsed / GAME_DURATION;
       targetLifetime = Math.max(
         TARGET_LIFETIME_MIN,
-        TARGET_LIFETIME_START - (elapsed / GAME_DURATION) * (TARGET_LIFETIME_START - TARGET_LIFETIME_MIN)
+        TARGET_LIFETIME_START - progressRatio * (TARGET_LIFETIME_START - TARGET_LIFETIME_MIN)
       );
       
       // Update targets
@@ -381,7 +438,7 @@
         
         // Remove expired targets
         if(age > target.lifetime){
-          if(!target.isDecoy){
+          if(target.isCorrectColor){
             targetsMissed++;
             currentCombo = 0;
             comboDiv.textContent = 'Combo: 0x';
@@ -406,6 +463,7 @@
       gameActive = false;
       if(animationFrame) cancelAnimationFrame(animationFrame);
       if(spawnInterval) clearInterval(spawnInterval);
+      if(colorChangeInterval) clearInterval(colorChangeInterval);
       
       // Clear remaining targets
       targets.forEach(target => {
@@ -426,8 +484,8 @@
           <div>Final Score: <strong style="color:#83bfff;">${finalScore}</strong></div>
           <div>Accuracy: ${accuracy}%</div>
           <div>Max Combo: ${maxCombo}x</div>
-          <div>Targets Hit: ${targetsHit}</div>
-          <div>Decoy Hits: ${decoysHit}</div>
+          <div>Correct Hits: ${targetsHit}</div>
+          <div>Wrong Color Hits: ${wrongColorHits}</div>
         </div>
       `;
       
@@ -437,7 +495,7 @@
         accuracy,
         maxCombo,
         targetsHit,
-        decoysHit
+        wrongColorHits
       };
       
       // Dispatch event
@@ -484,18 +542,49 @@
       gameActive = true;
       startTime = Date.now();
       
-      // Spawn targets periodically (gets faster over time)
-      spawnInterval = setInterval(() => {
+      // Set initial color and start cycling
+      activeColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+      updateColorBadge();
+      
+      colorChangeInterval = setInterval(() => {
+        // Pick a different color
+        const otherColors = COLOR_PALETTE.filter(c => c.name !== activeColor.name);
+        activeColor = otherColors[Math.floor(Math.random() * otherColors.length)];
+        updateColorBadge();
+        
+        // Flash effect
+        colorBadge.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+          colorBadge.style.transform = 'scale(1)';
+        }, 200);
+      }, TARGET_COLOR_CHANGE_MS);
+      
+      // Spawn targets periodically with dynamic speed
+      function scheduleNextSpawn(){
+        if(!gameActive) return;
+        
         const elapsed = Date.now() - startTime;
-        const spawnCount = elapsed > 30000 ? 2 : 1; // Multiple targets later
+        const progressRatio = elapsed / GAME_DURATION;
+        
+        // Ramp up speed: spawn interval decreases over time
+        spawnIntervalTime = Math.max(
+          SPAWN_INTERVAL_MIN,
+          SPAWN_INTERVAL_START - progressRatio * (SPAWN_INTERVAL_START - SPAWN_INTERVAL_MIN)
+        );
+        
+        // Spawn multiple targets later in game
+        const spawnCount = elapsed > 30000 ? 2 : 1;
         
         for(let i = 0; i < spawnCount; i++){
           spawnTarget();
         }
-      }, 1500);
+        
+        setTimeout(scheduleNextSpawn, spawnIntervalTime);
+      }
       
       // Initial targets
       spawnTarget();
+      scheduleNextSpawn();
       
       gameLoop();
     }

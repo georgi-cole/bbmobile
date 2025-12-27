@@ -11,12 +11,20 @@
   const LIVES = 3;
   const CORRECT_ITEM_POINTS = 10;
   const WRONG_ITEM_PENALTY = 5;
-  const LASER_HIT_PENALTY = 15;
+  const LASER_HIT_PENALTY = 10;
   const PLAYER_SIZE = 20;
   const ITEM_SIZE = 24;
   const CAMPING_RADIUS = 60;
   const CAMPING_THRESHOLD = 3000; // 3s in same spot
   const WRONG_ITEM_STREAK_THRESHOLD = 3;
+  const MOVE_THRESHOLD = 10; // pixels to count as movement
+  
+  // Laser mechanics constants
+  const LASER_TELEGRAPH_MS = 700; // Show warning before sweep
+  const LASER_SWEEP_DURATION = 1200; // Slower sweep
+  const LASER_GAP_PERCENT = 0.25; // 25% safe gap in sweep
+  const LASER_HIT_GRACE_MS = 350; // Must be in beam this long to count
+  const LASER_RECOVERY_MS = 800; // Invulnerability after hit
 
   // Recipe items database
   const ALL_INGREDIENTS = [
@@ -84,10 +92,11 @@
       <h2 style="color:#6fd3ff;margin:0 0 20px 0;">How to Play</h2>
       <p style="color:#e3ecf5;margin:10px 0;line-height:1.6;">
         • Drag your avatar to collect recipe ingredients<br>
-        • Avoid the sweeping laser lines<br>
+        • Watch for laser <strong>warnings</strong> before sweeps<br>
+        • Dodge the laser beams - they have safe gaps!<br>
         • Collect items matching the recipe for points<br>
         • Wrong items give penalties<br>
-        • 3 lives - lasers cost 1 life and drop items<br>
+        • Laser hits give penalties and eventually cost lives<br>
         • Recipe changes at 30 seconds!
       </p>
       <button id="startGameBtn" class="btn primary" style="margin-top:20px;padding:12px 32px;font-size:1.1rem;">START GAME</button>
@@ -130,6 +139,20 @@
     const gameArea = document.createElement('div');
     gameArea.style.cssText = 'position:relative;width:100%;height:350px;background:#0a1420;border:2px solid #2c3a4d;border-radius:8px;overflow:hidden;touch-action:none;';
     
+    // Add style element for animations
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+      @keyframes pulse {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 0.8; }
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
     // Player avatar
     const player = document.createElement('div');
     player.style.cssText = `position:absolute;width:${PLAYER_SIZE}px;height:${PLAYER_SIZE}px;border-radius:50%;background:#6fd3ff;box-shadow:0 0 12px #6fd3ff;z-index:100;`;
@@ -156,6 +179,7 @@
     let correctItems = 0;
     let wrongItems = 0;
     let laserHits = 0;
+    let laserHitAccumulator = 0; // Track persistent hits
     let wrongStreak = 0;
     let bestCombo = 0;
     let currentCombo = 0;
@@ -167,6 +191,8 @@
     let items = [];
     let lasers = [];
     let animationFrame = null;
+    let isInvulnerable = false;
+    let invulnerableUntil = 0;
     
     // Update recipe display
     function updateRecipeDisplay(){
@@ -213,43 +239,288 @@
       items.push({ div: itemDiv, x, y, correct: isCorrect, name: item.name });
     }
     
-    // Spawn laser
+    // Spawn laser with telegraph and sweep
     function spawnLaser(){
       if(!gameActive) return;
       
       const rect = gameArea.getBoundingClientRect();
       const isHorizontal = Math.random() < 0.5;
-      const speed = 1 + Math.random() * 2; // Increases over time
-      const thickness = 3;
       
-      const laser = document.createElement('div');
+      // Create telegraph warning
+      const telegraph = document.createElement('div');
+      telegraph.classList.add('laser-telegraph');
+      
       if(isHorizontal){
-        laser.style.cssText = `position:absolute;left:0;top:${Math.random() * rect.height}px;width:100%;height:${thickness}px;background:linear-gradient(90deg, transparent, #ff3366, transparent);box-shadow:0 0 8px #ff3366;z-index:90;`;
-        lasers.push({ div: laser, x: 0, y: parseFloat(laser.style.top), horizontal: true, speed });
+        const yPos = Math.random() * rect.height;
+        telegraph.style.cssText = `
+          position:absolute;
+          left:0;
+          top:${yPos}px;
+          width:100%;
+          height:8px;
+          background:rgba(255, 200, 0, 0.3);
+          border:1px dashed #ffcc00;
+          z-index:85;
+          animation:pulse 0.3s ease-in-out infinite;
+        `;
+        
+        gameArea.appendChild(telegraph);
+        
+        // After telegraph delay, show sweep
+        setTimeout(() => {
+          if(!gameActive){
+            if(telegraph.parentNode) gameArea.removeChild(telegraph);
+            return;
+          }
+          
+          gameArea.removeChild(telegraph);
+          
+          // Create laser beam with gap
+          const gapSize = rect.width * LASER_GAP_PERCENT;
+          const gapStart = Math.random() * (rect.width - gapSize);
+          
+          // Create two beam segments (before and after gap)
+          const beam1 = document.createElement('div');
+          beam1.classList.add('laser-beam');
+          beam1.style.cssText = `
+            position:absolute;
+            left:0;
+            top:${yPos - 2}px;
+            width:0;
+            height:4px;
+            background:linear-gradient(90deg, transparent, #ff3366, #ff3366);
+            box-shadow:0 0 12px #ff3366;
+            z-index:90;
+          `;
+          gameArea.appendChild(beam1);
+          
+          const beam2 = document.createElement('div');
+          beam2.classList.add('laser-beam');
+          beam2.style.cssText = `
+            position:absolute;
+            left:${gapStart + gapSize}px;
+            top:${yPos - 2}px;
+            width:0;
+            height:4px;
+            background:linear-gradient(90deg, #ff3366, #ff3366, transparent);
+            box-shadow:0 0 12px #ff3366;
+            z-index:90;
+          `;
+          gameArea.appendChild(beam2);
+          
+          // Animate sweep
+          let progress = 0;
+          const startTime = Date.now();
+          let hitStartTime = null;
+          
+          const sweepAnimation = () => {
+            if(!gameActive){
+              if(beam1.parentNode) gameArea.removeChild(beam1);
+              if(beam2.parentNode) gameArea.removeChild(beam2);
+              return;
+            }
+            
+            progress = Math.min(1, (Date.now() - startTime) / LASER_SWEEP_DURATION);
+            
+            beam1.style.width = (gapStart * progress) + 'px';
+            beam2.style.width = ((rect.width - gapStart - gapSize) * progress) + 'px';
+            
+            // Check collision with player (if not invulnerable)
+            if(!isInvulnerable && Date.now() > invulnerableUntil){
+              const playerCenterY = playerY + PLAYER_SIZE / 2;
+              const inBeam = Math.abs(playerCenterY - yPos) < PLAYER_SIZE / 2 + 4;
+              
+              // Check if player is in gap
+              const playerCenterX = playerX + PLAYER_SIZE / 2;
+              const inGap = playerCenterX >= gapStart && playerCenterX <= gapStart + gapSize;
+              
+              if(inBeam && !inGap){
+                if(hitStartTime === null){
+                  hitStartTime = Date.now();
+                }
+                
+                // Hit must persist for grace period
+                if(Date.now() - hitStartTime > LASER_HIT_GRACE_MS){
+                  handleLaserHit();
+                  hitStartTime = null; // Reset to avoid multiple hits
+                }
+              } else {
+                hitStartTime = null; // Player escaped
+              }
+            }
+            
+            if(progress < 1){
+              requestAnimationFrame(sweepAnimation);
+            } else {
+              // Cleanup
+              if(beam1.parentNode) gameArea.removeChild(beam1);
+              if(beam2.parentNode) gameArea.removeChild(beam2);
+            }
+          };
+          
+          sweepAnimation();
+        }, LASER_TELEGRAPH_MS);
       } else {
-        laser.style.cssText = `position:absolute;left:${Math.random() * rect.width}px;top:0;width:${thickness}px;height:100%;background:linear-gradient(180deg, transparent, #ff3366, transparent);box-shadow:0 0 8px #ff3366;z-index:90;`;
-        lasers.push({ div: laser, x: parseFloat(laser.style.left), y: 0, horizontal: false, speed });
+        // Vertical laser
+        const xPos = Math.random() * rect.width;
+        telegraph.style.cssText = `
+          position:absolute;
+          left:${xPos}px;
+          top:0;
+          width:8px;
+          height:100%;
+          background:rgba(255, 200, 0, 0.3);
+          border:1px dashed #ffcc00;
+          z-index:85;
+          animation:pulse 0.3s ease-in-out infinite;
+        `;
+        
+        gameArea.appendChild(telegraph);
+        
+        setTimeout(() => {
+          if(!gameActive){
+            if(telegraph.parentNode) gameArea.removeChild(telegraph);
+            return;
+          }
+          
+          gameArea.removeChild(telegraph);
+          
+          // Create laser beam with gap
+          const gapSize = rect.height * LASER_GAP_PERCENT;
+          const gapStart = Math.random() * (rect.height - gapSize);
+          
+          const beam1 = document.createElement('div');
+          beam1.classList.add('laser-beam');
+          beam1.style.cssText = `
+            position:absolute;
+            left:${xPos - 2}px;
+            top:0;
+            width:4px;
+            height:0;
+            background:linear-gradient(180deg, transparent, #ff3366, #ff3366);
+            box-shadow:0 0 12px #ff3366;
+            z-index:90;
+          `;
+          gameArea.appendChild(beam1);
+          
+          const beam2 = document.createElement('div');
+          beam2.classList.add('laser-beam');
+          beam2.style.cssText = `
+            position:absolute;
+            left:${xPos - 2}px;
+            top:${gapStart + gapSize}px;
+            width:4px;
+            height:0;
+            background:linear-gradient(180deg, #ff3366, #ff3366, transparent);
+            box-shadow:0 0 12px #ff3366;
+            z-index:90;
+          `;
+          gameArea.appendChild(beam2);
+          
+          let progress = 0;
+          const startTime = Date.now();
+          let hitStartTime = null;
+          
+          const sweepAnimation = () => {
+            if(!gameActive){
+              if(beam1.parentNode) gameArea.removeChild(beam1);
+              if(beam2.parentNode) gameArea.removeChild(beam2);
+              return;
+            }
+            
+            progress = Math.min(1, (Date.now() - startTime) / LASER_SWEEP_DURATION);
+            
+            beam1.style.height = (gapStart * progress) + 'px';
+            beam2.style.height = ((rect.height - gapStart - gapSize) * progress) + 'px';
+            
+            // Check collision
+            if(!isInvulnerable && Date.now() > invulnerableUntil){
+              const playerCenterX = playerX + PLAYER_SIZE / 2;
+              const inBeam = Math.abs(playerCenterX - xPos) < PLAYER_SIZE / 2 + 4;
+              
+              const playerCenterY = playerY + PLAYER_SIZE / 2;
+              const inGap = playerCenterY >= gapStart && playerCenterY <= gapStart + gapSize;
+              
+              if(inBeam && !inGap){
+                if(hitStartTime === null){
+                  hitStartTime = Date.now();
+                }
+                
+                if(Date.now() - hitStartTime > LASER_HIT_GRACE_MS){
+                  handleLaserHit();
+                  hitStartTime = null;
+                }
+              } else {
+                hitStartTime = null;
+              }
+            }
+            
+            if(progress < 1){
+              requestAnimationFrame(sweepAnimation);
+            } else {
+              if(beam1.parentNode) gameArea.removeChild(beam1);
+              if(beam2.parentNode) gameArea.removeChild(beam2);
+            }
+          };
+          
+          sweepAnimation();
+        }, LASER_TELEGRAPH_MS);
       }
-      
-      gameArea.appendChild(laser);
     }
     
-    // Check collision with lasers
-    function checkLaserCollision(){
-      const pRect = { x: playerX, y: playerY, size: PLAYER_SIZE };
+    // Handle laser hit
+    function handleLaserHit(){
+      if(isInvulnerable) return;
       
-      for(const laser of lasers){
-        if(laser.horizontal){
-          if(Math.abs(pRect.y + pRect.size/2 - laser.y) < PLAYER_SIZE/2 + 3){
-            return true;
-          }
-        } else {
-          if(Math.abs(pRect.x + pRect.size/2 - laser.x) < PLAYER_SIZE/2 + 3){
-            return true;
-          }
+      laserHitAccumulator++;
+      score = Math.max(0, score - LASER_HIT_PENALTY);
+      currentCombo = 0;
+      
+      // Flash screen
+      gameArea.style.background = '#ff9933';
+      setTimeout(() => {
+        gameArea.style.background = '#0a1420';
+      }, 150);
+      
+      // Accumulate hits - lose life every 2-3 hits
+      if(laserHitAccumulator >= 2){
+        lives--;
+        laserHits++;
+        laserHitAccumulator = 0;
+        
+        // Drop items
+        items.forEach(item => {
+          if(item.div.parentNode) gameArea.removeChild(item.div);
+        });
+        items = [];
+        
+        livesDiv.textContent = `Lives: ${lives}`;
+        
+        // Start invulnerability period
+        isInvulnerable = true;
+        invulnerableUntil = Date.now() + LASER_RECOVERY_MS;
+        player.style.opacity = '0.5';
+        player.style.animation = 'blink 0.2s ease-in-out infinite';
+        
+        setTimeout(() => {
+          isInvulnerable = false;
+          player.style.opacity = '1';
+          player.style.animation = '';
+        }, LASER_RECOVERY_MS);
+        
+        if(lives <= 0){
+          endGame();
+          return;
         }
+        
+        // Move player to center for safety
+        playerX = gameArea.clientWidth / 2 - PLAYER_SIZE / 2;
+        playerY = gameArea.clientHeight / 2 - PLAYER_SIZE / 2;
+        player.style.left = playerX + 'px';
+        player.style.top = playerY + 'px';
       }
-      return false;
+      
+      scoreDiv.textContent = `Score: ${score}`;
     }
     
     // Check collision with items
@@ -303,58 +574,6 @@
         setTimeout(() => {
           recipeCard.style.background = '#2c3a4d';
         }, 300);
-      }
-      
-      // Move lasers
-      for(let i = lasers.length - 1; i >= 0; i--){
-        const laser = lasers[i];
-        if(laser.horizontal){
-          // Horizontal lasers move down then wrap
-          laser.y += laser.speed;
-          if(laser.y > gameArea.clientHeight){
-            laser.y = -10;
-          }
-          laser.div.style.top = laser.y + 'px';
-        } else {
-          // Vertical lasers move right then wrap
-          laser.x += laser.speed;
-          if(laser.x > gameArea.clientWidth){
-            laser.x = -10;
-          }
-          laser.div.style.left = laser.x + 'px';
-        }
-      }
-      
-      // Check laser collision
-      if(checkLaserCollision()){
-        lives--;
-        laserHits++;
-        score = Math.max(0, score - LASER_HIT_PENALTY);
-        currentCombo = 0;
-        
-        // Drop items
-        items.forEach(item => gameArea.removeChild(item.div));
-        items = [];
-        
-        livesDiv.textContent = `Lives: ${lives}`;
-        scoreDiv.textContent = `Score: ${score}`;
-        
-        // Flash screen
-        gameArea.style.background = '#ff3366';
-        setTimeout(() => {
-          gameArea.style.background = '#0a1420';
-        }, 200);
-        
-        if(lives <= 0){
-          endGame();
-          return;
-        }
-        
-        // Brief invulnerability - move player to safe spot
-        playerX = gameArea.clientWidth / 2;
-        playerY = gameArea.clientHeight / 2;
-        player.style.left = playerX + 'px';
-        player.style.top = playerY + 'px';
       }
       
       // Check item collision
@@ -460,15 +679,19 @@
         spawnItem();
       }, 2000);
       
-      // Spawn lasers periodically (increases over time)
+      // Spawn lasers periodically (less frequent, telegraphed)
       laserSpawnInterval = setInterval(() => {
         spawnLaser();
-      }, 3000);
+      }, 4000); // Less frequent since they're more visible now
       
       // Initial spawns
       spawnItem();
       spawnItem();
-      spawnLaser();
+      
+      // First laser after a delay
+      setTimeout(() => {
+        spawnLaser();
+      }, 2000);
       
       gameLoop();
     }
