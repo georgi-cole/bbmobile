@@ -92,22 +92,27 @@
       }
       
       // Create player cards for each nominee
+      var validCards = []; // Track successfully created cards
       for (var i = 0; i < nominees.length; i++) {
-        (function(nomId, idx) {
+        (function(nomId, originalIdx) {
           var p = global.getP ? global.getP(nomId) : null;
-          if (!p) return;
+          if (!p) {
+            console.warn('[livevote-fs] Player not found:', nomId);
+            return;
+          }
           
           var card = document.createElement('div');
           card.className = 'fev-player-card';
           card.setAttribute('role', 'radio');
           card.setAttribute('aria-checked', 'false');
-          card.setAttribute('tabindex', idx === 0 ? '0' : '-1');
+          // Set tabindex based on actual position in grid, not original index
+          card.setAttribute('tabindex', validCards.length === 0 ? '0' : '-1');
           card.dataset.nomineeId = nomId;
           
           // Avatar
           var avatar = document.createElement('img');
           avatar.className = 'fev-player-avatar';
-          var resolveAvatar = (global.Game || global).resolveAvatar;
+          var resolveAvatar = global.resolveAvatar || (global.Game && global.Game.resolveAvatar);
           avatar.src = resolveAvatar ? resolveAvatar(p) : (p.avatar || p.img || p.photo);
           if (!avatar.src) {
             avatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p.name);
@@ -127,18 +132,31 @@
           badge.textContent = 'NOM';
           card.appendChild(badge);
           
-          // Click/tap handler
-          card.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            selectNominee(nomId, card);
-          };
+          // Track if already handling an interaction to prevent double-firing
+          var isHandlingInteraction = false;
           
-          // Touch handler for mobile
-          card.ontouchend = function(e) {
+          function handleSelection(e) {
+            if (isHandlingInteraction) return;
+            isHandlingInteraction = true;
+            
             e.preventDefault();
             e.stopPropagation();
             selectNominee(nomId, card);
+            
+            // Reset flag after a short delay
+            setTimeout(function() {
+              isHandlingInteraction = false;
+            }, 100);
+          }
+          
+          // Click/tap handler - unified for both mouse and touch
+          card.onclick = handleSelection;
+          
+          // Touch handler for mobile - use touchstart to feel more responsive
+          // But preventDefault to avoid double-firing with click
+          card.ontouchstart = function(e) {
+            // Don't call preventDefault here - let the browser handle it
+            // The onclick handler will fire after touchend
           };
           
           // Keyboard handler
@@ -165,6 +183,7 @@
           };
           
           grid.appendChild(card);
+          validCards.push(card); // Track successfully created cards
         })(nominees[i], i);
       }
       
@@ -177,11 +196,17 @@
       evictBtn.disabled = true;
       evictBtn.setAttribute('aria-disabled', 'true');
       
+      // Track if vote is being submitted to prevent double-submission
+      var isSubmitting = false;
+      
       evictBtn.onclick = function(e) {
         e.preventDefault();
         e.stopPropagation();
         
-        if (selectedId === null) return;
+        if (selectedId === null || isSubmitting) return;
+        
+        // Set flag to prevent double-submission
+        isSubmitting = true;
         
         // Disable button to prevent double-tap
         evictBtn.disabled = true;
@@ -204,12 +229,7 @@
         }, 200);
       };
       
-      // Touch handler for EVICT button
-      evictBtn.ontouchend = function(e) {
-        if (selectedId === null) return;
-        e.preventDefault();
-        evictBtn.onclick(e);
-      };
+      // No separate touch handler - onclick will fire after touchend automatically
       
       content.appendChild(evictBtn);
       overlay.appendChild(content);

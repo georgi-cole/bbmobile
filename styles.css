@@ -8643,14 +8643,14 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 }
 
 /* Body scroll lock when overlay is open */
+/* Note: Actual scroll position management is handled by livevote-helpers.js */
 html.eviction-vote-open {
   overflow: hidden !important;
 }
 
 html.eviction-vote-open body {
   overflow: hidden !important;
-  position: fixed;
-  width: 100%;
+  touch-action: none !important;
 }
 
 /* ==== Veto/ceremony inline card containment (TV-only) ==== */

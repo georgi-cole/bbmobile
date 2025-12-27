@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Fullscreen Eviction Vote Overlay</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: 'Montserrat', sans-serif;
+      background: #0d151f;
+      color: #e6e8ee;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: rgba(20, 30, 45, 0.8);
+      border-radius: 12px;
+    }
+    h1 {
+      text-align: center;
+      color: #ff6b6b;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(40, 50, 70, 0.5);
+      border-radius: 8px;
+    }
+    .test-btn {
+      padding: 12px 24px;
+      margin: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 2px solid #83bfff;
+      background: linear-gradient(135deg, #4a8ed9, #3a7ec9);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .test-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(70, 150, 255, 0.2);
+      border-left: 4px solid #83bfff;
+      border-radius: 4px;
+      display: none;
+    }
+    .result.show {
+      display: block;
+    }
+    .note {
+      font-size: 0.9rem;
+      color: #a0b0c0;
+      margin-top: 10px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🗳️ Fullscreen Eviction Vote Overlay Test</h1>
+    
+    <div class="test-section">
+      <h2>Test 1: Two Nominees (Standard Vote)</h2>
+      <button class="test-btn" onclick="testTwoNominees()">Show Vote with 2 Nominees</button>
+      <div id="result1" class="result"></div>
+      <p class="note">Expected: Should show 2 player cards side-by-side (or stacked on mobile) with EVICT button at bottom</p>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 2: Three Nominees (Multi-Nominee Vote)</h2>
+      <button class="test-btn" onclick="testThreeNominees()">Show Vote with 3 Nominees</button>
+      <div id="result2" class="result"></div>
+      <p class="note">Expected: Should show 3 player cards in a grid layout with EVICT button at bottom</p>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 3: Four Nominees (Max Multi-Nominee)</h2>
+      <button class="test-btn" onclick="testFourNominees()">Show Vote with 4 Nominees</button>
+      <div id="result3" class="result"></div>
+      <p class="note">Expected: Should show 4 player cards in 2x2 grid with EVICT button at bottom, scrollable if needed</p>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 4: Tie-Breaker Vote</h2>
+      <button class="test-btn" onclick="testTieBreak()">Show Tie-Breaker Vote</button>
+      <div id="result4" class="result"></div>
+      <p class="note">Expected: Title should show "Tie-Breaker Vote" instead of "Cast Your Vote to Evict"</p>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 5: Mobile Layout (Resize Test)</h2>
+      <button class="test-btn" onclick="testMobileLayout()">Show Vote (Resize window to test)</button>
+      <div id="result5" class="result"></div>
+      <p class="note">Expected: On narrow screens (< 500px), nominees should stack vertically in a single column</p>
+    </div>
+    
+    <div class="test-section">
+      <h2>✅ Acceptance Criteria Checklist</h2>
+      <ul style="list-style: none; padding-left: 0;">
+        <li>☐ Nominees are clickable/tappable (red highlight on selection)</li>
+        <li>☐ EVICT button is disabled until nominee is selected</li>
+        <li>☐ EVICT button becomes enabled after selection</li>
+        <li>☐ Clicking EVICT submits vote and closes overlay</li>
+        <li>☐ Overlay appears above all other content (z-index works)</li>
+        <li>☐ On mobile: nominees are tappable without issues</li>
+        <li>☐ On mobile: EVICT button is visible without scrolling (for 2-4 nominees)</li>
+        <li>☐ Body scroll is locked when overlay is open</li>
+        <li>☐ Keyboard navigation works (Tab, Enter, Arrow keys)</li>
+        <li>☐ No duplicate voting UIs rendered</li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Load core game files -->
+  <script>
+    // Mock minimal game state
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { id: 3, name: 'Carol', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carol' },
+        { id: 4, name: 'Dave', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dave' }
+      ]
+    };
+    
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+    
+    // Mock resolveAvatar
+    window.resolveAvatar = function(player) {
+      return player.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(player.name)}`;
+    };
+  </script>
+  
+  <!-- Load the fullscreen eviction vote module -->
+  <script src="js/livevote-fullscreen.js"></script>
+  
+  <script>
+    function showResult(testNum, message) {
+      const resultDiv = document.getElementById('result' + testNum);
+      resultDiv.textContent = message;
+      resultDiv.classList.add('show');
+      setTimeout(() => {
+        resultDiv.classList.remove('show');
+      }, 5000);
+    }
+    
+    function testTwoNominees() {
+      console.log('[Test 1] Starting two nominees test');
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2], // Alice and Bob
+        isTieBreak: false,
+        onVote: function(nomineeId) {
+          const name = window.safeName(nomineeId);
+          showResult(1, `✅ Vote cast! You voted to evict ${name} (ID: ${nomineeId})`);
+          console.log('[Test 1] Vote result:', { nomineeId, name });
+        }
+      }).then(result => {
+        console.log('[Test 1] Promise resolved with:', result);
+      });
+    }
+    
+    function testThreeNominees() {
+      console.log('[Test 2] Starting three nominees test');
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3], // Alice, Bob, and Carol
+        isTieBreak: false,
+        onVote: function(nomineeId) {
+          const name = window.safeName(nomineeId);
+          showResult(2, `✅ Vote cast! You voted to evict ${name} (ID: ${nomineeId})`);
+          console.log('[Test 2] Vote result:', { nomineeId, name });
+        }
+      }).then(result => {
+        console.log('[Test 2] Promise resolved with:', result);
+      });
+    }
+    
+    function testFourNominees() {
+      console.log('[Test 3] Starting four nominees test');
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3, 4], // Alice, Bob, Carol, and Dave
+        isTieBreak: false,
+        onVote: function(nomineeId) {
+          const name = window.safeName(nomineeId);
+          showResult(3, `✅ Vote cast! You voted to evict ${name} (ID: ${nomineeId})`);
+          console.log('[Test 3] Vote result:', { nomineeId, name });
+        }
+      }).then(result => {
+        console.log('[Test 3] Promise resolved with:', result);
+      });
+    }
+    
+    function testTieBreak() {
+      console.log('[Test 4] Starting tie-breaker test');
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2], // Alice and Bob
+        isTieBreak: true, // Should show "Tie-Breaker Vote" title
+        onVote: function(nomineeId) {
+          const name = window.safeName(nomineeId);
+          showResult(4, `✅ Tie-breaker vote cast! You voted to evict ${name} (ID: ${nomineeId})`);
+          console.log('[Test 4] Tie-breaker result:', { nomineeId, name });
+        }
+      }).then(result => {
+        console.log('[Test 4] Promise resolved with:', result);
+      });
+    }
+    
+    function testMobileLayout() {
+      console.log('[Test 5] Starting mobile layout test');
+      showResult(5, `📱 Overlay shown. Resize browser window to < 500px width to test mobile layout.`);
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3], // Alice, Bob, and Carol
+        isTieBreak: false,
+        onVote: function(nomineeId) {
+          const name = window.safeName(nomineeId);
+          showResult(5, `✅ Mobile layout test complete! You voted to evict ${name} (ID: ${nomineeId})`);
+          console.log('[Test 5] Mobile layout result:', { nomineeId, name });
+        }
+      }).then(result => {
+        console.log('[Test 5] Promise resolved with:', result);
+      });
+    }
+    
+    // Log when module is loaded
+    console.log('[Test] Fullscreen eviction vote module loaded:', {
+      showFullscreenEvictionVote: typeof window.showFullscreenEvictionVote,
+      hideFullscreenEvictionVote: typeof window.hideFullscreenEvictionVote,
+      LiveVoteFullscreen: window.LiveVoteFullscreen
+    });
+  </script>
+</body>
+</html>
