@@ -26,62 +26,56 @@
 
 /* 
  * Enforce the overlay as a hard container to prevent spillover.
- * This overlay uses position:fixed (from patch file) for full-viewport coverage.
- * The panel inside uses flexbox column layout with sticky header/footer.
+ * This overlay already uses position:fixed, but we ensure it clips content.
  */
 .lv-overlay {
   /* Positioning context for sticky elements */
-  position: fixed; /* Set in patch file, ensuring it's here for reference */
+  position: fixed;
   
   /* Hard container - clip any overflow beyond bounds */
   overflow: hidden;
   
-  /* Use flexbox instead of grid for better sticky support:
-   * Flexbox allows children to use position:sticky more reliably
-   * Grid works too, but flexbox is simpler for this 3-part layout
+  /* Use CSS Grid for structured 4-row layout:
+   * Row 1: Header/title (auto height)
+   * Row 2: Avatars area (flexible, grows to fill, but scrolls internally)
+   * Row 3: Confirmation container with selected preview and evict button (auto height)
+   * Row 4: Reserved for future status messages (auto height, optional)
    */
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr;
   
-  /* Ensure full viewport dimensions */
-  min-height: 100vh;
+  /* Ensure minimum dimensions to prevent collapse */
   min-height: 100dvh;
   
-  /* Safe area padding removed - now handled by header/footer individually */
+  /* Safe area padding for iOS notch and home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 
 /*
  * Header row - title and status area
- * Sticky at top, doesn't shrink
+ * Already styled, but ensure it stays fixed at top
  */
 .lv-overlay__header {
+  grid-row: 1;
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 /*
  * Carousel/Avatars area - the key containment zone
  * - Uses internal scrolling when content exceeds available space
- * - Grows to fill available space between header and footer
+ * - Never grows beyond its grid cell
  */
 .lv-overlay__carousel {
-  flex: 1 1 auto; /* Grow to fill available space */
+  grid-row: 2;
   
   /* Internal scrolling for avatars when they exceed available space */
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   
   /* Minimum height to ensure usable scroll area */
-  min-height: 0; /* Critical for flexbox children to shrink */
-  
-  /* Center content */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  min-height: 0; /* Critical for flexbox/grid children to shrink */
   
   /* Hide scrollbars but keep functionality */
   scrollbar-width: thin;
@@ -157,13 +151,14 @@
 
 /*
  * Confirmation container - holds selected preview and evict button
- * Sticky at bottom, doesn't shrink
+ * Uses sticky positioning to stay at bottom of visible area
  */
 .lv-overlay__confirm-container {
-  flex-shrink: 0;
+  grid-row: 3;
+  
+  /* Sticky to bottom of overlay when scrolling (if carousel scrolls vertically) */
   position: sticky;
   bottom: 0;
-  z-index: 10;
   
   /* COMPACT MODE: Lighter background gradient to increase transparency */
   background: linear-gradient(
@@ -176,6 +171,9 @@
   /* COMPACT MODE: Minimal padding with safe area for iOS home indicator */
   padding: clamp(8px, 2vw, 14px);
   padding-bottom: calc(clamp(8px, 2vw, 14px) + env(safe-area-inset-bottom, 0px));
+  
+  /* Ensure it sits above carousel content */
+  z-index: 10;
 }
 
 /*
