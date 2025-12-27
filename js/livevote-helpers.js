@@ -206,14 +206,24 @@
     // Clear countdown timer
     clearVoteCountdown();
     
-    // Clean up LiveVoteFullscreen timer (new enhancement)
+    // Clean up LiveVoteFullscreen timer (authoritative timer)
     try {
-      if (global.LiveVoteFullscreen?.pauseVoteTimer) {
-        global.LiveVoteFullscreen.pauseVoteTimer();
-        console.debug('[livevote-helpers] LiveVoteFullscreen timer paused');
+      if (global.LiveVoteFullscreen?.clearTimer) {
+        global.LiveVoteFullscreen.clearTimer();
+        console.debug('[livevote-helpers] LiveVoteFullscreen timer cleared');
       }
     } catch (e) {
-      console.warn('[livevote-helpers] Error pausing LiveVoteFullscreen timer:', e);
+      console.warn('[livevote-helpers] Error clearing LiveVoteFullscreen timer:', e);
+    }
+    
+    // Hide houseguest profile modal if available
+    try {
+      if (typeof global.hideHouseguestProfile === 'function') {
+        global.hideHouseguestProfile();
+        console.debug('[livevote-helpers] Houseguest profile hidden via API');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error hiding houseguest profile:', e);
     }
     
     // Call hide() on modals to ensure their internal state is reset
@@ -244,7 +254,8 @@
       '.fullscreen-pov-selector',  // POV fullscreen selector
       '.eviction-manager-root', // EvictionManager UI
       '.fullscreen-eviction-vote',  // Fullscreen eviction vote overlay (new)
-      '.houseguest-profile-modal'   // Houseguest profile modal (new)
+      '.houseguest-profile-modal',  // Houseguest profile modal (new)
+      '.fev-emoji-layer'       // Emoji layer (if orphaned)
     ];
 
     overlaySelectors.forEach(selector => {

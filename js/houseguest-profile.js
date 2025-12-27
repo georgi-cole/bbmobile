@@ -205,6 +205,44 @@
    * @returns {string} HTML string
    */
   function buildBasicInfoHTML(player) {
+    // Try to get enhanced data from intro hub sources
+    let enhancedData = null;
+    let dataSource = 'player object';
+    
+    // 1. Try global.houseguestsData
+    if (global.houseguestsData && global.houseguestsData[player.id]) {
+      enhancedData = global.houseguestsData[player.id];
+      dataSource = 'global.houseguestsData';
+      console.debug('[houseguest-profile] Using data from global.houseguestsData');
+    }
+    
+    // 2. Try querying intro hub DOM
+    if (!enhancedData) {
+      try {
+        const introHubElement = document.querySelector('#introHub .houseguest[data-player-id="' + player.id + '"]');
+        if (introHubElement) {
+          enhancedData = {
+            bio: introHubElement.dataset.bio || introHubElement.getAttribute('data-bio'),
+            story: introHubElement.dataset.story || introHubElement.getAttribute('data-story'),
+            age: introHubElement.dataset.age || introHubElement.getAttribute('data-age'),
+            location: introHubElement.dataset.location || introHubElement.getAttribute('data-location'),
+            occupation: introHubElement.dataset.occupation || introHubElement.getAttribute('data-occupation'),
+            trait: introHubElement.dataset.trait || introHubElement.getAttribute('data-trait'),
+            motto: introHubElement.dataset.motto || introHubElement.getAttribute('data-motto')
+          };
+          dataSource = 'intro hub DOM';
+          console.debug('[houseguest-profile] Using data from intro hub DOM element');
+        }
+      } catch (e) {
+        console.debug('[houseguest-profile] Could not query intro hub DOM:', e);
+      }
+    }
+    
+    // 3. Merge with player object (player object as fallback)
+    const data = Object.assign({}, player, enhancedData || {});
+    
+    console.debug('[houseguest-profile] Basic Info data source:', dataSource);
+    
     // Get avatar
     const resolveAvatar = global.resolveAvatar || (global.Game && global.Game.resolveAvatar);
     let avatarSrc = resolveAvatar ? resolveAvatar(player) : (player.avatar || player.img || player.photo);
@@ -223,32 +261,37 @@
     // Name
     html += `<h3 class="hg-profile-name">${player.name}</h3>`;
 
-    // Bio (if available)
-    if (player.bio) {
-      html += `<div class="hg-profile-bio">${player.bio}</div>`;
+    // Story (prioritized from intro hub)
+    if (data.story) {
+      html += `<div class="hg-profile-story">${data.story}</div>`;
     }
 
-    // Additional fields from player object
+    // Bio (if available and different from story)
+    if (data.bio && data.bio !== data.story) {
+      html += `<div class="hg-profile-bio">${data.bio}</div>`;
+    }
+
+    // Additional fields from player object or intro hub
     html += '<div class="hg-profile-fields">';
     
-    if (player.age !== undefined) {
-      html += `<div class="hg-profile-field"><span class="field-label">Age:</span> ${player.age}</div>`;
+    if (data.age !== undefined && data.age !== null) {
+      html += `<div class="hg-profile-field"><span class="field-label">Age:</span> ${data.age}</div>`;
     }
     
-    if (player.location) {
-      html += `<div class="hg-profile-field"><span class="field-label">Location:</span> ${player.location}</div>`;
+    if (data.location) {
+      html += `<div class="hg-profile-field"><span class="field-label">Location:</span> ${data.location}</div>`;
     }
     
-    if (player.occupation) {
-      html += `<div class="hg-profile-field"><span class="field-label">Occupation:</span> ${player.occupation}</div>`;
+    if (data.occupation) {
+      html += `<div class="hg-profile-field"><span class="field-label">Occupation:</span> ${data.occupation}</div>`;
     }
     
-    if (player.trait) {
-      html += `<div class="hg-profile-field"><span class="field-label">Trait:</span> ${player.trait}</div>`;
+    if (data.trait) {
+      html += `<div class="hg-profile-field"><span class="field-label">Trait:</span> ${data.trait}</div>`;
     }
     
-    if (player.motto) {
-      html += `<div class="hg-profile-field"><span class="field-label">Motto:</span> "${player.motto}"</div>`;
+    if (data.motto) {
+      html += `<div class="hg-profile-field"><span class="field-label">Motto:</span> "${data.motto}"</div>`;
     }
 
     html += '</div>'; // .hg-profile-fields
@@ -385,12 +428,34 @@
     return html;
   }
 
+  /**
+   * Hide/close all houseguest profile modals
+   * Safe to call even if no modal is open
+   */
+  function hideHouseguestProfile() {
+    const modals = document.querySelectorAll('.houseguest-profile-modal');
+    modals.forEach(modal => {
+      modal.classList.add('closing');
+      setTimeout(() => {
+        if (modal.parentNode) {
+          modal.parentNode.removeChild(modal);
+        }
+      }, 200);
+    });
+    
+    if (modals.length > 0) {
+      console.debug('[houseguest-profile] Closed ' + modals.length + ' modal(s)');
+    }
+  }
+
   // Export to global
   global.showHouseguestProfile = showHouseguestProfile;
+  global.hideHouseguestProfile = hideHouseguestProfile;
 
   // Export as module object
   global.HouseguestProfile = {
-    show: showHouseguestProfile
+    show: showHouseguestProfile,
+    hide: hideHouseguestProfile
   };
 
   console.info('[houseguest-profile] Module initialized');

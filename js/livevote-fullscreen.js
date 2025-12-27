@@ -11,8 +11,73 @@
     intervalId: null,
     remainingMs: 0,
     isPaused: false,
-    startTimeMs: 0
+    startTimeMs: 0,
+    isOwner: false  // Track if this module owns the current timer
   };
+
+  /**
+   * Clear all known legacy vote timers to ensure single source of truth
+   * This prevents multiple auto-vote timers from running concurrently
+   */
+  function clearLegacyVoteTimers() {
+    console.info('[livevote-fs] Clearing legacy vote timers...');
+    
+    let clearedCount = 0;
+    
+    // Known legacy timer variables from codebase
+    const legacyTimerVars = [
+      '__liveVoteAutoTimer',
+      'voteTimeoutId',
+      'livevoteTimeout',
+      '__autoVoteTimeout',
+      '_evictionVoteTimer',
+      '_voteAutoTimer'
+    ];
+    
+    // Clear each legacy timer if it exists
+    legacyTimerVars.forEach(function(varName) {
+      if (global[varName] !== undefined && global[varName] !== null) {
+        try {
+          clearTimeout(global[varName]);
+          clearInterval(global[varName]);
+          console.debug('[livevote-fs] Cleared legacy timer:', varName);
+          global[varName] = null;
+          clearedCount++;
+        } catch (e) {
+          console.warn('[livevote-fs] Error clearing', varName, ':', e);
+        }
+      }
+    });
+    
+    // Clear game.eviction timers if they exist
+    if (global.game && global.game.eviction) {
+      const evictionTimers = [
+        '_countdownInterval',
+        '_countdownTimeout',
+        '_autoVoteTimer'
+      ];
+      
+      evictionTimers.forEach(function(varName) {
+        if (global.game.eviction[varName] !== undefined && global.game.eviction[varName] !== null) {
+          try {
+            clearTimeout(global.game.eviction[varName]);
+            clearInterval(global.game.eviction[varName]);
+            console.debug('[livevote-fs] Cleared game.eviction timer:', varName);
+            global.game.eviction[varName] = null;
+            clearedCount++;
+          } catch (e) {
+            console.warn('[livevote-fs] Error clearing game.eviction.' + varName + ':', e);
+          }
+        }
+      });
+    }
+    
+    if (clearedCount > 0) {
+      console.info('[livevote-fs] Cleared ' + clearedCount + ' legacy timer(s)');
+    } else {
+      console.debug('[livevote-fs] No legacy timers found to clear');
+    }
+  }
 
   /**
    * Show full-screen eviction vote selector
@@ -455,7 +520,12 @@
       // This ensures the overlay is outside any stacking context
       document.body.appendChild(overlay);
       
-      // Start the voting timer
+      // Clear legacy timers before starting our authoritative timer
+      clearLegacyVoteTimers();
+      
+      // Start the voting timer and claim ownership
+      timerState.isOwner = true;
+      console.info('[livevote-fs] Starting fullscreen timer with ' + timeoutMs + 'ms timeout');
       startTimer();
       
       // Focus first card for accessibility
@@ -570,15 +640,8 @@
    * Safe to call even if overlay doesn't exist
    */
   function hideFullscreenEvictionVote() {
-    // Clean up timer
-    if (timerState.timeoutId) {
-      clearTimeout(timerState.timeoutId);
-      timerState.timeoutId = null;
-    }
-    if (timerState.intervalId) {
-      clearInterval(timerState.intervalId);
-      timerState.intervalId = null;
-    }
+    // Clean up timer and release ownership
+    clearTimer();
     
     var overlay = document.querySelector('.fullscreen-eviction-vote');
     if (overlay) {
@@ -594,6 +657,30 @@
         }
       }, 200);
     }
+  }
+  
+  /**
+   * Clear the vote timer (public method for external cleanup)
+   */
+  function clearTimer() {
+    if (timerState.timeoutId) {
+      clearTimeout(timerState.timeoutId);
+      timerState.timeoutId = null;
+    }
+    if (timerState.intervalId) {
+      clearInterval(timerState.intervalId);
+      timerState.intervalId = null;
+    }
+    timerState.isOwner = false;
+    console.debug('[livevote-fs] Timer cleared and ownership released');
+  }
+  
+  /**
+   * Check if this module currently owns the vote timer
+   * @returns {boolean} True if this module owns the timer
+   */
+  function isTimerOwner() {
+    return timerState.isOwner;
   }
   
   /**
@@ -615,7 +702,10 @@
     isOpen: isOpen,
     pauseVoteTimer: pauseVoteTimer,
     resumeVoteTimer: resumeVoteTimer,
-    getRemainingVoteMs: getRemainingVoteMs
+    getRemainingVoteMs: getRemainingVoteMs,
+    clearTimer: clearTimer,
+    isTimerOwner: isTimerOwner,
+    clearLegacyVoteTimers: clearLegacyVoteTimers  // Expose for testing/external use
   };
   
 })(window);

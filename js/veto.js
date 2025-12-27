@@ -2295,6 +2295,27 @@
           name.textContent = p.name;
           card.appendChild(name);
           
+          // Info button (always visible)
+          var infoBtn = document.createElement('button');
+          infoBtn.className = 'fs-info-btn';
+          infoBtn.setAttribute('aria-label', 'View ' + p.name + ' profile');
+          infoBtn.innerHTML = 'ℹ️';
+          infoBtn.onclick = function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Show profile modal (no timer for veto selector)
+            if(typeof global.showHouseguestProfile === 'function'){
+              global.showHouseguestProfile(nomId, {
+                pauseTimerCallback: function(){}, // No-op - no timer for POV selector
+                resumeTimerCallback: function(){}
+              });
+            } else {
+              console.warn('[veto] showHouseguestProfile not available');
+            }
+          };
+          card.appendChild(infoBtn);
+          
           // Save button
           var btn = document.createElement('button');
           btn.className = 'fs-save-btn';
