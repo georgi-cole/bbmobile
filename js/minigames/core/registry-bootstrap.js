@@ -36,7 +36,8 @@
         'memoryMatch', 'mathBlitz', 'timingBar', 'sequenceMemory',
         'patternMatch', 'wordAnagram', 'targetPractice', 'memoryPairs',
         'estimationGame', 'wordTyping', 'reactionTimer', 'sliderPuzzle',
-        'pathFinder', 'simonSays', 'holdWall', 'memoryZipline', 'swipeMaze',
+        'pathFinder', 'simonSays', 'holdWall', 'tiltedLedge', 'pressurePlank',
+        'rainBarrelBalance', 'memoryZipline', 'swipeMaze',
         'patternTrace', 'audioMatch', 'balanceBridge', 'colorMix',
         'wordLadder', 'rhythmTap', 'spotTheDifference', 'logicLocks',
         'astroJumper', 'bubbleBurst', 'cardClash', 'chainReaction',
@@ -108,7 +109,13 @@
       'social-strings': 'socialStrings',
       'socialstrings': 'socialStrings',
       'color-match': 'colorMatch',
-      'colormatch': 'colorMatch'
+      'colormatch': 'colorMatch',
+      'tilted-ledge': 'tiltedLedge',
+      'tiltedledge': 'tiltedLedge',
+      'pressure-plank': 'pressurePlank',
+      'pressureplank': 'pressurePlank',
+      'rain-barrel-balance': 'rainBarrelBalance',
+      'rainbarrelbalance': 'rainBarrelBalance'
     };
 
     console.info('Registering', Object.keys(descriptiveAliases).length, 'descriptive aliases');

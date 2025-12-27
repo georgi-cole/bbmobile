@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test — Endurance Minicomps</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b1020;
+      color: #e8f3ff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    header {
+      padding: 16px;
+      background: #1a2540;
+      border-bottom: 2px solid #2a4a6a;
+    }
+    header h2 {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+      color: #83bfff;
+    }
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #95a9c0;
+    }
+    main {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .controls button {
+      padding: 16px;
+      font-size: 1rem;
+      background: #2a4a6a;
+      color: #83bfff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .controls button:hover {
+      background: #3a5a7a;
+      transform: translateY(-2px);
+    }
+    .controls button:active {
+      transform: translateY(0);
+    }
+    .host {
+      height: 70vh;
+      min-height: 480px;
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0f1530;
+      margin-bottom: 20px;
+    }
+    .output {
+      padding: 16px;
+      background: rgba(20, 30, 50, 0.6);
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .output h3 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      color: #83bfff;
+    }
+    .output pre {
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: #e8f3ff;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .info {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      border-radius: 8px;
+      line-height: 1.6;
+      color: #95a9c0;
+    }
+    .info strong {
+      color: #e8f3ff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Endurance Minicomps Test</h2>
+    <p>Test the three new endurance minigames: Tilted Ledge, Pressure Plank, and Rain Barrel Balance</p>
+  </header>
+  
+  <main>
+    <div class="info">
+      <strong>Instructions:</strong> Click any button below to start a game. Each game includes:
+      <ul style="margin: 8px 0 0; padding-left: 20px;">
+        <li>Instructions overlay with game rules</li>
+        <li>3-2-1 countdown before start</li>
+        <li>Live HUD showing time, score, and level</li>
+        <li>Difficulty ramping over time</li>
+        <li>Anti-spam mechanics on input</li>
+        <li>End screen with replay option</li>
+        <li>Proper completion callback and event dispatching</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button id="btnTilt">🎯 Play Tilted Ledge</button>
+      <button id="btnPlank">💪 Play Pressure Plank</button>
+      <button id="btnBarrel">🪣 Play Rain Barrel Balance</button>
+      <button id="btnClear">🧹 Clear Display</button>
+    </div>
+    
+    <div id="host" class="host"></div>
+    
+    <div class="output">
+      <h3>Game Results</h3>
+      <pre id="out">Waiting for game to complete...</pre>
+    </div>
+  </main>
+
+  <!-- Load registry first -->
+  <script src="./registry.js"></script>
+  
+  <!-- Load the three new minigame modules -->
+  <script src="./tilted-ledge.js"></script>
+  <script src="./pressure-plank.js"></script>
+  <script src="./rain-barrel-balance.js"></script>
+  
+  <script>
+    const host = document.getElementById('host');
+    const out = document.getElementById('out');
+    
+    // Listen for minigame:end events
+    window.addEventListener('minigame:end', (e) => {
+      console.log('minigame:end event:', e.detail);
+      const timestamp = new Date().toLocaleTimeString();
+      out.textContent = `[${timestamp}] Game ended via event:\n${JSON.stringify(e.detail, null, 2)}`;
+    });
+    
+    function play(key) {
+      host.innerHTML = '';
+      out.textContent = `Playing: ${key}...`;
+      
+      // Use MinigameRegistry if available, otherwise direct render
+      if(window.MinigameRegistry && typeof window.MinigameRegistry.render === 'function') {
+        console.log('Rendering via MinigameRegistry');
+        window.MinigameRegistry.render(key, host, (score) => {
+          const timestamp = new Date().toLocaleTimeString();
+          out.textContent = `[${timestamp}] Completed via callback: ${key}\nScore: ${Math.round(score)}\n\nwindow.minigameResult:\n${JSON.stringify(window.minigameResult, null, 2)}`;
+        });
+      } else if(window.MiniGames && window.MiniGames[key]) {
+        console.log('Rendering via direct MiniGames access');
+        window.MiniGames[key].render(host, (score) => {
+          const timestamp = new Date().toLocaleTimeString();
+          out.textContent = `[${timestamp}] Completed via callback: ${key}\nScore: ${Math.round(score)}\n\nwindow.minigameResult:\n${JSON.stringify(window.minigameResult, null, 2)}`;
+        });
+      } else {
+        out.textContent = `Error: Game "${key}" not loaded or MinigameRegistry not available`;
+      }
+    }
+    
+    function clearDisplay() {
+      host.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#95a9c0;font-size:1.2rem;">Select a game to play</div>';
+      out.textContent = 'Waiting for game to complete...';
+    }
+    
+    document.getElementById('btnTilt').onclick = () => play('tiltedLedge');
+    document.getElementById('btnPlank').onclick = () => play('pressurePlank');
+    document.getElementById('btnBarrel').onclick = () => play('rainBarrelBalance');
+    document.getElementById('btnClear').onclick = clearDisplay;
+    
+    // Initialize display
+    clearDisplay();
+  </script>
+</body>
+</html>
