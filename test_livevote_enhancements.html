@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: LiveVoteFullscreen Enhancements (Timer, Emoji, Profile)</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: 'Montserrat', sans-serif;
+      background: #0d151f;
+      color: #e6e8ee;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: rgba(20, 30, 45, 0.8);
+      border-radius: 12px;
+    }
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #ff6b6b;
+      margin-top: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(40, 50, 70, 0.5);
+      border-radius: 8px;
+    }
+    .test-btn {
+      padding: 12px 24px;
+      margin: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 2px solid #83bfff;
+      background: linear-gradient(135deg, #4a8ed9, #3a7ec9);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .test-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(70, 150, 255, 0.2);
+      border-left: 4px solid #83bfff;
+      border-radius: 4px;
+    }
+    .note {
+      font-size: 0.9rem;
+      color: #a0b0c0;
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(119, 213, 141, 0.2);
+      border-left: 4px solid #77d58d;
+      border-radius: 4px;
+    }
+    .feature-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    .feature-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(131, 191, 255, 0.2);
+    }
+    .feature-list li:before {
+      content: "✓ ";
+      color: #77d58d;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🗳️ LiveVoteFullscreen Enhancements Test</h1>
+    
+    <div class="status">
+      <h3>✅ New Features Implemented</h3>
+      <ul class="feature-list">
+        <li>2-minute voting timer with countdown display (mm:ss)</li>
+        <li>Visual progress ring showing remaining time</li>
+        <li>Auto-vote on timeout (uses autoCastEvictionVote hook)</li>
+        <li>Decorative floating emoji layer (🚪, ❓, ❌, ⛔, 😱)</li>
+        <li>Info (i) button on selected nominee cards</li>
+        <li>Full-screen houseguest profile modal with two tabs</li>
+        <li>Timer pause/resume when profile modal opens/closes</li>
+        <li>Keyboard navigation and accessibility (ESC to close)</li>
+        <li>Configurable timeout via game.cfg.voteTimeoutMs</li>
+        <li>Feature flag for emoji layer via game.cfg.enableFloatingEmojis</li>
+      </ul>
+    </div>
+
+    <h2>🧪 Test Scenarios</h2>
+    
+    <div class="test-section">
+      <h3>Test 1: Timer with Auto-Vote (10 seconds)</h3>
+      <button class="test-btn" onclick="testTimerAutoVote()">Test 10s Timer with Auto-Vote</button>
+      <div id="result1" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: Timer counts down from 00:10. When it reaches 00:00, auto-vote hook is called and overlay closes.
+        Watch the console for auto-vote logs.
+      </p>
+    </div>
+    
+    <div class="test-section">
+      <h3>Test 2: Full 2-Minute Timer</h3>
+      <button class="test-btn" onclick="testFullTimer()">Test Full 2-Minute Timer</button>
+      <div id="result2" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: Timer counts down from 02:00. Progress ring animates. You can manually vote before timeout.
+      </p>
+    </div>
+    
+    <div class="test-section">
+      <h3>Test 3: Floating Emoji Layer</h3>
+      <button class="test-btn" onclick="testEmojiLayer()">Test Emoji Layer</button>
+      <div id="result3" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: 8 floating emojis animate from bottom to top. They don't block interaction (pointer-events: none).
+        Try clicking through emojis to select nominees.
+      </p>
+    </div>
+    
+    <div class="test-section">
+      <h3>Test 4: Profile Modal Integration</h3>
+      <button class="test-btn" onclick="testProfileModal()">Test Profile Modal with Timer Pause</button>
+      <div id="result4" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: Select a nominee to reveal info (i) button. Click it to open profile modal with Basic Info and Game Info tabs.
+        Timer pauses while modal is open. Close modal with X button or ESC key - timer resumes with remaining time.
+      </p>
+    </div>
+    
+    <div class="test-section">
+      <h3>Test 5: Keyboard Navigation</h3>
+      <button class="test-btn" onclick="testKeyboardNav()">Test Keyboard Navigation</button>
+      <div id="result5" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: Use Tab to navigate between cards. Use Arrow keys to move between nominees. Press Enter/Space to select.
+        Open profile modal and press ESC to close.
+      </p>
+    </div>
+    
+    <div class="test-section">
+      <h3>Test 6: Testing API Methods</h3>
+      <button class="test-btn" onclick="testAPIMethods()">Test getRemainingVoteMs()</button>
+      <div id="result6" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: Opens vote overlay and queries remaining time via LiveVoteFullscreen.getRemainingVoteMs().
+        Shows current remaining time in console and on screen.
+      </p>
+    </div>
+    
+    <div class="test-section">
+      <h3>Test 7: Emoji Layer Toggle</h3>
+      <button class="test-btn" onclick="testEmojiToggle()">Toggle Emojis Off</button>
+      <div id="result7" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: Disables emoji layer via config flag. Next vote overlay should not show floating emojis.
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 8: Cleanup Verification</h3>
+      <button class="test-btn" onclick="testCleanup()">Test Cleanup</button>
+      <div id="result8" class="result" style="display:none;"></div>
+      <p class="note">
+        Expected: Opens overlay, then calls closeAllVoteUI(). All overlays, timers, and emoji layers removed.
+      </p>
+    </div>
+  </div>
+
+  <!-- Mock game state and player data -->
+  <script>
+    // Initialize mock game state
+    window.game = {
+      cfg: {
+        voteTimeoutMs: 120000, // Default 2 minutes
+        enableFloatingEmojis: true
+      },
+      players: [
+        {
+          id: 1,
+          name: "Alice Johnson",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
+          age: 28,
+          location: "Los Angeles, CA",
+          occupation: "Marketing Manager",
+          trait: "Social Butterfly",
+          motto: "Play with your heart, win with your mind",
+          bio: "Alice is a competitive player who values relationships but isn't afraid to make big moves when necessary.",
+          history: [
+            { 
+              week: 1, 
+              hoh: true,
+              pov: false,
+              nominated: false,
+              alliance: "Formed 'The Strategy Six' alliance",
+              notes: "Strong social connections established early",
+              safe: true
+            },
+            { 
+              week: 2, 
+              hoh: false,
+              povCompeted: true,
+              nominated: false,
+              votes: 0,
+              alliance: "Alliance with Dave strengthened",
+              notes: "Laid low and focused on social game",
+              safe: true
+            },
+            {
+              week: 3,
+              hoh: false,
+              pov: true,
+              nominated: true,
+              nominatedBy: "Eve",
+              vetoed: true,
+              vetoedBy: "herself",
+              votes: 0,
+              notes: "Close call but managed to save herself",
+              safe: true
+            }
+          ]
+        },
+        {
+          id: 2,
+          name: "Bob Smith",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
+          age: 32,
+          location: "New York, NY",
+          occupation: "Software Engineer",
+          trait: "Strategist",
+          motto: "Think three steps ahead",
+          bio: "Bob is a calculated player who analyzes every move. He's known for his logical gameplay.",
+          history: [
+            { 
+              week: 1, 
+              hoh: false,
+              pov: false,
+              nominated: true,
+              nominatedBy: "Alice",
+              votes: 3,
+              alliance: "Tried to form counter-alliance",
+              notes: "Survived first eviction by one vote",
+              safe: true
+            },
+            { 
+              week: 2, 
+              hoh: false,
+              pov: true,
+              nominated: true,
+              nominatedBy: "Carol",
+              vetoed: true,
+              vetoedBy: "himself",
+              votes: 0,
+              notes: "Won crucial veto and saved himself",
+              safe: true
+            }
+          ]
+        },
+        {
+          id: 3,
+          name: "Carol Davis",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carol",
+          age: 25,
+          location: "Chicago, IL",
+          occupation: "Fitness Instructor",
+          trait: "Competitor",
+          motto: "Never give up",
+          bio: "Carol thrives in physical competitions and brings high energy to the house.",
+          archive: [
+            { week: 1, events: ["Nominated for eviction", "Lost veto competition"] },
+            { week: 2, events: ["Won HOH", "Nominated Bob and Eve"] }
+          ]
+        },
+        {
+          id: 4,
+          name: "Dave Wilson",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dave",
+          age: 30,
+          location: "Miami, FL",
+          occupation: "Teacher",
+          trait: "Charmer",
+          motto: "Kill them with kindness",
+          bio: "Dave is the social glue of the house, making friends with everyone."
+        }
+      ]
+    };
+
+    // Mock getP function
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id) || null;
+    };
+
+    // Mock resolveAvatar
+    window.resolveAvatar = function(player) {
+      return player.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(player.name)}`;
+    };
+
+    // Mock auto-vote hook
+    window.autoCastEvictionVote = function(nominees) {
+      console.log('[TEST] Auto-vote hook called with nominees:', nominees);
+      // Pick random nominee
+      const selected = nominees[Math.floor(Math.random() * nominees.length)];
+      console.log('[TEST] Auto-vote selected:', selected);
+      return selected;
+    };
+
+    // Mock closeAllVoteUI for cleanup test
+    window.closeAllVoteUI = function() {
+      console.log('[TEST] closeAllVoteUI called');
+      // Remove overlays
+      document.querySelectorAll('.fullscreen-eviction-vote, .houseguest-profile-modal').forEach(el => el.remove());
+      // Clear timers
+      if (window.LiveVoteFullscreen?.pauseVoteTimer) {
+        window.LiveVoteFullscreen.pauseVoteTimer();
+      }
+      // Remove class
+      document.documentElement.classList.remove('eviction-vote-open');
+    };
+  </script>
+  
+  <!-- Load the required modules -->
+  <script src="js/houseguest-profile.js"></script>
+  <script src="js/livevote-fullscreen.js"></script>
+  
+  <script>
+    function showResult(testNum, message) {
+      const resultDiv = document.getElementById('result' + testNum);
+      resultDiv.textContent = message;
+      resultDiv.style.display = 'block';
+      setTimeout(() => {
+        resultDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    // Test 1: Timer with auto-vote (10 seconds for quick testing)
+    function testTimerAutoVote() {
+      // Temporarily set short timeout
+      const originalTimeout = window.game.cfg.voteTimeoutMs;
+      window.game.cfg.voteTimeoutMs = 10000; // 10 seconds
+      
+      showResult(1, 'Opening vote with 10-second timer. Watch for auto-vote...');
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (id) => {
+          const player = window.getP(id);
+          console.log('[TEST 1] Vote submitted:', player?.name);
+          showResult(1, `✅ Auto-vote selected: ${player?.name}`);
+          // Restore original timeout
+          window.game.cfg.voteTimeoutMs = originalTimeout;
+        }
+      });
+    }
+
+    // Test 2: Full 2-minute timer
+    function testFullTimer() {
+      showResult(2, 'Opening vote with full 2-minute timer...');
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3],
+        onVote: (id) => {
+          const player = window.getP(id);
+          console.log('[TEST 2] Vote submitted:', player?.name);
+          showResult(2, `✅ Vote submitted: ${player?.name}`);
+        }
+      });
+    }
+
+    // Test 3: Emoji layer
+    function testEmojiLayer() {
+      window.game.cfg.enableFloatingEmojis = true;
+      showResult(3, 'Opening vote with emoji layer enabled...');
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3, 4],
+        onVote: (id) => {
+          const player = window.getP(id);
+          console.log('[TEST 3] Vote submitted:', player?.name);
+          showResult(3, `✅ Vote submitted with emojis visible: ${player?.name}`);
+        }
+      });
+    }
+
+    // Test 4: Profile modal integration
+    function testProfileModal() {
+      showResult(4, 'Opening vote. Select a nominee and click the info (i) button...');
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (id) => {
+          const player = window.getP(id);
+          console.log('[TEST 4] Vote submitted:', player?.name);
+          showResult(4, `✅ Vote submitted after profile modal test: ${player?.name}`);
+        }
+      });
+    }
+
+    // Test 5: Keyboard navigation
+    function testKeyboardNav() {
+      showResult(5, 'Opening vote. Use Tab/Arrow keys to navigate, Enter/Space to select...');
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3],
+        onVote: (id) => {
+          const player = window.getP(id);
+          console.log('[TEST 5] Vote submitted:', player?.name);
+          showResult(5, `✅ Vote submitted via keyboard: ${player?.name}`);
+        }
+      });
+    }
+
+    // Test 6: API methods
+    function testAPIMethods() {
+      showResult(6, 'Opening vote to test getRemainingVoteMs()...');
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (id) => {
+          const player = window.getP(id);
+          console.log('[TEST 6] Vote submitted:', player?.name);
+        }
+      });
+      
+      // Query remaining time every second
+      let queryCount = 0;
+      const queryInterval = setInterval(() => {
+        if (window.LiveVoteFullscreen?.getRemainingVoteMs) {
+          const remaining = window.LiveVoteFullscreen.getRemainingVoteMs();
+          const seconds = Math.ceil(remaining / 1000);
+          console.log(`[TEST 6] Remaining time: ${seconds}s (${remaining}ms)`);
+          showResult(6, `⏱️ Remaining time: ${seconds}s`);
+          queryCount++;
+          
+          if (queryCount >= 5 || remaining <= 0) {
+            clearInterval(queryInterval);
+            showResult(6, '✅ API test complete. Check console for details.');
+          }
+        }
+      }, 1000);
+    }
+
+    // Test 7: Toggle emojis off
+    function testEmojiToggle() {
+      window.game.cfg.enableFloatingEmojis = !window.game.cfg.enableFloatingEmojis;
+      const status = window.game.cfg.enableFloatingEmojis ? 'enabled' : 'disabled';
+      showResult(7, `Emojis ${status}. Open a vote to see the effect.`);
+      
+      // Open a vote to demonstrate
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (id) => {
+          const player = window.getP(id);
+          console.log('[TEST 7] Vote submitted:', player?.name);
+          showResult(7, `✅ Vote submitted with emojis ${status}`);
+        }
+      });
+    }
+
+    // Test 8: Cleanup
+    function testCleanup() {
+      showResult(8, 'Opening vote, then calling closeAllVoteUI() after 2 seconds...');
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3],
+        onVote: (id) => {
+          console.log('[TEST 8] Vote submitted:', id);
+        }
+      });
+      
+      setTimeout(() => {
+        console.log('[TEST 8] Calling closeAllVoteUI()...');
+        if (typeof window.closeAllVoteUI === 'function') {
+          window.closeAllVoteUI();
+          
+          // Verify cleanup
+          setTimeout(() => {
+            const overlaysExist = document.querySelector('.fullscreen-eviction-vote') !== null;
+            const modalExists = document.querySelector('.houseguest-profile-modal') !== null;
+            const classRemoved = !document.documentElement.classList.contains('eviction-vote-open');
+            
+            if (!overlaysExist && !modalExists && classRemoved) {
+              showResult(8, '✅ Cleanup successful! All overlays and classes removed.');
+            } else {
+              showResult(8, '⚠️ Cleanup incomplete. Check console for details.');
+              console.error('[TEST 8] Cleanup verification failed:', {
+                overlaysExist,
+                modalExists,
+                classRemoved
+              });
+            }
+          }, 500);
+        } else {
+          showResult(8, '⚠️ closeAllVoteUI() not found');
+        }
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

@@ -206,6 +206,16 @@
     // Clear countdown timer
     clearVoteCountdown();
     
+    // Clean up LiveVoteFullscreen timer (new enhancement)
+    try {
+      if (global.LiveVoteFullscreen?.pauseVoteTimer) {
+        global.LiveVoteFullscreen.pauseVoteTimer();
+        console.debug('[livevote-helpers] LiveVoteFullscreen timer paused');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error pausing LiveVoteFullscreen timer:', e);
+    }
+    
     // Call hide() on modals to ensure their internal state is reset
     try {
       if (global.LiveVoteChoiceCard?.isOpen?.()) {
@@ -233,7 +243,8 @@
       '.carousel-picker-overlay', // POV carousel picker
       '.fullscreen-pov-selector',  // POV fullscreen selector
       '.eviction-manager-root', // EvictionManager UI
-      '.fullscreen-eviction-vote'  // NEW: Fullscreen eviction vote overlay
+      '.fullscreen-eviction-vote',  // Fullscreen eviction vote overlay (new)
+      '.houseguest-profile-modal'   // Houseguest profile modal (new)
     ];
 
     overlaySelectors.forEach(selector => {
