@@ -413,6 +413,17 @@
     document.body.appendChild(state.rootElement);
 
     emitEvent('eviction:opened', { nominees, evictCount });
+    
+    // HOTFIX: Call defensive helper to ensure overlay stays interactive
+    if (typeof global.ensureOverlayInteractive === 'function') {
+      setTimeout(() => {
+        global.ensureOverlayInteractive(state.rootElement);
+      }, 100);
+      // Double-check after animation frames
+      setTimeout(() => {
+        global.ensureOverlayInteractive(state.rootElement);
+      }, 500);
+    }
 
     return state.rootElement;
   }

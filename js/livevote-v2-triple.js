@@ -116,7 +116,8 @@
       inset: 'clamp(8px,1.8vw,16px)',
       display: 'grid',
       gridTemplateRows: '1fr auto',
-      zIndex: '150'
+      zIndex: '150',
+      pointerEvents: 'auto' // HOTFIX: Ensure triple overlay is interactive
     });
 
     // Create 3-column grid for nominees
@@ -231,6 +232,14 @@
     root.appendChild(grid);
     root.appendChild(ctaRow);
     overlay.appendChild(root);
+    
+    // HOTFIX: Call defensive helper to ensure overlay stays interactive
+    if (global.ensureOverlayInteractive === 'function') {
+      setTimeout(() => {
+        global.ensureOverlayInteractive(root);
+        global.ensureOverlayInteractive(overlay);
+      }, 100);
+    }
 
     // Setup keyboard handler for 1/2/3 shortcuts
     keyHandler = (e) => {
