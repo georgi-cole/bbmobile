@@ -107,8 +107,19 @@
     // Phase 1: Scaffolds (future games)
     'holdWall': 'holdWall',
     'hold-wall': 'holdWall',
+    'holdwall': 'holdWall',
+    'tiltedLedge': 'tiltedLedge',
+    'tilted-ledge': 'tiltedLedge',
+    'tiltedledge': 'tiltedLedge',
+    'pressurePlank': 'pressurePlank',
+    'pressure-plank': 'pressurePlank',
+    'pressureplank': 'pressurePlank',
+    'rainBarrelBalance': 'rainBarrelBalance',
+    'rain-barrel-balance': 'rainBarrelBalance',
+    'rainbarrelbalance': 'rainBarrelBalance',
     'memoryZipline': 'memoryZipline',
     'memory-zipline': 'memoryZipline',
+    'memoryzipline': 'memoryZipline',
     
     // New Mobile-Friendly Games (placeholders)
     'swipeMaze': 'placeholder',
