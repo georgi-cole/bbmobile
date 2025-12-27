@@ -560,6 +560,7 @@
       }, TARGET_COLOR_CHANGE_MS);
       
       // Spawn targets periodically with dynamic speed
+      // Using recursive setTimeout (not setInterval) to allow dynamic spawn rate changes
       function scheduleNextSpawn(){
         if(!gameActive) return;
         

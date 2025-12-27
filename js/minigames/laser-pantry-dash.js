@@ -18,6 +18,7 @@
   const CAMPING_THRESHOLD = 3000; // 3s in same spot
   const WRONG_ITEM_STREAK_THRESHOLD = 3;
   const MOVE_THRESHOLD = 10; // pixels to count as movement
+  const LASER_HITS_PER_LIFE = 2; // Number of hits before losing a life
   
   // Laser mechanics constants
   const LASER_TELEGRAPH_MS = 700; // Show warning before sweep
@@ -482,8 +483,8 @@
         gameArea.style.background = '#0a1420';
       }, 150);
       
-      // Accumulate hits - lose life every 2-3 hits
-      if(laserHitAccumulator >= 2){
+      // Accumulate hits - lose life when threshold reached
+      if(laserHitAccumulator >= LASER_HITS_PER_LIFE){
         lives--;
         laserHits++;
         laserHitAccumulator = 0;
