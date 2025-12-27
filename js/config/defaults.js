@@ -48,6 +48,10 @@
     tJuryReturn: 30,
     tJurorReturnVoteMs: 6500, // Duration (ms) for juror return vote panel animation
     
+    // Live Vote Fullscreen Eviction Timer (ms)
+    voteTimeoutMs: 120000, // 2 minutes voting timer before auto-vote (120000ms = 2 min)
+    enableFloatingEmojis: true, // Enable decorative floating emojis in voting overlay
+    
     // Card animation settings
     cardHoldMs: 3000,
     cardGapMs: 2000,
