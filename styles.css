@@ -8385,6 +8385,274 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   }
 }
 
+/* ============================================
+   FULL-SCREEN EVICTION VOTE OVERLAY
+   Pattern: Copy of .fullscreen-pov-selector from POV ceremony
+   ============================================ */
+
+.fullscreen-eviction-vote {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 2147483647 !important; /* Max 32-bit int - highest possible */
+  background: rgba(10, 14, 26, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  pointer-events: auto !important;
+  animation: fevOverlayFadeIn 0.3s ease-out;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Header */
+.fullscreen-eviction-vote .fev-header {
+  text-align: center;
+  margin-bottom: 24px;
+  animation: fevSlideDown 0.4s ease-out;
+}
+
+.fullscreen-eviction-vote .fev-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ff6b6b;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+}
+
+/* Content container */
+.fullscreen-eviction-vote .fev-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  max-width: 100%;
+  animation: fevSlideUp 0.4s ease-out 0.15s backwards;
+}
+
+/* Player grid */
+.fullscreen-eviction-vote .fev-player-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  max-width: 600px;
+}
+
+/* Player card */
+.fullscreen-eviction-vote .fev-player-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: linear-gradient(145deg, rgba(40, 50, 70, 0.8), rgba(30, 40, 60, 0.9));
+  border-radius: 16px;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  animation: fevPlayerFadeGrow 0.5s ease-out backwards;
+  min-width: 140px;
+  max-width: 180px;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.fullscreen-eviction-vote .fev-player-card:nth-child(1) { animation-delay: 0.2s; }
+.fullscreen-eviction-vote .fev-player-card:nth-child(2) { animation-delay: 0.3s; }
+.fullscreen-eviction-vote .fev-player-card:nth-child(3) { animation-delay: 0.4s; }
+.fullscreen-eviction-vote .fev-player-card:nth-child(4) { animation-delay: 0.5s; }
+
+/* Selected state - red glow for eviction */
+.fullscreen-eviction-vote .fev-player-card.selected {
+  border-color: #ff6b6b;
+  background: linear-gradient(145deg, rgba(255, 107, 107, 0.2), rgba(200, 80, 80, 0.3));
+  box-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+  transform: scale(1.05);
+}
+
+.fullscreen-eviction-vote .fev-player-card:hover:not(.selected) {
+  border-color: rgba(255, 107, 107, 0.5);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.fullscreen-eviction-vote .fev-player-card:focus {
+  outline: 3px solid #ff6b6b;
+  outline-offset: 4px;
+}
+
+/* Avatar */
+.fullscreen-eviction-vote .fev-player-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  pointer-events: none; /* Let clicks pass through to card */
+}
+
+.fullscreen-eviction-vote .fev-player-card.selected .fev-player-avatar {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.6);
+}
+
+/* Player name */
+.fullscreen-eviction-vote .fev-player-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #e6e8ee;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+/* NOM badge */
+.fullscreen-eviction-vote .fev-nom-badge {
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+/* EVICT button */
+.fullscreen-eviction-vote .fev-evict-btn {
+  width: 100%;
+  max-width: 320px;
+  min-height: 60px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  padding: 18px 40px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, #ff6b6b, #c0392b);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-top: 16px;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.fullscreen-eviction-vote .fev-evict-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff5252, #e74c3c);
+  box-shadow: 0 8px 28px rgba(255, 107, 107, 0.6);
+  transform: translateY(-2px);
+}
+
+.fullscreen-eviction-vote .fev-evict-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.fullscreen-eviction-vote .fev-evict-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(135deg, #555, #444);
+  box-shadow: none;
+}
+
+/* Animations */
+@keyframes fevOverlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fevSlideDown {
+  from { opacity: 0; transform: translateY(-30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fevSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fevPlayerFadeGrow {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Exit animation */
+.fullscreen-eviction-vote.removing {
+  animation: fevOverlayFadeOut 0.2s ease-out forwards;
+  pointer-events: none !important;
+}
+
+@keyframes fevOverlayFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .fullscreen-eviction-vote,
+  .fullscreen-eviction-vote .fev-header,
+  .fullscreen-eviction-vote .fev-content,
+  .fullscreen-eviction-vote .fev-player-card {
+    animation: none !important;
+  }
+  
+  .fullscreen-eviction-vote .fev-player-card:hover,
+  .fullscreen-eviction-vote .fev-player-card.selected {
+    transform: none;
+  }
+}
+
+/* Mobile: Single column on narrow screens */
+@media (max-width: 500px) {
+  .fullscreen-eviction-vote .fev-player-grid {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .fullscreen-eviction-vote .fev-player-card {
+    min-width: 200px;
+    max-width: 280px;
+  }
+  
+  .fullscreen-eviction-vote .fev-title {
+    font-size: 1.3rem;
+  }
+  
+  .fullscreen-eviction-vote .fev-evict-btn {
+    font-size: 1.2rem;
+    min-height: 54px;
+  }
+}
+
+/* Body scroll lock when overlay is open */
+html.eviction-vote-open {
+  overflow: hidden !important;
+}
+
+html.eviction-vote-open body {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
+}
+
 /* ==== Veto/ceremony inline card containment (TV-only) ==== */
 /* Keep the overlay inside the TV safe area and center content */
 #tvOverlay {

@@ -186,12 +186,12 @@
     }
     
     // If human is eligible voter and hasn't voted yet, show voting overlay directly
-    if (humanIsVoter && !hasVoted && global.LiveVoteOverlay) {
+    if (humanIsVoter && !hasVoted && global.showFullscreenEvictionVote) {
       // Check if overlay is already open (prevents duplicate modals)
-      const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
+      const overlayOpen = global.LiveVoteFullscreen?.isOpen?.() || false;
       
       if (overlayOpen) {
-        console.debug('[eviction] Skipping overlay show: already open');
+        console.debug('[eviction] Skipping fullscreen vote: already open');
         return;
       }
       
@@ -201,7 +201,7 @@
           global.clearTVOverlayContent(); 
         }
       } catch (e) { 
-        console.warn('[LiveVote] clearTVOverlayContent failed', e); 
+        console.warn('[eviction] clearTVOverlayContent failed', e); 
       }
       
       // COMMIT 4: Hide panel while overlay is open (use CSS class)
@@ -209,11 +209,11 @@
         panel.classList.add('voteOverlayOpen');
       }
       
-      // Show Voting Overlay directly (no pre-vote modal)
-      global.LiveVoteOverlay.show({
+      // Show NEW Fullscreen Eviction Vote Overlay (replaces LiveVoteOverlay)
+      global.showFullscreenEvictionVote({
         nominees: g.eviction.nominees,
         isTieBreak: false,
-        onSubmit: (selectedId) => {
+        onVote: function(selectedId) {
           // Clear countdown timer using shared helper
           if (global.clearVoteCountdown) {
             global.clearVoteCountdown();
@@ -965,12 +965,12 @@
       
       try{
         // Check if two-step overlay is available
-        if (global.LiveVoteOverlay && !useLv2) {
-          // Use two-step voting overlay for tie-break
-          global.LiveVoteOverlay.show({
+        if (global.showFullscreenEvictionVote && !useLv2) {
+          // Use fullscreen voting overlay for tie-break
+          global.showFullscreenEvictionVote({
             nominees: cIds,
             isTieBreak: true,
-            onSubmit: (pickId) => {
+            onVote: function(pickId) {
               // Close all vote UI immediately before resolving
               if (global.closeAllVoteUI) {
                 global.closeAllVoteUI();
