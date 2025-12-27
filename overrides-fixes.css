@@ -246,3 +246,70 @@ body[data-phase="social_intermission"] {
     min-height: 0 !important;
   }
 }
+
+/* OPTION A: Remove panel chrome so content can fill available space */
+.lv-overlay__panel,
+#panel,
+.tvViewport,
+.tv,
+.faux-tv,
+[data-faux-tv],
+[data-sm-faux-tv],
+.tvViewport[data-sm-faux-tv] {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  --card-padding: 0 !important; /* defensive */
+}
+
+/* Ensure panel doesn't add inset spacing with pseudo elements */
+.lv-overlay__panel::before,
+.lv-overlay__panel::after,
+#panel::before,
+#panel::after,
+tvViewport::before,
+tvViewport::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Let the panel behave as normal container but allow children to fill */
+.lv-overlay__panel,
+.tvViewport,
+.faux-tv {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+/* Avatar/tiles: pack rows to top and don't consume extra vertical space */
+.lv-overlay__carousel,
+.lv-overlay__carousel .tiles-grid,
+.tiles-grid,
+housemates-grid,
+.lv2-grid,
+.lv-overlay__track {
+  align-content: flex-start !important;
+  align-items: flex-start !important;
+  flex: 0 0 auto !important;
+  gap: 12px !important;
+  padding: 0 !important; /* remove internal breathing if present */
+  min-height: 0 !important;
+}
+
+/* Faux-TV/stage should be free to grow inside the panel */
+.faux-tv-wrapper,
+.lv2-stage,
+.lv2-stage__viewport,
+tvViewport > .tv-content,
+[data-faux-tv] > .tv-content,
+[data-sm-faux-tv] > .tv-content {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
