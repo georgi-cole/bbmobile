@@ -211,7 +211,18 @@
     'territoryencircle': 'territoryEncircle',
     'magnetMaze': 'magnetMaze',
     'magnet-maze': 'magnetMaze',
-    'magnetmaze': 'magnetMaze'
+    'magnetmaze': 'magnetMaze',
+    
+    // Arcade Minigames
+    'laserPantryDash': 'laserPantryDash',
+    'laser-pantry-dash': 'laserPantryDash',
+    'laserpantrydash': 'laserPantryDash',
+    'confettiCannon': 'confettiCannon',
+    'confetti-cannon': 'confettiCannon',
+    'confetticannon': 'confettiCannon',
+    'buzzerSprintRelay': 'buzzerSprintRelay',
+    'buzzer-sprint-relay': 'buzzerSprintRelay',
+    'buzzersprintrelay': 'buzzerSprintRelay'
   };
 
   /**

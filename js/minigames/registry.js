@@ -788,6 +788,52 @@
       retired: false,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
+    
+    // Arcade Minigames
+    laserPantryDash: {
+      key: 'laserPantryDash',
+      name: 'Laser Pantry Dash',
+      description: 'Dodge lasers and collect recipe ingredients',
+      type: 'arcade',
+      scoring: 'points',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'laser-pantry-dash.js',
+      minScore: 0,
+      maxScore: 1000,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    confettiCannon: {
+      key: 'confettiCannon',
+      name: 'Confetti Cannon',
+      description: 'Tap targets quickly while avoiding decoys',
+      type: 'arcade',
+      scoring: 'points',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'confetti-cannon.js',
+      minScore: 0,
+      maxScore: 1000,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    buzzerSprintRelay: {
+      key: 'buzzerSprintRelay',
+      name: 'Buzzer Sprint Relay',
+      description: 'Memorize and repeat buzzer sequences quickly',
+      type: 'arcade',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'buzzer-sprint-relay.js',
+      minScore: 0,
+      maxScore: 1000,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
   };
 
   /**

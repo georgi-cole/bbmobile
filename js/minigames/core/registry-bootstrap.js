@@ -48,7 +48,8 @@
         'hangman', 'tiltLabyrinth', 'threeDigitsQuiz',
         'tetris', 'travelingDots', 'minesweeps', 'railSwitchSprint',
         'shadowConeSneak', 'bombDefuseConstraints', 'circuitLoop',
-        'territoryEncircle', 'magnetMaze'
+        'territoryEncircle', 'magnetMaze',
+        'laserPantryDash', 'confettiCannon', 'buzzerSprintRelay'
       ];
       
       for(const key of fallbackKeys){
@@ -115,7 +116,13 @@
       'pressure-plank': 'pressurePlank',
       'pressureplank': 'pressurePlank',
       'rain-barrel-balance': 'rainBarrelBalance',
-      'rainbarrelbalance': 'rainBarrelBalance'
+      'rainbarrelbalance': 'rainBarrelBalance',
+      'laser-pantry-dash': 'laserPantryDash',
+      'laserpantrydash': 'laserPantryDash',
+      'confetti-cannon': 'confettiCannon',
+      'confetticannon': 'confettiCannon',
+      'buzzer-sprint-relay': 'buzzerSprintRelay',
+      'buzzersprintrelay': 'buzzerSprintRelay'
     };
 
     console.info('Registering', Object.keys(descriptiveAliases).length, 'descriptive aliases');
