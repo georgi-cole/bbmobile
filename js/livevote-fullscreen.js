@@ -430,6 +430,19 @@
           }
         }).catch(function(err) {
           console.error('[livevote-fs] Auto-vote error:', err);
+          // CRITICAL: Clean up on error to prevent stuck overlay
+          cleanupTimerAndEmoji();
+          overlay.classList.add('removing');
+          document.documentElement.classList.remove('eviction-vote-open');
+          
+          setTimeout(function() {
+            if (overlay.parentNode) {
+              overlay.parentNode.removeChild(overlay);
+            }
+            // Resolve with null to indicate no vote was cast (graceful degradation)
+            // Not rejecting to avoid breaking the game flow
+            resolve(null);
+          }, 200);
         });
       }
       

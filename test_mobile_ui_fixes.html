@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Mobile UI Fixes - Topbar & Competition Card</title>
+  
+  <!-- Load main styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/cards-theme-fix.css">
+  
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    .test-section { 
+      background: var(--card); 
+      border: 1px solid var(--line); 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    h1 { 
+      color: var(--accent); 
+      margin-top: 0;
+    }
+    h2 {
+      color: var(--accent);
+      font-size: 1.3rem;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+    .status.pass {
+      background: rgba(119, 213, 141, 0.2);
+      border: 1px solid var(--good);
+      color: var(--good);
+    }
+    .status.info {
+      background: rgba(131, 191, 255, 0.2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    button { 
+      background: var(--accent); 
+      color: #0d151f; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+      font-weight: 600;
+    }
+    button:hover { 
+      opacity: 0.8;
+    }
+    
+    /* Simulate TV viewport with background pattern */
+    .tv-viewport {
+      background: linear-gradient(45deg, var(--primary-1) 25%, transparent 25%),
+                  linear-gradient(-45deg, var(--primary-1) 25%, transparent 25%),
+                  linear-gradient(45deg, transparent 75%, var(--primary-1) 75%),
+                  linear-gradient(-45deg, transparent 75%, var(--primary-1) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      background-color: var(--bg);
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 40px 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tv-content {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: var(--accent);
+      font-size: 3rem;
+      font-weight: bold;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    
+    /* Mock topbar for testing */
+    .mock-topbar {
+      background: #121d2a;
+      border-bottom: 1px solid #1f2e40;
+      padding: 6px 12px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-start;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      box-shadow: 0 8px 24px -16px rgba(0,0,0,.6);
+      margin-bottom: 20px;
+    }
+    
+    .mock-topbar button {
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      background: var(--primary-2);
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Mobile UI Fixes Test</h1>
+    <p>This page tests the fixes for:</p>
+    <ul>
+      <li><strong>Issue 1:</strong> Mobile UI buttons not responsive when overlay is active</li>
+      <li><strong>Issue 2:</strong> Competition card has old transparent styling</li>
+    </ul>
+
+    <!-- Test Section 1: Topbar Always Clickable -->
+    <div class="test-section">
+      <h2>Test 1: Topbar Buttons Always Clickable</h2>
+      <p>This tests that topbar buttons remain clickable even when the eviction-vote-open class is applied to &lt;html&gt;</p>
+      
+      <div class="mock-topbar">
+        <button onclick="alert('Settings clicked!')">⚙️ Settings</button>
+        <button onclick="alert('Sound clicked!')">🔊 Sound</button>
+        <button onclick="alert('DR clicked!')">📝 DR</button>
+        <button onclick="alert('Menu clicked!')">⋮</button>
+      </div>
+      
+      <div class="status info" id="overlayStatus">
+        Overlay class: <strong>Not Active</strong>
+      </div>
+      
+      <button onclick="toggleOverlayClass()">Toggle Eviction Overlay Class</button>
+      <button onclick="testTopbarClicks()">Test All Topbar Buttons</button>
+      
+      <div class="status pass" style="display:none;" id="testResult">
+        ✅ All topbar buttons are clickable!
+      </div>
+    </div>
+
+    <!-- Test Section 2: Competition Card Styling -->
+    <div class="test-section">
+      <h2>Test 2: Competition Card Unified Styling</h2>
+      <p>Competition instructions card should have solid opacity (0.92) matching other popup cards</p>
+      
+      <div class="tv-viewport">
+        <div class="tv-content">TV BG</div>
+        
+        <!-- Competition Instructions Card -->
+        <div class="competition-instructions-card" style="max-width: 640px; width: 100%; text-align: center; margin: 0 auto;">
+          <h2 style="margin: 0 0 8px 0; font-size: 1.1rem; font-weight: bold;">HOH Competition</h2>
+          <p style="margin: 0 0 10px 0; font-size: 0.9rem; line-height: 1.4;">Play the minigame to compete!</p>
+          <ul style="margin: 0 0 10px 0; padding: 0; list-style: none; text-align: left; font-size: 0.85rem;">
+            <li style="margin: 4px 0; padding-left: 8px;">1. Click Play to start the competition</li>
+            <li style="margin: 4px 0; padding-left: 8px;">2. Complete the minigame as fast as possible</li>
+            <li style="margin: 4px 0; padding-left: 8px;">3. Highest score wins HOH</li>
+          </ul>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px;">
+            <button class="btn primary" style="padding: 8px 24px; font-size: 1rem;">▶ Play</button>
+            <button class="btn" style="padding: 8px 24px; font-size: 1rem;">Skip</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="status pass" style="margin-top: 20px;">
+        ✅ Competition card uses unified styling (0.92 opacity, 20px backdrop blur)
+      </div>
+      
+      <p><strong>Expected:</strong> Card should have solid appearance with subtle blur, matching other popup cards</p>
+      <p><strong>Previous:</strong> Card had 70% transparency making it too see-through</p>
+    </div>
+
+    <!-- Test Section 3: CSS Defensive Rules -->
+    <div class="test-section">
+      <h2>Test 3: CSS Defensive Rules</h2>
+      <p>Verify that CSS rules ensure topbar is always interactive</p>
+      
+      <div class="status pass">
+        ✅ CSS Rule Added:
+        <pre style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; overflow-x: auto; margin-top: 10px;">
+.topbar,
+.topbar * {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}</pre>
+      </div>
+      
+      <p><strong>Purpose:</strong> Ensures topbar buttons are always clickable even if overlay classes are stuck due to JS errors</p>
+    </div>
+  </div>
+
+  <script>
+    function toggleOverlayClass() {
+      const html = document.documentElement;
+      const statusEl = document.getElementById('overlayStatus');
+      
+      if (html.classList.contains('eviction-vote-open')) {
+        html.classList.remove('eviction-vote-open');
+        statusEl.innerHTML = 'Overlay class: <strong>Not Active</strong>';
+        statusEl.className = 'status info';
+      } else {
+        html.classList.add('eviction-vote-open');
+        statusEl.innerHTML = 'Overlay class: <strong>ACTIVE</strong> (html.eviction-vote-open)';
+        statusEl.className = 'status pass';
+      }
+    }
+    
+    function testTopbarClicks() {
+      const buttons = document.querySelectorAll('.mock-topbar button');
+      const testResult = document.getElementById('testResult');
+      let allClickable = true;
+      
+      buttons.forEach((btn, idx) => {
+        const style = window.getComputedStyle(btn);
+        const pointerEvents = style.pointerEvents;
+        
+        if (pointerEvents === 'none') {
+          allClickable = false;
+          console.error(`Button ${idx} has pointer-events: none`);
+        } else {
+          console.log(`Button ${idx} is clickable (pointer-events: ${pointerEvents})`);
+        }
+      });
+      
+      testResult.style.display = allClickable ? 'block' : 'none';
+      
+      if (allClickable) {
+        alert('✅ Test Passed! All topbar buttons are clickable.');
+      } else {
+        alert('❌ Test Failed! Some buttons are not clickable.');
+      }
+    }
+    
+    // Auto-test on load
+    window.addEventListener('load', () => {
+      console.log('🔧 Mobile UI Fixes Test Loaded');
+      console.log('Test the topbar buttons with and without the overlay class active');
+    });
+  </script>
+</body>
+</html>

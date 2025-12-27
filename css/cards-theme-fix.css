@@ -9,6 +9,7 @@
 .reveal-card,
 .challenge-card,
 .challenge-card-example,
+.competition-instructions-card,
 .card.challenge,
 .card.hoh-comp,
 .card.pov-comp,
@@ -47,6 +48,7 @@
 .reveal-card h3,
 .challenge-card h3,
 .challenge-card-example h3,
+.competition-instructions-card h2,
 .card.challenge h3 {
   font-weight: 700 !important;
   font-size: 1.12rem !important;
@@ -61,6 +63,7 @@
 .revealCard::before,
 .reveal-card::before,
 .challenge-card::before,
+.competition-instructions-card::before,
 .card.challenge::before,
 .challenge-card-example::before {
   content: '' !important;
@@ -76,6 +79,7 @@
   .reveal-card,
   .challenge-card,
   .challenge-card-example,
+  .competition-instructions-card,
   .card.challenge {
     transition: none !important;
     will-change: auto !important;
@@ -87,6 +91,7 @@
   .reveal-card,
   .challenge-card,
   .challenge-card-example,
+  .competition-instructions-card,
   .card.challenge {
     background: linear-gradient(145deg, rgba(24, 36, 52, 0.96), rgba(10, 16, 24, 0.95)) !important;
   }

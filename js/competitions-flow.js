@@ -493,15 +493,12 @@
     container.innerHTML = '';
 
     // Create instructions card (no full-page overlay, just the card in the TV area)
-    // Style: ~70% transparent so TV background is visible, theme-aware colors
+    // Style: Uses unified card styling from cards-theme-fix.css
+    // (0.92 background opacity in gradient, 20px backdrop blur)
     const card = document.createElement('div');
     card.className = 'competition-instructions-card';
+    // Minimal inline styles - most styling comes from CSS
     card.style.cssText = `
-      background: ${theme.cardBgTransparent};
-      border: 1px solid ${theme.borderColor};
-      border-radius: 12px;
-      padding: 10px 12px;
-      box-shadow: 0 8px 20px -14px rgba(0, 0, 0, 0.7);
       max-width: 640px;
       width: 100%;
       animation: slideInUp 0.4s ease;
@@ -509,27 +506,25 @@
       margin: 0 auto;
     `;
 
-    // Title - more compact, theme-aware
+    // Title - theme-aware
     const title = document.createElement('h2');
     title.textContent = instructions.title;
     title.style.cssText = `
       margin: 0 0 8px 0;
       font-size: 1.1rem;
-      color: ${theme.accentColor};
       font-weight: bold;
     `;
 
-    // Description - more compact, theme-aware
+    // Description - theme-aware
     const description = document.createElement('p');
     description.textContent = instructions.description;
     description.style.cssText = `
       margin: 0 0 10px 0;
       font-size: 0.9rem;
-      color: ${theme.textColor};
       line-height: 1.4;
     `;
 
-    // Steps (if any) - more compact, theme-aware
+    // Steps (if any) - theme-aware colors come from CSS
     let stepsContainer = null;
     if(instructions.steps && instructions.steps.length > 0){
       stepsContainer = document.createElement('ul');
@@ -538,7 +533,6 @@
         padding: 0;
         list-style: none;
         text-align: left;
-        color: ${theme.mutedColor};
         font-size: 0.85rem;
       `;
       instructions.steps.forEach((step, idx) => {
