@@ -312,10 +312,88 @@
       console.warn('[livevote-helpers] Error restoring panel visibility:', e);
     }
 
+    // Remove marker classes from documentElement and body
+    try {
+      document.documentElement.classList.remove('live-vote-overlay-open');
+      document.body.classList.remove('live-vote-overlay-open');
+      console.debug('[livevote-helpers] Marker classes removed');
+    } catch (e) {
+      console.warn('[livevote-helpers] Error removing marker classes:', e);
+    }
+
     // Always force-unlock body scroll as final step
     // This ensures scroll is restored even if UI elements are already gone
     // and handles mismatched lock/unlock calls
     unlockBodyScroll(true);
+  }
+
+  /**
+   * Ensure voting overlays are interactive (removes pointer-events: none)
+   * Call this after showing any voting UI to guarantee interactivity
+   */
+  function ensureOverlayInteractive() {
+    console.debug('[livevote-helpers] ensureOverlayInteractive called');
+    
+    // Find all voting overlay elements
+    const overlaySelectors = [
+      '.lv-overlay',
+      '.lv2-overlay',
+      '.eviction-manager-root',
+      '#tvOverlay.live-vote-active',
+      '.live-vote-overlay'
+    ];
+    
+    overlaySelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          el.style.pointerEvents = 'auto';
+          console.debug(`[livevote-helpers] Set pointer-events: auto on ${selector}`);
+        });
+      } catch (e) {
+        console.warn(`[livevote-helpers] Error setting pointer-events on ${selector}:`, e);
+      }
+    });
+    
+    // Ensure nominee tiles are interactive
+    const nomineeSelectors = [
+      '.lv-overlay__nominee',
+      '.lv2-contestant',
+      '.eviction-nominee-tile',
+      '.eviction-manager-item'
+    ];
+    
+    nomineeSelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          el.style.pointerEvents = 'auto';
+          el.style.cursor = 'pointer';
+        });
+      } catch (e) {
+        console.warn(`[livevote-helpers] Error setting pointer-events on ${selector}:`, e);
+      }
+    });
+    
+    // Ensure Evict buttons are interactive
+    const buttonSelectors = [
+      '.lv-overlay__evict-btn',
+      '.lv2-evict-btn',
+      '.eviction-manager-root button[data-action="evict"]',
+      '.eviction-manager-evict-btn'
+    ];
+    
+    buttonSelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          el.style.pointerEvents = 'auto';
+          el.style.cursor = 'pointer';
+        });
+      } catch (e) {
+        console.warn(`[livevote-helpers] Error setting pointer-events on ${selector}:`, e);
+      }
+    });
   }
 
   // Export to global scope
@@ -325,6 +403,7 @@
   global.lockBodyScroll = lockBodyScroll;
   global.unlockBodyScroll = unlockBodyScroll;
   global.closeAllVoteUI = closeAllVoteUI;
+  global.ensureOverlayInteractive = ensureOverlayInteractive;
 
   console.info('[livevote-helpers] Initialized');
 

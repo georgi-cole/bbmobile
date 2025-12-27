@@ -7,7 +7,7 @@
   inset: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  z-index: 99999 !important; /* Very high z-index to ensure always on top */
+  z-index: 2147483647 !important; /* Maximum 32-bit integer for absolute top priority */
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -156,7 +156,7 @@
   transition: all 0.2s ease;
   letter-spacing: 0.05em;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
-  z-index: 100000 !important; /* Above everything else */
+  z-index: 2147483647 !important; /* Maximum z-index to ensure always tappable */
   pointer-events: auto !important; /* FIXED: Ensure Evict CTA is always tappable */
   touch-action: manipulation; /* Prevent accidental zooming on double-tap */
 }
