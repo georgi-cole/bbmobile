@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Live Vote Overlay Interactivity Fix - Test</title>
+  
+  <!-- Load all voting overlay CSS -->
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css?v=fix-overlay-interactivity-1">
+  <link rel="stylesheet" href="css/livevote-overrides.css?v=fix-overlay-interactivity-1">
+  <link rel="stylesheet" href="css/eviction-manager.css?v=fix-overlay-interactivity-1">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f1419, #1a2332);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .test-panel {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(20, 35, 55, 0.8);
+      border: 2px solid rgba(143, 211, 255, 0.3);
+      border-radius: 12px;
+      padding: 30px;
+      backdrop-filter: blur(10px);
+    }
+    
+    h1 {
+      color: #ffd96b;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    
+    h2 {
+      color: #8fd3ff;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #2d7a9c, #1e5570);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      min-height: 44px;
+    }
+    
+    button:hover {
+      background: linear-gradient(135deg, #357fa0, #246380);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(45, 122, 156, 0.3);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+    }
+    
+    button.danger:hover {
+      background: linear-gradient(135deg, #ff7979, #e03e3e);
+    }
+    
+    .test-info {
+      background: rgba(143, 211, 255, 0.1);
+      padding: 15px;
+      border-left: 4px solid #8fd3ff;
+      border-radius: 4px;
+      margin: 15px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .test-info strong {
+      color: #ffd96b;
+    }
+    
+    .test-info ul {
+      margin: 10px 0 0 20px;
+    }
+    
+    .test-info li {
+      margin: 5px 0;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    
+    .status-item {
+      margin: 5px 0;
+    }
+    
+    .status-item.success {
+      color: #7bed9f;
+    }
+    
+    .status-item.error {
+      color: #ff6b81;
+    }
+    
+    .status-item.info {
+      color: #8fd3ff;
+    }
+    
+    /* Mock roster to test z-index stacking */
+    #mock-roster {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: rgba(20, 35, 55, 0.95);
+      border-bottom: 2px solid rgba(143, 211, 255, 0.3);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: #8fd3ff;
+    }
+    
+    /* Mock panel to test overlap */
+    #mock-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 100px;
+      background: rgba(20, 35, 55, 0.95);
+      border-top: 2px solid rgba(143, 211, 255, 0.3);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: #8fd3ff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Mock UI elements to test z-index stacking -->
+  <div id="mock-roster">Mock Top Roster (z-index: 100)</div>
+  <div id="mock-panel">Mock Panel (z-index: 50)</div>
+  
+  <div class="test-panel">
+    <h1>🎯 Live Vote Overlay Interactivity Fix - Test</h1>
+    
+    <div class="section">
+      <h2>Test Scenarios</h2>
+      <div class="test-info">
+        <strong>What to test:</strong>
+        <ul>
+          <li>✓ Nominees are visible and clickable/tappable</li>
+          <li>✓ Evict button appears after selection and is tappable</li>
+          <li>✓ Overlay appears above mock roster and panel</li>
+          <li>✓ No gap between nominees and Evict button on mobile</li>
+          <li>✓ Overlay uses maximum z-index (2147483647)</li>
+        </ul>
+      </div>
+      
+      <div class="button-group">
+        <button id="test-livevote-2">Test LiveVoteOverlay (2 nominees)</button>
+        <button id="test-livevote-4">Test LiveVoteOverlay (4 nominees)</button>
+        <button id="test-eviction-mgr-2">Test EvictionManager (2 nominees)</button>
+        <button id="test-eviction-mgr-3">Test EvictionManager (3 nominees)</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Mobile Viewport Test</h2>
+      <div class="test-info">
+        <strong>How to test:</strong>
+        <ul>
+          <li>Open DevTools (F12)</li>
+          <li>Toggle Device Toolbar (Ctrl+Shift+M)</li>
+          <li>Select "iPhone 12 Pro" (390x844) or custom 375x812</li>
+          <li>Open an overlay and verify interactivity</li>
+        </ul>
+      </div>
+      
+      <div class="button-group">
+        <button id="verify-interactivity">🔍 Verify Interactivity</button>
+        <button id="check-z-index">📊 Check Z-Index</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Cleanup & Reset</h2>
+      <div class="button-group">
+        <button id="close-all" class="danger">Close All Overlays</button>
+        <button id="ensure-interactive">🔧 Force Interactive</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Test Status</h2>
+      <div id="status-log" class="status">
+        <div class="status-item info">Ready to test...</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load voting overlay JavaScript -->
+  <script src="js/livevote-helpers.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script src="js/ui/evictionManager.js"></script>
+  
+  <script>
+    // Mock global functions
+    window.game = { humanId: 1 };
+    
+    window.getP = (id) => {
+      const players = {
+        1: { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+        2: { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+        3: { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+        4: { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' }
+      };
+      return players[id] || { id, name: `Player${id}`, avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=Player${id}` };
+    };
+    
+    window.safeName = (id) => window.getP(id)?.name || `Player${id}`;
+    
+    window.resolveAvatar = (player) => player?.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${player?.name || 'player'}`;
+    
+    window.getDicebearUrl = (seed) => `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    
+    // Status logging
+    function logStatus(message, type = 'info') {
+      const log = document.getElementById('status-log');
+      const item = document.createElement('div');
+      item.className = `status-item ${type}`;
+      item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.appendChild(item);
+      log.scrollTop = log.scrollHeight;
+    }
+    
+    // Test handlers
+    document.getElementById('test-livevote-2').addEventListener('click', () => {
+      logStatus('Opening LiveVoteOverlay with 2 nominees...', 'info');
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2],
+        onSubmit: (id) => {
+          logStatus(`Vote submitted for: ${window.safeName(id)}`, 'success');
+        },
+        allowClose: true,
+        onCancel: () => {
+          logStatus('Vote cancelled by user', 'info');
+        }
+      });
+      logStatus('LiveVoteOverlay opened. Check z-index and interactivity.', 'success');
+    });
+    
+    document.getElementById('test-livevote-4').addEventListener('click', () => {
+      logStatus('Opening LiveVoteOverlay with 4 nominees...', 'info');
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2, 3, 4],
+        onSubmit: (id) => {
+          logStatus(`Vote submitted for: ${window.safeName(id)}`, 'success');
+        },
+        allowClose: true,
+        onCancel: () => {
+          logStatus('Vote cancelled by user', 'info');
+        }
+      });
+      logStatus('LiveVoteOverlay opened. Check z-index and interactivity.', 'success');
+    });
+    
+    document.getElementById('test-eviction-mgr-2').addEventListener('click', () => {
+      logStatus('Opening EvictionManager with 2 nominees...', 'info');
+      window.EvictionManager.show({
+        nominees: [1, 2],
+        evictCount: 1,
+        onVote: async (id) => {
+          logStatus(`Eviction vote for: ${window.safeName(id)}`, 'success');
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      });
+      logStatus('EvictionManager opened. Check z-index and interactivity.', 'success');
+    });
+    
+    document.getElementById('test-eviction-mgr-3').addEventListener('click', () => {
+      logStatus('Opening EvictionManager with 3 nominees...', 'info');
+      window.EvictionManager.show({
+        nominees: [1, 2, 3],
+        evictCount: 2,
+        onVote: async (id) => {
+          logStatus(`Eviction vote for: ${window.safeName(id)}`, 'success');
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      });
+      logStatus('EvictionManager opened. Check z-index and interactivity.', 'success');
+    });
+    
+    document.getElementById('close-all').addEventListener('click', () => {
+      logStatus('Closing all overlays...', 'info');
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+        logStatus('All overlays closed via closeAllVoteUI()', 'success');
+      } else {
+        logStatus('closeAllVoteUI() not available', 'error');
+      }
+    });
+    
+    document.getElementById('ensure-interactive').addEventListener('click', () => {
+      logStatus('Forcing overlays to be interactive...', 'info');
+      if (window.ensureOverlayInteractive) {
+        window.ensureOverlayInteractive();
+        logStatus('ensureOverlayInteractive() called', 'success');
+      } else {
+        logStatus('ensureOverlayInteractive() not available', 'error');
+      }
+    });
+    
+    document.getElementById('verify-interactivity').addEventListener('click', () => {
+      logStatus('Verifying overlay interactivity...', 'info');
+      
+      const overlays = document.querySelectorAll('.lv-overlay, .eviction-manager-root');
+      if (overlays.length === 0) {
+        logStatus('No overlays found. Open an overlay first.', 'error');
+        return;
+      }
+      
+      overlays.forEach((overlay, index) => {
+        const computed = window.getComputedStyle(overlay);
+        const rect = overlay.getBoundingClientRect();
+        
+        logStatus(`Overlay ${index + 1}:`, 'info');
+        logStatus(`  position: ${computed.position}`, 'info');
+        logStatus(`  z-index: ${computed.zIndex}`, computed.zIndex === '2147483647' ? 'success' : 'error');
+        logStatus(`  pointer-events: ${computed.pointerEvents}`, computed.pointerEvents === 'auto' ? 'success' : 'error');
+        logStatus(`  inset: ${computed.inset || `${computed.top} ${computed.right} ${computed.bottom} ${computed.left}`}`, 'info');
+        
+        // Test center point interactivity
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const elementAtCenter = document.elementFromPoint(centerX, centerY);
+        
+        if (elementAtCenter && overlay.contains(elementAtCenter)) {
+          logStatus(`  ✓ Center point is within overlay`, 'success');
+        } else {
+          logStatus(`  ✗ Center point returns: ${elementAtCenter?.tagName}.${elementAtCenter?.className}`, 'error');
+        }
+      });
+      
+      // Check for marker classes
+      const hasHtmlMarker = document.documentElement.classList.contains('live-vote-overlay-open');
+      const hasBodyMarker = document.body.classList.contains('live-vote-overlay-open');
+      logStatus(`Marker class on <html>: ${hasHtmlMarker}`, hasHtmlMarker ? 'success' : 'error');
+      logStatus(`Marker class on <body>: ${hasBodyMarker}`, hasBodyMarker ? 'success' : 'error');
+    });
+    
+    document.getElementById('check-z-index').addEventListener('click', () => {
+      logStatus('Checking z-index values...', 'info');
+      
+      const mockRoster = document.getElementById('mock-roster');
+      const mockPanel = document.getElementById('mock-panel');
+      const overlays = document.querySelectorAll('.lv-overlay, .eviction-manager-root');
+      
+      logStatus(`Mock Roster z-index: ${window.getComputedStyle(mockRoster).zIndex}`, 'info');
+      logStatus(`Mock Panel z-index: ${window.getComputedStyle(mockPanel).zIndex}`, 'info');
+      
+      overlays.forEach((overlay, index) => {
+        const zIndex = window.getComputedStyle(overlay).zIndex;
+        logStatus(`Overlay ${index + 1} z-index: ${zIndex}`, zIndex === '2147483647' ? 'success' : 'error');
+      });
+      
+      if (overlays.length > 0) {
+        logStatus('Expected z-index: 2147483647 (max 32-bit integer)', 'info');
+      }
+    });
+    
+    logStatus('Test page loaded. Click buttons to test overlays.', 'success');
+  </script>
+</body>
+</html>

@@ -95,7 +95,7 @@
       nominees = [],
       onSubmit = null,
       isTieBreak = false,
-      container = null,
+      container = null, // DEPRECATED: ignored, overlay always appends to document.body
       allowClose = false,
       onCancel = null
     } = options;
@@ -105,12 +105,9 @@
       return null;
     }
 
-    // Find container using shared overlay layer (prefer TVContainer or #tvOverlay)
-    const targetContainer = container || getContainer();
-    if (!targetContainer) {
-      console.warn('[VoteOverlay] No container found');
-      return null;
-    }
+    // FIXED: Always append to document.body to avoid stacking context issues
+    // Ignore container parameter - it's deprecated
+    console.info('[VoteOverlay] ✓ Appending overlay to document.body for maximum z-index');
     
     // Enable pointer events on tvOverlay layer if it exists
     const tvOverlay = document.getElementById('tvOverlay');
@@ -316,8 +313,20 @@
     // Add keyboard support
     overlay.addEventListener('keydown', handleKeyboard);
 
-    // Add to container
-    targetContainer.appendChild(overlay);
+    // FIXED: Apply defensive inline styles to ensure overlay is always interactive and on top
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.zIndex = '2147483647'; // Maximum 32-bit integer for absolute top priority
+    overlay.style.pointerEvents = 'auto'; // Ensure interactivity
+    
+    // Add marker classes to signal overlay is open
+    document.documentElement.classList.add('live-vote-overlay-open');
+    document.body.classList.add('live-vote-overlay-open');
+
+    // FIXED: Append to document.body to avoid stacking context issues
+    document.body.appendChild(overlay);
     state.overlay = overlay;
 
     // Initialize nav button states
@@ -685,6 +694,10 @@
     // Remove the overlay
     state.overlay.remove();
     state.overlay = null;
+    
+    // Remove marker classes to signal overlay is closed
+    document.documentElement.classList.remove('live-vote-overlay-open');
+    document.body.classList.remove('live-vote-overlay-open');
     
     // Disable pointer events on tvOverlay layer if it exists
     const tvOverlay = document.getElementById('tvOverlay');
