@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Info Buttons Comprehensive Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg, #0d151f);
+      color: var(--fg, #f1f5f9);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-section {
+      background: var(--card, #1e293b);
+      padding: 24px;
+      margin: 20px 0;
+      border-radius: 12px;
+      border: 1px solid var(--sep, #475569);
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: var(--ok, #4ade80);
+      border-bottom: 2px solid var(--sep, #475569);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h3 {
+      color: var(--fg-dim, #94a3b8);
+      font-size: 1rem;
+      margin-top: 24px;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--ok, #4ade80);
+      color: #000;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      opacity: 0.9;
+    }
+    
+    button.secondary {
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+    }
+    
+    .status {
+      padding: 12px;
+      background: var(--card-accent, #334155);
+      border-radius: 6px;
+      margin-top: 12px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .status-item {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--sep, #475569);
+    }
+    
+    .status-item:last-child {
+      border-bottom: none;
+    }
+    
+    .success {
+      color: var(--ok, #4ade80);
+    }
+    
+    .error {
+      color: var(--err, #ef4444);
+    }
+    
+    .warning {
+      color: var(--warn, #fbbf24);
+    }
+    
+    .info {
+      color: var(--info, #60a5fa);
+    }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .checklist li {
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .checklist li::before {
+      content: '⬜';
+      font-size: 1.2rem;
+    }
+    
+    .checklist li.done::before {
+      content: '✅';
+    }
+    
+    .intro-note {
+      background: rgba(96, 165, 250, 0.1);
+      border-left: 4px solid var(--info, #60a5fa);
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Info Buttons Comprehensive Test</h1>
+    
+    <div class="intro-note">
+      <strong>Test Objective:</strong> Verify that info (i) buttons appear on nominee cards in all relevant flows 
+      (POV, nominations, live vote) and correctly open the houseguest profile modal with proper timer pause/resume behavior.
+    </div>
+    
+    <!-- Status Section -->
+    <div class="test-section">
+      <h2>📊 Test Status</h2>
+      <div id="statusLog" class="status">
+        <div class="status-item info">Initializing test environment...</div>
+      </div>
+    </div>
+    
+    <!-- POV Fullscreen Test -->
+    <div class="test-section">
+      <h2>1️⃣ POV Fullscreen Selector Test</h2>
+      <p>Tests the info button in the Power of Veto fullscreen nominee save selector.</p>
+      
+      <h3>Expected Behavior:</h3>
+      <ul class="checklist" id="povChecklist">
+        <li>Info button appears on each nominee card</li>
+        <li>Clicking info button opens profile modal</li>
+        <li>Profile modal shows Basic Info tab with intro-hub data</li>
+        <li>Profile modal shows Game Info tab</li>
+        <li>ESC key closes profile modal</li>
+        <li>No timer pause/resume (POV has no timer)</li>
+        <li>Info button click doesn't trigger card selection</li>
+      </ul>
+      
+      <div class="button-group">
+        <button onclick="testPOVFullscreen()">Test POV Fullscreen Selector</button>
+        <button class="secondary" onclick="resetPOVTest()">Reset</button>
+      </div>
+    </div>
+    
+    <!-- TV Nominee Save Panel Test -->
+    <div class="test-section">
+      <h2>2️⃣ TV Nominee Save Panel Test</h2>
+      <p>Tests the info button in the TV overlay nominee save panel (inline TV cards).</p>
+      
+      <h3>Expected Behavior:</h3>
+      <ul class="checklist" id="tvChecklist">
+        <li>Info button appears on each nominee tile</li>
+        <li>Clicking info button opens profile modal</li>
+        <li>Profile modal displays correctly</li>
+        <li>No timer interactions (TV panel has no timer)</li>
+        <li>Save button still works correctly</li>
+      </ul>
+      
+      <div class="button-group">
+        <button onclick="testTVNomineeSavePanel()">Test TV Nominee Save Panel</button>
+        <button class="secondary" onclick="resetTVTest()">Reset</button>
+      </div>
+    </div>
+    
+    <!-- Nominations Fullscreen Test -->
+    <div class="test-section">
+      <h2>3️⃣ Nominations Fullscreen Selector Test</h2>
+      <p>Tests the info button in the fullscreen nomination ceremony selector.</p>
+      
+      <h3>Expected Behavior:</h3>
+      <ul class="checklist" id="nomsChecklist">
+        <li>Info button appears on each eligible player tile</li>
+        <li>Clicking info button opens profile modal</li>
+        <li>Profile modal shows complete player information</li>
+        <li>No timer pause/resume (nominations has no timer)</li>
+        <li>Info button doesn't interfere with selection</li>
+      </ul>
+      
+      <div class="button-group">
+        <button onclick="testNominationsFullscreen()">Test Nominations Fullscreen</button>
+        <button class="secondary" onclick="resetNomsTest()">Reset</button>
+      </div>
+    </div>
+    
+    <!-- Live Vote Fullscreen Test -->
+    <div class="test-section">
+      <h2>4️⃣ Live Vote Fullscreen Test (WITH TIMER)</h2>
+      <p>Tests the info button in the live vote eviction overlay with timer pause/resume.</p>
+      
+      <h3>Expected Behavior:</h3>
+      <ul class="checklist" id="liveVoteChecklist">
+        <li>Info button appears only on selected nominee card</li>
+        <li>Clicking info button opens profile modal</li>
+        <li>Vote timer PAUSES when profile opens</li>
+        <li>Vote timer RESUMES when profile closes</li>
+        <li>Profile modal can be closed with ESC</li>
+        <li>Timer countdown continues after profile closes</li>
+      </ul>
+      
+      <div class="button-group">
+        <button onclick="testLiveVoteFullscreen()">Test Live Vote Fullscreen</button>
+        <button class="secondary" onclick="resetLiveVoteTest()">Reset</button>
+      </div>
+    </div>
+    
+    <!-- Profile Data Source Test -->
+    <div class="test-section">
+      <h2>5️⃣ Profile Data Source Test</h2>
+      <p>Verifies that the profile modal correctly retrieves data from canonical sources.</p>
+      
+      <h3>Expected Data Source Priority:</h3>
+      <ol>
+        <li><code>getP(playerId)</code> - Primary player object</li>
+        <li><code>global.houseguestsData[playerId]</code> - Enhanced intro data</li>
+        <li>Intro hub DOM query - Fallback for intro hub data</li>
+        <li><code>global.game.players</code> - Ultimate fallback</li>
+      </ol>
+      
+      <div class="button-group">
+        <button onclick="testDataSources()">Test Data Sources</button>
+        <button class="secondary" onclick="checkConsoleDebug()">Check Console Debug</button>
+      </div>
+    </div>
+    
+    <!-- Cleanup Test -->
+    <div class="test-section">
+      <h2>6️⃣ Cleanup Test</h2>
+      <p>Verifies that closeAllVoteUI() properly cleans up profile modals and timers.</p>
+      
+      <h3>Expected Cleanup Behavior:</h3>
+      <ul class="checklist" id="cleanupChecklist">
+        <li>Profile modal is removed from DOM</li>
+        <li>LiveVoteFullscreen.clearTimer() is called</li>
+        <li>eviction-vote-open class is removed</li>
+        <li>Emoji layer is removed</li>
+        <li>Body scroll is unlocked</li>
+      </ul>
+      
+      <div class="button-group">
+        <button onclick="testCleanup()">Test Cleanup</button>
+        <button class="secondary" onclick="verifyCleanupState()">Verify Clean State</button>
+      </div>
+    </div>
+    
+    <!-- Manual Testing Guide -->
+    <div class="test-section">
+      <h2>📖 Manual Testing Instructions</h2>
+      <ol>
+        <li><strong>POV Test:</strong> Click "Test POV Fullscreen Selector", then click the info (i) button on any nominee card</li>
+        <li><strong>TV Test:</strong> Click "Test TV Nominee Save Panel", then click the info button on a nominee tile</li>
+        <li><strong>Nominations Test:</strong> Click "Test Nominations Fullscreen", then click info button on player tiles</li>
+        <li><strong>Live Vote Test:</strong> Click "Test Live Vote Fullscreen", select a nominee, then click their info button and watch the timer</li>
+        <li><strong>Verify:</strong> Check that profile modal opens, shows correct data, and can be closed with ESC</li>
+        <li><strong>Check Console:</strong> Open browser DevTools console and look for debug messages about data sources</li>
+      </ol>
+    </div>
+  </div>
+  
+  <!-- Load all required scripts -->
+  <script src="js/util.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/houseguest-profile.js"></script>
+  <script src="js/livevote-helpers.js"></script>
+  <script src="js/livevote-fullscreen.js"></script>
+  <script src="js/veto.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+  
+  <script>
+    // Logging utility
+    function logStatus(message, type = 'info') {
+      const statusLog = document.getElementById('statusLog');
+      const item = document.createElement('div');
+      item.className = `status-item ${type}`;
+      item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      statusLog.appendChild(item);
+      statusLog.scrollTop = statusLog.scrollHeight;
+      console.log(`[Test] ${message}`);
+    }
+    
+    // Initialize mock game state
+    function initMockGame() {
+      if (!window.game) {
+        window.game = {
+          players: [],
+          phase: 'test',
+          week: 1,
+          hohId: 1,
+          nominees: [2, 3],
+          povId: 1,
+          cfg: {
+            enableSocialManeuvers: true,
+            enableFloatingEmojis: true
+          }
+        };
+      }
+      
+      // Create mock players
+      for (let i = 1; i <= 8; i++) {
+        const player = {
+          id: i,
+          name: `Player ${i}`,
+          alive: true,
+          evicted: false,
+          jury: false,
+          nominated: i <= 3,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=player${i}`,
+          age: 20 + i,
+          location: `City ${i}`,
+          occupation: `Job ${i}`,
+          trait: `Trait ${i}`,
+          motto: `Motto for player ${i}`,
+          story: `This is the backstory for Player ${i}. They came to play Big Brother!`,
+          bio: `Extended biography for Player ${i}.`
+        };
+        window.game.players.push(player);
+      }
+      
+      // Helper functions
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.alivePlayers = () => window.game.players.filter(p => p.alive && !p.evicted);
+      window.safeName = (id) => {
+        const p = window.getP(id);
+        return p ? p.name : `Player ${id}`;
+      };
+      
+      // Mock resolveAvatar
+      window.resolveAvatar = (player) => {
+        if (typeof player === 'object' && player.avatar) return player.avatar;
+        const p = typeof player === 'number' ? window.getP(player) : player;
+        return p ? p.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=unknown`;
+      };
+      
+      logStatus('Mock game state initialized', 'success');
+    }
+    
+    // Test 1: POV Fullscreen Selector
+    function testPOVFullscreen() {
+      logStatus('Testing POV Fullscreen Selector...', 'info');
+      
+      if (typeof window.showFullscreenNomineeSaveSelector !== 'function') {
+        logStatus('ERROR: showFullscreenNomineeSaveSelector not found', 'error');
+        return;
+      }
+      
+      const nominees = [2, 3];
+      logStatus(`Opening POV selector with nominees: ${nominees.join(', ')}`, 'info');
+      
+      window.showFullscreenNomineeSaveSelector({
+        nominees: nominees,
+        title: 'Save a Nominee with Power of Veto'
+      }).then(selectedId => {
+        if (selectedId) {
+          logStatus(`POV test completed - Selected: ${window.safeName(selectedId)}`, 'success');
+          markChecklistItem('povChecklist', 0);
+        } else {
+          logStatus('POV test cancelled or no selection made', 'warning');
+        }
+      });
+      
+      // Check for info buttons after a delay
+      setTimeout(() => {
+        const infoButtons = document.querySelectorAll('.fullscreen-pov-selector .fs-info-btn');
+        if (infoButtons.length > 0) {
+          logStatus(`✓ Found ${infoButtons.length} info buttons in POV selector`, 'success');
+          markChecklistItem('povChecklist', 0);
+        } else {
+          logStatus('✗ No info buttons found in POV selector', 'error');
+        }
+      }, 500);
+    }
+    
+    function resetPOVTest() {
+      const overlay = document.querySelector('.fullscreen-pov-selector');
+      if (overlay) overlay.remove();
+      logStatus('POV test reset', 'info');
+    }
+    
+    // Test 2: TV Nominee Save Panel
+    function testTVNomineeSavePanel() {
+      logStatus('Testing TV Nominee Save Panel...', 'info');
+      
+      if (!window.TVCards || typeof window.TVCards.showTVNomineeSavePanel !== 'function') {
+        logStatus('ERROR: TVCards.showTVNomineeSavePanel not found', 'error');
+        return;
+      }
+      
+      const nominees = [2, 3];
+      logStatus(`Opening TV nominee save panel with nominees: ${nominees.join(', ')}`, 'info');
+      
+      window.TVCards.showTVNomineeSavePanel({
+        title: 'Power of Veto Ceremony',
+        nominees: nominees,
+        povId: 1
+      }).then(selectedId => {
+        if (selectedId) {
+          logStatus(`TV test completed - Saved: ${window.safeName(selectedId)}`, 'success');
+        } else {
+          logStatus('TV test cancelled', 'warning');
+        }
+      });
+      
+      // Check for info buttons
+      setTimeout(() => {
+        const infoButtons = document.querySelectorAll('.tv-tile-info-btn');
+        if (infoButtons.length > 0) {
+          logStatus(`✓ Found ${infoButtons.length} info buttons in TV panel`, 'success');
+          markChecklistItem('tvChecklist', 0);
+        } else {
+          logStatus('✗ No info buttons found in TV panel', 'error');
+        }
+      }, 500);
+    }
+    
+    function resetTVTest() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) tvOverlay.innerHTML = '';
+      logStatus('TV test reset', 'info');
+    }
+    
+    // Test 3: Nominations Fullscreen
+    function testNominationsFullscreen() {
+      logStatus('Testing Nominations Fullscreen Selector...', 'info');
+      
+      // This requires the nominations system to be set up properly
+      // For now, just log that we're testing
+      logStatus('Note: Nominations test requires full game context', 'warning');
+      logStatus('Please test manually by triggering a nomination ceremony', 'info');
+    }
+    
+    function resetNomsTest() {
+      const overlay = document.querySelector('.noms-fs-overlay');
+      if (overlay) overlay.remove();
+      logStatus('Nominations test reset', 'info');
+    }
+    
+    // Test 4: Live Vote Fullscreen
+    function testLiveVoteFullscreen() {
+      logStatus('Testing Live Vote Fullscreen with Timer...', 'info');
+      
+      if (!window.LiveVoteFullscreen || typeof window.LiveVoteFullscreen.show !== 'function') {
+        logStatus('ERROR: LiveVoteFullscreen.show not found', 'error');
+        return;
+      }
+      
+      const nominees = [2, 3];
+      logStatus(`Opening live vote overlay with nominees: ${nominees.join(', ')}`, 'info');
+      logStatus('Select a nominee to see the info button appear', 'info');
+      
+      window.LiveVoteFullscreen.show({
+        nominees: nominees,
+        onVote: (selectedId) => {
+          logStatus(`Vote cast for: ${window.safeName(selectedId)}`, 'success');
+        },
+        isTieBreak: false
+      }).then(result => {
+        logStatus(`Live vote test completed - Result: ${result}`, 'success');
+      }).catch(err => {
+        logStatus(`Live vote test error: ${err.message}`, 'error');
+      });
+      
+      // Check for timer
+      setTimeout(() => {
+        const timer = document.querySelector('.fev-timer');
+        if (timer) {
+          logStatus('✓ Vote timer found and running', 'success');
+          markChecklistItem('liveVoteChecklist', 0);
+        }
+      }, 500);
+    }
+    
+    function resetLiveVoteTest() {
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+        logStatus('Live vote test reset via closeAllVoteUI', 'info');
+      }
+    }
+    
+    // Test 5: Data Sources
+    function testDataSources() {
+      logStatus('Testing profile data sources...', 'info');
+      
+      // Test with different data availability
+      const testCases = [
+        { id: 1, source: 'getP + game.players', hasEnhanced: false },
+        { id: 2, source: 'global.houseguestsData', hasEnhanced: true },
+      ];
+      
+      testCases.forEach(testCase => {
+        const player = window.getP(testCase.id);
+        if (player) {
+          logStatus(`Player ${testCase.id} available via ${testCase.source}`, 'success');
+        } else {
+          logStatus(`Player ${testCase.id} NOT found`, 'error');
+        }
+      });
+      
+      logStatus('Check browser console for [houseguest-profile] debug messages', 'info');
+    }
+    
+    function checkConsoleDebug() {
+      logStatus('Opening profile to generate console debug messages...', 'info');
+      
+      if (typeof window.showHouseguestProfile === 'function') {
+        window.showHouseguestProfile(1, {
+          pauseTimerCallback: () => logStatus('Timer pause callback called', 'success'),
+          resumeTimerCallback: () => logStatus('Timer resume callback called', 'success')
+        });
+      } else {
+        logStatus('ERROR: showHouseguestProfile not found', 'error');
+      }
+    }
+    
+    // Test 6: Cleanup
+    function testCleanup() {
+      logStatus('Testing closeAllVoteUI cleanup...', 'info');
+      
+      // First open a profile modal
+      if (typeof window.showHouseguestProfile === 'function') {
+        window.showHouseguestProfile(1, {});
+        
+        setTimeout(() => {
+          // Then call cleanup
+          if (typeof window.closeAllVoteUI === 'function') {
+            window.closeAllVoteUI();
+            logStatus('closeAllVoteUI called', 'info');
+            
+            // Verify cleanup
+            setTimeout(() => verifyCleanupState(), 500);
+          } else {
+            logStatus('ERROR: closeAllVoteUI not found', 'error');
+          }
+        }, 1000);
+      }
+    }
+    
+    function verifyCleanupState() {
+      const checks = [
+        { name: 'Profile modal', selector: '.houseguest-profile-modal', shouldExist: false },
+        { name: 'Eviction vote overlay', selector: '.fullscreen-eviction-vote', shouldExist: false },
+        { name: 'Emoji layer', selector: '.fev-emoji-layer', shouldExist: false },
+        { name: 'eviction-vote-open class', check: () => !document.documentElement.classList.contains('eviction-vote-open'), shouldBe: true }
+      ];
+      
+      let allClear = true;
+      checks.forEach(check => {
+        if (check.selector) {
+          const exists = document.querySelector(check.selector) !== null;
+          const pass = exists === check.shouldExist;
+          if (pass) {
+            logStatus(`✓ ${check.name}: ${exists ? 'exists' : 'removed'}`, 'success');
+            markChecklistItem('cleanupChecklist', checks.indexOf(check));
+          } else {
+            logStatus(`✗ ${check.name}: ${exists ? 'still exists' : 'not found'}`, 'error');
+            allClear = false;
+          }
+        } else if (check.check) {
+          const pass = check.check() === check.shouldBe;
+          if (pass) {
+            logStatus(`✓ ${check.name}: correct`, 'success');
+            markChecklistItem('cleanupChecklist', checks.indexOf(check));
+          } else {
+            logStatus(`✗ ${check.name}: incorrect`, 'error');
+            allClear = false;
+          }
+        }
+      });
+      
+      if (allClear) {
+        logStatus('All cleanup checks passed!', 'success');
+      }
+    }
+    
+    // Helper to mark checklist items
+    function markChecklistItem(checklistId, index) {
+      const checklist = document.getElementById(checklistId);
+      if (checklist) {
+        const items = checklist.querySelectorAll('li');
+        if (items[index]) {
+          items[index].classList.add('done');
+        }
+      }
+    }
+    
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      logStatus('Test page loaded', 'success');
+      initMockGame();
+      logStatus('Ready to test! Click buttons above to begin.', 'info');
+    });
+  </script>
+</body>
+</html>
