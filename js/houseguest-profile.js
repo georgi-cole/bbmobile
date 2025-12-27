@@ -305,29 +305,72 @@
           <div class="history-week">Week ${weekNum}</div>
           <div class="history-events">`;
         
-        // Parse entry events/details
+        // Parse entry events/details with enhanced formatting
         if (typeof entry === 'string') {
-          html += `<div class="history-event">${entry}</div>`;
+          html += `<div class="history-event">• ${entry}</div>`;
         } else if (entry.events && Array.isArray(entry.events)) {
           entry.events.forEach(event => {
-            html += `<div class="history-event">${event}</div>`;
+            html += `<div class="history-event">• ${event}</div>`;
           });
         } else if (entry.summary) {
-          html += `<div class="history-event">${entry.summary}</div>`;
+          html += `<div class="history-event">• ${entry.summary}</div>`;
         } else if (entry.detail) {
-          html += `<div class="history-event">${entry.detail}</div>`;
+          html += `<div class="history-event">• ${entry.detail}</div>`;
         } else {
-          // Try to build a summary from entry properties
-          const parts = [];
-          if (entry.hoh) parts.push('Won HOH');
-          if (entry.pov) parts.push('Won POV');
-          if (entry.nominated) parts.push('Nominated');
-          if (entry.vetoed) parts.push('Saved with Veto');
-          if (entry.evicted) parts.push('Evicted');
-          if (parts.length > 0) {
-            html += `<div class="history-event">${parts.join(', ')}</div>`;
+          // Try to build a detailed summary from entry properties
+          const details = [];
+          
+          // Competition results
+          if (entry.hoh) {
+            details.push('🏆 Won Head of Household competition');
+          } else if (entry.hohNominee === false) {
+            details.push('❌ Did not win HOH');
+          }
+          
+          if (entry.pov) {
+            details.push('⭐ Won Power of Veto competition');
+          } else if (entry.povCompeted) {
+            details.push('🎯 Competed in Power of Veto');
+          }
+          
+          // Nomination status
+          if (entry.nominated) {
+            const nominatedBy = entry.nominatedBy ? ` by ${entry.nominatedBy}` : '';
+            details.push(`📛 Nominated for eviction${nominatedBy}`);
+          }
+          
+          if (entry.vetoed) {
+            const vetoedBy = entry.vetoedBy ? ` by ${entry.vetoedBy}` : '';
+            details.push(`🛡️ Saved with Power of Veto${vetoedBy}`);
+          }
+          
+          // Social gameplay
+          if (entry.alliance) {
+            details.push(`🤝 ${entry.alliance}`);
+          }
+          
+          if (entry.votes !== undefined) {
+            details.push(`🗳️ Received ${entry.votes} vote${entry.votes !== 1 ? 's' : ''} to evict`);
+          }
+          
+          // Final outcome
+          if (entry.evicted) {
+            details.push('❌ Evicted from the house');
+          } else if (entry.safe) {
+            details.push('✅ Safe this week');
+          }
+          
+          // Additional notes
+          if (entry.notes) {
+            details.push(`💭 ${entry.notes}`);
+          }
+          
+          if (details.length > 0) {
+            details.forEach(detail => {
+              html += `<div class="history-event">${detail}</div>`;
+            });
           } else {
-            html += `<div class="history-event">No events recorded</div>`;
+            html += `<div class="history-event">• No significant events this week</div>`;
           }
         }
         

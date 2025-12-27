@@ -206,8 +206,37 @@
           motto: "Play with your heart, win with your mind",
           bio: "Alice is a competitive player who values relationships but isn't afraid to make big moves when necessary.",
           history: [
-            { week: 1, events: ["Won HOH Competition", "Nominated Bob and Carol"] },
-            { week: 2, events: ["Safe this week", "Formed alliance with Dave"] }
+            { 
+              week: 1, 
+              hoh: true,
+              pov: false,
+              nominated: false,
+              alliance: "Formed 'The Strategy Six' alliance",
+              notes: "Strong social connections established early",
+              safe: true
+            },
+            { 
+              week: 2, 
+              hoh: false,
+              povCompeted: true,
+              nominated: false,
+              votes: 0,
+              alliance: "Alliance with Dave strengthened",
+              notes: "Laid low and focused on social game",
+              safe: true
+            },
+            {
+              week: 3,
+              hoh: false,
+              pov: true,
+              nominated: true,
+              nominatedBy: "Eve",
+              vetoed: true,
+              vetoedBy: "herself",
+              votes: 0,
+              notes: "Close call but managed to save herself",
+              safe: true
+            }
           ]
         },
         {
@@ -221,8 +250,29 @@
           motto: "Think three steps ahead",
           bio: "Bob is a calculated player who analyzes every move. He's known for his logical gameplay.",
           history: [
-            { week: 1, events: ["Nominated for eviction", "Survived eviction vote"] },
-            { week: 2, events: ["Won POV", "Saved himself from the block"] }
+            { 
+              week: 1, 
+              hoh: false,
+              pov: false,
+              nominated: true,
+              nominatedBy: "Alice",
+              votes: 3,
+              alliance: "Tried to form counter-alliance",
+              notes: "Survived first eviction by one vote",
+              safe: true
+            },
+            { 
+              week: 2, 
+              hoh: false,
+              pov: true,
+              nominated: true,
+              nominatedBy: "Carol",
+              vetoed: true,
+              vetoedBy: "himself",
+              votes: 0,
+              notes: "Won crucial veto and saved himself",
+              safe: true
+            }
           ]
         },
         {

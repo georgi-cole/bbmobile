@@ -8626,15 +8626,44 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 
 /* ========== TIMER STYLES ========== */
 .fullscreen-eviction-vote .fev-timer {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
   margin-top: 16px;
-  padding: 12px 20px;
+  padding: 16px 32px;
   background: rgba(255, 107, 107, 0.15);
-  border-radius: 12px;
+  border-radius: 20px;
   border: 2px solid rgba(255, 107, 107, 0.4);
+  overflow: hidden;
+  min-width: 180px;
+}
+
+/* Progress bar background (depletes left to right) */
+.fullscreen-eviction-vote .fev-timer-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255, 107, 107, 0.3), rgba(255, 107, 107, 0.2));
+  transition: width 0.5s ease;
+  z-index: 1;
+}
+
+/* Timer content (icon + text) */
+.fullscreen-eviction-vote .fev-timer-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Hourglass icon */
+.fullscreen-eviction-vote .fev-timer-icon {
+  font-size: 1.6rem;
+  line-height: 1;
 }
 
 .fullscreen-eviction-vote .fev-timer-text {
@@ -8644,26 +8673,20 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   font-variant-numeric: tabular-nums;
   min-width: 60px;
   text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+/* Remove old progress ring styles */
 .fullscreen-eviction-vote .fev-progress-ring {
-  width: 60px;
-  height: 60px;
-  transform: rotate(-90deg);
+  display: none;
 }
 
 .fullscreen-eviction-vote .fev-progress-circle-bg {
-  fill: none;
-  stroke: rgba(255, 107, 107, 0.2);
-  stroke-width: 4;
+  display: none;
 }
 
 .fullscreen-eviction-vote .fev-progress-circle {
-  fill: none;
-  stroke: #ff6b6b;
-  stroke-width: 4;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.5s ease;
+  display: none;
 }
 
 /* ========== EMOJI LAYER STYLES ========== */

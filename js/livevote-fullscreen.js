@@ -62,26 +62,34 @@
       titleEl.textContent = isTieBreak ? 'Tie-Breaker Vote' : 'Cast Your Vote to Evict';
       header.appendChild(titleEl);
       
-      // Timer display (mm:ss countdown)
+      // Timer display with hourglass icon and progress bar
       var timerDisplay = document.createElement('div');
       timerDisplay.className = 'fev-timer';
       timerDisplay.setAttribute('aria-live', 'polite');
       timerDisplay.setAttribute('aria-atomic', 'true');
+      
+      // Progress bar background (depletes over time)
+      var progressBar = document.createElement('div');
+      progressBar.className = 'fev-timer-progress';
+      timerDisplay.appendChild(progressBar);
+      
+      // Timer content (icon + text)
+      var timerContent = document.createElement('div');
+      timerContent.className = 'fev-timer-content';
+      
+      // Hourglass icon
+      var hourglassIcon = document.createElement('span');
+      hourglassIcon.className = 'fev-timer-icon';
+      hourglassIcon.textContent = '⏳';
+      timerContent.appendChild(hourglassIcon);
+      
+      // Time text
       var timerText = document.createElement('span');
       timerText.className = 'fev-timer-text';
       timerText.textContent = '02:00';
-      timerDisplay.appendChild(timerText);
+      timerContent.appendChild(timerText);
       
-      // Progress ring (visual indicator)
-      var progressRing = document.createElement('div');
-      progressRing.className = 'fev-progress-ring';
-      var progressCircle = document.createElement('svg');
-      progressCircle.setAttribute('width', '60');
-      progressCircle.setAttribute('height', '60');
-      progressCircle.innerHTML = '<circle cx="30" cy="30" r="26" class="fev-progress-circle-bg" />' +
-        '<circle cx="30" cy="30" r="26" class="fev-progress-circle" />';
-      progressRing.appendChild(progressCircle);
-      timerDisplay.appendChild(progressRing);
+      timerDisplay.appendChild(timerContent);
       
       header.appendChild(timerDisplay);
       
@@ -303,14 +311,11 @@
         var timeStr = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
         timerText.textContent = timeStr;
         
-        // Update progress ring
+        // Update progress bar width (depletes from 100% to 0%)
         var progress = timerState.remainingMs / timeoutMs;
-        var circle = progressCircle.querySelector('.fev-progress-circle');
-        if (circle) {
-          var circumference = 2 * Math.PI * 26;
-          var offset = circumference * (1 - progress);
-          circle.style.strokeDasharray = circumference;
-          circle.style.strokeDashoffset = offset;
+        var progressBar = overlay.querySelector('.fev-timer-progress');
+        if (progressBar) {
+          progressBar.style.width = (progress * 100) + '%';
         }
       }
       
@@ -500,7 +505,7 @@
     if (!overlay) return;
     
     var timerText = overlay.querySelector('.fev-timer-text');
-    var progressCircle = overlay.querySelector('.fev-progress-circle');
+    var progressBar = overlay.querySelector('.fev-timer-progress');
     var cfg = (global.game && global.game.cfg) || global.cfg || {};
     var totalMs = cfg.voteTimeoutMs || 120000;
     
@@ -512,13 +517,10 @@
       var timeStr = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
       if (timerText) timerText.textContent = timeStr;
       
-      // Update progress ring
+      // Update progress bar
       var progress = timerState.remainingMs / totalMs;
-      if (progressCircle) {
-        var circumference = 2 * Math.PI * 26;
-        var offset = circumference * (1 - progress);
-        progressCircle.style.strokeDasharray = circumference;
-        progressCircle.style.strokeDashoffset = offset;
+      if (progressBar) {
+        progressBar.style.width = (progress * 100) + '%';
       }
     }
     
