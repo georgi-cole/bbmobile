@@ -403,12 +403,11 @@
     state.rootElement.style.inset = '0';
     state.rootElement.style.width = '100vw';
     state.rootElement.style.height = '100vh';
-    state.rootElement.style.zIndex = '2147483647'; // Maximum 32-bit integer for absolute top priority
+    state.rootElement.style.zIndex = '2147483000'; // Very high z-index to sit above all UI
     state.rootElement.style.pointerEvents = 'auto'; // Ensure interactivity
     
     // Add body class to signal overlay is open
     document.documentElement.classList.add('live-vote-overlay-open');
-    document.body.classList.add('live-vote-overlay-open');
     
     // Append directly to document.body to avoid stacking context issues
     document.body.appendChild(state.rootElement);
@@ -449,7 +448,6 @@
     
     // Remove body class to signal overlay is closed
     document.documentElement.classList.remove('live-vote-overlay-open');
-    document.body.classList.remove('live-vote-overlay-open');
 
     // Reset state
     state.rootElement = null;
