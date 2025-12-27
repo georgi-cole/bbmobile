@@ -246,6 +246,51 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
+    tiltedLedge: {
+      key: 'tiltedLedge',
+      name: 'The Tilted Ledge',
+      description: 'Keep balance on a tilting ledge with telegraphed jerks',
+      type: 'endurance',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'tilted-ledge.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    pressurePlank: {
+      key: 'pressurePlank',
+      name: 'Pressure Plank',
+      description: 'Alternate hold/release to stay within a moving safe window',
+      type: 'endurance',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'pressure-plank.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    rainBarrelBalance: {
+      key: 'rainBarrelBalance',
+      name: 'Rain Barrel Balance',
+      description: 'Align center-of-mass with target zone while water sloshes',
+      type: 'endurance',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'rain-barrel-balance.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
     memoryZipline: {
       key: 'memoryZipline',
       name: 'Memory Zipline',
