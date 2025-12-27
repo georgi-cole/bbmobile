@@ -112,7 +112,7 @@
 
     // Create card element with locked height to prevent reflow
     const card = document.createElement('div');
-    card.className = 'lv-choice-card';
+    card.className = 'lv-choice-card unified-card unified-card--compact';
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-label', 'Vote to evict');
     
@@ -169,7 +169,7 @@
 
     // Vote button
     const voteBtn = document.createElement('button');
-    voteBtn.className = 'lv-choice-card__vote-btn';
+    voteBtn.className = 'lv-choice-card__vote-btn unified-card-btn unified-card-btn--danger';
     voteBtn.textContent = 'Vote';
     voteBtn.setAttribute('aria-label', 'Open voting overlay');
     voteBtn.onclick = () => {
