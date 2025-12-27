@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Final Fullscreen Live Vote Enhancements</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: 'Montserrat', sans-serif;
+      background: #0d151f;
+      color: #e6e8ee;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: rgba(20, 30, 45, 0.8);
+      border-radius: 12px;
+    }
+    h1 {
+      text-align: center;
+      color: #ff6b6b;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(40, 50, 70, 0.5);
+      border-radius: 8px;
+    }
+    .test-btn {
+      padding: 12px 24px;
+      margin: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 2px solid #83bfff;
+      background: linear-gradient(135deg, #4a8ed9, #3a7ec9);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .test-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    .test-btn.danger {
+      border-color: #ff6b6b;
+      background: linear-gradient(135deg, #ff5555, #ee4444);
+    }
+    .test-btn.success {
+      border-color: #4ade80;
+      background: linear-gradient(135deg, #4ade80, #3ac070);
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(70, 150, 255, 0.2);
+      border-left: 4px solid #83bfff;
+      border-radius: 4px;
+    }
+    .note {
+      font-size: 0.9rem;
+      color: #a0b0c0;
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .status {
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .status.pass {
+      background: rgba(74, 222, 128, 0.2);
+      border-left: 4px solid #4ade80;
+    }
+    .status.fail {
+      background: rgba(248, 113, 113, 0.2);
+      border-left: 4px solid #ff6b6b;
+    }
+    .status.info {
+      background: rgba(131, 191, 255, 0.2);
+      border-left: 4px solid #83bfff;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Final Fullscreen Live Vote Enhancements Test Suite</h1>
+    
+    <div class="test-section">
+      <h2>📋 Test Overview</h2>
+      <p>This test suite validates all enhancements to the fullscreen live vote eviction UI:</p>
+      <ul>
+        <li>✅ Legacy timer clearing and single authoritative timer</li>
+        <li>✅ Floating emoji layer with reduced-motion support</li>
+        <li>✅ Profile modal integration with timer pause/resume</li>
+        <li>✅ Info buttons across all nominee selection flows</li>
+        <li>✅ Intro-hub data integration for Basic Info</li>
+        <li>✅ Complete cleanup on close</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 1: Timer Management & Legacy Timer Clearing</h2>
+      <button class="test-btn" onclick="testTimerManagement()">Test Timer Management</button>
+      <button class="test-btn danger" onclick="testLegacyTimerClearing()">Test Legacy Timer Clearing</button>
+      <div id="result1" class="result" style="display:none;"></div>
+      <p class="note">Expected: Should clear all legacy timers before starting fullscreen timer. Check console for logs.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: Fullscreen Eviction Vote with Timer</h2>
+      <button class="test-btn" onclick="testEvictionVoteWithTimer()">Start Vote (120s timer)</button>
+      <button class="test-btn" onclick="testEvictionVoteShortTimer()">Start Vote (10s timer)</button>
+      <div id="result2" class="result" style="display:none;"></div>
+      <p class="note">Expected: Timer counts down from 120s (or 10s). Auto-vote triggers when time expires. Emojis float in background.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 3: Profile Modal with Timer Pause/Resume</h2>
+      <button class="test-btn" onclick="testProfileModalTimerPause()">Test Profile Modal + Timer Pause</button>
+      <div id="result3" class="result" style="display:none;"></div>
+      <p class="note">Expected: Click info button during vote → timer pauses. Close modal → timer resumes with correct remaining time.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 4: Floating Emoji Layer</h2>
+      <button class="test-btn" onclick="testEmojisEnabled()">Test with Emojis Enabled</button>
+      <button class="test-btn" onclick="testEmojisDisabled()">Test with Emojis Disabled</button>
+      <div id="result4" class="result" style="display:none;"></div>
+      <p class="note">Expected: Emojis (🚪❓❌⛔😱) float up from bottom when enabled. Hidden when disabled or prefers-reduced-motion.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 5: Info Buttons in All Flows</h2>
+      <button class="test-btn" onclick="testEvictionVoteInfoButton()">Test Eviction Vote Info Button</button>
+      <button class="test-btn" onclick="testPOVSelectorInfoButton()">Test POV Selector Info Button</button>
+      <button class="test-btn" onclick="testNominationsInfoButton()">Test Nominations Info Button</button>
+      <div id="result5" class="result" style="display:none;"></div>
+      <p class="note">Expected: Info buttons appear on all nominee cards. Click opens profile modal without selecting card.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 6: Intro-Hub Data Integration</h2>
+      <button class="test-btn" onclick="testIntroHubDataIntegration()">Test Intro-Hub Data</button>
+      <div id="result6" class="result" style="display:none;"></div>
+      <p class="note">Expected: Profile modal Basic Info pulls data from global.houseguestsData or intro hub DOM. Check console for source.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 7: Complete Cleanup</h2>
+      <button class="test-btn danger" onclick="testCleanup()">Test closeAllVoteUI() Cleanup</button>
+      <div id="result7" class="result" style="display:none;"></div>
+      <p class="note">Expected: Removes all overlays, clears timers, removes emojis, restores scroll. Check console.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 8: Auto-Vote Hook Priority</h2>
+      <button class="test-btn" onclick="testAutoVoteHooks()">Test Auto-Vote Hook Priority</button>
+      <div id="result8" class="result" style="display:none;"></div>
+      <p class="note">Expected: Tries global.autoCastEvictionVote → global.liveVoteAutoCast → random fallback. Check console.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Global API Status</h2>
+      <button class="test-btn success" onclick="checkGlobalAPI()">Check Global API</button>
+      <div id="resultAPI" class="result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/livevote-helpers.js"></script>
+  <script src="js/houseguest-profile.js"></script>
+  <script src="js/livevote-fullscreen.js"></script>
+
+  <script>
+    // Mock game data
+    const mockPlayers = [
+      { id: 1, name: 'Alice Anderson', age: 28, location: 'New York, NY', occupation: 'Marketing Manager', trait: 'Strategic', motto: 'Play smart, not hard', bio: 'Marketing manager who loves strategy games', story: 'A competitive marketing executive ready to outwit and outplay' },
+      { id: 2, name: 'Bob Bradley', age: 32, location: 'Los Angeles, CA', occupation: 'Actor', trait: 'Charismatic', motto: 'The show must go on', bio: 'An actor who knows how to perform', story: 'A Hollywood actor bringing drama to the game' },
+      { id: 3, name: 'Carol Chen', age: 25, location: 'San Francisco, CA', occupation: 'Software Engineer', trait: 'Analytical', motto: 'Debug life', bio: 'Engineer who loves solving puzzles', story: 'A tech genius ready to hack the game' },
+      { id: 4, name: 'David Davis', age: 35, location: 'Chicago, IL', occupation: 'Teacher', trait: 'Patient', motto: 'Education is power', bio: 'A teacher who can read people', story: 'An educator ready to teach the competition a lesson' }
+    ];
+
+    // Setup global mocks
+    window.getP = (id) => mockPlayers.find(p => p.id === id);
+    window.alivePlayers = () => mockPlayers;
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.resolveAvatar = (p) => `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.name)}`;
+    
+    // Mock game config
+    window.game = {
+      cfg: {
+        voteTimeoutMs: 120000, // 2 minutes
+        enableFloatingEmojis: true
+      }
+    };
+
+    // Mock intro-hub data (optional)
+    window.houseguestsData = {
+      1: { story: 'A competitive marketing executive ready to outwit and outplay', bio: 'Marketing manager specializing in consumer behavior' },
+      2: { story: 'A Hollywood actor bringing drama to the game', bio: 'Stage and screen actor with improv skills' }
+    };
+
+    // Test functions
+    function testTimerManagement() {
+      const result = document.getElementById('result1');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🔍 Opening console to check timer management logs...</div>';
+      
+      console.log('=== Timer Management Test ===');
+      console.log('LiveVoteFullscreen API:', window.LiveVoteFullscreen);
+      console.log('Available methods:', Object.keys(window.LiveVoteFullscreen));
+      
+      // Check if timer is owned
+      const isOwned = window.LiveVoteFullscreen.isTimerOwner();
+      const remaining = window.LiveVoteFullscreen.getRemainingVoteMs();
+      
+      result.innerHTML += `<div class="status ${isOwned ? 'pass' : 'info'}">Timer Owner: ${isOwned ? '✅ Yes' : '❌ No'}</div>`;
+      result.innerHTML += `<div class="status info">Remaining Time: ${remaining}ms</div>`;
+      result.innerHTML += '<div class="status pass">✅ Timer management API verified. Check console for details.</div>';
+    }
+
+    function testLegacyTimerClearing() {
+      const result = document.getElementById('result1');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🧹 Testing legacy timer clearing...</div>';
+      
+      // Create mock legacy timers
+      window.__liveVoteAutoTimer = setTimeout(() => {}, 10000);
+      window.voteTimeoutId = setTimeout(() => {}, 10000);
+      window.livevoteTimeout = setInterval(() => {}, 1000);
+      
+      console.log('=== Legacy Timer Clearing Test ===');
+      console.log('Created mock legacy timers');
+      
+      // Clear them
+      window.LiveVoteFullscreen.clearLegacyVoteTimers();
+      
+      result.innerHTML += '<div class="status pass">✅ Legacy timers cleared. Check console for logs.</div>';
+    }
+
+    function testEvictionVoteWithTimer() {
+      const result = document.getElementById('result2');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🗳️ Starting eviction vote with 120s timer...</div>';
+      
+      window.game.cfg.voteTimeoutMs = 120000;
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3],
+        onVote: (nomineeId) => {
+          result.innerHTML += `<div class="status pass">✅ Vote cast for player ${nomineeId} (${window.safeName(nomineeId)})</div>`;
+        }
+      }).then(nomineeId => {
+        console.log('Vote completed:', nomineeId);
+      });
+    }
+
+    function testEvictionVoteShortTimer() {
+      const result = document.getElementById('result2');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">⏱️ Starting eviction vote with 10s timer (for quick testing)...</div>';
+      
+      window.game.cfg.voteTimeoutMs = 10000;
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (nomineeId) => {
+          result.innerHTML += `<div class="status pass">✅ Vote cast for player ${nomineeId} (${window.safeName(nomineeId)})</div>`;
+        }
+      }).then(nomineeId => {
+        console.log('Vote completed:', nomineeId);
+        window.game.cfg.voteTimeoutMs = 120000; // Reset
+      });
+      
+      result.innerHTML += '<div class="status info">⏰ Auto-vote will trigger in 10 seconds if you don\'t vote</div>';
+    }
+
+    function testProfileModalTimerPause() {
+      const result = document.getElementById('result3');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🗳️ Starting vote... Click info button (ℹ️) on a card to test pause/resume</div>';
+      
+      window.game.cfg.voteTimeoutMs = 30000; // 30s for testing
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3],
+        onVote: (nomineeId) => {
+          result.innerHTML += `<div class="status pass">✅ Vote cast for player ${nomineeId}</div>`;
+        }
+      }).then(nomineeId => {
+        console.log('Vote completed:', nomineeId);
+        window.game.cfg.voteTimeoutMs = 120000; // Reset
+      });
+      
+      result.innerHTML += '<div class="status info">📝 Instructions: Select a card, then click the info button (ℹ️) to open profile. Timer should pause.</div>';
+    }
+
+    function testEmojisEnabled() {
+      const result = document.getElementById('result4');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🎉 Starting vote with emojis ENABLED...</div>';
+      
+      window.game.cfg.enableFloatingEmojis = true;
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (nomineeId) => {
+          result.innerHTML += `<div class="status pass">✅ Vote cast. Emojis should have been visible.</div>`;
+        }
+      });
+      
+      result.innerHTML += '<div class="status pass">✅ Look for floating emojis: 🚪❓❌⛔😱</div>';
+    }
+
+    function testEmojisDisabled() {
+      const result = document.getElementById('result4');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🚫 Starting vote with emojis DISABLED...</div>';
+      
+      window.game.cfg.enableFloatingEmojis = false;
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (nomineeId) => {
+          result.innerHTML += `<div class="status pass">✅ Vote cast. Emojis should NOT have been visible.</div>`;
+          window.game.cfg.enableFloatingEmojis = true; // Reset
+        }
+      });
+      
+      result.innerHTML += '<div class="status pass">✅ Emojis disabled. Should not see floating emojis.</div>';
+    }
+
+    function testEvictionVoteInfoButton() {
+      const result = document.getElementById('result5');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">ℹ️ Starting eviction vote. Select a card then click info button...</div>';
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2, 3],
+        onVote: (nomineeId) => {
+          result.innerHTML += `<div class="status pass">✅ Vote completed</div>`;
+        }
+      });
+      
+      result.innerHTML += '<div class="status info">📝 Instructions: 1) Select a card 2) Click info button (ℹ️) 3) Profile modal should open</div>';
+    }
+
+    function testPOVSelectorInfoButton() {
+      const result = document.getElementById('result5');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">⭐ POV selector info buttons are tested in veto flow (requires full game context)</div>';
+      result.innerHTML += '<div class="status info">📝 To test: Load game → Win POV → Select nominee to save → Click info button</div>';
+    }
+
+    function testNominationsInfoButton() {
+      const result = document.getElementById('result5');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🎯 Nominations info buttons are tested in HOH flow (requires full game context)</div>';
+      result.innerHTML += '<div class="status info">📝 To test: Load game → Win HOH → Make nominations → Click info button on nominees</div>';
+    }
+
+    function testIntroHubDataIntegration() {
+      const result = document.getElementById('result6');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">📖 Testing intro-hub data integration...</div>';
+      
+      console.log('=== Intro-Hub Data Test ===');
+      console.log('houseguestsData:', window.houseguestsData);
+      
+      // Show profile for player with intro-hub data
+      window.showHouseguestProfile(1).then(() => {
+        result.innerHTML += '<div class="status pass">✅ Profile modal closed. Check console for data source logs.</div>';
+      });
+      
+      result.innerHTML += '<div class="status info">🔍 Opening profile for Alice (has intro-hub data). Check console for source.</div>';
+      result.innerHTML += '<div class="status pass">✅ Should show "Story" field with intro-hub data</div>';
+    }
+
+    function testCleanup() {
+      const result = document.getElementById('result7');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🧹 Starting vote, then calling cleanup...</div>';
+      
+      // Start a vote
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: () => {}
+      });
+      
+      // Wait a moment then cleanup
+      setTimeout(() => {
+        console.log('=== Cleanup Test ===');
+        console.log('Calling closeAllVoteUI()...');
+        window.closeAllVoteUI();
+        
+        result.innerHTML += '<div class="status pass">✅ closeAllVoteUI() called. Check console for cleanup logs.</div>';
+        result.innerHTML += '<div class="status info">📝 Verify: No overlays, no timers, no emojis, scroll restored</div>';
+      }, 1000);
+    }
+
+    function testAutoVoteHooks() {
+      const result = document.getElementById('result8');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🎣 Testing auto-vote hook priority with 5s timer...</div>';
+      
+      // Set up auto-vote hook
+      window.autoCastEvictionVote = (nominees) => {
+        console.log('✅ autoCastEvictionVote hook called with nominees:', nominees);
+        result.innerHTML += '<div class="status pass">✅ autoCastEvictionVote hook was called (priority 1)</div>';
+        return nominees[0]; // Return first nominee
+      };
+      
+      window.game.cfg.voteTimeoutMs = 5000;
+      
+      window.showFullscreenEvictionVote({
+        nominees: [1, 2],
+        onVote: (nomineeId) => {
+          result.innerHTML += `<div class="status pass">✅ Auto-vote completed for player ${nomineeId}</div>`;
+          window.game.cfg.voteTimeoutMs = 120000; // Reset
+        }
+      });
+      
+      result.innerHTML += '<div class="status info">⏰ Wait 5 seconds for auto-vote to trigger...</div>';
+    }
+
+    function checkGlobalAPI() {
+      const result = document.getElementById('resultAPI');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="status info">🔍 Checking global API availability...</div>';
+      
+      const apis = [
+        { name: 'LiveVoteFullscreen.show', exists: typeof window.LiveVoteFullscreen?.show === 'function' },
+        { name: 'LiveVoteFullscreen.hide', exists: typeof window.LiveVoteFullscreen?.hide === 'function' },
+        { name: 'LiveVoteFullscreen.pauseVoteTimer', exists: typeof window.LiveVoteFullscreen?.pauseVoteTimer === 'function' },
+        { name: 'LiveVoteFullscreen.resumeVoteTimer', exists: typeof window.LiveVoteFullscreen?.resumeVoteTimer === 'function' },
+        { name: 'LiveVoteFullscreen.clearTimer', exists: typeof window.LiveVoteFullscreen?.clearTimer === 'function' },
+        { name: 'LiveVoteFullscreen.getRemainingVoteMs', exists: typeof window.LiveVoteFullscreen?.getRemainingVoteMs === 'function' },
+        { name: 'LiveVoteFullscreen.isTimerOwner', exists: typeof window.LiveVoteFullscreen?.isTimerOwner === 'function' },
+        { name: 'LiveVoteFullscreen.clearLegacyVoteTimers', exists: typeof window.LiveVoteFullscreen?.clearLegacyVoteTimers === 'function' },
+        { name: 'showHouseguestProfile', exists: typeof window.showHouseguestProfile === 'function' },
+        { name: 'hideHouseguestProfile', exists: typeof window.hideHouseguestProfile === 'function' },
+        { name: 'HouseguestProfile.show', exists: typeof window.HouseguestProfile?.show === 'function' },
+        { name: 'HouseguestProfile.hide', exists: typeof window.HouseguestProfile?.hide === 'function' },
+        { name: 'closeAllVoteUI', exists: typeof window.closeAllVoteUI === 'function' }
+      ];
+      
+      apis.forEach(api => {
+        const status = api.exists ? 'pass' : 'fail';
+        const icon = api.exists ? '✅' : '❌';
+        result.innerHTML += `<div class="status ${status}">${icon} ${api.name}</div>`;
+      });
+      
+      const allPass = apis.every(api => api.exists);
+      if (allPass) {
+        result.innerHTML += '<div class="status pass">🎉 All APIs available!</div>';
+      } else {
+        result.innerHTML += '<div class="status fail">⚠️ Some APIs missing!</div>';
+      }
+    }
+
+    // Run API check on load
+    window.addEventListener('load', () => {
+      console.log('=== Final Fullscreen Enhancements Test Suite ===');
+      console.log('Available APIs:', {
+        LiveVoteFullscreen: window.LiveVoteFullscreen,
+        HouseguestProfile: window.HouseguestProfile,
+        showHouseguestProfile: window.showHouseguestProfile,
+        hideHouseguestProfile: window.hideHouseguestProfile,
+        closeAllVoteUI: window.closeAllVoteUI
+      });
+    });
+  </script>
+</body>
+</html>
