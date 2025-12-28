@@ -210,10 +210,25 @@
     if (typeof value === 'string') return value;
     if (typeof value === 'number') return String(value);
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (Array.isArray(value)) return value.join(', ');
+    if (Array.isArray(value)) {
+      // Join array elements, but limit to first 5 items
+      const items = value.slice(0, 5);
+      const text = items.map(v => safeText(v)).join(', ');
+      return value.length > 5 ? text + '...' : text;
+    }
     if (typeof value === 'object') {
-      // For objects, try common properties
-      return value.name || value.label || value.value || JSON.stringify(value);
+      // For objects, try common properties first
+      if (value.name) return String(value.name);
+      if (value.label) return String(value.label);
+      if (value.value !== undefined) return safeText(value.value);
+      if (value.text) return String(value.text);
+      // As last resort, use JSON.stringify but truncate long output
+      try {
+        const json = JSON.stringify(value);
+        return json.length > 100 ? json.substring(0, 97) + '...' : json;
+      } catch (e) {
+        return '[Complex Object]';
+      }
     }
     return String(value);
   }

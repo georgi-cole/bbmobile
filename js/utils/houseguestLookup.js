@@ -7,9 +7,8 @@
  * Attempts multiple resolution strategies:
  * 1. Numeric ID lookup in game.players (for live game data with allies/enemies)
  * 2. Name match in game.players (case-insensitive)
- * 3. Numeric ID lookup in Houseguests static data
- * 4. Slug match in Houseguests static data
- * 5. Name match in Houseguests static data
+ * 3. Slug match in Houseguests static data
+ * 4. Name match in Houseguests static data
  * 
  * @param {string|number} key - ID, slug, or name to look up
  * @returns {object|null} Player/houseguest object or null if not found
@@ -18,9 +17,9 @@ export function getProfileByKey(key) {
   if (key === null || key === undefined) return null;
   
   const strKey = String(key);
+  const players = window.game && window.game.players;
   
   // First, try to find in game.players (live game data with allies/enemies)
-  const players = window.game && window.game.players;
   if (players && Array.isArray(players)) {
     // Try numeric ID match
     if (/^\d+$/.test(strKey)) {
@@ -43,19 +42,6 @@ export function getProfileByKey(key) {
   // Fall back to static Houseguests data (for profile info like bios)
   const houseguests = (window.Houseguests && window.Houseguests.getAll()) || [];
   if (houseguests.length === 0) return null;
-  
-  // Try numeric ID lookup by matching player id to houseguest name
-  if (/^\d+$/.test(strKey) && players && Array.isArray(players)) {
-    const numericId = Number(strKey);
-    const player = players.find(p => p.id === numericId);
-    if (player) {
-      // Find houseguest by matching name
-      const houseguest = houseguests.find(h => h.name === player.name);
-      if (houseguest) {
-        return mergeWithGamePlayer(houseguest);
-      }
-    }
-  }
   
   // Try slug match (lowercase, spaces -> dashes)
   const slug = strKey.toLowerCase().trim().replace(/\s+/g, '-');
