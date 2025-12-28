@@ -208,23 +208,26 @@
     if (global.game?.endAt) {
       console.info('[IntermissionCard] Setting up timer monitor (endAt:', global.game.endAt, ')');
       
+      // Helper to clean up the timer monitor
+      function clearTimerMonitor() {
+        if (card._timerMonitor) {
+          clearInterval(card._timerMonitor);
+          card._timerMonitor = null;
+        }
+      }
+      
       card._timerMonitor = setInterval(() => {
-        const game = global.game;
-        
         // Check if card was already removed
         if (!card.parentNode) {
-          if (card._timerMonitor) {
-            clearInterval(card._timerMonitor);
-            card._timerMonitor = null;
-          }
+          clearTimerMonitor();
           return;
         }
         
         // Check if timer has expired
+        const game = global.game;
         if (game?.endAt && game.endAt <= Date.now()) {
           console.info('[IntermissionCard] Timer expired, auto-removing card');
-          clearInterval(card._timerMonitor);
-          card._timerMonitor = null;
+          clearTimerMonitor();
           removeCard();
         }
       }, 500); // Check every 500ms
