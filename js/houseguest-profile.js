@@ -200,23 +200,54 @@
   }
 
   /**
+   * Helper to safely convert any value to a user-friendly string
+   * Prevents [object Object] from appearing in the UI
+   * @param {*} value - Any value to convert
+   * @returns {string} User-friendly string representation
+   */
+  function safeText(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) return value.join(', ');
+    if (typeof value === 'object') {
+      // For objects, try common properties
+      return value.name || value.label || value.value || JSON.stringify(value);
+    }
+    return String(value);
+  }
+
+  /**
    * Build Basic Info HTML
    * @param {Object} player - Player object from getP()
    * @returns {string} HTML string
    */
   function buildBasicInfoHTML(player) {
-    // Try to get enhanced data from intro hub sources
+    // Try to get enhanced data from canonical houseguests data source
     let enhancedData = null;
     let dataSource = 'player object';
     
-    // 1. Try global.houseguestsData
-    if (global.houseguestsData && global.houseguestsData[player.id]) {
+    // 1. PRIORITY: Try window.Houseguests.getAll() - canonical data source
+    if (global.Houseguests && typeof global.Houseguests.getAll === 'function') {
+      const allHouseguests = global.Houseguests.getAll();
+      // Find by name match (player.name should match houseguest.name)
+      const houseguest = allHouseguests.find(h => h.name === player.name);
+      if (houseguest) {
+        enhancedData = houseguest;
+        dataSource = 'window.Houseguests.getAll()';
+        console.debug('[houseguest-profile] Using data from window.Houseguests.getAll()');
+      }
+    }
+    
+    // 2. Try global.houseguestsData (if it exists)
+    if (!enhancedData && global.houseguestsData && global.houseguestsData[player.id]) {
       enhancedData = global.houseguestsData[player.id];
       dataSource = 'global.houseguestsData';
       console.debug('[houseguest-profile] Using data from global.houseguestsData');
     }
     
-    // 2. Try querying intro hub DOM
+    // 3. Try querying intro hub DOM
     if (!enhancedData) {
       try {
         const introHubElement = document.querySelector('#introHub .houseguest[data-player-id="' + player.id + '"]');
@@ -238,7 +269,7 @@
       }
     }
     
-    // 3. Merge with player object (player object as fallback)
+    // 4. Merge with player object (player object as fallback)
     const data = Object.assign({}, player, enhancedData || {});
     
     console.debug('[houseguest-profile] Basic Info data source:', dataSource);
@@ -272,26 +303,42 @@
     }
 
     // Additional fields from player object or intro hub
+    // Display all available rich fields from houseguests.js data
     html += '<div class="hg-profile-fields">';
     
-    if (data.age !== undefined && data.age !== null) {
-      html += `<div class="hg-profile-field"><span class="field-label">Age:</span> ${data.age}</div>`;
+    // Core fields that should always be shown if available
+    const fields = [
+      { key: 'age', label: 'Age' },
+      { key: 'sex', label: 'Sex' },
+      { key: 'location', label: 'Location' },
+      { key: 'sexuality', label: 'Sexuality' },
+      { key: 'education', label: 'Education' },
+      { key: 'profession', label: 'Profession' },
+      { key: 'occupation', label: 'Occupation' }, // fallback field name
+      { key: 'familyStatus', label: 'Family Status' },
+      { key: 'kids', label: 'Kids' },
+      { key: 'pets', label: 'Pets' },
+      { key: 'zodiacSign', label: 'Zodiac Sign' },
+      { key: 'religion', label: 'Religion' },
+      { key: 'trait', label: 'Trait' }
+    ];
+    
+    fields.forEach(field => {
+      const value = data[field.key];
+      if (value !== undefined && value !== null && safeText(value) !== '') {
+        const displayValue = safeText(value);
+        html += `<div class="hg-profile-field"><span class="field-label">${field.label}:</span> ${displayValue}</div>`;
+      }
+    });
+    
+    // Motto (with quotes if present)
+    if (data.motto && safeText(data.motto) !== '') {
+      html += `<div class="hg-profile-field"><span class="field-label">Motto:</span> "${safeText(data.motto)}"</div>`;
     }
     
-    if (data.location) {
-      html += `<div class="hg-profile-field"><span class="field-label">Location:</span> ${data.location}</div>`;
-    }
-    
-    if (data.occupation) {
-      html += `<div class="hg-profile-field"><span class="field-label">Occupation:</span> ${data.occupation}</div>`;
-    }
-    
-    if (data.trait) {
-      html += `<div class="hg-profile-field"><span class="field-label">Trait:</span> ${data.trait}</div>`;
-    }
-    
-    if (data.motto) {
-      html += `<div class="hg-profile-field"><span class="field-label">Motto:</span> "${data.motto}"</div>`;
+    // Fun Fact (if available)
+    if (data.funFact && safeText(data.funFact) !== '') {
+      html += `<div class="hg-profile-field"><span class="field-label">Fun Fact:</span> ${safeText(data.funFact)}</div>`;
     }
 
     html += '</div>'; // .hg-profile-fields
