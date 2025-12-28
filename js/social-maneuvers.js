@@ -3562,76 +3562,71 @@
     card.style.cssText = 'max-width: 680px; pointer-events: auto;';
 
     const header = document.createElement('h3');
-    header.textContent = '🎭 Social Phase Complete';
+    header.textContent = '🎭 Summary';
     header.style.cssText = 'margin: 0 0 1em; text-align: center;';
     card.appendChild(header);
 
     // Summary content
     const content = document.createElement('div');
     content.className = 'social-summary-content';
-    content.style.cssText = 'font-size: 0.9rem; line-height: 1.6;';
+    content.style.cssText = 'font-size: 0.9rem; line-height: 1.6; text-align: center;';
 
-    // Energy spent
+    // Energy spent - more concise format
     const totalEnergySpent = Object.values(summary.resources.energySpent).reduce((a,b) => a+b, 0);
     const totalInfoSpent = Object.values(summary.resources.informationSpent || {}).reduce((a,b) => a+b, 0);
     
     if(totalEnergySpent > 0 || totalInfoSpent > 0){
       const energyLine = document.createElement('div');
-      let resourceText = `<strong>⚡ Energy:</strong> ${totalEnergySpent} spent`;
-      if(totalInfoSpent > 0){
-        resourceText += ` | <strong>🔍 Information:</strong> ${totalInfoSpent} spent`;
-      }
-      resourceText += ` across ${summary.actions.total} action${summary.actions.total !== 1 ? 's' : ''}`;
-      energyLine.innerHTML = resourceText;
+      energyLine.innerHTML = `<strong>⚡ Energy:</strong> ${totalEnergySpent} spent`;
       content.appendChild(energyLine);
+      
+      // Show information on separate line if present
+      if(totalInfoSpent > 0){
+        const infoLine = document.createElement('div');
+        infoLine.style.marginTop = '0.5em';
+        infoLine.innerHTML = `<strong>🔍 Information:</strong> ${totalInfoSpent} spent`;
+        content.appendChild(infoLine);
+      }
     }
 
-    // Actions summary
+    // Actions summary - simplified to just show total
     if(summary.actions.total > 0){
       const actionsLine = document.createElement('div');
       actionsLine.style.marginTop = '0.5em';
-      const categories = Object.entries(summary.actions.byCategory)
-        .map(([cat, count]) => `${count} ${cat}`)
-        .join(', ');
-      actionsLine.innerHTML = `<strong>🎯 Actions:</strong> ${categories}`;
+      actionsLine.innerHTML = `<strong>🎯 Actions:</strong> ${summary.actions.total} total`;
       content.appendChild(actionsLine);
     }
 
-    // Relationship changes
+    // Relationship changes - simplified wording
     if(summary.relationships.changes.length > 0){
       const relLine = document.createElement('div');
       relLine.style.marginTop = '0.5em';
       const significantChanges = summary.relationships.changes.filter(c => Math.abs(c.delta) > 0.1);
-      relLine.innerHTML = `<strong>💕 Relationships:</strong> ${significantChanges.length} significant change${significantChanges.length !== 1 ? 's' : ''}`;
+      const changeText = significantChanges.length === 1 ? 'big change' : 'big changes';
+      relLine.innerHTML = `<strong>💕 Relationships:</strong> ${significantChanges.length} ${changeText}`;
       content.appendChild(relLine);
     }
 
-    // New alliances
+    // New alliances - count only, names in details
     if(summary.relationships.newAlliances.length > 0){
       const allianceLine = document.createElement('div');
       allianceLine.style.cssText = 'margin-top: 0.5em; color: #27ae60; font-weight: 600;';
-      const allianceNames = summary.relationships.newAlliances.map(a => 
-        `${a.player1} & ${a.player2}`
-      ).join(', ');
-      allianceLine.innerHTML = `<strong>🤝 New Alliance${summary.relationships.newAlliances.length !== 1 ? 's' : ''}:</strong> ${allianceNames}`;
+      allianceLine.innerHTML = `<strong>🤝 New alliances:</strong> ${summary.relationships.newAlliances.length}`;
       content.appendChild(allianceLine);
     }
 
-    // New rivalries
+    // New rivalries - count only, names in details
     if(summary.relationships.newRivalries.length > 0){
       const rivalryLine = document.createElement('div');
       rivalryLine.style.cssText = 'margin-top: 0.5em; color: #e74c3c; font-weight: 600;';
-      const rivalryNames = summary.relationships.newRivalries.map(r => 
-        `${r.player1} vs ${r.player2}`
-      ).join(', ');
-      rivalryLine.innerHTML = `<strong>⚔️ New Rivalry${summary.relationships.newRivalries.length !== 1 ? 's' : ''}:</strong> ${rivalryNames}`;
+      rivalryLine.innerHTML = `<strong>⚔️ New rivalries:</strong> ${summary.relationships.newRivalries.length}`;
       content.appendChild(rivalryLine);
     }
 
-    // Memories
+    // Memories - simplified to show only new count
     const memoryLine = document.createElement('div');
     memoryLine.style.marginTop = '0.5em';
-    memoryLine.innerHTML = `<strong>💭 Memories:</strong> ${summary.memories.created} new, ${summary.memories.total} total`;
+    memoryLine.innerHTML = `<strong>💭 Memories:</strong> ${summary.memories.created} new`;
     content.appendChild(memoryLine);
 
     card.appendChild(content);
