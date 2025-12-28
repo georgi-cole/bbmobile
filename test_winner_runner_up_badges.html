@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winner & Runner-Up Badge Test</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./css/mobileRoster.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .test-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .test-button:hover {
+      background: #0056b3;
+    }
+    #test-roster {
+      margin-top: 20px;
+    }
+    .status-message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      background: #e7f3ff;
+      border-left: 4px solid #007bff;
+    }
+    .mobile-roster-container {
+      min-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🥇 Winner & Runner-Up Badge Test 🥈</h1>
+  
+  <div class="test-section">
+    <h2>Test Setup</h2>
+    <p>This test verifies that winner and runner-up badges display correctly in the mobile roster after jury vote completion.</p>
+    <button class="test-button" onclick="initGame()">1. Initialize Game</button>
+    <button class="test-button" onclick="advanceToFinale()">2. Advance to Finale (2 players)</button>
+    <button class="test-button" onclick="setWinnerAndRunnerUp()">3. Set Winner & Runner-Up Labels</button>
+    <button class="test-button" onclick="updateRoster()">4. Update Roster Display</button>
+    <div id="status" class="status-message" style="display:none;"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Expected Behavior</h2>
+    <ul>
+      <li>Winner should display 🥇 gold medal badge</li>
+      <li>Runner-up should display 🥈 silver medal badge</li>
+      <li>Runner-up avatar should be grayed out (but NO red X)</li>
+      <li>Winner avatar should remain in full color</li>
+      <li>Badges should appear as corner emojis on the avatars</li>
+    </ul>
+  </div>
+
+  <div id="test-roster"></div>
+
+  <!-- Required scripts -->
+  <script src="./js/config/defaults.js"></script>
+  <script src="./js/utils.js"></script>
+  <script src="./js/data/houseguests.js"></script>
+  <script src="./js/avatar-resolver.js"></script>
+  <script src="./js/game-bus.js"></script>
+  <script src="./js/ui/mobileRoster.js"></script>
+  
+  <script>
+    let testPlayers = [];
+    
+    function showStatus(message, type = 'info') {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.style.display = 'block';
+      status.style.background = type === 'success' ? '#d4edda' : '#e7f3ff';
+      status.style.borderLeftColor = type === 'success' ? '#28a745' : '#007bff';
+      console.log('[TEST]', message);
+    }
+    
+    function initGame() {
+      // Create minimal game state
+      window.game = {
+        players: [],
+        week: 10,
+        season: 1,
+        phase: 'finale',
+        cfg: {
+          enableSocialManeuvers: false
+        }
+      };
+      
+      // Create test players
+      const playerNames = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank'];
+      testPlayers = playerNames.map((name, i) => ({
+        id: i + 1,
+        name: name,
+        evicted: i < 4, // First 4 are evicted
+        evictedWeek: i < 4 ? i + 2 : null,
+        hoh: false,
+        pov: false,
+        nominated: false,
+        safe: false
+      }));
+      
+      window.game.players = testPlayers;
+      
+      // Initialize mobile roster
+      if (window.MobileRoster && window.MobileRoster.init) {
+        window.MobileRoster.init();
+      }
+      
+      showStatus('✓ Game initialized with 6 players (4 evicted, 2 remaining)', 'success');
+    }
+    
+    function advanceToFinale() {
+      if (!window.game || !testPlayers.length) {
+        showStatus('❌ Please initialize game first!');
+        return;
+      }
+      
+      // Ensure only 2 players remain
+      testPlayers.forEach((p, i) => {
+        p.evicted = i < 4;
+        p.evictedWeek = i < 4 ? i + 2 : null;
+      });
+      
+      window.game.phase = 'finale';
+      
+      showStatus('✓ Advanced to finale - 2 finalists remain: ' + testPlayers.filter(p => !p.evicted).map(p => p.name).join(' vs '), 'success');
+    }
+    
+    function setWinnerAndRunnerUp() {
+      if (!window.game || !testPlayers.length) {
+        showStatus('❌ Please initialize game first!');
+        return;
+      }
+      
+      const finalists = testPlayers.filter(p => !p.evicted);
+      if (finalists.length !== 2) {
+        showStatus('❌ Need exactly 2 finalists!');
+        return;
+      }
+      
+      // Set winner (first finalist)
+      const winner = finalists[0];
+      winner.showFinalLabel = 'WINNER';
+      winner.winner = true;
+      winner.finalRank = 1;
+      winner.hoh = false;
+      winner.pov = false;
+      winner.nominated = false;
+      winner.nominationState = 'none';
+      
+      // Set runner-up (second finalist)
+      const runnerUp = finalists[1];
+      runnerUp.showFinalLabel = 'RUNNER-UP';
+      runnerUp.runnerUp = true;
+      runnerUp.finalRank = 2;
+      runnerUp.hoh = false;
+      runnerUp.pov = false;
+      runnerUp.nominated = false;
+      runnerUp.nominationState = 'none';
+      
+      showStatus(`✓ Winner: ${winner.name} 🥇 | Runner-Up: ${runnerUp.name} 🥈`, 'success');
+    }
+    
+    function updateRoster() {
+      if (!window.game || !testPlayers.length) {
+        showStatus('❌ Please initialize game first!');
+        return;
+      }
+      
+      // Trigger roster update
+      if (window.bbGameBus && window.bbGameBus.emit) {
+        window.bbGameBus.emit('players:update', { reason: 'test-finale-labels' });
+        showStatus('✓ Roster updated - check below for winner 🥇 and runner-up 🥈 badges', 'success');
+      } else {
+        showStatus('❌ Game bus not available');
+      }
+    }
+    
+    // Auto-initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[TEST] Page loaded, ready for manual testing');
+      showStatus('Ready for testing. Click buttons in order (1 → 2 → 3 → 4)', 'info');
+    });
+  </script>
+</body>
+</html>
