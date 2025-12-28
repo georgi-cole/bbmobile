@@ -581,6 +581,17 @@
     
     // Update HUD to reflect changes
     try{ if(typeof g.updateHud === 'function') g.updateHud(); }catch(e){}
+    
+    // Emit players:update event for mobile roster and other listeners
+    try{
+      if(g.bbGameBus && typeof g.bbGameBus.emit === 'function'){
+        // Determine runner-up: if winner is A, runner-up is B; otherwise runner-up is A
+        const runnerUpId = winnerId === A ? B : A;
+        g.bbGameBus.emit('players:update', { reason: 'finale-labels-set', winnerId, runnerUpId });
+      }
+    }catch(e){
+      console.warn('[finale] failed to emit players:update event', e);
+    }
   }
 
   // Helper to hide and remove the faceoff graph with fade animation

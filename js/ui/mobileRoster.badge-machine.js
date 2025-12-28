@@ -31,10 +31,12 @@
 
   const CONFIG = {
     // Badge priority order (highest to lowest)
-    BADGE_PRIORITY: ['HOH', 'POV', 'NOM', 'SAFE'],
+    BADGE_PRIORITY: ['WINNER', 'RUNNER-UP', 'HOH', 'POV', 'NOM', 'SAFE'],
     
     // Badge emojis
     BADGE_EMOJI: {
+      'WINNER': '🥇',
+      'RUNNER-UP': '🥈',
       'HOH': '👑',
       'POV': '🛡️',
       'NOM': '❓',
