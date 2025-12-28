@@ -2241,6 +2241,32 @@
     const popover = createProfilePopover();
     const body = popover.querySelector('.profile-popover-body');
     
+    // Enrich player data with canonical houseguest profile
+    // This ensures we get all the rich fields (age, sex, location, profession, motto, funFact, etc.)
+    let enrichedPlayer = player;
+    
+    // Try to get enriched data from window.Houseguests.getAll()
+    if (global.Houseguests && typeof global.Houseguests.getAll === 'function') {
+      const houseguests = global.Houseguests.getAll();
+      const houseguest = houseguests.find(h => h.name === player.name);
+      if (houseguest) {
+        // Merge: player takes precedence for live data, houseguest for static profile fields
+        enrichedPlayer = {
+          ...houseguest,
+          ...player,
+          // Preserve important static fields from houseguest data
+          age: houseguest.age !== undefined ? houseguest.age : player.age,
+          sex: houseguest.sex || player.sex || player.gender,
+          location: houseguest.location || player.location || player.hometown,
+          profession: houseguest.profession || player.profession || player.occupation || player.job,
+          occupation: houseguest.occupation || player.occupation || player.job,
+          motto: houseguest.motto || player.motto || player.tagline,
+          funFact: houseguest.funFact || player.funFact || player.fun_fact
+        };
+        console.debug('[MobileRoster] Enriched player profile with houseguest data for', player.name);
+      }
+    }
+    
     // Get all players for ranking
     const allPlayers = [...state.activePlayers, ...state.evictedPlayers];
     const ranking = computeRanking(player, allPlayers);
@@ -2249,51 +2275,51 @@
     const fields = [];
     
     // Name header
-    fields.push(`<h3 class="profile-field-name">${player.name || 'Guest'}</h3>`);
+    fields.push(`<h3 class="profile-field-name">${enrichedPlayer.name || 'Guest'}</h3>`);
     
     // Age
-    if (player.age) {
-      fields.push(`<div class="profile-field"><label>Age:</label> <span>${player.age}</span></div>`);
+    if (enrichedPlayer.age) {
+      fields.push(`<div class="profile-field"><label>Age:</label> <span>${enrichedPlayer.age}</span></div>`);
     } else {
       fields.push(`<div class="profile-field"><label>Age:</label> <span class="profile-field-empty">—</span></div>`);
     }
     
     // Gender
-    if (player.gender || player.sex) {
-      fields.push(`<div class="profile-field"><label>Gender:</label> <span>${player.gender || player.sex}</span></div>`);
+    if (enrichedPlayer.gender || enrichedPlayer.sex) {
+      fields.push(`<div class="profile-field"><label>Gender:</label> <span>${enrichedPlayer.gender || enrichedPlayer.sex}</span></div>`);
     }
     
     // Location
-    if (player.location || player.hometown) {
-      fields.push(`<div class="profile-field"><label>Location:</label> <span>${player.location || player.hometown}</span></div>`);
+    if (enrichedPlayer.location || enrichedPlayer.hometown) {
+      fields.push(`<div class="profile-field"><label>Location:</label> <span>${enrichedPlayer.location || enrichedPlayer.hometown}</span></div>`);
     } else {
       fields.push(`<div class="profile-field"><label>Location:</label> <span class="profile-field-empty">—</span></div>`);
     }
     
     // Occupation (bold)
-    if (player.occupation || player.job) {
-      fields.push(`<div class="profile-field"><label>Occupation:</label> <strong>${player.occupation || player.job}</strong></div>`);
+    if (enrichedPlayer.occupation || enrichedPlayer.job || enrichedPlayer.profession) {
+      fields.push(`<div class="profile-field"><label>Occupation:</label> <strong>${enrichedPlayer.occupation || enrichedPlayer.job || enrichedPlayer.profession}</strong></div>`);
     } else {
       fields.push(`<div class="profile-field"><label>Occupation:</label> <span class="profile-field-empty">None</span></div>`);
     }
     
     // Motto (italic)
-    if (player.motto || player.tagline) {
-      fields.push(`<div class="profile-field"><label>Motto:</label> <em>"${player.motto || player.tagline}"</em></div>`);
+    if (enrichedPlayer.motto || enrichedPlayer.tagline) {
+      fields.push(`<div class="profile-field"><label>Motto:</label> <em>"${enrichedPlayer.motto || enrichedPlayer.tagline}"</em></div>`);
     } else {
       fields.push(`<div class="profile-field"><label>Motto:</label> <span class="profile-field-empty">—</span></div>`);
     }
     
     // Fun Fact
-    if (player.funFact || player.fun_fact) {
-      fields.push(`<div class="profile-field"><label>Fun Fact:</label> <span>${player.funFact || player.fun_fact}</span></div>`);
+    if (enrichedPlayer.funFact || enrichedPlayer.fun_fact) {
+      fields.push(`<div class="profile-field"><label>Fun Fact:</label> <span>${enrichedPlayer.funFact || enrichedPlayer.fun_fact}</span></div>`);
     } else {
       fields.push(`<div class="profile-field"><label>Fun Fact:</label> <span class="profile-field-empty">None</span></div>`);
     }
     
     // Allies
-    if (player.allies && player.allies.length > 0) {
-      const alliesNames = player.allies.map(id => {
+    if (enrichedPlayer.allies && enrichedPlayer.allies.length > 0) {
+      const alliesNames = enrichedPlayer.allies.map(id => {
         const ally = allPlayers.find(p => p.id === id);
         return ally ? ally.name : `Player ${id}`;
       }).join(', ');
@@ -2303,8 +2329,8 @@
     }
     
     // Enemies
-    if (player.enemies && player.enemies.length > 0) {
-      const enemiesNames = player.enemies.map(id => {
+    if (enrichedPlayer.enemies && enrichedPlayer.enemies.length > 0) {
+      const enemiesNames = enrichedPlayer.enemies.map(id => {
         const enemy = allPlayers.find(p => p.id === id);
         return enemy ? enemy.name : `Player ${id}`;
       }).join(', ');
