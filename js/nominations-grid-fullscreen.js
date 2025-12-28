@@ -476,11 +476,13 @@
           animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
         `;
         
-        // Title
-        const titleEl = document.createElement('h3');
-        titleEl.textContent = title;
-        titleEl.style.cssText = 'margin: 0 0 8px 0; font-size: 1.3rem;';
-        card.appendChild(titleEl);
+        // Title (only add if not empty)
+        if (title) {
+          const titleEl = document.createElement('h3');
+          titleEl.textContent = title;
+          titleEl.style.cssText = 'margin: 0 0 8px 0; font-size: 1.3rem;';
+          card.appendChild(titleEl);
+        }
         
         // Body text
         const body = document.createElement('div');
@@ -547,9 +549,9 @@
         ? 'three houseguests' 
         : 'four houseguests';
     
-    const bodyText = `${hoh.name}, as Head of Household, you must nominate ${countText} for eviction.`;
+    const bodyText = `${hoh.name}, as current HOH, you must nominate ${countText} for eviction.`;
     
-    return showCenteredCard('Nomination Ceremony', bodyText, 'NOMINATE', (resolve) => {
+    return showCenteredCard('', bodyText, 'NOMINATE', (resolve) => {
       console.log(LOG_PREFIX, 'NOMINATE button clicked');
       // Clear card and proceed
       const tvOverlay = document.getElementById('tvOverlay');

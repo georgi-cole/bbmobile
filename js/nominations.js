@@ -199,15 +199,11 @@
       const card = document.createElement('div');
       card.className = 'revealCard diaryRoomCard tvCardBody';
       
-      const title = document.createElement('h3');
-      title.textContent = 'Nomination Ceremony';
-      card.appendChild(title);
-      
       const info = document.createElement('p');
       const countText = need > 2 
-        ? `You must nominate ${need} houseguests for eviction.`
-        : 'You must nominate two houseguests for eviction.';
-      info.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
+        ? `${need} houseguests`
+        : 'two houseguests';
+      info.textContent = `${hoh.name}, as current HOH, you must nominate ${countText} for eviction.`;
       card.appendChild(info);
       
       const btnRow = document.createElement('div');

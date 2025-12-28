@@ -752,12 +752,14 @@
       
       // Accessibility: ARIA role for dialog with actions
       card.setAttribute('role', 'dialog');
-      card.setAttribute('aria-label', title);
+      card.setAttribute('aria-label', title || message);
       card.setAttribute('tabindex', '0');
       
-      var h3 = document.createElement('h3');
-      h3.textContent = title;
-      card.appendChild(h3);
+      if (title) {
+        var h3 = document.createElement('h3');
+        h3.textContent = title;
+        card.appendChild(h3);
+      }
       
       var p = document.createElement('p');
       p.textContent = message;
@@ -1088,12 +1090,12 @@
     }
     
     var countText = need > 2 
-      ? 'You must nominate ' + need + ' houseguests for eviction.'
-      : 'You must nominate two houseguests for eviction.';
-    var message = hohName + ', as Head of Household, it is time to make your nominations. ' + countText;
+      ? need + ' houseguests'
+      : 'two houseguests';
+    var message = hohName + ', as current HOH, you must nominate ' + countText + ' for eviction.';
     
     return showTVDecision({
-      title: 'Nomination Ceremony',
+      title: '',
       message: message,
       buttons: [
         {
