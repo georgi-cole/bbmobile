@@ -988,9 +988,11 @@
   /**
    * Emoji fallbacks for status badges
    * Used when text would overflow the badge container
-   * Note: Only HOH, POV, NOM, SAFE are used on mobile tiles
+   * Note: WINNER/RUNNER-UP use medal emojis; HOH, POV, NOM, SAFE are used on mobile tiles
    */
   const BADGE_EMOJI_MAP = {
+    'WINNER': '🥇',
+    'RUNNER-UP': '🥈',
     'HOH': '👑',
     'POV': '🛡️',
     'NOM': '❓',
@@ -1314,8 +1316,9 @@
   
   /**
    * Compute badge tokens for a player
-   * Returns array of tokens in priority order: HOH > POV > NOM > SAFE
+   * Returns array of tokens in priority order: WINNER > RUNNER-UP > HOH > POV > NOM > SAFE
    * Note: EVICTED is NOT returned - red cross overlay is sufficient on mobile tiles
+   * Exception: Runner-up gets grayed out but shows silver medal badge
    * @param {Object} player - Player object (should be normalized first)
    * @returns {Array<string>} Array of badge tokens
    */
@@ -1324,6 +1327,19 @@
     
     // Normalize status first
     normalizeStatus(player);
+    
+    // Check for finale winner/runner-up status BEFORE eviction check
+    // These statuses take highest priority
+    const isWinner = player.showFinalLabel === 'WINNER' || player.winner;
+    const isRunnerUp = player.showFinalLabel === 'RUNNER-UP' || player.runnerUp;
+    
+    // Winner and runner-up get special badges regardless of eviction state
+    if (isWinner) {
+      return ['WINNER'];
+    }
+    if (isRunnerUp) {
+      return ['RUNNER-UP'];
+    }
     
     // Note: Evicted players do NOT get an EVICTED badge on mobile
     // The red cross overlay is sufficient visual indicator
@@ -1460,7 +1476,7 @@
   /**
    * Get combined badge info for a player
    * Returns badge text and class based on status combination
-   * Prioritizes: EVICTED > HOH > POV > NOM > SAFE
+   * Prioritizes: WINNER > RUNNER-UP > EVICTED > HOH > POV > NOM > SAFE
    */
   function getCombinedBadgeInfo(player, isEvicted = false) {
     // Handle explicit evicted parameter first (takes priority)
@@ -1472,7 +1488,8 @@
     }
     
     // Use computeBadges to get tokens (handles normalization internally)
-    // Note: computeBadges returns empty array for evicted players (red cross sufficient)
+    // Note: computeBadges returns WINNER/RUNNER-UP badges with highest priority
+    // and returns empty array for evicted players (red cross sufficient)
     const tokens = computeBadges(player);
     
     if (tokens.length === 0) {
@@ -1486,8 +1503,11 @@
     const useEmoji = shouldUseEmojiFallback(tokens);
     
     // Build display text - use emoji for combos if needed
+    // WINNER/RUNNER-UP always use emojis regardless of useEmoji setting
     let text;
-    if (useEmoji) {
+    if (tokens[0] === 'WINNER' || tokens[0] === 'RUNNER-UP') {
+      text = BADGE_EMOJI_MAP[tokens[0]];
+    } else if (useEmoji) {
       text = getEmojiDisplay(tokens);
     } else {
       text = tokens.join('+');
@@ -1495,6 +1515,8 @@
     
     // Determine class (use first status for styling)
     const classMap = {
+      'WINNER': 'winner',
+      'RUNNER-UP': 'runner-up',
       'HOH': 'hoh',
       'POV': 'pov',
       'NOM': 'nom',
@@ -1517,6 +1539,10 @@
     // Normalize status first
     normalizeStatus(player);
     
+    // Check for runner-up status (grayed but no red X)
+    const isRunnerUp = player.showFinalLabel === 'RUNNER-UP' || player.runnerUp;
+    const isWinner = player.showFinalLabel === 'WINNER' || player.winner;
+    
     // Note: Badge info is used for pill/emoji logic, not for inline badge rendering
     // Badge display is now handled exclusively via:
     // 1. Pill animation (replaces name footer for ~7s) - via showBadgePill()
@@ -1532,11 +1558,22 @@
       if (player.nominated) flags.push('nom');
       if (player.safe) flags.push('safe');
       if (player.evicted || isEvicted) flags.push('evict');
+      if (isWinner) flags.push('winner');
+      if (isRunnerUp) flags.push('runner');
       const flagStr = flags.length > 0 ? flags.join(',') : 'none';
       debugTag = `<div class="mobile-roster-debug-tag" aria-hidden="true">${flagStr}</div>`;
     }
     
-    const evictedClass = isEvicted ? 'evicted' : '';
+    // Build tile classes:
+    // - 'evicted' for evicted players (red X and grayed)
+    // - 'runner-up' for runner-up (grayed but no red X)
+    let tileClasses = 'no-touch-callout';
+    if (isEvicted) {
+      tileClasses += ' evicted';
+    } else if (isRunnerUp) {
+      tileClasses += ' runner-up';
+    }
+    
     const fallbackUrl = global.getAvatarFallback ? 
       global.getAvatarFallback(player.name || player.id, null) : 
       avatar;
@@ -1553,9 +1590,10 @@
     
     return `
       <button 
-        class="mobile-roster-tile ${evictedClass} no-touch-callout"
+        class="mobile-roster-tile ${tileClasses}"
         data-player-id="${safePlayerId}"
         data-evicted="${isEvicted}"
+        data-runner-up="${isRunnerUp}"
         aria-label="${statusLabel}"
         tabindex="0"
         role="button"

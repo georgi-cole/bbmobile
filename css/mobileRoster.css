@@ -400,6 +400,14 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 }
 
 /* Corner emoji variants for specific badge types */
+.corner-emoji-winner {
+  filter: drop-shadow(0 1px 4px rgba(255, 215, 0, 0.9));
+}
+
+.corner-emoji-runner-up {
+  filter: drop-shadow(0 1px 4px rgba(192, 192, 192, 0.9));
+}
+
 .corner-emoji-hoh {
   filter: drop-shadow(0 1px 3px rgba(255, 177, 66, 0.7));
 }
@@ -769,6 +777,24 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 .mobile-roster-active-grid .mobile-roster-tile.evicted .mobile-roster-name {
   color: var(--muted, #888);
   opacity: 0.8;
+}
+
+/* Runner-up styling - grayed out but no red X */
+.mobile-roster-active-grid .mobile-roster-tile.runner-up {
+  opacity: 0.75;
+}
+
+.mobile-roster-active-grid .mobile-roster-tile.runner-up .mobile-roster-avatar {
+  filter: grayscale(0.85) brightness(0.75);
+}
+
+.mobile-roster-active-grid .mobile-roster-tile.runner-up:hover .mobile-roster-avatar {
+  filter: grayscale(0.75) brightness(0.8);
+}
+
+.mobile-roster-active-grid .mobile-roster-tile.runner-up .mobile-roster-name {
+  color: var(--muted, #999);
+  opacity: 0.85;
 }
 
 /* Evicted tile in drawer (if drawer is used) - smaller size */
