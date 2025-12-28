@@ -156,6 +156,12 @@
         return;
       }
 
+      // Clear timer monitor if active
+      if (card._timerMonitor) {
+        clearInterval(card._timerMonitor);
+        card._timerMonitor = null;
+      }
+
       card.style.animation = 'slideDownFade 0.3s ease-in';
       card.style.animationFillMode = 'forwards';
       
@@ -197,6 +203,37 @@
     }
 
     card.remove = removeCard;
+
+    // Set up timer monitor to auto-remove card when phase timer expires
+    if (global.game?.endAt) {
+      console.info('[IntermissionCard] Setting up timer monitor (endAt:', global.game.endAt, ')');
+      
+      // Helper to clean up the timer monitor
+      function clearTimerMonitor() {
+        if (card._timerMonitor) {
+          clearInterval(card._timerMonitor);
+          card._timerMonitor = null;
+        }
+      }
+      
+      card._timerMonitor = setInterval(() => {
+        // Check if card was already removed
+        if (!card.parentNode) {
+          clearTimerMonitor();
+          return;
+        }
+        
+        // Check if timer has expired
+        const game = global.game;
+        if (game?.endAt && game.endAt <= Date.now()) {
+          console.info('[IntermissionCard] Timer expired, auto-removing card');
+          clearTimerMonitor();
+          removeCard();
+        }
+      }, 500); // Check every 500ms
+    } else {
+      console.warn('[IntermissionCard] No game.endAt available, card will not auto-remove on timer expiration');
+    }
     
     console.info('[IntermissionCard] ✓ Card shown in TV overlay');
     return card;
@@ -216,6 +253,11 @@
         // Null-safe removal using modern remove() method
         if (card) {
           try {
+            // Clear timer monitor if present
+            if (card._timerMonitor) {
+              clearInterval(card._timerMonitor);
+              card._timerMonitor = null;
+            }
             card.remove();
             removedCount++;
           } catch (e) {
