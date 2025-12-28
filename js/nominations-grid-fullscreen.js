@@ -255,10 +255,88 @@
         margin: 80px auto 100px;
       }
       
+      /* Pagination wrapper for 8+ players */
+      .noms-fs-pagination-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 900px;
+        margin: 80px auto 100px;
+      }
+      
+      /* Grid container for paginated mode */
+      .noms-fs-grid.paginated-mode {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(var(--nfs-mincol, 140px), 1fr));
+        gap: 16px;
+        max-width: 900px;
+        width: 100%;
+        margin: 0;
+      }
+      
+      /* Hide tiles that are not on current page */
+      .noms-fs-tile.page-hidden {
+        display: none;
+      }
+      
+      /* Pagination controls */
+      .noms-fs-pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        margin-top: 24px;
+      }
+      
+      .noms-fs-page-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--card, #1e293b);
+        border: 2px solid var(--sep, #475569);
+        color: var(--fg, #f1f5f9);
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        user-select: none;
+      }
+      
+      .noms-fs-page-btn:hover:not(:disabled) {
+        background: var(--ok, #4ade80);
+        border-color: var(--ok, #4ade80);
+        color: #000;
+        transform: scale(1.1);
+      }
+      
+      .noms-fs-page-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+      
+      .noms-fs-page-indicator {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--fg, #f1f5f9);
+        min-width: 80px;
+        text-align: center;
+      }
+      
       @media (max-width: 768px) {
         .noms-fs-grid {
           gap: 12px;
           margin: 80px auto 120px;
+        }
+        
+        .noms-fs-pagination-wrapper {
+          margin: 80px 12px 120px;
+        }
+        
+        .noms-fs-page-btn {
+          width: 44px;
+          height: 44px;
+          font-size: 1.3rem;
         }
       }
       
@@ -689,11 +767,131 @@
         header.appendChild(legend);
         overlay.appendChild(header);
         
-        // Create grid
-        const grid = document.createElement('div');
-        grid.className = 'noms-fs-grid';
-        grid.setAttribute('role', 'group');
-        grid.setAttribute('aria-label', 'Nomination candidates');
+        // Create grid container
+        let gridContainer;
+        let currentPage = 1;
+        let totalPages = 1;
+        const itemsPerPage = 8;
+        
+        // Enable pagination for 8+ players
+        const usePagination = eligible.length > 8;
+        
+        if (usePagination) {
+          totalPages = Math.ceil(eligible.length / itemsPerPage);
+          console.log(LOG_PREFIX, `Enabled pagination for ${eligible.length} players: ${totalPages} pages`);
+          
+          // Create pagination wrapper
+          gridContainer = document.createElement('div');
+          gridContainer.className = 'noms-fs-pagination-wrapper';
+          
+          // Create grid
+          const grid = document.createElement('div');
+          grid.className = 'noms-fs-grid paginated-mode';
+          grid.setAttribute('role', 'group');
+          grid.setAttribute('aria-label', 'Nomination candidates');
+          gridContainer.appendChild(grid);
+          
+          // Function to update page visibility
+          const updatePageVisibility = (page) => {
+            const startIdx = (page - 1) * itemsPerPage;
+            const endIdx = startIdx + itemsPerPage;
+            
+            tiles.forEach((tile, idx) => {
+              if (idx >= startIdx && idx < endIdx) {
+                tile.classList.remove('page-hidden');
+              } else {
+                tile.classList.add('page-hidden');
+              }
+            });
+            
+            // Update pagination controls
+            const prevBtn = gridContainer.querySelector('.noms-fs-page-prev');
+            const nextBtn = gridContainer.querySelector('.noms-fs-page-next');
+            const pageIndicator = gridContainer.querySelector('.noms-fs-page-indicator');
+            
+            if (prevBtn) prevBtn.disabled = page === 1;
+            if (nextBtn) nextBtn.disabled = page === totalPages;
+            if (pageIndicator) pageIndicator.textContent = `Page ${page} of ${totalPages}`;
+            
+            console.log(LOG_PREFIX, `Showing page ${page}/${totalPages} (items ${startIdx + 1}-${Math.min(endIdx, tiles.length)})`);
+          };
+          
+          // Create pagination controls
+          const paginationControls = document.createElement('div');
+          paginationControls.className = 'noms-fs-pagination-controls';
+          
+          const prevBtn = document.createElement('button');
+          prevBtn.className = 'noms-fs-page-btn noms-fs-page-prev';
+          prevBtn.innerHTML = '←';
+          prevBtn.setAttribute('aria-label', 'Previous page');
+          prevBtn.disabled = true;
+          prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+              currentPage--;
+              updatePageVisibility(currentPage);
+            }
+          });
+          paginationControls.appendChild(prevBtn);
+          
+          const pageIndicator = document.createElement('div');
+          pageIndicator.className = 'noms-fs-page-indicator';
+          pageIndicator.textContent = `Page 1 of ${totalPages}`;
+          pageIndicator.setAttribute('aria-live', 'polite');
+          paginationControls.appendChild(pageIndicator);
+          
+          const nextBtn = document.createElement('button');
+          nextBtn.className = 'noms-fs-page-btn noms-fs-page-next';
+          nextBtn.innerHTML = '→';
+          nextBtn.setAttribute('aria-label', 'Next page');
+          nextBtn.disabled = totalPages === 1;
+          nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+              currentPage++;
+              updatePageVisibility(currentPage);
+            }
+          });
+          paginationControls.appendChild(nextBtn);
+          
+          gridContainer.appendChild(paginationControls);
+          
+          // Add touch swipe support for mobile pagination
+          let touchStartX = 0;
+          let touchEndX = 0;
+          const minSwipeDistance = 50;
+          
+          gridContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+          }, { passive: true });
+          
+          gridContainer.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeDistance = touchStartX - touchEndX;
+            
+            // Swipe left (next page)
+            if (swipeDistance > minSwipeDistance && currentPage < totalPages) {
+              currentPage++;
+              updatePageVisibility(currentPage);
+              console.log(LOG_PREFIX, 'Swipe left: moved to page', currentPage);
+            }
+            // Swipe right (previous page)
+            else if (swipeDistance < -minSwipeDistance && currentPage > 1) {
+              currentPage--;
+              updatePageVisibility(currentPage);
+              console.log(LOG_PREFIX, 'Swipe right: moved to page', currentPage);
+            }
+          }, { passive: true });
+          
+          // Store update function for later use
+          gridContainer.updatePageVisibility = updatePageVisibility;
+        } else {
+          // Standard grid without pagination
+          gridContainer = document.createElement('div');
+          gridContainer.className = 'noms-fs-grid';
+          gridContainer.setAttribute('role', 'group');
+          gridContainer.setAttribute('aria-label', 'Nomination candidates');
+        }
+        
+        const grid = gridContainer.querySelector('.noms-fs-grid') || gridContainer;
         
         // Create tiles for eligible players
         const tiles = [];
@@ -817,7 +1015,12 @@
           tiles.push(tile);
         });
         
-        overlay.appendChild(grid);
+        // Initialize pagination if enabled
+        if (usePagination && gridContainer.updatePageVisibility) {
+          gridContainer.updatePageVisibility(1);
+        }
+        
+        overlay.appendChild(gridContainer);
         
         // Create confirm button
         const confirmBtn = document.createElement('button');
@@ -872,34 +1075,37 @@
           
           e.preventDefault();
           
-          const currentIndex = tiles.indexOf(currentFocus);
+          // Get visible tiles (exclude page-hidden)
+          const visibleTiles = tiles.filter(t => !t.classList.contains('page-hidden'));
+          const currentIndex = visibleTiles.indexOf(currentFocus);
           if (currentIndex === -1) return;
           
           let nextIndex = currentIndex;
           
           if (e.key === 'ArrowRight') {
-            nextIndex = (currentIndex + 1) % tiles.length;
+            nextIndex = (currentIndex + 1) % visibleTiles.length;
           } else if (e.key === 'ArrowLeft') {
-            nextIndex = (currentIndex - 1 + tiles.length) % tiles.length;
+            nextIndex = (currentIndex - 1 + visibleTiles.length) % visibleTiles.length;
           } else if (e.key === 'ArrowDown') {
             // Move down by approximate row size (assume 5 columns on desktop, 3 on mobile)
             const cols = window.innerWidth <= 768 ? 3 : 5;
-            nextIndex = (currentIndex + cols) % tiles.length;
+            nextIndex = Math.min(currentIndex + cols, visibleTiles.length - 1);
           } else if (e.key === 'ArrowUp') {
             const cols = window.innerWidth <= 768 ? 3 : 5;
-            nextIndex = (currentIndex - cols + tiles.length) % tiles.length;
+            nextIndex = Math.max(currentIndex - cols, 0);
           }
           
-          tiles[nextIndex].focus();
+          visibleTiles[nextIndex].focus();
         };
         document.addEventListener('keydown', selectorState.keyboardHandler);
         
         // Add to DOM
         document.body.appendChild(overlay);
         
-        // Focus first tile
-        if (tiles.length > 0) {
-          setTimeout(() => tiles[0].focus(), 100);
+        // Focus first visible tile
+        const firstVisibleTile = tiles.find(t => !t.classList.contains('page-hidden'));
+        if (firstVisibleTile) {
+          setTimeout(() => firstVisibleTile.focus(), 100);
         }
         
         console.log(LOG_PREFIX, '✓ Fullscreen selector opened');

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Nomination Horizontal Scroll (8+ players)</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #0a0e1a;
+    }
+    
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 20000;
+      background: rgba(30, 41, 59, 0.95);
+      border: 2px solid #475569;
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 200px;
+    }
+    
+    .test-controls h3 {
+      margin: 0 0 8px 0;
+      font-size: 0.9rem;
+      color: #f1f5f9;
+    }
+    
+    .test-controls button {
+      display: block;
+      width: 100%;
+      margin: 4px 0;
+      padding: 8px;
+      background: #4ade80;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    
+    .test-controls button:hover {
+      background: #22c55e;
+    }
+    
+    .test-info {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #475569;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3>Test Nomination Grid</h3>
+    <button onclick="testWithCount(6)">Test 6 Players</button>
+    <button onclick="testWithCount(8)">Test 8 Players</button>
+    <button onclick="testWithCount(10)">Test 10 Players (H-Scroll)</button>
+    <button onclick="testWithCount(12)">Test 12 Players (H-Scroll)</button>
+    <button onclick="testWithCount(14)">Test 14 Players (H-Scroll)</button>
+    <button onclick="testWithCount(16)">Test 16 Players (H-Scroll)</button>
+    <div class="test-info">
+      <strong>Expected:</strong><br>
+      • 6-8 players: Grid layout<br>
+      • 9+ players: Horizontal scroll
+    </div>
+  </div>
+
+  <div id="tv" style="display: none;"></div>
+
+  <script type="module">
+    import './js/nominations-grid-fullscreen.js';
+
+    // Mock game state
+    window.game = {
+      phase: 'nominations',
+      hohId: 1,
+      nomsLocked: false,
+      __nomsCommitInProgress: false,
+      __nomsCommitted: false,
+      nominees: [],
+      __twistNomSlots: 2,
+      players: []
+    };
+
+    // Helper to generate mock players
+    function generatePlayers(count) {
+      const names = [
+        'Aria', 'Finn', 'Echo', 'Zed', 'Lia', 'Jax', 'Rey', 'Quinn',
+        'Rae', 'Pax', 'Nova', 'Kai', 'Sage', 'Ash', 'River', 'Sky',
+        'Drew', 'Alex', 'Sam', 'Jordan'
+      ];
+      
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        players.push({
+          id: i + 1,
+          name: names[i] || `Player ${i + 1}`,
+          human: i === 0, // First player is human HOH
+          evicted: false,
+          jury: false,
+          avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${i}`,
+          affinity: {}
+        });
+      }
+      
+      // Set HOH affinity for testing ally/enemy indicators
+      players[0].affinity = {};
+      players.forEach((p, idx) => {
+        if (idx > 0) {
+          // Make some allies and enemies
+          if (idx % 3 === 0) {
+            players[0].affinity[p.id] = 0.3; // Ally
+          } else if (idx % 4 === 0) {
+            players[0].affinity[p.id] = -0.3; // Enemy
+          } else {
+            players[0].affinity[p.id] = 0; // Neutral
+          }
+        }
+      });
+      
+      return players;
+    }
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted && !p.jury);
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+
+    window.inSameAlliance = function(id1, id2) {
+      // Simple mock - return false for testing
+      return false;
+    };
+
+    window.Game = {
+      resolveAvatar: function(player) {
+        if (typeof player === 'object' && player.avatar) {
+          return player.avatar;
+        }
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${player}`;
+      }
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    // Mock profile display
+    window.showHouseguestProfile = function(playerId, options) {
+      console.log('Show profile for player', playerId);
+      alert(`Profile for ${window.safeName(playerId)}`);
+    };
+
+    // Test function
+    window.testWithCount = async function(count) {
+      console.log(`\n=== Testing with ${count} players ===`);
+      
+      // Generate players
+      window.game.players = generatePlayers(count);
+      window.game.hohId = 1;
+      
+      console.log('Players generated:', window.game.players.length);
+      console.log('Eligible for nomination:', window.game.players.length - 1);
+      
+      // Close any existing selector
+      const existing = document.querySelector('.noms-fs-overlay');
+      if (existing) {
+        existing.remove();
+      }
+      
+      // Open fullscreen selector
+      try {
+        const selections = await window.NomsFS.open();
+        console.log('Selections:', selections);
+        if (selections) {
+          alert(`Selected: ${selections.map(id => window.safeName(id)).join(', ')}`);
+        } else {
+          console.log('Selection cancelled');
+        }
+      } catch (err) {
+        console.error('Error opening selector:', err);
+        alert('Error: ' + err.message);
+      }
+    };
+
+    console.log('Test page loaded. Use buttons to test different player counts.');
+    console.log('NomsFS available:', !!window.NomsFS);
+  </script>
+</body>
+</html>
