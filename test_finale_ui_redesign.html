@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finale UI Redesign Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2rem;
+      color: #00e0cc;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .info {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .info h2 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      color: #00e0cc;
+    }
+    
+    .info ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .info li {
+      padding: 6px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+    
+    .info li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00e0cc;
+      font-weight: bold;
+    }
+    
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    #tv {
+      width: 100%;
+      max-width: 800px;
+      height: 500px;
+      margin: 20px auto;
+      background: linear-gradient(135deg, #1a2942 0%, #0f1a2f 100%);
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .status {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #00e0cc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 Finale UI Redesign Test</h1>
+    
+    <div class="info">
+      <h2>New Features</h2>
+      <ul>
+        <li>Fullscreen cinematic overlay with dark backdrop</li>
+        <li>Horizontal side-by-side finalist layout with VS indicator</li>
+        <li>Vote counter pills with pulse animations</li>
+        <li>Single message area at bottom (no overlap)</li>
+        <li>Winner celebration with confetti and floating emojis</li>
+        <li>Runner-up compact display</li>
+        <li>Persistent winner display in TV area after celebration</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button onclick="testFullscreenOverlay()">1. Show Fullscreen Overlay</button>
+      <button onclick="testVoteReveal()">2. Simulate Vote Reveals</button>
+      <button onclick="testWinnerCelebration()">3. Show Winner Celebration</button>
+      <button onclick="testPersistentDisplay()">4. Show Persistent TV Display</button>
+      <button onclick="resetAll()">Reset All</button>
+    </div>
+    
+    <div id="tv"></div>
+    
+    <div class="status" id="status">
+      Ready to test. Click buttons above to test each phase.
+    </div>
+  </div>
+  
+  <script src="js/jury-viz.js"></script>
+  <script>
+    // Mock global object
+    window.global = window;
+    
+    // Mock data
+    const mockFinalists = {
+      left: {
+        id: 1,
+        name: 'Alice',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice'
+      },
+      right: {
+        id: 2,
+        name: 'Bob',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob'
+      }
+    };
+    
+    function log(message) {
+      const status = document.getElementById('status');
+      status.textContent = new Date().toLocaleTimeString() + ': ' + message;
+      console.log('[Test]', message);
+    }
+    
+    function testFullscreenOverlay() {
+      log('Mounting fullscreen overlay with finalists...');
+      
+      if (typeof window.FinalFaceoff?.mount === 'function') {
+        window.FinalFaceoff.mount({
+          left: mockFinalists.left,
+          right: mockFinalists.right,
+          majority: 5,
+          fullscreen: true
+        });
+        log('✓ Fullscreen overlay mounted successfully');
+      } else {
+        log('✗ FinalFaceoff.mount not available');
+      }
+    }
+    
+    async function testVoteReveal() {
+      log('Simulating vote reveals...');
+      
+      const jurors = ['Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Hank', 'Ivy', 'Jack', 'Kate'];
+      const reasons = [
+        'They played a strategic masterclass',
+        'Their social game was unmatched',
+        'They made all the right moves',
+        'They earned my respect',
+        'They controlled the house',
+        'Their loyalty never wavered',
+        'They adapted to every situation',
+        'They played with integrity',
+        'They deserved this win'
+      ];
+      
+      for (let i = 0; i < jurors.length; i++) {
+        const votedFor = Math.random() < 0.5 ? mockFinalists.left.name : mockFinalists.right.name;
+        const which = votedFor === mockFinalists.left.name ? 'left' : 'right';
+        
+        if (window.FinalFaceoff?.showVoteCard) {
+          window.FinalFaceoff.showVoteCard(jurors[i], votedFor, reasons[i]);
+        }
+        
+        if (window.FinalFaceoff?.onVote) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          window.FinalFaceoff.onVote(which);
+        }
+        
+        log(`Vote ${i+1}/${jurors.length}: ${jurors[i]} → ${votedFor}`);
+        await new Promise(resolve => setTimeout(resolve, 2500));
+      }
+      
+      log('✓ All votes revealed');
+    }
+    
+    function testWinnerCelebration() {
+      log('Showing winner celebration...');
+      
+      if (typeof window.FinalFaceoff?.showWinnerCelebration === 'function') {
+        window.FinalFaceoff.showWinnerCelebration(
+          mockFinalists.left,
+          mockFinalists.right,
+          'Alice: 5 • Bob: 4'
+        );
+        log('✓ Winner celebration displayed with confetti and emojis');
+      } else {
+        log('✗ FinalFaceoff.showWinnerCelebration not available');
+      }
+    }
+    
+    function testPersistentDisplay() {
+      log('Closing fullscreen and showing persistent TV display...');
+      
+      if (typeof window.FinalFaceoff?.destroy === 'function') {
+        window.FinalFaceoff.destroy();
+      }
+      
+      // Simulate showWinnerOnTV
+      const tv = document.getElementById('tv');
+      tv.innerHTML = '';
+      
+      const container = document.createElement('div');
+      container.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 20px;
+        gap: 16px;
+      `;
+      
+      const avatar = document.createElement('img');
+      avatar.src = mockFinalists.left.avatar;
+      avatar.alt = mockFinalists.left.name;
+      avatar.style.cssText = `
+        width: min(60%, 300px);
+        height: min(60%, 300px);
+        object-fit: cover;
+        border-radius: 16px;
+        border: 3px solid #ffd700;
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.5),
+                    0 8px 24px rgba(0, 0, 0, 0.6);
+      `;
+      
+      const name = document.createElement('div');
+      name.textContent = mockFinalists.left.name;
+      name.style.cssText = `
+        font-size: clamp(20px, 4vw, 32px);
+        font-weight: 800;
+        color: #ffd700;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+        text-align: center;
+      `;
+      
+      const title = document.createElement('div');
+      title.textContent = '✨ WINNER OF BIG BROTHER ✨';
+      title.style.cssText = `
+        font-size: clamp(14px, 2.5vw, 20px);
+        font-weight: 700;
+        color: #00e0cc;
+        text-shadow: 0 0 10px rgba(0, 224, 204, 0.6),
+                     0 2px 4px rgba(0, 0, 0, 0.8);
+        text-align: center;
+        letter-spacing: 2px;
+      `;
+      
+      container.append(avatar, name, title);
+      tv.appendChild(container);
+      
+      log('✓ Persistent winner display shown in TV area');
+    }
+    
+    function resetAll() {
+      log('Resetting all...');
+      
+      if (typeof window.FinalFaceoff?.destroy === 'function') {
+        window.FinalFaceoff.destroy();
+      }
+      
+      const tv = document.getElementById('tv');
+      tv.innerHTML = '';
+      
+      log('✓ Reset complete');
+    }
+    
+    log('Test page loaded. Click buttons to test each phase.');
+  </script>
+</body>
+</html>
