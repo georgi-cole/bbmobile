@@ -390,142 +390,71 @@
     st._fitCleanup = ()=>{ try{ ro.disconnect(); }catch{} window.removeEventListener('resize', schedule); };
   }
 
-  // Render the Faceoff (centered + auto-fit)
+  // Render the Faceoff using new fullscreen overlay system
   function renderFinaleGraph(A, B, totalJurors){
-    const tv = document.getElementById('tv');
-    const panel = document.getElementById('panel');
-    const mountAt = tv || panel || document.body;
-    if (!mountAt) { console.warn('[jury] No mount container (#tv/#panel).'); return; }
-
-    try { mountAt.querySelectorAll('#juryGraphBox').forEach(x=>x.remove()); } catch{}
-
-    const box=document.createElement('div'); box.className='minigame-host'; box.id='juryGraphBox';
-    box.style.position = 'relative';
-    box.style.zIndex = '5';
-    box.style.overflow = 'visible';
-    // Make container transparent - no blocking overlay
-    box.style.background = 'transparent';
-    box.style.border = 'none';
-    box.style.boxShadow = 'none';
-    box.style.padding = '0';
-
     const need = Math.floor(totalJurors/2)+1;
-
-    const Aimg = getAvatar(A);
-    const Bimg = getAvatar(B);
-
-    box.innerHTML = `
-      <div class="fo-center">
-        <div class="fo-fit" id="foFit">
-          <div class="fo-belt" id="foBelt"></div>
-          <div class="finalFaceoff" id="finalFaceoff">
-            <div class="fo-slot left" id="foLeft">
-              <img class="fo-avatar" id="foLeftImg" src="${Aimg}" alt="${safeName(A)}"
-                onerror="console.warn('[jury] avatar fallback for ${safeName(A)}');this.onerror=null;this.src='${getAvatarFallback(safeName(A))}'">
-              <div class="fo-name" id="foLeftName">${safeName(A)}</div>
-              <div class="fo-votes"><span id="foLeftCount">0</span></div>
-            </div>
-            <div class="fo-slot right" id="foRight">
-              <img class="fo-avatar" id="foRightImg" src="${Bimg}" alt="${safeName(B)}"
-                onerror="console.warn('[jury] avatar fallback for ${safeName(B)}');this.onerror=null;this.src='${getAvatarFallback(safeName(B))}'">
-              <div class="fo-name" id="foRightName">${safeName(B)}</div>
-              <div class="fo-votes"><span id="foRightCount">0</span></div>
-            </div>
-            <div class="fo-badge" id="foBadge">Majority clinched</div>
-          </div>
-        </div>
-      </div>
-    `;
-    if (tv) tv.appendChild(box); else mountAt.prepend(box);
-
-    faceoff.state = {
-      A, B, need,
-      counts: { a:0, b:0 },
-      els: {
-        wrap: box,
-        fit: box.querySelector('#foFit'),
-        belt: box.querySelector('#foBelt'),
-        root: box.querySelector('#finalFaceoff'),
-        leftSlot: box.querySelector('#foLeft'),
-        rightSlot: box.querySelector('#foRight'),
-        leftCount: box.querySelector('#foLeftCount'),
-        rightCount: box.querySelector('#foRightCount'),
-        badge: box.querySelector('#foBadge')
-      }
-    };
-
-    installAutoFit(box);
-    console.log('[jury] Faceoff mounted (auto-fit centered) in', tv ? '#tv' : (panel ? '#panel' : 'body'));
+    
+    const leftPlayer = g.getP?.(A) || { id: A, name: String(A) };
+    const rightPlayer = g.getP?.(B) || { id: B, name: String(B) };
+    
+    // Set avatar URLs on player objects for FinalFaceoff
+    leftPlayer.avatar = getAvatar(A);
+    rightPlayer.avatar = getAvatar(B);
+    
+    // Mount in fullscreen overlay mode
+    if (typeof g.FinalFaceoff?.mount === 'function') {
+      g.FinalFaceoff.mount({
+        left: leftPlayer,
+        right: rightPlayer,
+        majority: need,
+        fullscreen: true
+      });
+      console.log('[jury] Faceoff mounted in fullscreen overlay');
+    } else {
+      console.warn('[jury] FinalFaceoff.mount not available');
+    }
   }
 
-  // Vote message belt
+  // Vote message - use new FinalFaceoff API
   function addFaceoffVoteCard(jurorName, finalistName, dynamicReason){
-    const st = faceoff.state; if(!st?.els?.belt) return;
-    // Use dynamic reason if provided, otherwise fall back to default message
-    const text = dynamicReason || `${jurorName}: I vote for ${finalistName} to win the Big Brother game.`;
-    const bubble = document.createElement('div');
-    bubble.className='fo-bubble';
-    bubble.textContent = text;
-    st.els.belt.innerHTML = '';
-    st.els.belt.appendChild(bubble);
-    requestAnimationFrame(()=> bubble.classList.add('show'));
-    setTimeout(()=>{ try{ bubble.classList.remove('show'); }catch{} }, 1800);
-    st._fitSchedule && st._fitSchedule();
+    if (typeof g.FinalFaceoff?.showVoteCard === 'function') {
+      g.FinalFaceoff.showVoteCard(jurorName, finalistName, dynamicReason);
+    }
   }
 
-  // Update counts / pulse / leader glow / majority badge
+  // Update counts / pulse / leader glow using new API
   function updateFinaleGraph(aCount,bCount){
-    const st = faceoff.state; if(!st) return;
-    const prevA = st.counts.a, prevB = st.counts.b;
-
-    st.counts.a = aCount|0;
-    st.counts.b = bCount|0;
-
-    if(st.els.leftCount) st.els.leftCount.textContent = String(st.counts.a);
-    if(st.els.rightCount) st.els.rightCount.textContent = String(st.counts.b);
-
-    const leftLead = st.counts.a > st.counts.b;
-    const rightLead = st.counts.b > st.counts.a;
-
-    if(st.els.leftSlot) st.els.leftSlot.classList.toggle('fo-leader', leftLead);
-    if(st.els.rightSlot) st.els.rightSlot.classList.toggle('fo-leader', rightLead);
-
-    if (st.counts.a > prevA && st.els.leftSlot){
-      st.els.leftSlot.classList.remove('fo-pulse'); void st.els.leftSlot.offsetWidth; st.els.leftSlot.classList.add('fo-pulse');
-      setTimeout(()=>st.els.leftSlot.classList.remove('fo-pulse'), 650);
+    if (typeof g.FinalFaceoff?.onVote === 'function') {
+      // Determine which side got the vote
+      const prevA = faceoff.state?.counts?.a || 0;
+      const prevB = faceoff.state?.counts?.b || 0;
+      
+      if (aCount > prevA) {
+        g.FinalFaceoff.onVote('left', { left: aCount, right: bCount });
+      } else if (bCount > prevB) {
+        g.FinalFaceoff.onVote('right', { left: aCount, right: bCount });
+      } else {
+        // Just update counts without animation
+        g.FinalFaceoff.setCounts({ left: aCount, right: bCount });
+      }
+      
+      // Store in legacy state for compatibility
+      if (!faceoff.state) faceoff.state = { counts: {} };
+      faceoff.state.counts.a = aCount;
+      faceoff.state.counts.b = bCount;
     }
-    if (st.counts.b > prevB && st.els.rightSlot){
-      st.els.rightSlot.classList.remove('fo-pulse'); void st.els.rightSlot.offsetWidth; st.els.rightSlot.classList.add('fo-pulse');
-      setTimeout(()=>st.els.rightSlot.classList.remove('fo-pulse'), 650);
-    }
-
-    const clinched = st.need>0 && (st.counts.a>=st.need || st.counts.b>=st.need);
-    if(st.els.badge) st.els.badge.style.display = clinched ? '' : 'none';
-
-    st._fitSchedule && st._fitSchedule();
   }
 
   function showFinalTallyBanner(){
-    const st = faceoff.state; if(!st?.els?.root) return;
-    st.els.root.querySelectorAll('.fo-tally').forEach(x=>x.remove());
-    const t = document.createElement('div');
-    t.className='fo-tally';
-    t.textContent = `Final Tally — ${safeName(st.A)}: ${st.counts.a} · ${safeName(st.B)}: ${st.counts.b}`;
-    st.els.root.appendChild(t);
-    st._fitSchedule && st._fitSchedule();
+    if (typeof g.FinalFaceoff?.showFinalTally === 'function') {
+      g.FinalFaceoff.showFinalTally();
+    }
   }
 
   function showWinnerMessageBanner(winnerId){
-    const st = faceoff.state; if(!st?.els?.root) return;
-    st.els.root.querySelectorAll('.fo-winner').forEach(x=>x.remove());
-    const w = document.createElement('div');
-    w.className='fo-winner';
-    w.textContent = `${safeName(winnerId)} has won the Big Brother game!`;
-    // Position at bottom instead of covering finalist photos
-    w.style.bottom = '8px';
-    w.style.top = 'auto';
-    st.els.root.appendChild(w);
-    st._fitSchedule && st._fitSchedule();
+    if (typeof g.FinalFaceoff?.showWinnerMessage === 'function') {
+      g.FinalFaceoff.showWinnerMessage(safeName(winnerId));
+    }
   }
 
   function showPlacementLabels(winnerId){
@@ -654,6 +583,70 @@
       if (typeof g.showCredits === 'function') return g.showCredits();
       console.log('[jury] No credits function detected.');
     }catch(e){ console.warn('[jury] credits failed', e); }
+  }
+  
+  // Show winner persistently in TV area after fullscreen closes
+  function showWinnerOnTV(winnerId){
+    const tv = document.getElementById('tv');
+    if (!tv) return;
+    
+    // Clear existing content
+    tv.innerHTML = '';
+    
+    const container = document.createElement('div');
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 20px;
+      gap: 16px;
+    `;
+    
+    const avatar = document.createElement('img');
+    avatar.src = getAvatar(winnerId);
+    avatar.alt = safeName(winnerId);
+    avatar.style.cssText = `
+      width: min(60%, 300px);
+      height: min(60%, 300px);
+      object-fit: cover;
+      border-radius: 16px;
+      border: 3px solid #ffd700;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.5),
+                  0 8px 24px rgba(0, 0, 0, 0.6);
+    `;
+    avatar.onerror = function() {
+      this.onerror = null;
+      this.src = getAvatarFallback(safeName(winnerId));
+    };
+    
+    const name = document.createElement('div');
+    name.textContent = safeName(winnerId);
+    name.style.cssText = `
+      font-size: clamp(20px, 4vw, 32px);
+      font-weight: 800;
+      color: #ffd700;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+      text-align: center;
+    `;
+    
+    const title = document.createElement('div');
+    title.textContent = '✨ WINNER OF BIG BROTHER ✨';
+    title.style.cssText = `
+      font-size: clamp(14px, 2.5vw, 20px);
+      font-weight: 700;
+      color: #00e0cc;
+      text-shadow: 0 0 10px rgba(0, 224, 204, 0.6),
+                   0 2px 4px rgba(0, 0, 0, 0.8);
+      text-align: center;
+      letter-spacing: 2px;
+    `;
+    
+    container.append(avatar, name, title);
+    tv.appendChild(container);
+    
+    console.info('[jury] Winner display shown in TV area');
   }
 
   // ===== NEW FINALE FLOW FUNCTIONS =====
@@ -1541,39 +1534,40 @@
       g.ProgressionEvents.onFinalWinner(winner);
     }
     
-    // Show winner
+    // Show winner celebration with confetti and floating emojis
     await sleep(1000);
     try{ await g.cardQueueWaitIdle?.(); }catch{}
     
-    showFinalTallyBanner();
-    showPlacementLabels(winner);
-    showWinnerMessageBanner(winner);
+    const [A,B]=finalists();
+    const winnerPlayer = gp(winner);
+    const runnerUpId = winner === A ? B : A;
+    const runnerUpPlayer = gp(runnerUpId);
+    const finalA = votes.get(A)||0;
+    const finalB = votes.get(B)||0;
+    const finalVotes = `${safeName(A)}: ${finalA} • ${safeName(B)}: ${finalB}`;
     
-    // NO CONFETTI per spec
+    // Show cinematic winner celebration with confetti and floating emojis
+    if(typeof g.FinalFaceoff?.showWinnerCelebration === 'function'){
+      g.FinalFaceoff.showWinnerCelebration(winnerPlayer, runnerUpPlayer, finalVotes);
+      console.info('[jury] Winner celebration displayed');
+    }
     
     try{ g.setMusic?.('victory', true); }catch(e){}
     
-    // Add crown overlay on winner's photo (non-face-covering)
-    const winnerSide = winner === A ? 'left' : 'right';
-    if(typeof g.FinalFaceoff?.showCrown === 'function'){
-      g.FinalFaceoff.showCrown(winnerSide);
-      console.info('[jury] Crown displayed on winner');
+    // Wait 8 seconds for celebration
+    await sleep(8000);
+    
+    // Close fullscreen overlay and show persistent TV display
+    if(typeof g.FinalFaceoff?.destroy === 'function'){
+      g.FinalFaceoff.destroy();
+      console.info('[jury] Fullscreen overlay closed');
     }
     
-    // Wait 2 seconds with crown
-    await sleep(2000);
+    // Update persistent TV display with winner
+    showWinnerOnTV(winner);
     
-    // Show 1M dollar check card
-    if(typeof g.FinalFaceoff?.showCheckCard === 'function'){
-      g.FinalFaceoff.showCheckCard(safeName(winner), 5000);
-      console.info('[jury] Check card displayed');
-    }
-    
-    // Wait full 5 seconds for check card to display and auto-remove
-    await sleep(5000);
-    
-    // Fade out and remove the tally/faceoff graph
-    await hideFaceoffGraph();
+    // Set final labels and clear other states
+    showPlacementLabels(winner);
     
     // Run Public Favourite AFTER tally hidden, BEFORE cinematic overlay
     try{

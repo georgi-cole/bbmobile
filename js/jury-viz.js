@@ -9,120 +9,191 @@
 (function injectFaceoffStyles(){
   if (document.getElementById('faceoff-css')) return;
   const css = `
+  /* Fullscreen cinematic overlay */
+  .finale-fullscreen-overlay{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: auto;
+  }
+  .finale-fullscreen-overlay.visible{
+    opacity: 1;
+  }
+  
   .finalFaceoff{
     position: relative;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    align-items: start;
+    grid-template-columns: 1fr auto 1fr;
+    gap: clamp(20px, 4vw, 60px);
+    align-items: center;
     justify-items: center;
     width: 100%;
-    padding: 18px 12px 28px;
+    max-width: 1400px;
+    padding: 40px 20px;
     box-sizing: border-box;
-    min-height: 300px;
+    min-height: 400px;
   }
-  /* Vote cards lane (top center) - Issue 3: Safe region above finalists */
-  .finalFaceoff .fo-cards{
-    position: absolute;
-    top: -80px; /* Moved higher to avoid overlap with finalists */
+  /* VS divider between finalists */
+  .finalFaceoff .fo-vs{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(32px, 6vw, 64px);
+    font-weight: 900;
+    color: #00e0cc;
+    text-shadow: 0 0 20px rgba(0, 224, 204, 0.6),
+                 0 4px 8px rgba(0, 0, 0, 0.8);
+    letter-spacing: 4px;
+    animation: vsGlow 2s ease-in-out infinite alternate;
+  }
+  @keyframes vsGlow{
+    0%{ text-shadow: 0 0 20px rgba(0, 224, 204, 0.6), 0 4px 8px rgba(0, 0, 0, 0.8); }
+    100%{ text-shadow: 0 0 30px rgba(0, 224, 204, 0.9), 0 4px 12px rgba(0, 0, 0, 0.8); }
+  }
+  
+  /* Single message area at bottom - no overlap */
+  .finalFaceoff .fo-message-area{
+    position: fixed;
+    bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
-    width: min(90%, 980px);
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: center;
-    gap: 6px;
-    pointer-events: none;
-    z-index: 5;
-  }
-  /* Jury lane safe region class for collision detection */
-  .jury-lane {
-    position: absolute;
-    top: -80px;
-    left: 0;
-    right: 0;
-    height: 200px;
-    pointer-events: none;
-    z-index: 5;
-  }
-  /* Offset class for collision detection fallback */
-  .fo-card.offset-up {
-    transform: translateY(-20px);
-  }
-  .fo-card.offset-up.enter {
-    transform: translateY(-20px);
-  }
-  .finalFaceoff .fo-card{
-    /* Ultra-transparent vote cards with glassmorphism */
-    background: rgba(0,0,0,0.15);
-    backdrop-filter: blur(4px) saturate(1.1);
-    -webkit-backdrop-filter: blur(4px) saturate(1.1);
-    border: 1px solid rgba(255,255,255,0.12);
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: clamp(13px, 1.7vw, 18px);
-    line-height: 1.25;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    width: min(90%, 800px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 2px solid rgba(0, 224, 204, 0.3);
+    border-radius: 16px;
+    padding: 20px 28px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(0, 224, 204, 0.2);
+    z-index: 10001;
     opacity: 0;
-    transform: translateY(-6px);
-    transition: opacity .25s ease, transform .25s ease;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .finalFaceoff .fo-message-area.visible{
+    opacity: 1;
+  }
+  .finalFaceoff .fo-message-juror{
+    font-size: clamp(14px, 2vw, 18px);
+    font-weight: 700;
+    color: #00e0cc;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .finalFaceoff .fo-message-text{
+    font-size: clamp(15px, 2.2vw, 20px);
+    font-weight: 400;
     color: #e8f9ff;
     text-align: center;
-    max-width: 100%;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-  }
-  .finalFaceoff .fo-card.enter{
-    opacity: 1;
-    transform: translateY(0);
-  }
-  .finalFaceoff .fo-card.fade{
-    opacity: 0;
-    transform: translateY(-10px);
+    font-style: italic;
+    line-height: 1.4;
   }
 
   .finalFaceoff .fo-slot{
     position: relative;
-    display: grid;
-    grid-template-rows: auto auto auto;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-items: center;
-    padding: 14px 16px;
-    width: min(46vw, 520px);
-    border-radius: 14px;
-    /* Completely transparent background - TV fully visible */
-    background: transparent;
-    box-shadow: none;
-    transition: box-shadow .25s ease, transform .25s ease;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px 20px;
+    width: min(40vw, 450px);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
   }
   .finalFaceoff .fo-slot.fo-leader{
-    /* Subtle glow only, no border */
-    box-shadow: 0 0 20px rgba(0,255,230,0.15);
+    border-color: rgba(0, 224, 204, 0.5);
+    box-shadow: 0 0 40px rgba(0, 224, 204, 0.3),
+                0 8px 32px rgba(0, 0, 0, 0.4);
+    transform: scale(1.02);
+  }
     transform: translateY(-2px);
   }
 
   .fo-avatar{
-    width: min(26vw, 300px);
-    height: min(26vw, 300px);
+    width: min(35vw, 350px);
+    height: min(35vw, 350px);
     object-fit: cover;
-    border-radius: 12px;
+    border-radius: 16px;
     background: #111;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    border: 3px solid rgba(255, 255, 255, 0.15);
   }
 
   .fo-name{
-    font-size: clamp(18px, 2vw, 28px);
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    text-align: center;
-  }
-
-  .fo-votes{
     font-size: clamp(22px, 3vw, 36px);
     font-weight: 800;
-    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.65));
+    letter-spacing: 1px;
+    text-align: center;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Vote counter pills below each finalist */
+  .fo-vote-pill{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+  }
+  .fo-vote-pill.pulse{
+    animation: votePulse 0.6s ease;
+  }
+  @keyframes votePulse{
+    0%{ 
+      transform: scale(1); 
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    50%{ 
+      transform: scale(1.15); 
+      border-color: rgba(0, 224, 204, 0.8);
+      box-shadow: 0 0 30px rgba(0, 224, 204, 0.6),
+                  0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    100%{ 
+      transform: scale(1); 
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+  }
+  .fo-vote-pill-label{
+    font-size: clamp(12px, 1.5vw, 16px);
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .fo-votes{
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(0, 224, 204, 0.8));
     -webkit-background-clip: text;
-    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   }
 
   .fo-badge{
@@ -321,6 +392,229 @@
     color: #9bb5d4;
     margin-top: 12px;
     font-style: italic;
+  }
+  
+  /* Winner celebration overlay */
+  .winner-celebration{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10002;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .winner-celebration.visible{
+    opacity: 1;
+  }
+  
+  /* Winner display - large centered */
+  .winner-display{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 40px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 3px solid rgba(0, 224, 204, 0.5);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8),
+                0 0 40px rgba(0, 224, 204, 0.4);
+    animation: winnerEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes winnerEnter{
+    0%{
+      opacity: 0;
+      transform: scale(0.5) translateY(-50px);
+    }
+    100%{
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  
+  .winner-avatar-large{
+    width: min(50vw, 400px);
+    height: min(50vw, 400px);
+    object-fit: cover;
+    border-radius: 20px;
+    border: 4px solid rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 60px rgba(255, 215, 0, 0.5),
+                0 16px 48px rgba(0, 0, 0, 0.8);
+    animation: winnerGlow 2s ease-in-out infinite alternate;
+  }
+  @keyframes winnerGlow{
+    0%{ 
+      border-color: rgba(255, 215, 0, 0.6);
+      box-shadow: 0 0 60px rgba(255, 215, 0, 0.5),
+                  0 16px 48px rgba(0, 0, 0, 0.8);
+    }
+    100%{ 
+      border-color: rgba(255, 215, 0, 0.9);
+      box-shadow: 0 0 80px rgba(255, 215, 0, 0.8),
+                  0 16px 48px rgba(0, 0, 0, 0.8);
+    }
+  }
+  
+  .winner-name-large{
+    font-size: clamp(32px, 6vw, 64px);
+    font-weight: 900;
+    text-align: center;
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #d4af37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.6));
+    animation: nameShimmer 3s ease-in-out infinite;
+  }
+  @keyframes nameShimmer{
+    0%, 100%{ filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.6)); }
+    50%{ filter: drop-shadow(0 4px 20px rgba(255, 215, 0, 0.9)); }
+  }
+  
+  .winner-title{
+    font-size: clamp(18px, 3vw, 32px);
+    font-weight: 700;
+    text-align: center;
+    color: #00e0cc;
+    text-shadow: 0 0 20px rgba(0, 224, 204, 0.8),
+                 0 4px 8px rgba(0, 0, 0, 0.8);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  
+  .winner-votes-display{
+    font-size: clamp(16px, 2.5vw, 24px);
+    font-weight: 600;
+    color: #e8f9ff;
+    text-align: center;
+    opacity: 0.9;
+  }
+  
+  .runner-up-compact{
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    z-index: 10003;
+  }
+  .runner-up-avatar{
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid rgba(192, 192, 192, 0.5);
+  }
+  .runner-up-info{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .runner-up-label{
+    font-size: 12px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .runner-up-name{
+    font-size: 18px;
+    font-weight: 700;
+    color: #e8f9ff;
+  }
+  
+  /* Floating emojis */
+  .floating-emoji{
+    position: absolute;
+    font-size: 48px;
+    pointer-events: none;
+    animation: floatUp 4s ease-in-out infinite;
+    opacity: 0;
+  }
+  @keyframes floatUp{
+    0%{
+      opacity: 0;
+      transform: translateY(0) rotate(0deg);
+    }
+    10%{
+      opacity: 1;
+    }
+    90%{
+      opacity: 1;
+    }
+    100%{
+      opacity: 0;
+      transform: translateY(-100vh) rotate(360deg);
+    }
+  }
+  
+  /* Confetti particle */
+  .confetti{
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    animation: confettiFall 3s ease-out forwards;
+  }
+  @keyframes confettiFall{
+    0%{
+      opacity: 1;
+      transform: translateY(0) rotate(0deg);
+    }
+    100%{
+      opacity: 0;
+      transform: translateY(100vh) rotate(720deg);
+    }
+  }
+  
+  /* Mobile adjustments */
+  @media (max-width: 768px) {
+    .finalFaceoff{
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+    .finalFaceoff .fo-vs{
+      font-size: clamp(24px, 8vw, 48px);
+    }
+    .finalFaceoff .fo-slot{
+      width: min(80vw, 400px);
+    }
+    .fo-avatar{
+      width: min(60vw, 250px);
+      height: min(60vw, 250px);
+    }
+    .winner-avatar-large{
+      width: min(70vw, 300px);
+      height: min(70vw, 300px);
+    }
+    .runner-up-compact{
+      bottom: 20px;
+      right: 20px;
+      flex-direction: column;
+      text-align: center;
+    }
   }`;
   const style = document.createElement('style');
   style.id = 'faceoff-css';
@@ -345,82 +639,106 @@
     return obj?.avatar || obj?.image || obj?.img || obj?.avatarUrl || obj?.photo || '';
   }
 
-  function mount({ left, right, majority, container }){
+  function mount({ left, right, majority, container, fullscreen = true }){
     destroy();
     // Remove any left-over graph containers
     try { document.querySelectorAll('.final-graph, .jury-graph, #finalGraph').forEach(x => x.remove()); } catch {}
 
-    const mountAt = typeof container === 'string' ? document.querySelector(container) : (container || document.body);
-    if (!mountAt) throw new Error('FinalFaceoff: container not found');
+    // Create fullscreen overlay if requested
+    let overlay = null;
+    let mountAt = null;
+    
+    if (fullscreen) {
+      overlay = el('div', 'finale-fullscreen-overlay');
+      document.body.appendChild(overlay);
+      mountAt = overlay;
+      
+      // Fade in overlay
+      requestAnimationFrame(() => {
+        setTimeout(() => overlay.classList.add('visible'), 50);
+      });
+    } else {
+      mountAt = typeof container === 'string' ? document.querySelector(container) : (container || document.body);
+      if (!mountAt) throw new Error('FinalFaceoff: container not found');
+    }
 
     const wrap = el('div', 'finalFaceoff');
-    const cards = el('div', 'fo-cards');
-    const badge = el('div', 'fo-badge', 'Majority clinched'); badge.style.display = 'none';
-
+    
+    // Left finalist slot
     const leftSlot = el('div', 'fo-slot left');
-    const leftImg = el('img', 'fo-avatar'); leftImg.src = pickAvatar(left); leftImg.alt = left?.name || 'Finalist A';
+    const leftImg = el('img', 'fo-avatar'); 
+    leftImg.src = pickAvatar(left); 
+    leftImg.alt = left?.name || 'Finalist A';
     const leftName = el('div', 'fo-name', left?.name || 'Finalist A');
+    
+    // Vote pill for left
+    const leftPill = el('div', 'fo-vote-pill');
+    const leftPillLabel = el('div', 'fo-vote-pill-label', 'VOTES');
     const leftVotes = el('div', 'fo-votes', '0');
-    leftSlot.append(leftImg, leftName, leftVotes);
+    leftPill.append(leftPillLabel, leftVotes);
+    
+    leftSlot.append(leftImg, leftName, leftPill);
 
+    // VS divider
+    const vs = el('div', 'fo-vs', 'VS');
+
+    // Right finalist slot
     const rightSlot = el('div', 'fo-slot right');
-    const rightImg = el('img', 'fo-avatar'); rightImg.src = pickAvatar(right); rightImg.alt = right?.name || 'Finalist B';
+    const rightImg = el('img', 'fo-avatar'); 
+    rightImg.src = pickAvatar(right); 
+    rightImg.alt = right?.name || 'Finalist B';
     const rightName = el('div', 'fo-name', right?.name || 'Finalist B');
+    
+    // Vote pill for right
+    const rightPill = el('div', 'fo-vote-pill');
+    const rightPillLabel = el('div', 'fo-vote-pill-label', 'VOTES');
     const rightVotes = el('div', 'fo-votes', '0');
-    rightSlot.append(rightImg, rightName, rightVotes);
+    rightPill.append(rightPillLabel, rightVotes);
+    
+    rightSlot.append(rightImg, rightName, rightPill);
 
-    wrap.append(cards, leftSlot, rightSlot, badge);
+    // Message area at bottom
+    const messageArea = el('div', 'fo-message-area');
+    const messageJuror = el('div', 'fo-message-juror');
+    const messageText = el('div', 'fo-message-text');
+    messageArea.append(messageJuror, messageText);
+
+    wrap.append(leftSlot, vs, rightSlot);
     mountAt.appendChild(wrap);
+    mountAt.appendChild(messageArea);
 
     state = {
-      wrap, cards, badge,
-      left:  { meta:left,  slot:leftSlot,  votesEl:leftVotes,  count:0 },
-      right: { meta:right, slot:rightSlot, votesEl:rightVotes, count:0 },
-      majority: majority || 0
+      wrap, 
+      overlay, 
+      messageArea, 
+      messageJuror, 
+      messageText,
+      left:  { meta:left,  slot:leftSlot,  img:leftImg, votesEl:leftVotes, pill:leftPill, count:0 },
+      right: { meta:right, slot:rightSlot, img:rightImg, votesEl:rightVotes, pill:rightPill, count:0 },
+      majority: majority || 0,
+      fullscreen
     };
 
     updateLeaderGlow();
-    updateBadge();
-    console.log('[jury-viz] Final Faceoff UI mounted');
+    console.log('[jury-viz] Final Faceoff UI mounted', fullscreen ? '(fullscreen)' : '(in-place)');
   }
 
-  function showVoteCard(jurorName, votedName){
+  function showVoteCard(jurorName, votedName, reason){
     if(!state) return;
-    const text = `${jurorName}: I vote for ${votedName} to win the Big Brother game.`;
-    const card = el('div', 'fo-card', text);
-    state.cards.appendChild(card);
     
-    // Issue 3: Collision detection - check if card overlaps finalist avatars
-    let offsetApplied = false;
-    requestAnimationFrame(() => {
-      const cardRect = card.getBoundingClientRect();
-      const leftSlotRect = state.left.slot.getBoundingClientRect();
-      const rightSlotRect = state.right.slot.getBoundingClientRect();
+    // Use single message area at bottom
+    if (state.messageJuror && state.messageText && state.messageArea) {
+      state.messageJuror.textContent = jurorName;
+      state.messageText.textContent = reason || `I vote for ${votedName} to win Big Brother.`;
       
-      // Check for overlap
-      const overlapsLeft = !(cardRect.bottom < leftSlotRect.top || cardRect.top > leftSlotRect.bottom);
-      const overlapsRight = !(cardRect.bottom < rightSlotRect.top || cardRect.top > rightSlotRect.bottom);
+      // Show message
+      state.messageArea.classList.add('visible');
       
-      if(overlapsLeft || overlapsRight){
-        card.classList.add('offset-up');
-        offsetApplied = true;
-      }
-      
-      // Log bubble positioning (Issue 3)
-      console.info(`[jury] bubble juror=${jurorName} offsetApplied=${offsetApplied}`);
-      
-      card.classList.add('enter');
-    });
-    
-    // keep last 3 cards
-    const nodes = Array.from(state.cards.children);
-    while (nodes.length > 3){
-      nodes[0].remove();
-      nodes.shift();
+      // Hide after delay
+      setTimeout(() => {
+        state.messageArea.classList.remove('visible');
+      }, 2400);
     }
-    
-    setTimeout(()=> card.classList.add('fade'), 1400);
-    setTimeout(()=> card.remove(), 2200);
   }
 
   function setCounts({ left, right }){
@@ -440,8 +758,17 @@
       state.right.count = counts.right;
     }
     writeCounts();
-    pulse(which === 'left' ? state.left.slot : state.right.slot);
-    updateLeaderGlow(); updateBadge();
+    
+    // Pulse the vote pill instead of the slot
+    const pill = which === 'left' ? state.left.pill : state.right.pill;
+    if (pill) {
+      pill.classList.remove('pulse');
+      void pill.offsetWidth; // Force reflow
+      pill.classList.add('pulse');
+      setTimeout(() => pill.classList.remove('pulse'), 650);
+    }
+    
+    updateLeaderGlow();
   }
 
   function showFinalTally(){
@@ -501,29 +828,126 @@
   }
 
   function writeCounts(){
+    if (!state) return;
     state.left.votesEl.textContent  = String(state.left.count);
     state.right.votesEl.textContent = String(state.right.count);
   }
-  function pulse(slot){
-    if (!slot) return;
-    slot.classList.remove('fo-pulse'); void slot.offsetWidth; slot.classList.add('fo-pulse');
-    setTimeout(()=> slot.classList.remove('fo-pulse'), 650);
-  }
+  
   function updateLeaderGlow(){
+    if (!state) return;
     const a = state.left.count, b = state.right.count;
     state.left.slot.classList.toggle('fo-leader',  a > b);
     state.right.slot.classList.toggle('fo-leader', b > a);
   }
-  function updateBadge(){
-    const m = state?.majority || 0;
-    const clinched = m > 0 && (state.left.count >= m || state.right.count >= m);
-    if (state?.badge) state.badge.style.display = clinched ? '' : 'none';
+  
+  function remove(sel){ 
+    try{ 
+      if (state?.wrap) state.wrap.querySelectorAll(sel).forEach(x=>x.remove()); 
+      if (state?.overlay) state.overlay.querySelectorAll(sel).forEach(x=>x.remove());
+    }catch{} 
   }
-  function remove(sel){ try{ state.wrap.querySelectorAll(sel).forEach(x=>x.remove()); }catch{} }
+  
+  // Create confetti burst
+  function createConfetti(count = 100) {
+    if (!state || !state.overlay) return;
+    
+    const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731', '#5f27cd', '#00d2d3'];
+    const container = state.overlay;
+    
+    for (let i = 0; i < count; i++) {
+      const confetti = el('div', 'confetti');
+      confetti.style.left = Math.random() * 100 + 'vw';
+      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.animationDelay = Math.random() * 0.5 + 's';
+      confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+      container.appendChild(confetti);
+      
+      // Remove after animation
+      setTimeout(() => confetti.remove(), 3500);
+    }
+    
+    console.log('[jury-viz] Confetti burst created');
+  }
+  
+  // Create floating emojis
+  function createFloatingEmojis() {
+    if (!state || !state.overlay) return;
+    
+    const emojis = ['👑', '🏆', '🎉', '✨'];
+    const container = state.overlay;
+    
+    // Create 12 floating emojis
+    for (let i = 0; i < 12; i++) {
+      const emoji = el('div', 'floating-emoji');
+      emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      emoji.style.left = (10 + Math.random() * 80) + 'vw';
+      emoji.style.animationDelay = (Math.random() * 2) + 's';
+      emoji.style.animationDuration = (3 + Math.random() * 2) + 's';
+      container.appendChild(emoji);
+    }
+    
+    console.log('[jury-viz] Floating emojis created');
+  }
+  
+  // Show winner celebration overlay
+  function showWinnerCelebration(winner, runnerUp, finalVotes) {
+    if (!state) return;
+    
+    const celebration = el('div', 'winner-celebration');
+    
+    // Winner display
+    const display = el('div', 'winner-display');
+    
+    const avatarLarge = el('img', 'winner-avatar-large');
+    avatarLarge.src = pickAvatar(winner);
+    avatarLarge.alt = winner?.name || 'Winner';
+    
+    const nameLarge = el('div', 'winner-name-large', winner?.name || 'WINNER');
+    const title = el('div', 'winner-title', '✨ WINNER OF BIG BROTHER ✨');
+    const votesDisplay = el('div', 'winner-votes-display', `Final Vote: ${finalVotes}`);
+    
+    display.append(avatarLarge, nameLarge, title, votesDisplay);
+    celebration.appendChild(display);
+    
+    // Runner-up compact display
+    if (runnerUp) {
+      const runnerUpCard = el('div', 'runner-up-compact');
+      
+      const runnerUpAvatar = el('img', 'runner-up-avatar');
+      runnerUpAvatar.src = pickAvatar(runnerUp);
+      runnerUpAvatar.alt = runnerUp?.name || 'Runner-up';
+      
+      const runnerUpInfo = el('div', 'runner-up-info');
+      const runnerUpLabel = el('div', 'runner-up-label', 'Runner-Up');
+      const runnerUpName = el('div', 'runner-up-name', runnerUp?.name || 'Unknown');
+      
+      runnerUpInfo.append(runnerUpLabel, runnerUpName);
+      runnerUpCard.append(runnerUpAvatar, runnerUpInfo);
+      
+      if (state.overlay) state.overlay.appendChild(runnerUpCard);
+    }
+    
+    if (state.overlay) state.overlay.appendChild(celebration);
+    
+    // Show celebration
+    requestAnimationFrame(() => {
+      setTimeout(() => celebration.classList.add('visible'), 50);
+    });
+    
+    // Create effects
+    createConfetti(150);
+    createFloatingEmojis();
+    
+    console.log('[jury-viz] Winner celebration displayed');
+    return celebration;
+  }
 
   function destroy(){
     if (!state) return;
-    try { state.wrap.remove(); } catch {}
+    try { 
+      if (state.overlay) state.overlay.remove();
+      if (state.wrap) state.wrap.remove();
+    } catch {}
     state = null;
     console.log('[jury-viz] Final Faceoff UI destroyed');
   }
@@ -532,7 +956,9 @@
   global.FinalFaceoff = {
     mount, showVoteCard, setCounts, onVote,
     showFinalTally, showWinnerMessage,
-    showCrown, showCheckCard, destroy
+    showCrown, showCheckCard, 
+    showWinnerCelebration, createConfetti, createFloatingEmojis,
+    destroy
   };
 
   // Backward-compatible shims (replace old "final graph" helpers)
