@@ -273,6 +273,30 @@
       </div>
     </div>
     
+    <!-- Profile Data Validation Test -->
+    <div class="test-section">
+      <h2>7️⃣ Profile Data Validation Test</h2>
+      <p>Verifies that profile data is properly formatted and doesn't show [object Object] or undefined values.</p>
+      
+      <h3>Validation Checks:</h3>
+      <ul class="checklist" id="validationChecklist">
+        <li>No "[object Object]" text appears in Basic Info</li>
+        <li>All fields display as user-friendly strings</li>
+        <li>Empty/missing fields show "—" or are hidden</li>
+        <li>Houseguests.getAll() is used as canonical data source</li>
+        <li>Rich profile fields are displayed (age, location, profession, etc.)</li>
+      </ul>
+      
+      <div class="button-group">
+        <button onclick="testProfileDataValidation()">Test Profile Data</button>
+        <button class="secondary" onclick="inspectProfileHTML()">Inspect HTML</button>
+      </div>
+      
+      <div id="validationResults" class="status" style="margin-top: 16px; display: none;">
+        <!-- Results will be populated here -->
+      </div>
+    </div>
+    
     <!-- Manual Testing Guide -->
     <div class="test-section">
       <h2>📖 Manual Testing Instructions</h2>
@@ -283,6 +307,7 @@
         <li><strong>Live Vote Test:</strong> Click "Test Live Vote Fullscreen", select a nominee, then click their info button and watch the timer</li>
         <li><strong>Verify:</strong> Check that profile modal opens, shows correct data, and can be closed with ESC</li>
         <li><strong>Check Console:</strong> Open browser DevTools console and look for debug messages about data sources</li>
+        <li><strong>Data Validation:</strong> Click "Test Profile Data" to verify no [object Object] appears and all fields are properly formatted</li>
       </ol>
     </div>
   </div>
@@ -297,6 +322,7 @@
   <script src="js/veto.js"></script>
   <script src="js/ui/tv-cards.js"></script>
   <script src="js/nominations-grid-fullscreen.js"></script>
+  <script src="js/data/houseguests.js"></script>
   
   <script>
     // Logging utility
@@ -614,10 +640,135 @@
       }
     }
     
+    // Test 7: Profile Data Validation
+    function testProfileDataValidation() {
+      logStatus('Testing profile data validation...', 'info');
+      
+      const resultsDiv = document.getElementById('validationResults');
+      resultsDiv.style.display = 'block';
+      resultsDiv.innerHTML = '<div class="status-item info">Running validation checks...</div>';
+      
+      let checksPassed = 0;
+      let checksTotal = 0;
+      
+      // Check 1: Houseguests.getAll() exists
+      checksTotal++;
+      if (window.Houseguests && typeof window.Houseguests.getAll === 'function') {
+        logStatus('✓ window.Houseguests.getAll() is available', 'success');
+        markChecklistItem('validationChecklist', 3);
+        checksPassed++;
+      } else {
+        logStatus('✗ window.Houseguests.getAll() NOT available', 'error');
+      }
+      
+      // Check 2: Create a test profile modal and inspect its content
+      checksTotal++;
+      if (typeof window.showHouseguestProfile === 'function') {
+        // Open profile for player 1
+        window.showHouseguestProfile(1, {});
+        
+        setTimeout(() => {
+          const modal = document.querySelector('.houseguest-profile-modal');
+          if (modal) {
+            const basicPanel = modal.querySelector('#basic-info-panel');
+            if (basicPanel) {
+              const html = basicPanel.innerHTML;
+              
+              // Check for [object Object]
+              const hasObjectObject = html.includes('[object Object]');
+              if (!hasObjectObject) {
+                logStatus('✓ No "[object Object]" found in Basic Info', 'success');
+                markChecklistItem('validationChecklist', 0);
+                checksPassed++;
+              } else {
+                logStatus('✗ Found "[object Object]" in Basic Info!', 'error');
+                resultsDiv.innerHTML += '<div class="status-item error">FAIL: [object Object] detected in profile HTML</div>';
+              }
+              checksTotal++;
+              
+              // Check for proper field formatting
+              const hasFieldLabels = html.includes('field-label');
+              if (hasFieldLabels) {
+                logStatus('✓ Field labels found (proper formatting)', 'success');
+                markChecklistItem('validationChecklist', 1);
+                checksPassed++;
+              } else {
+                logStatus('⚠ No field labels found', 'warning');
+              }
+              checksTotal++;
+              
+              // Check for rich fields
+              const hasRichFields = html.includes('Age:') || html.includes('Location:') || 
+                                   html.includes('Profession:') || html.includes('Occupation:');
+              if (hasRichFields) {
+                logStatus('✓ Rich profile fields displayed', 'success');
+                markChecklistItem('validationChecklist', 4);
+                checksPassed++;
+              } else {
+                logStatus('⚠ No rich profile fields found (age, location, profession)', 'warning');
+              }
+              checksTotal++;
+              
+              // Show sample of HTML
+              resultsDiv.innerHTML += `<div class="status-item info">Sample HTML (first 500 chars):<br><pre style="white-space: pre-wrap; font-size: 0.8em; margin-top: 8px;">${html.substring(0, 500).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div>`;
+            }
+            
+            // Close the modal
+            const closeBtn = modal.querySelector('.hg-profile-close');
+            if (closeBtn) closeBtn.click();
+          }
+          
+          // Summary
+          logStatus(`Validation complete: ${checksPassed}/${checksTotal} checks passed`, checksPassed === checksTotal ? 'success' : 'warning');
+          
+          if (checksPassed === checksTotal) {
+            markChecklistItem('validationChecklist', 2);
+          }
+        }, 500);
+      } else {
+        logStatus('✗ showHouseguestProfile not available', 'error');
+      }
+    }
+    
+    function inspectProfileHTML() {
+      logStatus('Opening profile to inspect HTML structure...', 'info');
+      
+      if (typeof window.showHouseguestProfile === 'function') {
+        window.showHouseguestProfile(1, {});
+        
+        setTimeout(() => {
+          const modal = document.querySelector('.houseguest-profile-modal');
+          if (modal) {
+            const basicPanel = modal.querySelector('#basic-info-panel');
+            if (basicPanel) {
+              console.group('Profile HTML Inspection');
+              console.log('Full HTML:', basicPanel.innerHTML);
+              console.log('Text content:', basicPanel.textContent);
+              console.groupEnd();
+              
+              logStatus('Profile HTML logged to console (F12)', 'success');
+              alert('Profile HTML structure logged to browser console. Press F12 to view.');
+            }
+          }
+        }, 500);
+      } else {
+        logStatus('✗ showHouseguestProfile not available', 'error');
+      }
+    }
+    
     // Initialize on load
     window.addEventListener('DOMContentLoaded', () => {
       logStatus('Test page loaded', 'success');
       initMockGame();
+      
+      // Load houseguests data if available
+      if (window.Houseguests && typeof window.Houseguests.getAll === 'function') {
+        const houseguests = window.Houseguests.getAll();
+        logStatus(`Loaded ${houseguests.length} houseguest profiles from canonical source`, 'success');
+      } else {
+        logStatus('WARNING: window.Houseguests.getAll() not available', 'warning');
+      }
+      
       logStatus('Ready to test! Click buttons above to begin.', 'info');
     });
   </script>

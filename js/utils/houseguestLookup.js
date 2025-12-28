@@ -5,7 +5,7 @@
 /**
  * Get profile by key (id, slug, or name)
  * Attempts multiple resolution strategies:
- * 1. Numeric ID lookup in game.players
+ * 1. Numeric ID lookup in game.players (for live game data with allies/enemies)
  * 2. Name match in game.players (case-insensitive)
  * 3. Slug match in Houseguests static data
  * 4. Name match in Houseguests static data
@@ -17,21 +17,26 @@ export function getProfileByKey(key) {
   if (key === null || key === undefined) return null;
   
   const strKey = String(key);
+  const players = window.game && window.game.players;
   
   // First, try to find in game.players (live game data with allies/enemies)
-  const players = window.game && window.game.players;
   if (players && Array.isArray(players)) {
     // Try numeric ID match
     if (/^\d+$/.test(strKey)) {
       const numericId = Number(strKey);
       const found = players.find(p => p.id === numericId);
-      if (found) return found;
+      if (found) {
+        // Enrich with static houseguest data if available
+        return enrichWithHouseguestData(found);
+      }
     }
     
     // Try name match (case-insensitive)
     const lowerKey = strKey.toLowerCase().trim();
     const found = players.find(p => p.name && p.name.toLowerCase() === lowerKey);
-    if (found) return found;
+    if (found) {
+      return enrichWithHouseguestData(found);
+    }
   }
   
   // Fall back to static Houseguests data (for profile info like bios)
@@ -57,6 +62,47 @@ export function getProfileByKey(key) {
 }
 
 /**
+ * Enrich player object with static houseguest data
+ * Adds bio, story, and other profile fields from houseguests.js
+ * 
+ * @param {object} player - Player object from game.players
+ * @returns {object} Enriched player object
+ */
+function enrichWithHouseguestData(player) {
+  const houseguests = (window.Houseguests && window.Houseguests.getAll()) || [];
+  const houseguest = houseguests.find(h => h.name === player.name);
+  
+  if (!houseguest) {
+    return player;
+  }
+  
+  // Merge: player takes precedence for live data, houseguest for static profile fields
+  return {
+    ...houseguest,
+    ...player,
+    // Preserve important static fields from houseguest data
+    fullName: houseguest.fullName || player.fullName || player.name,
+    bio: houseguest.bio || player.bio,
+    story: houseguest.story || player.story,
+    motto: houseguest.motto || player.motto,
+    funFact: houseguest.funFact || player.funFact,
+    age: houseguest.age !== undefined ? houseguest.age : player.age,
+    sex: houseguest.sex || player.sex,
+    location: houseguest.location || player.location,
+    sexuality: houseguest.sexuality || player.sexuality,
+    education: houseguest.education || player.education,
+    profession: houseguest.profession || player.profession,
+    occupation: houseguest.occupation || player.occupation,
+    familyStatus: houseguest.familyStatus || player.familyStatus,
+    kids: houseguest.kids || player.kids,
+    pets: houseguest.pets || player.pets,
+    zodiacSign: houseguest.zodiacSign || player.zodiacSign,
+    religion: houseguest.religion || player.religion,
+    trait: houseguest.trait || player.trait
+  };
+}
+
+/**
  * Merge static houseguest data with live game player data
  * This ensures we get both profile info (bio, motto) and live data (allies, enemies)
  * 
@@ -75,15 +121,28 @@ function mergeWithGamePlayer(houseguest) {
     return houseguest;
   }
   
-  // Merge: player data takes precedence for live fields
+  // Merge: player data takes precedence for live fields, houseguest for static profile fields
   return {
     ...houseguest,
     ...player,
-    // Preserve important static fields
-    fullName: houseguest.fullName || player.fullName,
+    // Preserve important static fields from houseguest data
+    fullName: houseguest.fullName || player.fullName || player.name,
     bio: houseguest.bio || player.bio,
     story: houseguest.story || player.story,
     motto: houseguest.motto || player.motto,
-    funFact: houseguest.funFact || player.funFact
+    funFact: houseguest.funFact || player.funFact,
+    age: houseguest.age !== undefined ? houseguest.age : player.age,
+    sex: houseguest.sex || player.sex,
+    location: houseguest.location || player.location,
+    sexuality: houseguest.sexuality || player.sexuality,
+    education: houseguest.education || player.education,
+    profession: houseguest.profession || player.profession,
+    occupation: houseguest.occupation || player.occupation,
+    familyStatus: houseguest.familyStatus || player.familyStatus,
+    kids: houseguest.kids || player.kids,
+    pets: houseguest.pets || player.pets,
+    zodiacSign: houseguest.zodiacSign || player.zodiacSign,
+    religion: houseguest.religion || player.religion,
+    trait: houseguest.trait || player.trait
   };
 }

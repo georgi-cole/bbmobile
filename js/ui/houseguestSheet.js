@@ -77,11 +77,34 @@ export const HouseguestSheet = (() => {
 
     const bio = profile.bio || profile.story || 'No bio available.';
     const name = profile.fullName || profile.name || 'Guest';
+    
+    // Build basic info section with available fields
+    let basicInfoHtml = '';
+    const basicFields = [
+      { key: 'age', label: 'Age' },
+      { key: 'location', label: 'Location' },
+      { key: 'profession', label: 'Profession' },
+      { key: 'occupation', label: 'Occupation' }
+    ];
+    
+    const availableFields = basicFields.filter(field => {
+      const value = profile[field.key];
+      return value !== undefined && value !== null && String(value).trim() !== '';
+    });
+    
+    if (availableFields.length > 0) {
+      basicInfoHtml = '<section class="basic-info"><h3>Info</h3><ul class="info-list">';
+      availableFields.forEach(field => {
+        basicInfoHtml += `<li><span class="label">${field.label}:</span> ${profile[field.key]}</li>`;
+      });
+      basicInfoHtml += '</ul></section>';
+    }
 
     el.innerHTML = `
       <div class="profile">
         <h2>${name}</h2>
         <p class="bio">${bio}</p>
+        ${basicInfoHtml}
         <section class="social">
           <h3>Allies</h3>
           <ul class="allies">${alliesHtml}</ul>
