@@ -585,7 +585,9 @@
     // Emit players:update event for mobile roster and other listeners
     try{
       if(g.bbGameBus && typeof g.bbGameBus.emit === 'function'){
-        g.bbGameBus.emit('players:update', { reason: 'finale-labels-set', winnerId, runnerUpId: A === winnerId ? B : A });
+        // Determine runner-up: if winner is A, runner-up is B; otherwise runner-up is A
+        const runnerUpId = winnerId === A ? B : A;
+        g.bbGameBus.emit('players:update', { reason: 'finale-labels-set', winnerId, runnerUpId });
       }
     }catch(e){
       console.warn('[finale] failed to emit players:update event', e);

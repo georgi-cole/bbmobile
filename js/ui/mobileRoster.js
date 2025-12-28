@@ -1505,8 +1505,9 @@
     // Build display text - use emoji for combos if needed
     // WINNER/RUNNER-UP always use emojis regardless of useEmoji setting
     let text;
-    if (tokens[0] === 'WINNER' || tokens[0] === 'RUNNER-UP') {
-      text = BADGE_EMOJI_MAP[tokens[0]];
+    const firstToken = tokens[0]; // Safe to access after length check above
+    if (firstToken === 'WINNER' || firstToken === 'RUNNER-UP') {
+      text = BADGE_EMOJI_MAP[firstToken];
     } else if (useEmoji) {
       text = getEmojiDisplay(tokens);
     } else {
@@ -1522,7 +1523,7 @@
       'NOM': 'nom',
       'SAFE': 'safe'
     };
-    const badgeClass = classMap[tokens[0]] || 'default';
+    const badgeClass = classMap[firstToken] || 'default';
     
     return { text, class: badgeClass, tokens, useEmoji };
   }
