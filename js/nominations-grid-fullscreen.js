@@ -255,10 +255,35 @@
         margin: 80px auto 100px;
       }
       
+      /* Horizontal scroll for 8+ players to prevent vertical overflow */
+      .noms-fs-grid.scroll-mode {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        max-width: 100%;
+        padding: 0 20px;
+        margin: 80px 0 100px;
+      }
+      
+      .noms-fs-grid.scroll-mode .noms-fs-tile {
+        flex: 0 0 auto;
+        width: var(--nfs-mincol, 140px);
+        scroll-snap-align: start;
+      }
+      
       @media (max-width: 768px) {
         .noms-fs-grid {
           gap: 12px;
           margin: 80px auto 120px;
+        }
+        
+        .noms-fs-grid.scroll-mode {
+          margin: 80px 0 120px;
+          padding: 0 12px;
         }
       }
       
@@ -690,6 +715,13 @@
         // Create grid
         const grid = document.createElement('div');
         grid.className = 'noms-fs-grid';
+        
+        // Enable horizontal scroll mode for 8+ players to prevent vertical overflow
+        if (eligible.length > 8) {
+          grid.classList.add('scroll-mode');
+          console.log(LOG_PREFIX, `Enabled scroll-mode for ${eligible.length} players (>8)`);
+        }
+        
         grid.setAttribute('role', 'group');
         grid.setAttribute('aria-label', 'Nomination candidates');
         
