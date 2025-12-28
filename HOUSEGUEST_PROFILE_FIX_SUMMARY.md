@@ -1,192 +1,194 @@
-# Houseguest Profile Lookup Fix - Implementation Summary
+# Houseguest Profile Fix Summary
 
-## Overview
-Fixed empty content issues in mobile bottom sheet and desktop roster hover for houseguest profiles, and implemented real-time social relationship updates.
+## Issues Fixed
 
-## Problem Statement
-1. **Empty Profile Content**: Some houseguests (existing ones like Kian) would sometimes show empty content when tapping/hovering due to inconsistent lookup logic
-2. **Stale Relationship Data**: Allies/enemies lists didn't update in real-time when social bonds changed during gameplay
+### 1. "[object Object]" in Fullscreen Ceremony Basic Info
+**Problem:** When clicking the info button in fullscreen ceremonies (POV, nominations, live vote), the Basic Info tab displayed the literal text "[object Object]" instead of rich profile information.
 
-## Root Causes
-- No canonical lookup utility - different parts of UI used different resolution strategies (id vs name vs slug)
-- No event bus subscription - UIs didn't listen for social relationship update events
-- Data split between `window.Houseguests` (static data) and `window.game.players` (live data with relationships)
+**Root Cause:** The `buildBasicInfoHTML()` function in `js/houseguest-profile.js` was trying to use `global.houseguestsData[player.id]` which doesn't exist. It never consulted the canonical data source `window.Houseguests.getAll()`.
 
-## Solution Architecture
+**Solution:**
+- Prioritized `window.Houseguests.getAll()` as the canonical data source
+- Added `safeText()` helper to safely convert values to strings
+- Enhanced display to show all rich fields from houseguests.js
 
-### 1. Canonical Lookup Utility (`js/utils/houseguestLookup.js`)
-**Purpose**: Single source of truth for resolving houseguest profiles
+### 2. Empty Mobile Long-Press Bottom Sheet
+**Problem:** On mobile devices, long-pressing a houseguest avatar opened a bottom sheet that was empty or showed minimal data.
 
-**Strategy**:
-1. Check `game.players` first (live data with current allies/enemies)
-2. Fall back to `Houseguests` static data (profile info like bio, motto)
-3. Merge both to get complete profile
+**Root Cause:** The mobile roster's `showProfilePopover()` only used `window.game.players` which contains live game state but not rich profile fields (age, location, profession, motto, etc.).
 
-**Lookup Methods**:
-- Numeric ID: `getProfileByKey(1)` → finds player with id=1
-- String name: `getProfileByKey('Kian')` → case-insensitive name match
-- Slug: `getProfileByKey('kian')` → matches houseguest.id field
+**Solution:**
+- Enriched player data with canonical houseguest profiles before display
+- Now shows: age, sex, location, profession, motto, fun fact, allies, enemies
+- Uses same data source as desktop for consistency
 
-### 2. Mobile Bottom Sheet (`js/ui/houseguestSheet.js`)
-**Purpose**: Display full houseguest profile on mobile
+## Data Flow (After Fix)
 
-**Features**:
-- Uses canonical lookup for profile resolution
-- Renders bio/story from merged data
-- Displays allies/enemies from live `player.allies` and `player.enemies` arrays
-- Subscribes to social events: `social:updated`, `social.relation.changed`, `social.relations.synced`
-- Auto-refreshes when open and social relationships change
-
-**API**:
-- `HouseguestSheet.open(key)` - Open sheet with profile
-- `HouseguestSheet.close()` - Close sheet
-
-### 3. Desktop Roster Hover (`js/ui/rosterHover.js`)
-**Purpose**: Show quick profile preview on desktop hover
-
-**Features**:
-- Uses canonical lookup for profile resolution
-- Displays name and allies list
-- Subscribes to social events
-- Auto-refreshes visible hover when relationships update
-
-**API**:
-- `RosterHover.attach(selector)` - Attach hover handlers to roster items
-
-## Event Bus Integration
-
-The modules subscribe to three social update events:
-- `social:updated` - Generic social update (for backward compatibility)
-- `social.relation.changed` - Specific relation change between two players
-- `social.relations.synced` - Bulk relations update after recomputation
-
-These events are emitted by:
-- `js/social-relations.js` - When relations are recomputed
-- `js/social-maneuvers.js` - When social actions complete
-- `js/social.js` - During social phase updates
-
-## Testing
-
-### Manual Testing (test_houseguest_profile_lookup.html)
-Created comprehensive test page with:
-1. Lookup utility testing (various keys)
-2. Desktop hover simulation
-3. Mobile bottom sheet simulation  
-4. Social relationship update testing
-
-### Test Results
-✅ Lookup works for existing houseguests (Kian, Finn, Mimi, etc.)
-✅ Desktop hover displays profiles correctly
-✅ Mobile bottom sheet shows full bio and relationships
-✅ Social updates trigger automatic refresh in both UIs
-✅ Event bus subscriptions working correctly
-
-### Screenshots
-- **Hover Test**: https://github.com/user-attachments/assets/67149be1-98d0-4669-a80d-7582b982af39
-- **Bottom Sheet**: https://github.com/user-attachments/assets/f43acb2e-5ff4-4459-9cc4-9120fcb6e372
-- **Social Update Before**: https://github.com/user-attachments/assets/8d22f8c6-486b-4780-8d5f-f206c1a9b620
-- **Social Update After**: https://github.com/user-attachments/assets/809a1621-4911-4c1e-85d2-43725eeda230
-- **Hover After Update**: https://github.com/user-attachments/assets/fa87dc8b-619b-42b7-99ed-6922ee407c5c
-
-## Code Quality
-
-### ESLint Compliance
-- All files pass ESLint validation
-- Fixed strict equality warnings (`==` → `===`, `!=` → `!==`)
-- Added ES module support in `.eslintrc.json`
-
-### ES6 Modules
-All new code uses modern ES6 syntax:
-```javascript
-import { getProfileByKey } from '../utils/houseguestLookup.js';
-export const HouseguestSheet = (() => { ... })();
+```
+User Action (Info Button / Long-Press)
+          ↓
+    getP(playerId) → Basic player object
+          ↓
+window.Houseguests.getAll() → Find by name match
+          ↓
+    Merge Objects:
+    - Live data (id, alive, evicted, allies, enemies)
+    - Static data (age, sex, location, profession, motto, funFact, etc.)
+          ↓
+    Display in UI (Basic Info tab / Mobile popover)
 ```
 
-## Integration Points
+## Files Modified
 
-### Data Sources
-- `window.Houseguests.getAll()` - Static profile data (from `js/data/houseguests.js`)
-- `window.game.players` - Live player data with allies/enemies
-- `player.allies` - Array of player IDs (computed by `js/social-relations.js`)
-- `player.enemies` - Array of player IDs (computed by `js/social-relations.js`)
+1. **js/houseguest-profile.js**
+   - Added `safeText()` helper (prevents [object Object])
+   - Updated `buildBasicInfoHTML()` to use canonical source
+   - Enhanced field display
 
-### Event Bus
-- `window.game.bus` - Global event bus (from `js/bbGameBus.js`)
-- `.on(event, callback)` - Subscribe to events
-- `.emit(event, data)` - Emit events
+2. **js/utils/houseguestLookup.js**
+   - Enhanced `getProfileByKey()` for numeric IDs
+   - Added `enrichWithHouseguestData()` function
+   - Improved merging logic
 
-## Files Changed
+3. **js/ui/houseguestSheet.js**
+   - Added basic info fields display
+   - Ready for future mobile sheet use
 
-### Added Files
-- `js/utils/houseguestLookup.js` - 96 lines, canonical lookup utility
-- `js/ui/houseguestSheet.js` - 158 lines, mobile bottom sheet
-- `js/ui/rosterHover.js` - 133 lines, desktop hover
-- `test_houseguest_profile_lookup.html` - 214 lines, manual test page
+4. **js/ui/mobileRoster.js** ⭐
+   - Main mobile fix
+   - Enriches player data before display
+   - Shows all profile fields
 
-### Modified Files
-- `.eslintrc.json` - Added ES module support for new files
+5. **test_info_buttons_comprehensive.html**
+   - Added Test 7: Profile Data Validation
+   - Validates no [object Object]
+   - Checks rich fields display
 
-## No Breaking Changes
-- All changes are additive
-- No existing code modified
-- New modules can be imported and used by other parts of the app
-- Backward compatible with existing lookup patterns
+## Key Features
 
-## Future Integration
+### safeText() Helper
+Safely converts any value to user-friendly string:
+- Handles null/undefined → empty string
+- Arrays → comma-separated (max 5 items)
+- Objects → tries name/label/value/text properties
+- Fallback: JSON.stringify with 100-char truncation
 
-To integrate these modules into the existing app:
+### Data Enrichment
+All profile displays now use a three-layer approach:
+1. **Primary:** `window.Houseguests.getAll()` - Canonical rich profiles
+2. **Secondary:** `global.houseguestsData[id]` - If available
+3. **Tertiary:** Intro hub DOM queries - Fallback
+4. **Ultimate:** `window.game.players` - Basic game state
 
-### For Mobile Roster
-```javascript
-import { HouseguestSheet } from './js/ui/houseguestSheet.js';
+### Rich Fields Displayed
+- Age, Sex/Gender
+- Location
+- Sexuality, Education
+- Profession/Occupation
+- Family Status, Kids, Pets
+- Zodiac Sign, Religion
+- Trait, Motto, Fun Fact
 
-// On avatar tap
-avatarElement.addEventListener('click', (e) => {
-  const playerId = e.target.dataset.playerId;
-  HouseguestSheet.open(playerId);
-});
+## Testing Checklist
+
+### Desktop Tests
+- [x] POV ceremony info button → Basic Info shows rich data
+- [x] Nominations info button → Complete profile
+- [x] Live vote info button → Complete data + timer handling
+- [x] No "[object Object]" anywhere
+
+### Mobile Tests  
+- [x] Long-press avatar → Popover shows complete data
+- [x] All fields properly formatted
+- [x] Matches desktop data quality
+
+### Automated Tests
+- [x] Test 7 in `test_info_buttons_comprehensive.html`
+- [x] Validates canonical source usage
+- [x] Checks HTML output
+
+## Before/After Comparison
+
+### Before Fix
+
+**Desktop Ceremony Basic Info:**
+```
+Avatar: [Image]
+Name: Finn
+
+[object Object]
 ```
 
-### For Desktop Roster
-```javascript
-import { RosterHover } from './js/ui/rosterHover.js';
-
-// Attach to roster items
-RosterHover.attach('.roster-card');
+**Mobile Long-Press:**
+```
+Finn
+Age: —
+Location: —
+Occupation: None
 ```
 
-## Known Limitations
+### After Fix
 
-1. **HTML Structure Required**: Both modules expect specific HTML structure:
-   - Sheet: `<div id="houseguest-sheet"><div class="content"></div></div>`
-   - Hover: `<div id="roster-hover"></div>`
+**Desktop Ceremony Basic Info:**
+```
+Avatar: [Image]
+Name: Finn Lund
 
-2. **Styling Not Included**: Modules only handle functionality, CSS must be added separately
+Finn grew up on the rugged coast of Finland...
 
-3. **Missing Profiles**: Profiles that don't exist (like "Lia" and "Noa" mentioned in problem) will show "Profile not found"
+Age: 41
+Sex: Male
+Location: Helsinki, Finland
+Sexuality: Straight
+Education: Master of Engineering
+Profession: Marine Architect
+Family Status: Divorced
+Kids: One daughter
+Pets: None
+Zodiac Sign: Capricorn
+Religion: Agnostic
+Motto: "Design for the storm, not the calm"
+```
 
-## Performance Considerations
+**Mobile Long-Press:**
+```
+Finn
+Age: 41
+Gender: Male
+Location: Helsinki, Finland
+Occupation: Marine Architect
+Motto: "Design for the storm, not the calm"
+Fun Fact: Can read nautical charts faster than most captains
+Allies: [List]
+Enemies: [List]
+Ranking: #1
+```
 
-- **Lookup Performance**: O(n) where n = number of houseguests/players (typically < 20, negligible)
-- **Event Subscriptions**: Minimal overhead, only refresh visible UIs
-- **Memory**: No memory leaks, proper cleanup on close
+## Backwards Compatibility
 
-## Maintenance
+✅ All changes are additive
+✅ No breaking changes to public APIs
+✅ Graceful degradation if data unavailable
+✅ Existing ceremony flows unaffected
 
-### To Add New Lookup Strategy
-Edit `js/utils/houseguestLookup.js` and add to `getProfileByKey()` function
+## Performance
 
-### To Add More Social Event Types
-Add to subscription lists in both `houseguestSheet.js` and `rosterHover.js`
+- **Impact:** Minimal (one additional array.find() per display)
+- **Data:** Already loaded in memory
+- **Network:** No additional requests
+- **Memory:** No significant increase
 
-### To Customize Display
-Modify the `render()` functions in respective UI modules
+## Security
 
-## Conclusion
+✅ No XSS vulnerabilities (all text sanitized via textContent)
+✅ No sensitive data exposure
+✅ safeText() prevents code injection
 
-This implementation provides a robust, maintainable solution for:
-✅ Reliable houseguest profile lookup across different key types
-✅ Real-time social relationship updates in UI
-✅ Consistent data merging between static and live sources
-✅ Clean separation of concerns with modular architecture
-✅ No breaking changes to existing code
+## Future Enhancements
+
+Potential improvements for future PRs:
+1. Cache enriched profiles to avoid repeated lookups
+2. Add profile photos/avatars in mobile popover
+3. Add "View Full Profile" link to open houseguests modal
+4. Sync profile updates with social relationship changes
+5. Add profile comparison view for strategy planning
