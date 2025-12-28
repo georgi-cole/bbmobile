@@ -1827,14 +1827,35 @@
    * Sync corner emoji badges for all players with existing statuses
    * Called after grid render to ensure emojis are visible immediately.
    * Supports combo emojis (e.g., HOH+POV, NOM+POV) for multi-status players.
+   * Also handles finale statuses (WINNER, RUNNER-UP).
    */
   function syncCornerEmojisFromStatus() {
     for (const player of state.activePlayers) {
-      // Skip evicted players - they don't get badge emojis
-      if (player.evicted) continue;
-      
       // Normalize status to get canonical flags
       normalizeStatus(player);
+      
+      // Check for finale statuses first (highest priority)
+      const isWinner = player.showFinalLabel === 'WINNER' || player.winner;
+      const isRunnerUp = player.showFinalLabel === 'RUNNER-UP' || player.runnerUp;
+      
+      if (isWinner) {
+        // Winner always gets gold medal badge
+        if (!state.activeBadgePills.has(String(player.id))) {
+          showCornerEmoji(player.id, 'WINNER');
+        }
+        continue;
+      }
+      
+      if (isRunnerUp) {
+        // Runner-up always gets silver medal badge
+        if (!state.activeBadgePills.has(String(player.id))) {
+          showCornerEmoji(player.id, 'RUNNER-UP');
+        }
+        continue;
+      }
+      
+      // Skip evicted players - they don't get badge emojis
+      if (player.evicted) continue;
       
       // Only show emoji if player has an active badge AND no pill animation is active
       if (state.activeBadgePills.has(String(player.id))) {
