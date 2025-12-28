@@ -83,6 +83,9 @@
       position: relative;
       z-index: 13;
       pointer-events: auto;
+      /* Ensure card fits within TV overlay */
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
     }
     
     .social-summary-card h3 {
@@ -96,6 +99,7 @@
       font-size: 0.9rem;
       line-height: 1.6;
       color: #e3ecf5;
+      text-align: center;
     }
     
     .social-summary-content > div {
@@ -155,6 +159,7 @@
       .social-summary-card {
         max-width: 90% !important;
         padding: 20px !important;
+        max-height: calc(100vh - 60px) !important;
       }
       
       .social-summary-card h3 {
@@ -165,6 +170,7 @@
       .social-summary-content {
         font-size: 0.85rem !important;
         line-height: 1.5 !important;
+        text-align: center !important;
       }
       
       .social-summary-content > div {
@@ -206,13 +212,13 @@
 </head>
 <body>
   <div class="test-container">
-    <h1>🎭 Social Phase Complete Card - Mobile Optimization Test</h1>
+    <h1>🎭 Summary Card - Mobile Optimization Test</h1>
     
     <div class="viewport-wrapper">
       <div class="viewport-label">📱 Mobile View (375px) - New Concise Format</div>
       <div class="faux-tv mobile-viewport">
         <div class="revealCard social-summary-card">
-          <h3>🎭 Social Phase Complete</h3>
+          <h3>🎭 Summary</h3>
           <div class="social-summary-content">
             <div><strong>⚡ Energy:</strong> 34 spent</div>
             <div style="margin-top: 0.5em;"><strong>🎯 Actions:</strong> 27 total</div>
@@ -232,7 +238,7 @@
       <div class="viewport-label">📱 Mobile View (375px) - With Information Resource</div>
       <div class="faux-tv mobile-viewport">
         <div class="revealCard social-summary-card">
-          <h3>🎭 Social Phase Complete</h3>
+          <h3>🎭 Summary</h3>
           <div class="social-summary-content">
             <div><strong>⚡ Energy:</strong> 34 spent</div>
             <div style="margin-top: 0.5em;"><strong>🔍 Information:</strong> 15 spent</div>
@@ -254,7 +260,7 @@
       <div class="viewport-label">💻 Tablet View (768px)</div>
       <div class="faux-tv tablet-viewport">
         <div class="revealCard social-summary-card">
-          <h3>🎭 Social Phase Complete</h3>
+          <h3>🎭 Summary</h3>
           <div class="social-summary-content">
             <div><strong>⚡ Energy:</strong> 34 spent</div>
             <div style="margin-top: 0.5em;"><strong>🔍 Information:</strong> 15 spent</div>
@@ -279,7 +285,7 @@
         <div class="version-label old">❌ OLD - Too Verbose</div>
         <div class="faux-tv mobile-viewport">
           <div class="revealCard" style="padding: 32px;">
-            <h3 style="margin: 0 0 1em; text-align: center; color: #4a90e2; font-size: 1.8em;">🎭 Social Phase Complete</h3>
+            <h3 style="margin: 0 0 1em; text-align: center; color: #4a90e2; font-size: 1.8em;">🎭 Summary</h3>
             <div style="font-size: 0.9rem; line-height: 1.6;">
               <div><strong>⚡ Energy:</strong> 34 spent | <strong>🔍 Information:</strong> 1 spent across 27 actions</div>
               <div style="margin-top: 0.5em;"><strong>🎯 Actions:</strong> 22 friendly, 5 strategic</div>
@@ -299,7 +305,7 @@
         <div class="version-label new">✅ NEW - Concise</div>
         <div class="faux-tv mobile-viewport">
           <div class="revealCard social-summary-card">
-            <h3>🎭 Social Phase Complete</h3>
+            <h3>🎭 Summary</h3>
             <div class="social-summary-content">
               <div><strong>⚡ Energy:</strong> 34 spent</div>
               <div style="margin-top: 0.5em;"><strong>🔍 Information:</strong> 1 spent</div>

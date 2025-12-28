@@ -3562,14 +3562,14 @@
     card.style.cssText = 'max-width: 680px; pointer-events: auto;';
 
     const header = document.createElement('h3');
-    header.textContent = '🎭 Social Phase Complete';
+    header.textContent = '🎭 Summary';
     header.style.cssText = 'margin: 0 0 1em; text-align: center;';
     card.appendChild(header);
 
     // Summary content
     const content = document.createElement('div');
     content.className = 'social-summary-content';
-    content.style.cssText = 'font-size: 0.9rem; line-height: 1.6;';
+    content.style.cssText = 'font-size: 0.9rem; line-height: 1.6; text-align: center;';
 
     // Energy spent - more concise format
     const totalEnergySpent = Object.values(summary.resources.energySpent).reduce((a,b) => a+b, 0);

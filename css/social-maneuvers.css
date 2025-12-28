@@ -610,6 +610,14 @@
   position: relative;
   z-index: 13;
   pointer-events: auto;
+  /* Ensure card fits within TV overlay on all devices */
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+/* Center-align all summary content */
+.social-summary-content {
+  text-align: center;
 }
 
 /* Mobile optimization for social summary card */
@@ -619,6 +627,8 @@
     max-width: 90% !important;
     /* Reduce padding for more compact display */
     padding: 20px !important;
+    /* Ensure it fits within mobile viewport */
+    max-height: calc(100vh - 60px) !important;
   }
   
   .social-summary-card h3 {
@@ -631,6 +641,8 @@
     /* Reduce font size and tighten spacing */
     font-size: 0.85rem !important;
     line-height: 1.5 !important;
+    /* Maintain center alignment */
+    text-align: center !important;
   }
   
   .social-summary-content > div {
