@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Complete - Mobile Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #0a0e14;
+      color: #e3ecf5;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #4a90e2;
+      margin-bottom: 1.5em;
+      text-align: center;
+    }
+    
+    .viewport-wrapper {
+      background: #1a2332;
+      border: 2px solid #2d3748;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .viewport-label {
+      color: #9ca3af;
+      font-size: 0.875rem;
+      margin-bottom: 15px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .faux-tv {
+      background: linear-gradient(135deg, #1e2a3a 0%, #0f1419 100%);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      position: relative;
+      overflow: auto;
+    }
+    
+    .mobile-viewport {
+      width: 375px;
+      margin: 0 auto;
+    }
+    
+    .tablet-viewport {
+      width: 768px;
+      margin: 0 auto;
+    }
+    
+    /* Social Summary Card Styles */
+    .revealCard {
+      background: linear-gradient(145deg, rgba(24, 36, 52, 0.96), rgba(10, 16, 24, 0.95));
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 680px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      margin: 0 auto;
+    }
+    
+    .social-summary-card {
+      position: relative;
+      z-index: 13;
+      pointer-events: auto;
+    }
+    
+    .social-summary-card h3 {
+      margin: 0 0 1em;
+      text-align: center;
+      color: #4a90e2;
+      font-size: 1.8em;
+    }
+    
+    .social-summary-content {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #e3ecf5;
+    }
+    
+    .social-summary-content > div {
+      margin-top: 0.5em;
+    }
+    
+    .social-summary-content > div:first-child {
+      margin-top: 0;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+    }
+    
+    .btn.small {
+      padding: 10px 20px;
+      font-size: 0.9rem;
+    }
+    
+    .btn:not(.danger) {
+      background: #4a5568;
+      color: #fff;
+    }
+    
+    .btn:hover:not(.danger) {
+      background: #5a6578;
+      transform: translateY(-1px);
+    }
+    
+    .btn:nth-child(2) {
+      background: linear-gradient(180deg, #1fc884 0%, #13a26e 100%);
+    }
+    
+    .btn:nth-child(2):hover {
+      background: linear-gradient(180deg, #22d491 0%, #15b57c 100%);
+    }
+    
+    .decisionActions {
+      display: flex;
+      gap: 10px;
+      margin-top: 1.5em;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    /* Mobile optimization for social summary card */
+    @media (max-width: 768px) {
+      .social-summary-card {
+        max-width: 90% !important;
+        padding: 20px !important;
+      }
+      
+      .social-summary-card h3 {
+        font-size: 1.3rem !important;
+        margin: 0 0 0.75em !important;
+      }
+      
+      .social-summary-content {
+        font-size: 0.85rem !important;
+        line-height: 1.5 !important;
+      }
+      
+      .social-summary-content > div {
+        margin-top: 0.4em !important;
+      }
+    }
+    
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 30px;
+    }
+    
+    @media (max-width: 900px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .version-label {
+      background: #2d3748;
+      color: #e3ecf5;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    
+    .version-label.old {
+      background: #e74c3c;
+    }
+    
+    .version-label.new {
+      background: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎭 Social Phase Complete Card - Mobile Optimization Test</h1>
+    
+    <div class="viewport-wrapper">
+      <div class="viewport-label">📱 Mobile View (375px) - New Concise Format</div>
+      <div class="faux-tv mobile-viewport">
+        <div class="revealCard social-summary-card">
+          <h3>🎭 Social Phase Complete</h3>
+          <div class="social-summary-content">
+            <div><strong>⚡ Energy:</strong> 34 spent</div>
+            <div style="margin-top: 0.5em;"><strong>🎯 Actions:</strong> 27 total</div>
+            <div style="margin-top: 0.5em;"><strong>💕 Relationships:</strong> 1 big change</div>
+            <div style="margin-top: 0.5em; color: #27ae60; font-weight: 600;"><strong>🤝 New alliances:</strong> 2</div>
+            <div style="margin-top: 0.5em;"><strong>💭 Memories:</strong> 50 new</div>
+          </div>
+          <div class="decisionActions">
+            <button class="btn small">Details</button>
+            <button class="btn small">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="viewport-wrapper">
+      <div class="viewport-label">📱 Mobile View (375px) - With Information Resource</div>
+      <div class="faux-tv mobile-viewport">
+        <div class="revealCard social-summary-card">
+          <h3>🎭 Social Phase Complete</h3>
+          <div class="social-summary-content">
+            <div><strong>⚡ Energy:</strong> 34 spent</div>
+            <div style="margin-top: 0.5em;"><strong>🔍 Information:</strong> 15 spent</div>
+            <div style="margin-top: 0.5em;"><strong>🎯 Actions:</strong> 27 total</div>
+            <div style="margin-top: 0.5em;"><strong>💕 Relationships:</strong> 3 big changes</div>
+            <div style="margin-top: 0.5em; color: #27ae60; font-weight: 600;"><strong>🤝 New alliances:</strong> 2</div>
+            <div style="margin-top: 0.5em; color: #e74c3c; font-weight: 600;"><strong>⚔️ New rivalries:</strong> 1</div>
+            <div style="margin-top: 0.5em;"><strong>💭 Memories:</strong> 50 new</div>
+          </div>
+          <div class="decisionActions">
+            <button class="btn small">Details</button>
+            <button class="btn small">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="viewport-wrapper">
+      <div class="viewport-label">💻 Tablet View (768px)</div>
+      <div class="faux-tv tablet-viewport">
+        <div class="revealCard social-summary-card">
+          <h3>🎭 Social Phase Complete</h3>
+          <div class="social-summary-content">
+            <div><strong>⚡ Energy:</strong> 34 spent</div>
+            <div style="margin-top: 0.5em;"><strong>🔍 Information:</strong> 15 spent</div>
+            <div style="margin-top: 0.5em;"><strong>🎯 Actions:</strong> 27 total</div>
+            <div style="margin-top: 0.5em;"><strong>💕 Relationships:</strong> 3 big changes</div>
+            <div style="margin-top: 0.5em; color: #27ae60; font-weight: 600;"><strong>🤝 New alliances:</strong> 2</div>
+            <div style="margin-top: 0.5em; color: #e74c3c; font-weight: 600;"><strong>⚔️ New rivalries:</strong> 1</div>
+            <div style="margin-top: 0.5em;"><strong>💭 Memories:</strong> 50 new</div>
+          </div>
+          <div class="decisionActions">
+            <button class="btn small">Details</button>
+            <button class="btn small">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <h2 style="color: #4a90e2; margin: 2em 0 1em; text-align: center;">Comparison: Old vs New Format</h2>
+    
+    <div class="comparison">
+      <div>
+        <div class="version-label old">❌ OLD - Too Verbose</div>
+        <div class="faux-tv mobile-viewport">
+          <div class="revealCard" style="padding: 32px;">
+            <h3 style="margin: 0 0 1em; text-align: center; color: #4a90e2; font-size: 1.8em;">🎭 Social Phase Complete</h3>
+            <div style="font-size: 0.9rem; line-height: 1.6;">
+              <div><strong>⚡ Energy:</strong> 34 spent | <strong>🔍 Information:</strong> 1 spent across 27 actions</div>
+              <div style="margin-top: 0.5em;"><strong>🎯 Actions:</strong> 22 friendly, 5 strategic</div>
+              <div style="margin-top: 0.5em;"><strong>💕 Relationships:</strong> 1 significant change</div>
+              <div style="margin-top: 0.5em; color: #27ae60; font-weight: 600;"><strong>🤝 New Alliances:</strong> OK & Kai, Lux & Finn</div>
+              <div style="margin-top: 0.5em;"><strong>💭 Memories:</strong> 27 new, 50 total</div>
+            </div>
+            <div class="decisionActions">
+              <button class="btn small">Details</button>
+              <button class="btn small">Continue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <div class="version-label new">✅ NEW - Concise</div>
+        <div class="faux-tv mobile-viewport">
+          <div class="revealCard social-summary-card">
+            <h3>🎭 Social Phase Complete</h3>
+            <div class="social-summary-content">
+              <div><strong>⚡ Energy:</strong> 34 spent</div>
+              <div style="margin-top: 0.5em;"><strong>🔍 Information:</strong> 1 spent</div>
+              <div style="margin-top: 0.5em;"><strong>🎯 Actions:</strong> 27 total</div>
+              <div style="margin-top: 0.5em;"><strong>💕 Relationships:</strong> 1 big change</div>
+              <div style="margin-top: 0.5em; color: #27ae60; font-weight: 600;"><strong>🤝 New alliances:</strong> 2</div>
+              <div style="margin-top: 0.5em;"><strong>💭 Memories:</strong> 27 new</div>
+            </div>
+            <div class="decisionActions">
+              <button class="btn small">Details</button>
+              <button class="btn small">Continue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="margin-top: 3em; padding: 20px; background: #1a2332; border-radius: 8px; border-left: 4px solid #4a90e2;">
+      <h3 style="color: #4a90e2; margin-bottom: 0.5em;">📝 Summary of Changes</h3>
+      <ul style="color: #9ca3af; line-height: 1.8;">
+        <li>✅ Energy: Removed action count, now just "X spent"</li>
+        <li>✅ Information: Separate line when present</li>
+        <li>✅ Actions: Simplified to "X total" instead of listing categories</li>
+        <li>✅ Relationships: Changed to "X big change(s)" instead of "significant changes"</li>
+        <li>✅ Alliances/Rivalries: Show count only (details in Details button)</li>
+        <li>✅ Memories: Only show new count</li>
+        <li>✅ Mobile CSS: Reduced padding, font sizes, and spacing for better fit</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
