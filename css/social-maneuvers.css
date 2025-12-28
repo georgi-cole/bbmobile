@@ -615,21 +615,26 @@
 /* Mobile optimization for social summary card */
 @media (max-width: 768px) {
   .social-summary-card {
+    /* Override inline max-width for better mobile fit */
     max-width: 90% !important;
+    /* Reduce padding for more compact display */
     padding: 20px !important;
   }
   
   .social-summary-card h3 {
+    /* Smaller header for mobile */
     font-size: 1.3rem !important;
     margin: 0 0 0.75em !important;
   }
   
   .social-summary-content {
+    /* Reduce font size and tighten spacing */
     font-size: 0.85rem !important;
     line-height: 1.5 !important;
   }
   
   .social-summary-content > div {
+    /* Tighter spacing between items */
     margin-top: 0.4em !important;
   }
 }
