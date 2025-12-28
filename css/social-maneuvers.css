@@ -612,6 +612,28 @@
   pointer-events: auto;
 }
 
+/* Mobile optimization for social summary card */
+@media (max-width: 768px) {
+  .social-summary-card {
+    max-width: 90% !important;
+    padding: 20px !important;
+  }
+  
+  .social-summary-card h3 {
+    font-size: 1.3rem !important;
+    margin: 0 0 0.75em !important;
+  }
+  
+  .social-summary-content {
+    font-size: 0.85rem !important;
+    line-height: 1.5 !important;
+  }
+  
+  .social-summary-content > div {
+    margin-top: 0.4em !important;
+  }
+}
+
 /* Ensure backdrop doesn't interfere with card interactions */
 .social-summary-backdrop ~ #decisionDeck {
   pointer-events: none;
