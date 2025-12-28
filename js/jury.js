@@ -1456,7 +1456,7 @@
     const finalB = votes.get(B)||0;
     console.info(`[juryReveal] winner=${winner} votes=${finalA}-${finalB}`);
     
-    return winner;
+    return { winner, votes, A, B };
   }
 
   // Main orchestrator for new finale flow
@@ -1525,9 +1525,11 @@
     await sleep(1500);
     
     // PHASE 2: Jury reveal (no Public Favourite before jury)
-    const winner = await startJuryRevealPhase(jurors, A, B);
+    const result = await startJuryRevealPhase(jurors, A, B);
     
-    if(!winner) return;
+    if(!result || !result.winner) return;
+    
+    const { winner, votes } = result;
     
     // Hook: Log XP for final winner
     if(g.ProgressionEvents?.onFinalWinner){
@@ -1538,7 +1540,6 @@
     await sleep(1000);
     try{ await g.cardQueueWaitIdle?.(); }catch{}
     
-    const [A,B]=finalists();
     const winnerPlayer = gp(winner);
     const runnerUpId = winner === A ? B : A;
     const runnerUpPlayer = gp(runnerUpId);
