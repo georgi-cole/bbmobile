@@ -14,19 +14,20 @@
    * - First juror = (J + 2)th place
    * - Last juror = 3rd place
    * 
+   * Note on placement calculation:
+   * - When N players remain and one is evicted, they finish in Nth place
+   * - Example: 9 players remain, one evicted = finishes 9th place
+   * - This is consistent with Big Brother terminology
+   * 
    * Examples:
    * - 7-person jury: 9th place (first juror) to 3rd place (last juror)
    * - 9-person jury: 11th place (first juror) to 3rd place (last juror)
    * 
-   * @param {number} playersLeftWhenEvicted - Number of players remaining when evicted
+   * @param {number} placement - The player's final placement (e.g., 9 = 9th place)
    * @param {number} jurySize - Size of the jury (default: 7)
    * @returns {boolean} - True if player makes jury, false otherwise
    */
-  function makesJury(playersLeftWhenEvicted, jurySize = 7) {
-    // When a player is evicted, they finish in Nth place where N = playersLeftWhenEvicted
-    // Example: Evicted at 9 players left = finishes 9th place
-    const placement = playersLeftWhenEvicted;
-    
+  function makesJury(placement, jurySize = 7) {
     // Calculate jury range
     const firstJurorPlace = jurySize + 2;  // e.g., 7 + 2 = 9th place
     const lastJurorPlace = 3;              // Always 3rd place
