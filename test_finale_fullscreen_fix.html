@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finale Fullscreen Overlay Fix - Manual Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      color: #e8f9ff;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #00e0cc;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    .info-box {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    #tv {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      min-height: 500px;
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    #panel {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      min-height: 200px;
+    }
+    .test-result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .pass {
+      background: rgba(0, 224, 204, 0.2);
+      color: #00e0cc;
+      border: 1px solid rgba(0, 224, 204, 0.4);
+    }
+    .fail {
+      background: rgba(255, 107, 107, 0.2);
+      color: #ff6b6b;
+      border: 1px solid rgba(255, 107, 107, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 Finale Fullscreen Overlay Fix - Manual Test</h1>
+    
+    <div class="info-box">
+      <h3>✅ What This Test Validates</h3>
+      <ul>
+        <li><strong>Fullscreen Overlay:</strong> Overlay is created FIRST before human voting</li>
+        <li><strong>Human Voting UI:</strong> Renders INSIDE the overlay with horizontal layout</li>
+        <li><strong>Finalist Display:</strong> Shows finalists side-by-side with large avatars</li>
+        <li><strong>No Panel UI:</strong> Old jury ballots panel does NOT appear in #panel</li>
+        <li><strong>Vote Reveal:</strong> Happens inside the overlay with animations</li>
+      </ul>
+    </div>
+
+    <div class="controls">
+      <button onclick="runTest('humanJuror')">Test 1: Human as Juror</button>
+      <button onclick="runTest('humanNotJuror')">Test 2: Human NOT as Juror</button>
+      <button onclick="runTest('noJurors')">Test 3: No Jurors (Edge Case)</button>
+      <button onclick="clearTest()">Clear All</button>
+    </div>
+
+    <div id="results"></div>
+
+    <div id="tv">
+      <p style="opacity: 0.5; text-align: center;">TV Area - Faceoff will appear in fullscreen overlay</p>
+    </div>
+
+    <div id="panel">
+      <p style="opacity: 0.5;">Panel Area - Should remain empty (no jury ballots panel)</p>
+    </div>
+  </div>
+
+  <!-- Load game dependencies -->
+  <script src="js/utilities.js"></script>
+  <script src="js/player_profiles.js"></script>
+  <script src="js/jury-viz.js"></script>
+  <script src="js/jury.js"></script>
+
+  <script>
+    // Initialize minimal game state
+    window.game = window.game || {};
+    window.game.players = [
+      { id: 1, name: 'Remy', evicted: false, threat: 0.7, affinity: {} },
+      { id: 2, name: 'Jax', evicted: false, threat: 0.6, affinity: {} },
+      { id: 3, name: 'Echo', juror: true, evicted: true, weekEvicted: 8, affinity: { 1: 0.8, 2: 0.4 } },
+      { id: 4, name: 'Lia', juror: true, evicted: true, weekEvicted: 7, affinity: { 1: 0.3, 2: 0.7 } },
+      { id: 5, name: 'Mimi', juror: true, evicted: true, weekEvicted: 6, affinity: { 1: 0.6, 2: 0.5 } }
+    ];
+    window.game.finalTwo = [1, 2];
+    window.game.juryHouse = [3, 4, 5];
+    window.game.week = 10;
+    window.game.cfg = { tJuryFinale: 10 };
+    
+    // Helper functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+    window.rng = () => Math.random();
+    
+    // Avatar resolution
+    window.resolveAvatar = (id) => {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}`;
+    };
+    
+    // Mock functions
+    window.setPhase = () => {};
+    window.addJuryLog = (msg) => console.log('[Jury Log]', msg);
+    window.showCard = (title, msgs, type, duration) => {
+      console.log('[Card]', title, msgs);
+      return Promise.resolve();
+    };
+    window.showEventModal = (opts) => {
+      console.log('[Event Modal]', opts.title);
+      return new Promise(resolve => setTimeout(resolve, 1000));
+    };
+    window.cardQueueWaitIdle = () => Promise.resolve();
+    window.showBigCard = () => {};
+    window.victory = () => {};
+    window.setMusic = () => {};
+    window.showFinaleCinematic = () => console.log('[Finale Cinematic]');
+    window.updateHud = () => {};
+    window.bbGameBus = { emit: () => {} };
+    
+    // Test results tracking
+    const results = [];
+    
+    function logResult(test, check, passed, details = '') {
+      results.push({ test, check, passed, details });
+      updateResults();
+    }
+    
+    function updateResults() {
+      const resultsEl = document.getElementById('results');
+      if (results.length === 0) {
+        resultsEl.innerHTML = '';
+        return;
+      }
+      
+      let html = '<div class="info-box"><h3>Test Results</h3>';
+      results.forEach(r => {
+        const cssClass = r.passed ? 'pass' : 'fail';
+        const icon = r.passed ? '✅' : '❌';
+        html += `<div class="test-result ${cssClass}">${icon} ${r.test} - ${r.check}`;
+        if (r.details) html += `<br><small style="opacity: 0.8;">${r.details}</small>`;
+        html += '</div>';
+      });
+      html += '</div>';
+      resultsEl.innerHTML = html;
+    }
+    
+    function clearTest() {
+      results.length = 0;
+      updateResults();
+      
+      // Clear overlays
+      document.querySelectorAll('.finale-fullscreen-overlay').forEach(el => el.remove());
+      
+      // Clear TV
+      const tv = document.getElementById('tv');
+      tv.innerHTML = '<p style="opacity: 0.5; text-align: center;">TV Area - Faceoff will appear in fullscreen overlay</p>';
+      
+      // Clear panel
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '<p style="opacity: 0.5;">Panel Area - Should remain empty (no jury ballots panel)</p>';
+      
+      console.clear();
+      console.log('[Test] Cleared');
+    }
+    
+    async function runTest(testType) {
+      clearTest();
+      console.log(`[Test] Starting: ${testType}`);
+      
+      // Configure test scenario
+      if (testType === 'humanJuror') {
+        window.game.humanId = 3; // Echo is human
+        console.log('[Test] Human player ID: 3 (Echo), is a juror');
+      } else if (testType === 'humanNotJuror') {
+        window.game.humanId = 1; // Remy is human (finalist, not juror)
+        console.log('[Test] Human player ID: 1 (Remy), NOT a juror');
+      } else if (testType === 'noJurors') {
+        window.game.juryHouse = [];
+        console.log('[Test] No jurors');
+      }
+      
+      // Wait a bit for setup
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check 1: Panel should be empty before test
+      const panelBefore = document.getElementById('panel').querySelectorAll('.juryPanelHost').length;
+      logResult(testType, 'Panel empty before test', panelBefore === 0, 
+        `Found ${panelBefore} jury panel elements (should be 0)`);
+      
+      // Run the finale flow
+      try {
+        // Start the flow in background (don't await - we want to check intermediate state)
+        const flowPromise = window.startJuryVote();
+        
+        // Wait for overlay to be created (should be almost immediate)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Check 2: Fullscreen overlay should exist
+        const overlay = document.querySelector('.finale-fullscreen-overlay');
+        logResult(testType, 'Fullscreen overlay created', !!overlay,
+          overlay ? 'Overlay element found in DOM' : 'Overlay NOT found');
+        
+        // Check 3: If human is juror, voting UI should be in overlay
+        if (testType === 'humanJuror' && overlay) {
+          const votingUI = overlay.querySelector('#humanJuryVoteOverlay');
+          logResult(testType, 'Voting UI in overlay', !!votingUI,
+            votingUI ? 'Human voting UI found inside overlay' : 'Voting UI NOT in overlay');
+          
+          // Check 4: Finalists should be side-by-side
+          if (votingUI) {
+            const grid = votingUI.querySelector('[style*="grid-template-columns"]');
+            logResult(testType, 'Horizontal finalist layout', !!grid,
+              grid ? 'Grid layout found with side-by-side finalists' : 'No grid layout');
+          }
+          
+          // Auto-click a vote button to continue
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const voteBtn = overlay.querySelector('#btnVoteA');
+          if (voteBtn) {
+            console.log('[Test] Auto-clicking vote button');
+            voteBtn.click();
+          }
+        }
+        
+        // Wait a bit more
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check 5: Faceoff should be in overlay
+        const faceoff = overlay?.querySelector('.finalFaceoff');
+        logResult(testType, 'Faceoff in overlay', !!faceoff,
+          faceoff ? 'Faceoff UI found inside overlay' : 'Faceoff NOT in overlay');
+        
+        // Check 6: Panel should STILL be empty (no jury ballots panel)
+        const panelAfter = document.getElementById('panel').querySelectorAll('.juryPanelHost').length;
+        logResult(testType, 'Panel remains empty', panelAfter === 0,
+          `Found ${panelAfter} jury panel elements (should be 0)`);
+        
+        // Check 7: No voting UI in panel
+        const panelVotingUI = document.getElementById('panel').querySelector('#humanJuryVote');
+        logResult(testType, 'No voting UI in panel', !panelVotingUI,
+          panelVotingUI ? 'OLD voting UI found in panel (BAD)' : 'No voting UI in panel (GOOD)');
+        
+        console.log(`[Test] ${testType} checks complete`);
+        
+        // Note: We're not waiting for the full flow to complete as it takes a long time
+        // and we've already validated the key fixes
+        
+      } catch (error) {
+        console.error('[Test] Error:', error);
+        logResult(testType, 'Test execution', false, `Error: ${error.message}`);
+      }
+    }
+    
+    // Auto-run first test on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test] Page loaded, ready for testing');
+      console.log('[Test] Click a button above to run a test scenario');
+    });
+  </script>
+</body>
+</html>

@@ -573,6 +573,195 @@
     panel.appendChild(box);
     return box;
   }
+  
+  /**
+   * Render human voting UI inside fullscreen overlay with horizontal layout
+   * @param {HTMLElement} overlay - Required fullscreen overlay element to render UI inside
+   * @param {*} A - First finalist ID
+   * @param {*} B - Second finalist ID
+   * @returns {HTMLElement|null} The voting container element, or null if overlay is not provided
+   */
+  function renderHumanJuryUIInOverlay(overlay, A, B){
+    if(!overlay) {
+      console.error('[jury] Cannot render voting UI: overlay element is required');
+      return null;
+    }
+    
+    const container = document.createElement('div');
+    container.id = 'humanJuryVoteOverlay';
+    
+    // Mobile-responsive container styling
+    const isMobile = window.innerWidth <= 768;
+    container.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(90vw, 900px);
+      max-height: ${isMobile ? '90vh' : '85vh'};
+      overflow-y: auto;
+      padding: ${isMobile ? '20px 16px' : '40px 20px'};
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 2px solid rgba(0, 224, 204, 0.4);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8),
+                  0 0 40px rgba(0, 224, 204, 0.3);
+      z-index: 10001;
+    `;
+    
+    const title = document.createElement('div');
+    title.textContent = '🎖️ YOUR JURY VOTE 🎖️';
+    title.style.cssText = `
+      font-size: ${isMobile ? 'clamp(18px, 5vw, 24px)' : 'clamp(24px, 4vw, 36px)'};
+      font-weight: 900;
+      text-align: center;
+      color: #00e0cc;
+      margin-bottom: ${isMobile ? '16px' : '32px'};
+      text-shadow: 0 0 20px rgba(0, 224, 204, 0.6);
+      letter-spacing: 2px;
+    `;
+    
+    const faceoffContainer = document.createElement('div');
+    faceoffContainer.style.cssText = `
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: ${isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 4vw, 60px)'};
+      align-items: center;
+      justify-items: center;
+      margin-bottom: ${isMobile ? '16px' : '32px'};
+    `;
+    
+    // Create finalist cards
+    function createFinalistCard(finalistId) {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: ${isMobile ? '8px' : '16px'};
+        padding: ${isMobile ? '12px' : '20px'};
+        border-radius: ${isMobile ? '12px' : '16px'};
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+      `;
+      
+      const avatar = document.createElement('img');
+      avatar.src = getAvatar(finalistId);
+      avatar.alt = safeName(finalistId);
+      avatar.style.cssText = `
+        width: ${isMobile ? 'min(30vw, 120px)' : 'min(25vw, 200px)'};
+        height: ${isMobile ? 'min(30vw, 120px)' : 'min(25vw, 200px)'};
+        object-fit: cover;
+        border-radius: ${isMobile ? '8px' : '12px'};
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      `;
+      avatar.onerror = function() {
+        console.warn('[jury] Avatar fallback for finalist:', safeName(finalistId));
+        this.onerror = null;
+        this.src = getAvatarFallback(safeName(finalistId));
+      };
+      
+      const name = document.createElement('div');
+      name.textContent = safeName(finalistId);
+      name.style.cssText = `
+        font-size: ${isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(18px, 2.5vw, 28px)'};
+        font-weight: 800;
+        color: #ffffff;
+        text-align: center;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+      `;
+      
+      card.appendChild(avatar);
+      card.appendChild(name);
+      return card;
+    }
+    
+    const leftCard = createFinalistCard(A);
+    const vs = document.createElement('div');
+    vs.textContent = 'VS';
+    vs.style.cssText = `
+      font-size: ${isMobile ? 'clamp(20px, 6vw, 32px)' : 'clamp(28px, 5vw, 48px)'};
+      font-weight: 900;
+      color: #00e0cc;
+      text-shadow: 0 0 20px rgba(0, 224, 204, 0.6);
+      letter-spacing: 3px;
+    `;
+    const rightCard = createFinalistCard(B);
+    
+    faceoffContainer.appendChild(leftCard);
+    faceoffContainer.appendChild(vs);
+    faceoffContainer.appendChild(rightCard);
+    
+    // Vote buttons
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.cssText = `
+      display: flex;
+      gap: ${isMobile ? '12px' : '24px'};
+      justify-content: center;
+      margin-bottom: ${isMobile ? '12px' : '20px'};
+      flex-wrap: wrap;
+    `;
+    
+    const btnA = document.createElement('button');
+    btnA.id = 'btnVoteA';
+    btnA.textContent = `VOTE ${safeName(A).toUpperCase()}`;
+    btnA.style.cssText = `
+      padding: ${isMobile ? '12px 20px' : '16px 32px'};
+      font-size: ${isMobile ? 'clamp(12px, 3vw, 16px)' : 'clamp(16px, 2vw, 20px)'};
+      font-weight: 800;
+      background: linear-gradient(135deg, #00e0cc 0%, #00b4a0 100%);
+      color: #001a18;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 224, 204, 0.4);
+      transition: all 0.3s ease;
+      letter-spacing: 1px;
+      ${isMobile ? 'min-width: 120px;' : ''}
+    `;
+    btnA.onmouseover = function() {
+      this.style.transform = 'translateY(-2px)';
+      this.style.boxShadow = '0 12px 32px rgba(0, 224, 204, 0.6)';
+    };
+    btnA.onmouseout = function() {
+      this.style.transform = 'translateY(0)';
+      this.style.boxShadow = '0 8px 24px rgba(0, 224, 204, 0.4)';
+    };
+    
+    const btnB = document.createElement('button');
+    btnB.id = 'btnVoteB';
+    btnB.textContent = `VOTE ${safeName(B).toUpperCase()}`;
+    btnB.style.cssText = btnA.style.cssText;
+    btnB.onmouseover = btnA.onmouseover;
+    btnB.onmouseout = btnA.onmouseout;
+    
+    buttonsContainer.appendChild(btnA);
+    buttonsContainer.appendChild(btnB);
+    
+    // Instructions
+    const instructions = document.createElement('div');
+    instructions.textContent = 'Cast your vote for the winner';
+    instructions.style.cssText = `
+      font-size: ${isMobile ? 'clamp(12px, 3vw, 14px)' : 'clamp(14px, 2vw, 18px)'};
+      color: #aaa;
+      text-align: center;
+      font-style: italic;
+    `;
+    
+    container.appendChild(title);
+    container.appendChild(faceoffContainer);
+    container.appendChild(buttonsContainer);
+    container.appendChild(instructions);
+    
+    overlay.appendChild(container);
+    
+    return container;
+  }
+  
   function waitForHumanJuryVote(A,B){
     return new Promise(resolve=>{
       const box = renderHumanJuryUI(A,B);
@@ -588,6 +777,70 @@
       };
       box?.querySelector('#btnVoteA')?.addEventListener('click', ()=>kill(A));
       box?.querySelector('#btnVoteB')?.addEventListener('click', ()=>kill(B));
+    });
+  }
+  
+  /**
+   * Wait for human jury vote inside fullscreen overlay
+   * @param {HTMLElement} overlay - Required fullscreen overlay element containing the voting UI
+   * @param {*} A - First finalist ID
+   * @param {*} B - Second finalist ID
+   * @returns {Promise<*|null>} Promise that resolves to the selected finalist ID, or null if UI rendering fails
+   */
+  function waitForHumanJuryVoteInOverlay(overlay, A, B){
+    return new Promise(resolve=>{
+      if (!overlay) {
+        console.error('[jury] Cannot render voting UI: overlay is required');
+        // Don't auto-vote for human - this is an error condition
+        // Return null to signal caller to handle this case
+        resolve(null);
+        return;
+      }
+      
+      const box = renderHumanJuryUIInOverlay(overlay, A, B);
+      if(!box) {
+        console.error('[jury] Failed to render voting UI in overlay');
+        // Don't auto-vote for human - this is an error condition
+        resolve(null);
+        return;
+      }
+      
+      const kill = (choice)=>{
+        try{
+          // Show confirmation
+          const confirmation = document.createElement('div');
+          confirmation.textContent = `✓ Your ballot: ${safeName(choice)}`;
+          confirmation.style.cssText = `
+            margin-top: 20px;
+            font-size: clamp(16px, 2.5vw, 22px);
+            font-weight: 700;
+            color: #00e0cc;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(0, 224, 204, 0.6);
+          `;
+          box.appendChild(confirmation);
+          
+          // Disable buttons
+          box.querySelectorAll('button').forEach(b => {
+            b.disabled = true;
+            b.style.opacity = '0.5';
+            b.style.cursor = 'not-allowed';
+          });
+          
+          // Fade out voting UI after brief delay
+          setTimeout(() => {
+            box.style.transition = 'opacity 0.5s ease';
+            box.style.opacity = '0';
+            setTimeout(() => box.remove(), 500);
+          }, 1500);
+        }catch(e){
+          console.warn('[jury] Error in voting UI cleanup:', e);
+        }
+        resolve(choice);
+      };
+      
+      box.querySelector('#btnVoteA')?.addEventListener('click', ()=>kill(A));
+      box.querySelector('#btnVoteB')?.addEventListener('click', ()=>kill(B));
     });
   }
 
@@ -685,8 +938,14 @@
     return gg.finale;
   }
 
-  // Phase 1: Anonymous Jury Casting (blind voting without revealing picks)
-  async function startJuryCastingPhase(jurors, A, B){
+  /**
+   * Phase 1: Anonymous Jury Casting (blind voting without revealing picks)
+   * @param {Array} jurors - Array of juror IDs
+   * @param {*} A - First finalist ID
+   * @param {*} B - Second finalist ID
+   * @param {HTMLElement|null} overlay - Optional fullscreen overlay element. If provided, human voting UI renders inside overlay.
+   */
+  async function startJuryCastingPhase(jurors, A, B, overlay = null){
     const gg = g.game || {};
     const finale = ensureFinaleState();
     
@@ -708,8 +967,11 @@
       if (humanIsJuror && jid === humanId) {
         console.info('[juryCast] waiting for human vote juror=' + jid);
         
-        // Show human voting UI with 30-second timeout
-        const votePromise = waitForHumanJuryVote(A, B);
+        // Choose voting UI based on whether overlay is available
+        const votePromise = overlay 
+          ? waitForHumanJuryVoteInOverlay(overlay, A, B)
+          : waitForHumanJuryVote(A, B);
+          
         const timeoutPromise = new Promise(resolve => {
           setTimeout(() => {
             console.warn('[juryCast] human vote timeout, using affinity fallback');
@@ -720,7 +982,7 @@
         // Race between vote and timeout
         pick = await Promise.race([votePromise, timeoutPromise]);
         
-        // If timeout (pick is null), use affinity-based fallback
+        // If timeout OR UI error (pick is null), use affinity-based fallback
         if (pick === null) {
           pick = ballotPick(jid, A, B);
           console.info(`[juryCast] human vote fallback juror=${jid} pick=${pick}`);
@@ -1512,10 +1774,33 @@
     
     setTvNow('Final Jury Vote');
     
-    // PHASE 1: Anonymous casting
-    await startJuryCastingPhase(jurors, A, B);
+    // CRITICAL FIX: Create fullscreen overlay FIRST before any UI renders
+    // This ensures all subsequent UI renders inside the overlay
+    let finaleOverlay = null;
+    if (typeof g.FinalFaceoff?.mount === 'function') {
+      // Mount the faceoff in fullscreen mode - this creates the overlay
+      const leftPlayer = g.getP?.(A) || { id: A, name: String(A) };
+      const rightPlayer = g.getP?.(B) || { id: B, name: String(B) };
+      leftPlayer.avatar = getAvatar(A);
+      rightPlayer.avatar = getAvatar(B);
+      const need = Math.floor(finalJurors.length / 2) + 1;
+      
+      g.FinalFaceoff.mount({
+        left: leftPlayer,
+        right: rightPlayer,
+        majority: need,
+        fullscreen: true
+      });
+      
+      // Get reference to the overlay element for passing to child functions
+      finaleOverlay = document.querySelector('.finale-fullscreen-overlay');
+      console.log('[jury] Fullscreen overlay created and faceoff mounted');
+    }
     
-    // Show jury vote modal announcement (similar to twists) BEFORE finalists appear
+    // PHASE 1: Anonymous casting - pass overlay so human voting renders inside it
+    await startJuryCastingPhase(jurors, A, B, finaleOverlay);
+    
+    // Show jury vote modal announcement (similar to twists) BEFORE reveal starts
     if (g.showEventModal) await g.showEventModal({
       title: 'Time for the Jury Vote',
       emojis: '⚖️👑',
@@ -1525,9 +1810,8 @@
       tone: 'special'
     });
     
-    // NOW render the finalists - modal appears just before they appear
-    renderFinaleGraph(A,B,jurors.length);
-    try{ renderJuryBallotsPanel(jurors,A,B); }catch{}
+    // REMOVED: Don't call renderFinaleGraph here as overlay already mounted above
+    // REMOVED: Don't call renderJuryBallotsPanel - we're using fullscreen overlay only
     
     // Intro cards before reveal (tripled durations)
     // Intro card 1: 6.0s (was 2.0s)

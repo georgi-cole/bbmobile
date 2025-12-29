@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finale UI Screenshots</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      margin: 0;
+      padding: 0;
+    }
+    #tv {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80vw;
+      height: 60vh;
+      background: #1a1a1a;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+    }
+    #panel {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80vw;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid #333;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div id="tv">TV Area</div>
+  <div id="panel">Panel Area (should be empty during finale)</div>
+
+  <script src="js/utilities.js"></script>
+  <script src="js/player_profiles.js"></script>
+  <script src="js/jury-viz.js"></script>
+  <script src="js/jury.js"></script>
+
+  <script>
+    // Initialize game state
+    window.game = window.game || {};
+    window.game.players = [
+      { id: 1, name: 'Remy', evicted: false, threat: 0.7, affinity: { 2: 0.3, 3: 0.8, 4: 0.4, 5: 0.6 } },
+      { id: 2, name: 'Jax', evicted: false, threat: 0.6, affinity: { 1: 0.3, 3: 0.4, 4: 0.7, 5: 0.5 } },
+      { id: 3, name: 'Echo', juror: true, evicted: true, weekEvicted: 8, affinity: { 1: 0.8, 2: 0.4 } },
+      { id: 4, name: 'Lia', juror: true, evicted: true, weekEvicted: 7, affinity: { 1: 0.3, 2: 0.7 } },
+      { id: 5, name: 'Mimi', juror: true, evicted: true, weekEvicted: 6, affinity: { 1: 0.6, 2: 0.5 } }
+    ];
+    window.game.finalTwo = [1, 2];
+    window.game.juryHouse = [3, 4, 5];
+    window.game.humanId = 3; // Echo is human
+    window.game.week = 10;
+    window.game.cfg = { tJuryFinale: 5, enablePublicFav: false };
+    
+    // Helper functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+    window.rng = () => Math.random();
+    window.resolveAvatar = (id) => `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}`;
+    window.getAvatarFallback = (name) => `https://api.dicebear.com/6.x/bottts/svg?seed=${name}`;
+    
+    // Mock functions
+    window.setPhase = () => {};
+    window.addJuryLog = (msg) => console.log('[Jury Log]', msg);
+    window.showCard = (title, msgs) => {
+      console.log('[Card]', title);
+      return Promise.resolve();
+    };
+    window.showEventModal = (opts) => {
+      console.log('[Event Modal]', opts.title);
+      return new Promise(resolve => setTimeout(resolve, 500));
+    };
+    window.cardQueueWaitIdle = () => Promise.resolve();
+    window.flushAllCards = () => {};
+    window.showBigCard = () => {};
+    window.victory = () => {};
+    window.setMusic = () => {};
+    window.showFinaleCinematic = () => console.log('[Finale Cinematic]');
+    window.updateHud = () => {};
+    window.bbGameBus = { emit: () => {} };
+    window.tv = { say: () => {} };
+    window.ProgressionEvents = {};
+    
+    // Signal when ready for screenshot
+    window.screenshotStage = 'initial';
+    
+    // Auto-start after page load
+    window.addEventListener('DOMContentLoaded', async () => {
+      console.log('[Screenshot Demo] Page loaded');
+      
+      // Wait a moment for everything to settle
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Start the finale flow
+      console.log('[Screenshot Demo] Starting finale flow...');
+      window.screenshotStage = 'starting';
+      
+      // Start in background
+      const finalePromise = window.startJuryVote();
+      
+      // Wait for overlay to appear
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mark as ready for voting screenshot
+      window.screenshotStage = 'voting-ready';
+      console.log('[Screenshot Demo] Voting UI should be visible now');
+      
+      // Auto-click vote after a delay for next screenshot
+      setTimeout(() => {
+        const voteBtn = document.querySelector('#btnVoteA');
+        if (voteBtn) {
+          console.log('[Screenshot Demo] Auto-clicking vote button');
+          voteBtn.click();
+          window.screenshotStage = 'voted';
+        }
+      }, 3000);
+      
+      // Wait for reveal phase
+      setTimeout(() => {
+        window.screenshotStage = 'revealing';
+        console.log('[Screenshot Demo] Vote reveal phase');
+      }, 5000);
+    });
+  </script>
+</body>
+</html>

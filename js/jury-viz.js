@@ -592,18 +592,47 @@
     .finalFaceoff{
       grid-template-columns: 1fr;
       grid-template-rows: 1fr auto 1fr;
-      gap: 20px;
-      padding: 20px;
+      gap: 12px;
+      padding: 16px 12px;
+      min-height: auto;
     }
     .finalFaceoff .fo-vs{
-      font-size: clamp(24px, 8vw, 48px);
+      font-size: clamp(20px, 6vw, 32px);
+      letter-spacing: 2px;
     }
     .finalFaceoff .fo-slot{
-      width: min(80vw, 400px);
+      width: min(85vw, 350px);
+      padding: 16px 12px;
+      gap: 12px;
     }
     .fo-avatar{
-      width: min(60vw, 250px);
-      height: min(60vw, 250px);
+      width: min(40vw, 150px);
+      height: min(40vw, 150px);
+    }
+    .fo-name{
+      font-size: clamp(16px, 4vw, 24px);
+    }
+    .fo-vote-pill{
+      padding: 8px 16px;
+      gap: 6px;
+    }
+    .fo-vote-pill-label{
+      font-size: clamp(10px, 2vw, 12px);
+    }
+    .fo-votes{
+      font-size: clamp(20px, 5vw, 32px);
+    }
+    .finalFaceoff .fo-message-area{
+      bottom: 20px;
+      padding: 16px 20px;
+      width: min(92%, 380px);
+    }
+    .finalFaceoff .fo-message-juror{
+      font-size: clamp(12px, 3vw, 14px);
+      margin-bottom: 6px;
+    }
+    .finalFaceoff .fo-message-text{
+      font-size: clamp(13px, 3.2vw, 16px);
     }
     .winner-avatar-large{
       width: min(70vw, 300px);
