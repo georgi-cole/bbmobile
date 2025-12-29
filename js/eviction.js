@@ -1602,7 +1602,7 @@
   }
   global.handleSelfEviction=handleSelfEviction;
 
-  function postEvictionRouting(){
+  async function postEvictionRouting(){
     const g=global.game;
     
     // COMMIT 3: Clean up all vote UI using global helper (includes lv2 cleanup)
@@ -1614,11 +1614,11 @@
     if(remain.length===2){ setTimeout(()=>global.startJuryVote?.(),700); global.updateHud?.(); return; }
     if(remain.length===3){ setTimeout(()=>global.startFinal3Flow?.(),700); global.updateHud?.(); return; }
 
-    proceedNextWeek();
+    await proceedNextWeek();
   }
   global.postEvictionRouting=postEvictionRouting;
 
-  function proceedNextWeek(){
+  async function proceedNextWeek(){
     const g=global.game;
     
     // Clear all badges at the start of a new week (Issue: tag reset)
@@ -1694,7 +1694,8 @@
     }
 
     global.tv.say(`Week ${g.week} — Intermission`);
-    global.setPhase('intermission',4,()=>global.startHOH?.());
+    // IMPORTANT: Await setPhase to ensure self-eviction completes before HOH starts
+    await global.setPhase('intermission',4,()=>global.startHOH?.());
     global.updateHud?.();
   }
   global.proceedNextWeek=proceedNextWeek;

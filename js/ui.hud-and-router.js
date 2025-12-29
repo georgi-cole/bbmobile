@@ -2034,7 +2034,7 @@ header.innerHTML = `
   // Phase token cancellation system
   if(!g.currentPhaseToken) g.currentPhaseToken = 0;
   
-  function setPhase(phase, seconds, onTimeout){
+  async function setPhase(phase, seconds, onTimeout){
     const game=g.game; if(!game) return;
     
     // Guard: Block phase changes while game is paused
@@ -2146,7 +2146,10 @@ header.innerHTML = `
     try{
       if(!g.__twistsInitDone){ g.twists?.init?.(); g.__twistsInitDone = true; }
       g.twists?.onPhaseChange?.(phase);
-      if(phase === 'intermission'){ g.twists?.decideForWeek?.(); }
+      // IMPORTANT: Await decideForWeek during intermission to ensure self-eviction completes first
+      if(phase === 'intermission'){ 
+        await g.twists?.decideForWeek?.(); 
+      }
       if(phase === 'nominations'){ 
         g.twists?.prepareNominations?.(); 
         

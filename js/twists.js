@@ -212,7 +212,7 @@
     return null;
   }
 
-  function decideForWeek(){
+  async function decideForWeek(){
     const g=global.game; if(!g) return;
     if(g.__twistDecidedWeek===g.week) return;
 
@@ -226,7 +226,9 @@
     // Reset badge flag to prevent badge from appearing before announcement modal
     g.__twistBadgeShown=false;
 
-    tryMaybeAutoSelfEvict();
+    // IMPORTANT: Await self-eviction to complete BEFORE proceeding with week logic
+    // This ensures the self-eviction card, animation, and cleanup happen before the new week modal
+    await tryMaybeAutoSelfEvict();
 
     // Use centralized twist selection logic
     const twist = pickWeeklyTwist(g);
@@ -779,7 +781,7 @@
   global.renderReturnTwistPanel=renderReturnTwistPanel;
   global.__showJurorReturnResult=showJurorReturnResult;
 
-  function tryMaybeAutoSelfEvict(){
+  async function tryMaybeAutoSelfEvict(){
     const g=global.game; if(!g) return;
     const alive=ap();
     if(alive.length<=3) return;
@@ -795,15 +797,28 @@
     console.info(`[twists] Auto self-eviction triggered (${pct}%): ${victim.name}`);
     
     // Use centralized handler for AI self-eviction with modal
+    // IMPORTANT: Await completion to ensure self-eviction finishes before week transition
     if(typeof global.selfEviction?.handle === 'function'){
-      try{ global.selfEviction.handle(victim.id, 'ai'); }catch(e){
+      try{ 
+        await global.selfEviction.handle(victim.id, 'ai');
+        
+        // Additional wait to ensure all card animations complete
+        if(typeof global.cardQueueWaitIdle === 'function'){
+          await global.cardQueueWaitIdle();
+        }
+      }catch(e){
         console.error('[twists] Error in centralized self-eviction:', e);
       }
     } else {
       // Fallback to legacy handler
       global.addLog?.(`Auto self-eviction (${pct}%): ${victim.name}.`,'warn');
       try{ 
-        global.handleSelfEviction?.(victim.id,'self'); 
+        await global.handleSelfEviction?.(victim.id,'self');
+        
+        // Additional wait to ensure all card animations complete
+        if(typeof global.cardQueueWaitIdle === 'function'){
+          await global.cardQueueWaitIdle();
+        }
       }catch(e){
         console.error('[twists] Error in legacy self-eviction handler:', e);
       }

@@ -133,9 +133,11 @@
       });
 
       // Show modal for AI random events
+      // NOTE: This card will be shown BEFORE the eviction visual animation
+      // Use a custom title with emoji to make it stand out
       if(origin === 'ai' && typeof global.showCard === 'function'){
         global.showCard(
-          'Breaking News',
+          'I\'ve had it 😤',
           [`${player.name} has decided to self-evict from the Big Brother house.`],
           'warn',
           4000,
@@ -239,7 +241,7 @@
         );
       }
       
-      endWeekAndProceed();
+      await endWeekAndProceed();
       return true;
     } else if(context.duringVeto){
       // During veto ceremony: process eviction and continue week
@@ -291,7 +293,7 @@
     }
     
     // Week ends, proceed to next week
-    endWeekAndProceed();
+    await endWeekAndProceed();
     
     return true;
   }
@@ -576,7 +578,7 @@
   /**
    * End the week and proceed to next week or endgame
    */
-  function endWeekAndProceed(){
+  async function endWeekAndProceed(){
     const g = global.game;
     
     // Clear all role-related state
@@ -584,9 +586,9 @@
     
     // Use existing postEvictionRouting if available
     if(typeof global.postEvictionRouting === 'function'){
-      global.postEvictionRouting();
+      await global.postEvictionRouting();
     } else if(typeof global.proceedNextWeek === 'function'){
-      global.proceedNextWeek();
+      await global.proceedNextWeek();
     } else {
       // Fallback: manual advance
       if(Array.isArray(g.players)){
