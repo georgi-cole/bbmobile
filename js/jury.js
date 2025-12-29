@@ -521,6 +521,16 @@
     }catch(e){
       console.warn('[finale] failed to emit players:update event', e);
     }
+    
+    // Force mobile roster refresh to ensure winner/runner-up badges are displayed
+    try{
+      if(g.MobileRoster && typeof g.MobileRoster.refresh === 'function'){
+        g.MobileRoster.refresh();
+        console.info('[finale] mobile roster refreshed for badge update');
+      }
+    }catch(e){
+      console.warn('[finale] failed to refresh mobile roster', e);
+    }
   }
 
   // Helper to hide and remove the faceoff graph with fade animation
