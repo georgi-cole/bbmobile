@@ -564,7 +564,13 @@
     return box;
   }
   
-  // NEW: Render human voting UI inside fullscreen overlay with horizontal layout
+  /**
+   * Render human voting UI inside fullscreen overlay with horizontal layout
+   * @param {HTMLElement} overlay - Required fullscreen overlay element to render UI inside
+   * @param {*} A - First finalist ID
+   * @param {*} B - Second finalist ID
+   * @returns {HTMLElement|null} The voting container element, or null if overlay is not provided
+   */
   function renderHumanJuryUIInOverlay(overlay, A, B){
     if(!overlay) {
       console.error('[jury] Cannot render voting UI: overlay element is required');
@@ -639,6 +645,7 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
       `;
       avatar.onerror = function() {
+        console.warn('[jury] Avatar fallback for finalist:', safeName(finalistId));
         this.onerror = null;
         this.src = getAvatarFallback(safeName(finalistId));
       };
@@ -756,7 +763,13 @@
     });
   }
   
-  // NEW: Wait for human jury vote inside overlay
+  /**
+   * Wait for human jury vote inside fullscreen overlay
+   * @param {HTMLElement} overlay - Required fullscreen overlay element containing the voting UI
+   * @param {*} A - First finalist ID
+   * @param {*} B - Second finalist ID
+   * @returns {Promise<*|null>} Promise that resolves to the selected finalist ID, or null if UI rendering fails
+   */
   function waitForHumanJuryVoteInOverlay(overlay, A, B){
     return new Promise(resolve=>{
       if (!overlay) {
