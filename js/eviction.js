@@ -8,6 +8,9 @@
 (function(global){
   const JURY_START_AT=9;
   
+  // Game Over modal timing constant
+  const GAME_OVER_MODAL_DELAY = 1500; // ms - delay before showing Game Over modal after eviction animation
+  
   // Tie-break timeout: maximum time to wait for human HOH to break a tie
   // After this timeout, the tie is auto-resolved using HOH affinity
   const TIE_BREAK_TIMEOUT_MS = 15000; // 15 seconds
@@ -1499,7 +1502,7 @@
       
       setTimeout(async () => {
         await global.GameOverModal.show(modalData);
-      }, 1500);
+      }, GAME_OVER_MODAL_DELAY);
     }
 
     postEvictionRouting();
@@ -1583,7 +1586,7 @@
             placement: playersLeftWhenEvicted,
             jurySize: jurySize
           });
-        }, 1500);
+        }, GAME_OVER_MODAL_DELAY);
       }
     }
 
