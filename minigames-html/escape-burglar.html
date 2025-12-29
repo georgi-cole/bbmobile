@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Escape the Burglar — Grid Puzzle</title>
+<style>
+  :root{--bg:#071021;--card:#0d1a2b;--muted:#9fb3c8;--accent:#70d2a8;--danger:#ff6b6b;--player:#ffd700;--burglar:#ff6b6b;--exit:#70d2a8}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,var(--bg),#03101a);color:#e6f6f1;touch-action:manipulation}
+  .wrap{max-width:760px;margin:0 auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+  header{display:flex;justify-content:space-between;align-items:center}
+  h1{font-size:1.1rem;margin:0}
+  .hud{display:flex;gap:10px;align-items:center;color:var(--muted);font-weight:600;font-size:13px}
+  .card{background:linear-gradient(180deg,var(--card),#071826);border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+  .grid-container{display:flex;justify-content:center;align-items:center;padding:12px}
+  .grid{display:grid;gap:2px;background:#000;padding:2px;border-radius:8px;touch-action:none}
+  .cell{width:40px;height:40px;background:#1a2332;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:20px;user-select:none}
+  .cell.player{background:var(--player);color:#000}
+  .cell.burglar{background:var(--burglar);color:#fff}
+  .cell.exit{background:var(--exit);color:#000}
+  .cell.wall{background:#333}
+  .controls{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .control-btn{padding:12px 20px;border-radius:8px;background:rgba(255,255,255,0.08);color:#e6f6f1;border:0;cursor:pointer;font-size:16px;font-weight:600;min-width:60px}
+  .control-btn:active{background:rgba(255,255,255,0.15)}
+  .btn{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04);color:#e6f6f1;border:0;cursor:pointer;font-size:14px}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),#53b08a);color:#012218;font-weight:700}
+  .instructions{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:999;background:linear-gradient(180deg,rgba(1,6,10,0.8),rgba(1,6,10,0.95));padding:20px}
+  .inst-box{max-width:640px;background:linear-gradient(180deg,#071826,#021219);padding:18px;border-radius:14px}
+  .countdown{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:900;color:#fff;pointer-events:none;z-index:998}
+  .end-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999;background:linear-gradient(180deg,rgba(0,0,0,0.6),rgba(0,0,0,0.85));flex-direction:column;gap:12px}
+  .small-muted{color:var(--muted);font-size:13px}
+  @media (max-width:420px){
+    .inst-box{padding:14px}
+    .cell{width:32px;height:32px;font-size:16px}
+    .control-btn{padding:10px 16px;font-size:14px;min-width:50px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Escape the Burglar</h1>
+    <div class="hud">
+      <span id="moves">Moves: 0</span>
+      <span id="score">Score: 0</span>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="small-muted" style="text-align:center;margin-bottom:8px">
+      Reach the exit (🚪) before the burglar (🔴) catches you!
+    </div>
+    <div class="grid-container">
+      <div class="grid" id="gameGrid"></div>
+    </div>
+  </div>
+
+  <div class="card controls">
+    <button class="control-btn" id="btnUp">↑</button>
+  </div>
+  <div class="card controls" style="gap:12px">
+    <button class="control-btn" id="btnLeft">←</button>
+    <button class="control-btn" id="btnRight">→</button>
+  </div>
+  <div class="card controls">
+    <button class="control-btn" id="btnDown">↓</button>
+  </div>
+
+  <div class="card" style="text-align:center">
+    <div class="small-muted">Swipe on grid or use buttons to move</div>
+  </div>
+</div>
+
+<!-- Instructions overlay -->
+<div class="instructions" id="instructions">
+  <div class="inst-box">
+    <h3 style="margin-top:0">Escape the Burglar — Grid Puzzle</h3>
+    <p class="small-muted">You (🔵) must reach the exit (🚪) before the burglar(s) (🔴) catch you. Each move you make, burglars move one step closer using greedy pathfinding. Avoid walls (⬛). Complete more levels to face tougher challenges with larger grids and more burglars!</p>
+    <p class="small-muted">Mobile-first: swipe on the grid or tap arrow buttons. No external assets.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn primary" id="startBtn">Start</button>
+    </div>
+  </div>
+</div>
+
+<div class="countdown" id="countdown" style="display:none"></div>
+
+<script>
+(() => {
+  // difficulty ramp: stored in localStorage
+  let currentLevel = 0;
+  let gridSize = 6; // starts at 6x6
+  let burglarCount = 1;
+  let score = 0;
+  let moves = 0;
+  let gameStarted = false;
+
+  let playerPos = { x: 0, y: 0 };
+  let exitPos = { x: 0, y: 0 };
+  let burglars = []; // [{x, y}]
+  let walls = []; // [{x, y}]
+
+  const instructionsEl = document.getElementById('instructions');
+  const startBtn = document.getElementById('startBtn');
+  const countdownEl = document.getElementById('countdown');
+  const gameGrid = document.getElementById('gameGrid');
+  const movesEl = document.getElementById('moves');
+  const scoreEl = document.getElementById('score');
+  const btnUp = document.getElementById('btnUp');
+  const btnDown = document.getElementById('btnDown');
+  const btnLeft = document.getElementById('btnLeft');
+  const btnRight = document.getElementById('btnRight');
+
+  startBtn.addEventListener('click', () => {
+    instructionsEl.style.display = 'none';
+    showCountdown(() => {
+      startGame();
+    });
+  });
+
+  function showCountdown(callback) {
+    countdownEl.style.display = 'flex';
+    let count = 3;
+    countdownEl.textContent = count;
+    const interval = setInterval(() => {
+      count--;
+      if (count === 0) {
+        countdownEl.textContent = 'GO!';
+      } else if (count < 0) {
+        clearInterval(interval);
+        countdownEl.style.display = 'none';
+        callback();
+      } else {
+        countdownEl.textContent = count;
+      }
+    }, 1000);
+  }
+
+  function startGame() {
+    gameStarted = true;
+    score = 0;
+    moves = 0;
+
+    // load progress
+    try {
+      const stored = localStorage.getItem('escapeBurglar_level');
+      if (stored) currentLevel = parseInt(stored, 10) || 0;
+    } catch (e) {}
+
+    // difficulty ramp
+    gridSize = 6 + Math.floor(currentLevel / 3); // +1 size every 3 levels
+    if (gridSize > 10) gridSize = 10;
+    burglarCount = 1 + Math.floor(currentLevel / 5); // +1 burglar every 5 levels
+    if (burglarCount > 4) burglarCount = 4;
+
+    generateLevel();
+    renderGrid();
+    updateHUD();
+  }
+
+  function generateLevel() {
+    // place player in top-left
+    playerPos = { x: 0, y: 0 };
+    // place exit in bottom-right
+    exitPos = { x: gridSize - 1, y: gridSize - 1 };
+    // place burglars randomly (not on player or exit)
+    burglars = [];
+    for (let i = 0; i < burglarCount; i++) {
+      let bx, by;
+      do {
+        bx = Math.floor(Math.random() * gridSize);
+        by = Math.floor(Math.random() * gridSize);
+      } while ((bx === playerPos.x && by === playerPos.y) || (bx === exitPos.x && by === exitPos.y) || burglars.some(b => b.x === bx && b.y === by));
+      burglars.push({ x: bx, y: by });
+    }
+    // place random walls (10% of grid)
+    walls = [];
+    const wallCount = Math.floor(gridSize * gridSize * 0.1);
+    for (let i = 0; i < wallCount; i++) {
+      let wx, wy;
+      do {
+        wx = Math.floor(Math.random() * gridSize);
+        wy = Math.floor(Math.random() * gridSize);
+      } while ((wx === playerPos.x && wy === playerPos.y) || (wx === exitPos.x && wy === exitPos.y) || burglars.some(b => b.x === wx && b.y === wy) || walls.some(w => w.x === wx && w.y === wy));
+      walls.push({ x: wx, y: wy });
+    }
+  }
+
+  function renderGrid() {
+    gameGrid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+    gameGrid.innerHTML = '';
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.x = x;
+        cell.dataset.y = y;
+
+        if (x === playerPos.x && y === playerPos.y) {
+          cell.classList.add('player');
+          cell.textContent = '🔵';
+        } else if (x === exitPos.x && y === exitPos.y) {
+          cell.classList.add('exit');
+          cell.textContent = '🚪';
+        } else if (burglars.some(b => b.x === x && b.y === y)) {
+          cell.classList.add('burglar');
+          cell.textContent = '🔴';
+        } else if (walls.some(w => w.x === x && w.y === y)) {
+          cell.classList.add('wall');
+          cell.textContent = '⬛';
+        }
+
+        gameGrid.appendChild(cell);
+      }
+    }
+  }
+
+  function movePlayer(dx, dy) {
+    if (!gameStarted) return;
+    const newX = playerPos.x + dx;
+    const newY = playerPos.y + dy;
+    if (newX < 0 || newX >= gridSize || newY < 0 || newY >= gridSize) return;
+    if (walls.some(w => w.x === newX && w.y === newY)) return; // can't move into wall
+
+    playerPos.x = newX;
+    playerPos.y = newY;
+    moves++;
+
+    // check win
+    if (playerPos.x === exitPos.x && playerPos.y === exitPos.y) {
+      score += 100 - moves;
+      endGame(true, 'You escaped!');
+      return;
+    }
+
+    // move burglars (greedy pathfinding)
+    moveBurglars();
+
+    // check lose
+    if (burglars.some(b => b.x === playerPos.x && b.y === playerPos.y)) {
+      endGame(false, 'Caught by burglar!');
+      return;
+    }
+
+    renderGrid();
+    updateHUD();
+  }
+
+  function moveBurglars() {
+    burglars.forEach(burglar => {
+      // greedy: move closer to player on x or y
+      const dx = playerPos.x - burglar.x;
+      const dy = playerPos.y - burglar.y;
+      let moveX = 0, moveY = 0;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        moveX = dx > 0 ? 1 : -1;
+      } else if (dy !== 0) {
+        moveY = dy > 0 ? 1 : -1;
+      } else if (dx !== 0) {
+        moveX = dx > 0 ? 1 : -1;
+      }
+      const newX = burglar.x + moveX;
+      const newY = burglar.y + moveY;
+      // check bounds and walls
+      if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize && !walls.some(w => w.x === newX && w.y === newY)) {
+        burglar.x = newX;
+        burglar.y = newY;
+      }
+    });
+  }
+
+  function updateHUD() {
+    movesEl.textContent = `Moves: ${moves}`;
+    scoreEl.textContent = `Score: ${score}`;
+  }
+
+  btnUp.addEventListener('click', () => movePlayer(0, -1));
+  btnDown.addEventListener('click', () => movePlayer(0, 1));
+  btnLeft.addEventListener('click', () => movePlayer(-1, 0));
+  btnRight.addEventListener('click', () => movePlayer(1, 0));
+
+  // swipe support
+  let touchStartX = 0, touchStartY = 0;
+  gameGrid.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  gameGrid.addEventListener('touchend', e => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const dx = touchEndX - touchStartX;
+    const dy = touchEndY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > 30) movePlayer(dx > 0 ? 1 : -1, 0);
+    } else {
+      if (Math.abs(dy) > 30) movePlayer(0, dy > 0 ? 1 : -1);
+    }
+  }, { passive: true });
+
+  // keyboard support
+  document.addEventListener('keydown', e => {
+    if (!gameStarted) return;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') movePlayer(0, -1);
+    else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') movePlayer(0, 1);
+    else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') movePlayer(-1, 0);
+    else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') movePlayer(1, 0);
+  });
+
+  function endGame(won, message) {
+    gameStarted = false;
+
+    if (won) {
+      currentLevel++;
+      try {
+        localStorage.setItem('escapeBurglar_level', currentLevel.toString());
+      } catch (e) {}
+    }
+
+    const result = {
+      score: Math.max(0, score),
+      won,
+      moves,
+      level: currentLevel
+    };
+    window.minigameResult = result;
+    window.dispatchEvent(new CustomEvent('minigame:end', { detail: result }));
+
+    const endScreen = document.createElement('div');
+    endScreen.className = 'end-screen';
+    endScreen.innerHTML = `
+      <div class="card" style="padding:24px;text-align:center">
+        <h2 style="margin:0 0 12px">${won ? '✓ Escaped!' : '✗ Caught!'}</h2>
+        <p class="small-muted">${message}</p>
+        <p style="font-size:1.5rem;margin:8px 0">Score: ${Math.max(0, score)}</p>
+        <p class="small-muted">Moves: ${moves} | Level: ${currentLevel}</p>
+        <button class="btn primary" id="replayBtnEnd">Play Again</button>
+      </div>
+    `;
+    document.body.appendChild(endScreen);
+
+    document.getElementById('replayBtnEnd').addEventListener('click', () => {
+      document.body.removeChild(endScreen);
+      location.reload();
+    });
+  }
+})();
+</script>
+</body>
+</html>

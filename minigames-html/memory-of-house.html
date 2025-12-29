@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Memory of the House — Visual Memory Challenge</title>
+<style>
+  :root{--bg:#071021;--card:#0d1a2b;--muted:#9fb3c8;--accent:#70d2a8;--danger:#ff6b6b}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,var(--bg),#03101a);color:#e6f6f1}
+  .wrap{max-width:760px;margin:0 auto;padding:18px;display:flex;flex-direction:column;gap:12px;height:calc(100vh - 36px)}
+  header{display:flex;justify-content:space-between;align-items:center}
+  h1{font-size:1.1rem;margin:0}
+  .hud{display:flex;gap:10px;align-items:center;color:var(--muted);font-weight:600;font-size:13px}
+  .card{background:linear-gradient(180deg,var(--card),#071826);border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+  canvas{width:100%;max-width:600px;height:auto;border-radius:8px;margin:0 auto;display:block}
+  .question{margin-top:12px}
+  .choices{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .choice-btn{padding:12px;border-radius:8px;background:rgba(255,255,255,0.04);color:#e6f6f1;border:0;cursor:pointer;text-align:left;font-size:14px}
+  .choice-btn:hover{background:rgba(255,255,255,0.08)}
+  .choice-btn.correct{background:linear-gradient(90deg,rgba(112,210,168,0.3),rgba(83,176,138,0.2));color:#70d2a8}
+  .choice-btn.wrong{background:rgba(255,107,107,0.15);color:#ff6b6b}
+  .btn{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04);color:#e6f6f1;border:0;cursor:pointer;font-size:14px}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),#53b08a);color:#012218;font-weight:700}
+  .instructions{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:999;background:linear-gradient(180deg,rgba(1,6,10,0.8),rgba(1,6,10,0.95));padding:20px}
+  .inst-box{max-width:640px;background:linear-gradient(180deg,#071826,#021219);padding:18px;border-radius:14px}
+  .countdown{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:900;color:#fff;pointer-events:none;z-index:998}
+  .end-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999;background:linear-gradient(180deg,rgba(0,0,0,0.6),rgba(0,0,0,0.85));flex-direction:column;gap:12px}
+  .small-muted{color:var(--muted);font-size:13px}
+  .phase-indicator{text-align:center;margin:8px 0;font-weight:600;color:var(--accent)}
+  @media (max-width:420px){
+    .inst-box{padding:14px}
+    .wrap{padding:12px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Memory of the House</h1>
+    <div class="hud">
+      <span id="time">Time: 12.0s</span>
+      <span id="score">Score: 0</span>
+    </div>
+  </header>
+
+  <div class="card" id="sceneCard">
+    <div class="phase-indicator" id="phaseIndicator">Memorize the scene...</div>
+    <canvas id="sceneCanvas" width="600" height="400"></canvas>
+  </div>
+
+  <div class="card" id="questionCard" style="display:none">
+    <div class="question">
+      <div class="small-muted" id="questionNum">Question 1/5</div>
+      <p id="questionText" style="margin:8px 0;font-weight:600"></p>
+    </div>
+    <div class="choices" id="choicesWrap"></div>
+  </div>
+</div>
+
+<!-- Instructions overlay -->
+<div class="instructions" id="instructions">
+  <div class="inst-box">
+    <h3 style="margin-top:0">Memory of the House — Visual Memory</h3>
+    <p class="small-muted">Study a randomized scene for 12 seconds. Then answer 5 multiple-choice questions about what you saw. Each correct answer earns points. No hints, no retries—just your memory!</p>
+    <p class="small-muted">Mobile-first design. Offline-ready. No external assets.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn primary" id="startBtn">Start</button>
+    </div>
+  </div>
+</div>
+
+<div class="countdown" id="countdown" style="display:none"></div>
+
+<script>
+(() => {
+  // Scene generation templates
+  const OBJECTS = [
+    { name: 'Chair', colors: ['brown', 'black', 'gray', 'white'] },
+    { name: 'Table', colors: ['brown', 'white', 'gray', 'black'] },
+    { name: 'Lamp', colors: ['yellow', 'white', 'blue', 'red'] },
+    { name: 'Vase', colors: ['blue', 'red', 'green', 'purple'] },
+    { name: 'Clock', colors: ['gold', 'silver', 'black', 'white'] },
+    { name: 'Plant', colors: ['green', 'darkgreen', 'lightgreen'] },
+    { name: 'Book', colors: ['red', 'blue', 'brown', 'green'] },
+    { name: 'Candle', colors: ['white', 'red', 'yellow', 'purple'] }
+  ];
+
+  const POSITIONS = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+  const WALL_COLORS = ['#e6d5c3', '#c8d8e6', '#f0e6d2', '#d4e4d8', '#f5e8dc'];
+
+  let scene = null; // { wallColor, objects: [{name, color, position}] }
+  let questions = []; // [{question, choices: [str], correct: idx}]
+  let currentQuestionIdx = 0;
+  let score = 0;
+  let timeLeft = 12;
+  let timerInterval = null;
+  let gameStarted = false;
+  let viewingScene = true;
+
+  // UI refs
+  const instructionsEl = document.getElementById('instructions');
+  const startBtn = document.getElementById('startBtn');
+  const countdownEl = document.getElementById('countdown');
+  const sceneCard = document.getElementById('sceneCard');
+  const questionCard = document.getElementById('questionCard');
+  const canvas = document.getElementById('sceneCanvas');
+  const ctx = canvas.getContext('2d');
+  const phaseIndicator = document.getElementById('phaseIndicator');
+  const timeEl = document.getElementById('time');
+  const scoreEl = document.getElementById('score');
+  const questionNum = document.getElementById('questionNum');
+  const questionText = document.getElementById('questionText');
+  const choicesWrap = document.getElementById('choicesWrap');
+
+  startBtn.addEventListener('click', () => {
+    instructionsEl.style.display = 'none';
+    showCountdown(() => {
+      startGame();
+    });
+  });
+
+  function showCountdown(callback) {
+    countdownEl.style.display = 'flex';
+    let count = 3;
+    countdownEl.textContent = count;
+    const interval = setInterval(() => {
+      count--;
+      if (count === 0) {
+        countdownEl.textContent = 'GO!';
+      } else if (count < 0) {
+        clearInterval(interval);
+        countdownEl.style.display = 'none';
+        callback();
+      } else {
+        countdownEl.textContent = count;
+      }
+    }, 1000);
+  }
+
+  function startGame() {
+    gameStarted = true;
+    viewingScene = true;
+    score = 0;
+    timeLeft = 12;
+    currentQuestionIdx = 0;
+
+    generateScene();
+    renderScene();
+    generateQuestions();
+    updateHUD();
+    startViewTimer();
+  }
+
+  function generateScene() {
+    const wallColor = WALL_COLORS[Math.floor(Math.random() * WALL_COLORS.length)];
+    const objectCount = 4 + Math.floor(Math.random() * 3); // 4-6 objects
+    const usedPositions = [];
+    const objects = [];
+
+    for (let i = 0; i < objectCount; i++) {
+      const objTemplate = OBJECTS[Math.floor(Math.random() * OBJECTS.length)];
+      const color = objTemplate.colors[Math.floor(Math.random() * objTemplate.colors.length)];
+      let position = POSITIONS[Math.floor(Math.random() * POSITIONS.length)];
+      // avoid duplicate positions
+      let attempts = 0;
+      while (usedPositions.includes(position) && attempts < 10) {
+        position = POSITIONS[Math.floor(Math.random() * POSITIONS.length)];
+        attempts++;
+      }
+      usedPositions.push(position);
+      objects.push({ name: objTemplate.name, color, position });
+    }
+
+    scene = { wallColor, objects };
+  }
+
+  function renderScene() {
+    ctx.fillStyle = scene.wallColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // draw objects
+    scene.objects.forEach(obj => {
+      const pos = getPositionCoords(obj.position);
+      ctx.fillStyle = obj.color;
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+
+      // simple shapes
+      if (obj.name === 'Chair') {
+        ctx.fillRect(pos.x, pos.y, 60, 80);
+        ctx.strokeRect(pos.x, pos.y, 60, 80);
+        ctx.fillRect(pos.x, pos.y - 20, 60, 20);
+        ctx.strokeRect(pos.x, pos.y - 20, 60, 20);
+      } else if (obj.name === 'Table') {
+        ctx.fillRect(pos.x, pos.y, 80, 50);
+        ctx.strokeRect(pos.x, pos.y, 80, 50);
+      } else if (obj.name === 'Lamp') {
+        ctx.beginPath();
+        ctx.moveTo(pos.x + 20, pos.y);
+        ctx.lineTo(pos.x + 40, pos.y);
+        ctx.lineTo(pos.x + 35, pos.y + 40);
+        ctx.lineTo(pos.x + 25, pos.y + 40);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillRect(pos.x + 28, pos.y + 40, 4, 20);
+      } else if (obj.name === 'Vase') {
+        ctx.beginPath();
+        ctx.moveTo(pos.x + 20, pos.y);
+        ctx.lineTo(pos.x + 10, pos.y + 40);
+        ctx.lineTo(pos.x + 30, pos.y + 40);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (obj.name === 'Clock') {
+        ctx.beginPath();
+        ctx.arc(pos.x + 30, pos.y + 30, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(pos.x + 28, pos.y + 15, 4, 15);
+        ctx.fillRect(pos.x + 28, pos.y + 30, 12, 4);
+      } else if (obj.name === 'Plant') {
+        ctx.fillRect(pos.x + 15, pos.y + 30, 30, 20);
+        ctx.beginPath();
+        ctx.arc(pos.x + 30, pos.y + 15, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (obj.name === 'Book') {
+        ctx.fillRect(pos.x, pos.y, 40, 60);
+        ctx.strokeRect(pos.x, pos.y, 40, 60);
+      } else if (obj.name === 'Candle') {
+        ctx.fillRect(pos.x + 10, pos.y, 20, 40);
+        ctx.strokeRect(pos.x + 10, pos.y, 20, 40);
+        ctx.fillStyle = 'orange';
+        ctx.beginPath();
+        ctx.moveTo(pos.x + 20, pos.y - 10);
+        ctx.lineTo(pos.x + 15, pos.y);
+        ctx.lineTo(pos.x + 25, pos.y);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // label
+      ctx.fillStyle = '#000';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(obj.name, pos.x, pos.y - 5);
+    });
+  }
+
+  function getPositionCoords(position) {
+    const w = canvas.width;
+    const h = canvas.height;
+    switch (position) {
+      case 'top-left': return { x: 30, y: 30 };
+      case 'top-right': return { x: w - 130, y: 30 };
+      case 'bottom-left': return { x: 30, y: h - 130 };
+      case 'bottom-right': return { x: w - 130, y: h - 130 };
+      case 'center': return { x: w / 2 - 40, y: h / 2 - 40 };
+      default: return { x: 100, y: 100 };
+    }
+  }
+
+  function generateQuestions() {
+    questions = [];
+    const objects = scene.objects;
+    const objCount = objects.length;
+
+    // Q1: What color was the wall?
+    const wrongWalls = WALL_COLORS.filter(c => c !== scene.wallColor);
+    questions.push({
+      question: 'What color was the wall?',
+      choices: shuffleArray([scene.wallColor, ...wrongWalls.slice(0, 3)]),
+      correct: scene.wallColor
+    });
+
+    // Q2: How many objects were in the scene?
+    const wrongCounts = [objCount - 1, objCount + 1, objCount + 2].filter(c => c > 0 && c <= 10);
+    questions.push({
+      question: 'How many objects were in the scene?',
+      choices: shuffleArray([objCount.toString(), ...wrongCounts.map(c => c.toString())].slice(0, 4)),
+      correct: objCount.toString()
+    });
+
+    // Q3: What was in the top-left?
+    const topLeft = objects.find(o => o.position === 'top-left');
+    if (topLeft) {
+      const wrongObjs = objects.filter(o => o.position !== 'top-left').slice(0, 3);
+      questions.push({
+        question: 'What object was in the top-left corner?',
+        choices: shuffleArray([topLeft.name, ...wrongObjs.map(o => o.name)]),
+        correct: topLeft.name
+      });
+    } else {
+      questions.push({
+        question: 'What object was in the top-left corner?',
+        choices: shuffleArray(['Nothing', ...objects.slice(0, 3).map(o => o.name)]),
+        correct: 'Nothing'
+      });
+    }
+
+    // Q4: What color was object X?
+    const randObj = objects[Math.floor(Math.random() * objects.length)];
+    const wrongColors = ['red', 'blue', 'green', 'yellow', 'purple', 'brown', 'black', 'white'].filter(c => c !== randObj.color);
+    questions.push({
+      question: `What color was the ${randObj.name}?`,
+      choices: shuffleArray([randObj.color, ...wrongColors.slice(0, 3)]),
+      correct: randObj.color
+    });
+
+    // Q5: Was there a [object]?
+    const allObjNames = OBJECTS.map(o => o.name);
+    const presentObjs = objects.map(o => o.name);
+    const absentObj = allObjNames.find(n => !presentObjs.includes(n)) || 'Mirror';
+    questions.push({
+      question: `Was there a ${absentObj} in the scene?`,
+      choices: shuffleArray(['Yes', 'No']),
+      correct: presentObjs.includes(absentObj) ? 'Yes' : 'No'
+    });
+  }
+
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function startViewTimer() {
+    phaseIndicator.textContent = 'Memorize the scene...';
+    timerInterval = setInterval(() => {
+      timeLeft -= 0.1;
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        transitionToQuestions();
+      }
+      updateHUD();
+    }, 100);
+  }
+
+  function transitionToQuestions() {
+    viewingScene = false;
+    sceneCard.style.display = 'none';
+    questionCard.style.display = 'block';
+    showQuestion(0);
+  }
+
+  function showQuestion(idx) {
+    if (idx >= questions.length) {
+      endGame();
+      return;
+    }
+    currentQuestionIdx = idx;
+    const q = questions[idx];
+    questionNum.textContent = `Question ${idx + 1}/5`;
+    questionText.textContent = q.question;
+    choicesWrap.innerHTML = '';
+    q.choices.forEach((choice, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = choice;
+      btn.addEventListener('click', () => {
+        handleAnswer(choice, btn);
+      });
+      choicesWrap.appendChild(btn);
+    });
+  }
+
+  function handleAnswer(chosen, btnEl) {
+    const q = questions[currentQuestionIdx];
+    const isCorrect = chosen === q.correct;
+    if (isCorrect) {
+      score += 100;
+      btnEl.classList.add('correct');
+    } else {
+      btnEl.classList.add('wrong');
+      // highlight correct
+      Array.from(choicesWrap.children).forEach(btn => {
+        if (btn.textContent === q.correct) btn.classList.add('correct');
+      });
+    }
+    updateHUD();
+    // disable all buttons
+    Array.from(choicesWrap.children).forEach(btn => btn.disabled = true);
+    setTimeout(() => {
+      showQuestion(currentQuestionIdx + 1);
+    }, 1500);
+  }
+
+  function updateHUD() {
+    if (viewingScene) {
+      timeEl.textContent = `Time: ${timeLeft.toFixed(1)}s`;
+    } else {
+      timeEl.textContent = `Q${currentQuestionIdx + 1}/5`;
+    }
+    scoreEl.textContent = `Score: ${score}`;
+  }
+
+  function endGame() {
+    gameStarted = false;
+
+    // difficulty ramp: increment progress
+    try {
+      const stored = localStorage.getItem('memoryOfHouse_progress');
+      let progressIndex = parseInt(stored, 10) || 0;
+      progressIndex = (progressIndex + 1) % 10;
+      localStorage.setItem('memoryOfHouse_progress', progressIndex.toString());
+    } catch (e) {}
+
+    const result = {
+      score: Math.max(0, score),
+      won: score >= 300,
+      questionsCorrect: Math.floor(score / 100)
+    };
+    window.minigameResult = result;
+    window.dispatchEvent(new CustomEvent('minigame:end', { detail: result }));
+
+    const endScreen = document.createElement('div');
+    endScreen.className = 'end-screen';
+    endScreen.innerHTML = `
+      <div class="card" style="padding:24px;text-align:center">
+        <h2 style="margin:0 0 12px">${result.won ? '✓ Great Memory!' : '✗ Try Again'}</h2>
+        <p style="font-size:1.5rem;margin:8px 0">Score: ${score}</p>
+        <p class="small-muted">Correct answers: ${result.questionsCorrect}/5</p>
+        <button class="btn primary" id="replayBtnEnd">Play Again</button>
+      </div>
+    `;
+    document.body.appendChild(endScreen);
+
+    document.getElementById('replayBtnEnd').addEventListener('click', () => {
+      document.body.removeChild(endScreen);
+      location.reload();
+    });
+  }
+})();
+</script>
+</body>
+</html>
