@@ -248,8 +248,9 @@
   // ===== LEGACY: Old panel tiles (DEPRECATED - no longer used) =====
   // These functions are kept for backward compatibility but are no-ops.
   // The fullscreen overlay system (FinalFaceoff) is now used exclusively.
+  // MIGRATION: Use FinalFaceoff.mount() in fullscreen mode instead.
   function renderJuryBallotsPanel(jurors, A, B){
-    console.warn('[jury] renderJuryBallotsPanel is deprecated and no longer renders UI');
+    console.warn('[jury] renderJuryBallotsPanel is deprecated - use FinalFaceoff fullscreen overlay instead');
     return; // No-op: fullscreen overlay handles all UI
   }
   function juryPanelOnBallot(jurorId, pickId){
@@ -364,8 +365,9 @@
   // ===== LEGACY: renderFinaleGraph (DEPRECATED) =====
   // This function is kept for backward compatibility but is a no-op.
   // The fullscreen overlay is now mounted directly in startFinaleRefactorFlow().
+  // MIGRATION: The overlay is created automatically - no manual render needed.
   function renderFinaleGraph(A, B, totalJurors){
-    console.warn('[jury] renderFinaleGraph is deprecated - overlay is mounted in startFinaleRefactorFlow()');
+    console.warn('[jury] renderFinaleGraph is deprecated - overlay auto-mounted in startFinaleRefactorFlow()');
     return; // No-op: overlay already mounted in main flow
   }
 

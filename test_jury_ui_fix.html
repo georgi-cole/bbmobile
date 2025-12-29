@@ -230,23 +230,43 @@
       onPublicFavorite: () => {}
     };
     
-    // Avatar resolution
+    // Avatar resolution with fallback
     window.getDicebearUrl = (seed) => `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
     window.resolveAvatar = (playerId) => {
       const player = window.getP(playerId);
       if (!player) return window.getDicebearUrl(String(playerId));
-      return `./avatars/${player.name}.png`;
+      // Use dicebear as primary since ./avatars/ may not exist in all environments
+      return window.getDicebearUrl(player.name || String(playerId));
     };
     window.getAvatarFallback = (name, failedUrl) => window.getDicebearUrl(name || 'player');
   </script>
   
-  <!-- Load jury modules -->
-  <script src="js/jury-viz.js"></script>
-  <script src="js/jury.js"></script>
+  <!-- Load jury modules with error handling -->
+  <script src="js/jury-viz.js" onerror="console.error('Failed to load jury-viz.js')"></script>
+  <script src="js/jury.js" onerror="console.error('Failed to load jury.js')"></script>
   
   <script>
+    // Wait for modules to load before enabling test controls
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check if required modules loaded
+      if (!window.FinalFaceoff || !window.startJuryVote) {
+        window.addJuryLog('ERROR: Required jury modules failed to load', 'jury');
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnStart').textContent = 'Modules Not Loaded';
+        return;
+      }
+      
+      window.addJuryLog('Modules loaded successfully', 'default');
+    });
+    
     // Test controls
     document.getElementById('btnStart').addEventListener('click', async () => {
+      // Verify modules are available
+      if (!window.startJuryVote) {
+        window.addJuryLog('ERROR: startJuryVote not available', 'jury');
+        return;
+      }
+      
       document.getElementById('log').innerHTML = '';
       window.addJuryLog('Starting jury vote flow...', 'jury');
       
