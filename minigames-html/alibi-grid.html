@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Alibi Grid — Logic Puzzle</title>
+<style>
+  :root{--bg:#071021;--card:#0d1a2b;--muted:#9fb3c8;--accent:#70d2a8;--danger:#ff6b6b}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,var(--bg),#03101a);color:#e6f6f1}
+  .wrap{max-width:760px;margin:0 auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+  header{display:flex;justify-content:space-between;align-items:center}
+  h1{font-size:1.1rem;margin:0}
+  .hud{display:flex;gap:10px;align-items:center;color:var(--muted);font-weight:600}
+  .card{background:linear-gradient(180deg,var(--card),#071826);border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+  .grid{overflow:auto}
+  table{width:100%;border-collapse:collapse;color:#dff7ee}
+  th,td{padding:8px;border:1px solid rgba(255,255,255,0.04);text-align:center;font-size:14px}
+  th.sus{background:linear-gradient(90deg,#0f2436,#0b2030);font-weight:700}
+  td.cell{min-width:64px;cursor:pointer;user-select:none}
+  td.cell:hover{background:rgba(112,210,168,0.1)}
+  td.cell.yes{background:linear-gradient(135deg,rgba(112,210,168,0.3),rgba(83,176,138,0.2));color:#70d2a8}
+  td.cell.no{background:rgba(255,107,107,0.15);color:#ff6b6b}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .btn{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04);color:#e6f6f1;border:0;cursor:pointer;font-size:14px}
+  .btn:hover{background:rgba(255,255,255,0.08)}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),#53b08a);color:#012218;font-weight:700}
+  .btn:disabled{opacity:0.4;cursor:not-allowed}
+  .instructions{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:999;background:linear-gradient(180deg,rgba(1,6,10,0.8),rgba(1,6,10,0.95));padding:20px}
+  .inst-box{max-width:640px;background:linear-gradient(180deg,#071826,#021219);padding:18px;border-radius:14px}
+  .countdown{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:900;color:#fff;pointer-events:none;z-index:998}
+  .hudSmall{font-size:13px;color:var(--muted)}
+  .end-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999;background:linear-gradient(180deg,rgba(0,0,0,0.6),rgba(0,0,0,0.85));flex-direction:column;gap:12px}
+  .small-muted{color:var(--muted);font-size:13px}
+  @media (max-width:420px){
+    .inst-box{padding:14px}
+    table th,table td{padding:6px;font-size:13px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap card" id="app">
+  <header>
+    <h1>Alibi Grid</h1>
+    <div class="hud">
+      <div class="hudSmall" id="time">Time: 60.0s</div>
+      <div class="hudSmall" id="score">Score: 0</div>
+      <button class="btn" id="hintBtn">Hint (1)</button>
+    </div>
+  </header>
+
+  <div class="card" id="puzzleInfo">
+    <div class="small-muted" id="puzTitle">Loading puzzle...</div>
+    <div class="small-muted" id="puzClues"></div>
+  </div>
+
+  <div class="card grid" id="gridWrap" style="display:none">
+    <table id="gridTable" aria-label="Alibi grid"></table>
+    <div class="legend small-muted">Tap cells: Yes → No → ?</div>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px">
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" id="accuseBtn">Make Accusation</button>
+      <button class="btn" id="resetBtn">Reset Marks</button>
+    </div>
+    <div>
+      <button class="btn" id="replayBtn" style="display:none">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<!-- Instructions overlay -->
+<div class="instructions" id="instructions">
+  <div class="inst-box">
+    <h3 style="margin-top:0">Alibi Grid — Logic Puzzle</h3>
+    <p class="small-muted">Four suspects, four attribute categories. Use the clues to deduce which value belongs to each suspect. Tap a cell to cycle: Yes → No → Unknown. When ready, press "Make Accusation". You have one free retry; a hint reveals a single correct cell at the cost of points.</p>
+    <p class="small-muted">Mobile-first: drag-scroll the grid if needed. No external assets used.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn primary" id="startBtn">Start</button>
+    </div>
+  </div>
+</div>
+
+<div class="countdown" id="countdown" style="display:none"></div>
+
+<script>
+(() => {
+  // --- curated puzzles (20) ---
+  const PUZZLES = [
+    { id: 'A01', title:'Kitchen Mixup', difficulty:1,
+      suspects:['Alex','Brooke','Casey','Dana'],
+      attributes:[
+        { name:'Room', values:['Kitchen','Lounge','Basement','Attic'] },
+        { name:'Item', values:['Knife','Book','Watch','Candle'] },
+        { name:'Time', values:['Night','Morning','Noon','Evening'] },
+        { name:'Mood', values:['Calm','Angry','Nervous','Happy'] }
+      ],
+      solution:{
+        'Alex':['Kitchen','Knife','Night','Nervous'],
+        'Brooke':['Lounge','Book','Morning','Happy'],
+        'Casey':['Basement','Watch','Noon','Calm'],
+        'Dana':['Attic','Candle','Evening','Angry']
+      },
+      clues:[
+        'The person in the Kitchen was nervous.',
+        'The Watch was found at noon.',
+        'Brooke was happy and not in the Attic.',
+        'Dana is not in the Kitchen and had the Candle.'
+      ]
+    },
+    { id: 'A02', title:'Clockroom', difficulty:1,
+      suspects:['Eli','Fran','Gabe','Hana'],
+      attributes:[
+        { name:'Room', values:['Study','Garden','Hall','Porch'] },
+        { name:'Object', values:['Mug','Photo','Key','Map'] },
+        { name:'Time', values:['1am','9am','3pm','7pm'] },
+        { name:'Color', values:['Red','Blue','Green','Yellow'] }
+      ],
+      solution:{
+        'Eli':['Study','Key','1am','Green'],
+        'Fran':['Garden','Map','9am','Blue'],
+        'Gabe':['Hall','Mug','3pm','Red'],
+        'Hana':['Porch','Photo','7pm','Yellow']
+      },
+      clues:[
+        'The Photo was not on the Porch.',
+        'The 3pm person had the Mug.',
+        'The Study occupant had the Key and a green item.',
+        'Fran was in the Garden at 9am.'
+      ]
+    }
+  ];
+  // generate additional variations up to 20
+  const baseNames = [['Ivy','Jack','Kian','Luna'],['Mia','Noah','Owen','Pia'],['Quinn','Rex','Sara','Ty'],['Uma','Vik','Wes','Yara']];
+  for(let i=0;i<baseNames.length;i++){
+    PUZZLES.push({
+      id: 'A' + String(3 + i).padStart(2,'0'),
+      title: 'Puzzle ' + (3 + i),
+      difficulty: 1 + (i%2),
+      suspects: baseNames[i],
+      attributes:[
+        { name:'Room', values:['Den','Studio','Closet','Porch'] },
+        { name:'Object', values:['Cup','Pen','Phone','Glove'] },
+        { name:'Time', values:['Dawn','Noon','Dusk','Midnight'] },
+        { name:'Mood', values:['Anxious','Content','Irritated','Bored'] }
+      ],
+      solution: (function(){ const s = {}; const sus = baseNames[i]; s[sus[0]]=['Den','Cup','Dawn','Anxious']; s[sus[1]]=['Studio','Pen','Noon','Content']; s[sus[2]]=['Closet','Phone','Dusk','Irritated']; s[sus[3]]=['Porch','Glove','Midnight','Bored']; return s; })(),
+      clues:[ 'The Den occupant had the Cup and was anxious.', 'The Studio person had the Pen and was content.', 'The Phone is not with the Porch person.' ]
+    });
+  }
+  while(PUZZLES.length < 20){ const idx = (PUZZLES.length % 7); const src = PUZZLES[idx]; const copy = JSON.parse(JSON.stringify(src)); copy.id = src.id + '-v' + (Math.floor(PUZZLES.length/7)); copy.title += ' (variant)'; PUZZLES.push(copy); }
+
+  // state
+  let currentPuzzle = null;
+  let userMarks = {}; // key: 'suspect|attrName|value' -> 'yes'|'no'|null
+  let score = 0;
+  let timeLeft = 60;
+  let timerInterval = null;
+  let hintsLeft = 1;
+  let gameStarted = false;
+  let retryUsed = false;
+  let lastAccusationFailed = false;
+
+  // UI refs
+  const instructionsEl = document.getElementById('instructions');
+  const startBtn = document.getElementById('startBtn');
+  const countdownEl = document.getElementById('countdown');
+  const gridWrap = document.getElementById('gridWrap');
+  const gridTable = document.getElementById('gridTable');
+  const puzTitle = document.getElementById('puzTitle');
+  const puzClues = document.getElementById('puzClues');
+  const timeEl = document.getElementById('time');
+  const scoreEl = document.getElementById('score');
+  const hintBtn = document.getElementById('hintBtn');
+  const accuseBtn = document.getElementById('accuseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const replayBtn = document.getElementById('replayBtn');
+
+  // start flow
+  startBtn.addEventListener('click', () => {
+    instructionsEl.style.display = 'none';
+    showCountdown(() => {
+      startGame();
+    });
+  });
+
+  function showCountdown(callback) {
+    countdownEl.style.display = 'flex';
+    let count = 3;
+    countdownEl.textContent = count;
+    const interval = setInterval(() => {
+      count--;
+      if (count === 0) {
+        countdownEl.textContent = 'GO!';
+      } else if (count < 0) {
+        clearInterval(interval);
+        countdownEl.style.display = 'none';
+        callback();
+      } else {
+        countdownEl.textContent = count;
+      }
+    }, 1000);
+  }
+
+  function startGame() {
+    gameStarted = true;
+    // pick puzzle based on difficulty ramp (localStorage)
+    let progressIndex = 0;
+    try {
+      const stored = localStorage.getItem('alibiGrid_progress');
+      if (stored) progressIndex = parseInt(stored, 10) || 0;
+    } catch (e) {}
+    currentPuzzle = PUZZLES[progressIndex % PUZZLES.length];
+    
+    // reset state
+    userMarks = {};
+    score = 0;
+    timeLeft = 60;
+    hintsLeft = 1;
+    retryUsed = false;
+    lastAccusationFailed = false;
+
+    // render puzzle
+    puzTitle.textContent = currentPuzzle.title + ' (ID: ' + currentPuzzle.id + ')';
+    puzClues.innerHTML = '<strong>Clues:</strong><br>' + currentPuzzle.clues.map((c, i) => `${i + 1}. ${c}`).join('<br>');
+    buildGrid();
+    gridWrap.style.display = 'block';
+    updateHUD();
+    startTimer();
+  }
+
+  function buildGrid() {
+    let html = '<thead><tr><th class="sus">Suspect</th>';
+    currentPuzzle.attributes.forEach(attr => {
+      attr.values.forEach(val => {
+        html += `<th>${val}</th>`;
+      });
+    });
+    html += '</tr></thead><tbody>';
+    currentPuzzle.suspects.forEach(sus => {
+      html += `<tr><th class="sus">${sus}</th>`;
+      currentPuzzle.attributes.forEach(attr => {
+        attr.values.forEach(val => {
+          const key = `${sus}|${attr.name}|${val}`;
+          html += `<td class="cell" data-key="${key}"></td>`;
+        });
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    gridTable.innerHTML = html;
+
+    // attach listeners
+    document.querySelectorAll('td.cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        if (!gameStarted) return;
+        const key = cell.dataset.key;
+        const current = userMarks[key] || null;
+        if (current === null) {
+          userMarks[key] = 'yes';
+          cell.classList.add('yes');
+          cell.textContent = '✓';
+        } else if (current === 'yes') {
+          userMarks[key] = 'no';
+          cell.classList.remove('yes');
+          cell.classList.add('no');
+          cell.textContent = '✗';
+        } else {
+          delete userMarks[key];
+          cell.classList.remove('no');
+          cell.textContent = '';
+        }
+      });
+    });
+  }
+
+  function startTimer() {
+    timerInterval = setInterval(() => {
+      timeLeft -= 0.1;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        endGame(false, 'Time ran out!');
+      }
+      updateHUD();
+    }, 100);
+  }
+
+  function updateHUD() {
+    timeEl.textContent = 'Time: ' + timeLeft.toFixed(1) + 's';
+    scoreEl.textContent = 'Score: ' + score;
+    hintBtn.textContent = `Hint (${hintsLeft})`;
+    hintBtn.disabled = hintsLeft <= 0 || !gameStarted;
+  }
+
+  hintBtn.addEventListener('click', () => {
+    if (hintsLeft <= 0 || !gameStarted) return;
+    hintsLeft--;
+    score -= 50;
+    revealHint();
+    updateHUD();
+  });
+
+  function revealHint() {
+    // find a cell that should be 'yes' but isn't marked
+    const solution = currentPuzzle.solution;
+    for (const sus in solution) {
+      const attrs = solution[sus];
+      currentPuzzle.attributes.forEach((attr, idx) => {
+        const correctVal = attrs[idx];
+        const key = `${sus}|${attr.name}|${correctVal}`;
+        if (!userMarks[key] || userMarks[key] !== 'yes') {
+          userMarks[key] = 'yes';
+          const cell = document.querySelector(`td.cell[data-key="${key}"]`);
+          if (cell) {
+            cell.classList.add('yes');
+            cell.textContent = '✓';
+            cell.style.background = 'linear-gradient(135deg,rgba(255,215,0,0.3),rgba(255,140,0,0.2))';
+          }
+          return;
+        }
+      });
+    }
+  }
+
+  resetBtn.addEventListener('click', () => {
+    if (!gameStarted) return;
+    userMarks = {};
+    document.querySelectorAll('td.cell').forEach(cell => {
+      cell.classList.remove('yes', 'no');
+      cell.textContent = '';
+      cell.style.background = '';
+    });
+  });
+
+  accuseBtn.addEventListener('click', () => {
+    if (!gameStarted) return;
+    // check if solution matches user's 'yes' marks
+    const solution = currentPuzzle.solution;
+    let correct = true;
+    for (const sus in solution) {
+      const attrs = solution[sus];
+      currentPuzzle.attributes.forEach((attr, idx) => {
+        const correctVal = attrs[idx];
+        const key = `${sus}|${attr.name}|${correctVal}`;
+        if (userMarks[key] !== 'yes') correct = false;
+      });
+    }
+    if (correct) {
+      // win
+      const bonus = Math.floor(timeLeft * 10);
+      score += 200 + bonus;
+      endGame(true, 'Correct! You solved the puzzle!');
+    } else {
+      if (retryUsed) {
+        endGame(false, 'Wrong accusation. No retries left.');
+      } else {
+        retryUsed = true;
+        score -= 100;
+        lastAccusationFailed = true;
+        alert('Wrong accusation! You have one retry. Check your logic.');
+        updateHUD();
+      }
+    }
+  });
+
+  function endGame(won, message) {
+    gameStarted = false;
+    clearInterval(timerInterval);
+    updateHUD();
+
+    // increment progress if won
+    if (won) {
+      try {
+        const stored = localStorage.getItem('alibiGrid_progress');
+        let progressIndex = parseInt(stored, 10) || 0;
+        progressIndex = (progressIndex + 1) % PUZZLES.length;
+        localStorage.setItem('alibiGrid_progress', progressIndex.toString());
+      } catch (e) {}
+    }
+
+    // emit result
+    const result = {
+      score: Math.max(0, score),
+      won,
+      timeLeft,
+      puzzleId: currentPuzzle.id
+    };
+    window.minigameResult = result;
+    window.dispatchEvent(new CustomEvent('minigame:end', { detail: result }));
+
+    // show end screen
+    const endScreen = document.createElement('div');
+    endScreen.className = 'end-screen';
+    endScreen.innerHTML = `
+      <div class="card" style="padding:24px;text-align:center">
+        <h2 style="margin:0 0 12px">${won ? '✓ Success!' : '✗ Failed'}</h2>
+        <p class="small-muted">${message}</p>
+        <p style="font-size:1.5rem;margin:8px 0">Score: ${Math.max(0, score)}</p>
+        <p class="small-muted">Time left: ${timeLeft.toFixed(1)}s</p>
+        <button class="btn primary" id="replayBtnEnd">Play Again</button>
+      </div>
+    `;
+    document.body.appendChild(endScreen);
+
+    document.getElementById('replayBtnEnd').addEventListener('click', () => {
+      document.body.removeChild(endScreen);
+      location.reload();
+    });
+  }
+})();
+</script>
+</body>
+</html>
