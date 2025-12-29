@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jury UI Fix Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2rem;
+      color: #00e0cc;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    
+    #tv {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      min-height: 600px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    
+    #panel {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      min-height: 200px;
+    }
+    
+    .info {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .info h2 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      color: #00e0cc;
+    }
+    
+    .info ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .info li {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .info li:last-child {
+      border-bottom: none;
+    }
+    
+    #log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      color: #aaa;
+    }
+    
+    .log-entry.jury {
+      color: #00e0cc;
+      font-weight: 600;
+    }
+    
+    .log-entry.muted {
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎖️ Jury UI Fix Test 🎖️</h1>
+    
+    <div class="info">
+      <h2>Test Objectives</h2>
+      <ul>
+        <li>✅ Verify NO duplicate avatars appear below TV during user voting</li>
+        <li>✅ Verify NO vertical avatar cards appear below TV during jury reveal</li>
+        <li>✅ Verify juror messages appear in styled message area (not raw text)</li>
+        <li>✅ Verify winner celebration happens within modal</li>
+        <li>✅ Verify clean transition after modal closes</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button id="btnStart">Start Jury Vote Flow</button>
+      <button id="btnClear" class="secondary">Clear UI</button>
+      <button id="btnInspect" class="secondary">Inspect DOM</button>
+    </div>
+    
+    <div id="tv">
+      <div style="text-align: center; opacity: 0.5;">
+        <div style="font-size: 3rem;">📺</div>
+        <div style="margin-top: 12px;">Click "Start Jury Vote Flow" to begin</div>
+      </div>
+    </div>
+    
+    <div id="panel"></div>
+    
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // Minimal game state setup
+    window.game = {
+      players: [
+        { id: 1, name: 'Rae', evicted: false, juror: false },
+        { id: 2, name: 'Nova', evicted: false, juror: false },
+        { id: 3, name: 'Ash', evicted: true, juror: true, weekEvicted: 5, affinity: {1: 0.6, 2: 0.4} },
+        { id: 4, name: 'Jordan', evicted: true, juror: true, weekEvicted: 6, affinity: {1: 0.3, 2: 0.7} },
+        { id: 5, name: 'Sam', evicted: true, juror: true, weekEvicted: 7, affinity: {1: 0.5, 2: 0.5} },
+        { id: 6, name: 'Riley', evicted: true, juror: true, weekEvicted: 8, affinity: {1: 0.7, 2: 0.3} },
+        { id: 7, name: 'Casey', evicted: true, juror: true, weekEvicted: 9, affinity: {1: 0.4, 2: 0.6} }
+      ],
+      finalTwo: [1, 2],
+      juryHouse: [3, 4, 5, 6, 7],
+      humanId: null, // Set to 3 to test human voting
+      week: 10,
+      cfg: {
+        tJuryFinale: 42,
+        enablePublicFav: false // Disable for faster testing
+      }
+    };
+    
+    window.players = window.game.players;
+    window.rng = () => Math.random();
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    
+    // Logging functions
+    const logEntries = [];
+    window.addJuryLog = function(msg, type = 'default') {
+      logEntries.push({ msg, type, time: Date.now() });
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    };
+    
+    // Stub functions
+    window.setPhase = () => {};
+    window.tv = { say: () => {} };
+    window.showCard = async () => {};
+    window.cardQueueWaitIdle = async () => {};
+    window.showEventModal = async () => {};
+    window.setMusic = () => {};
+    window.victory = () => {};
+    window.showBigCard = () => {};
+    window.showFinaleCinematic = () => {};
+    window.updateHud = () => {};
+    window.flushAllCards = () => {};
+    window.bbGameBus = { emit: () => {} };
+    window.MobileRoster = { refresh: () => {} };
+    window.ProgressionEvents = {
+      onJuryVote: () => {},
+      onFinalWinner: () => {},
+      onPublicFavorite: () => {}
+    };
+    
+    // Avatar resolution with fallback
+    window.getDicebearUrl = (seed) => `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    window.resolveAvatar = (playerId) => {
+      const player = window.getP(playerId);
+      if (!player) return window.getDicebearUrl(String(playerId));
+      // Use dicebear as primary since ./avatars/ may not exist in all environments
+      return window.getDicebearUrl(player.name || String(playerId));
+    };
+    window.getAvatarFallback = (name, failedUrl) => window.getDicebearUrl(name || 'player');
+  </script>
+  
+  <!-- Load jury modules with error handling -->
+  <script src="js/jury-viz.js" onerror="console.error('Failed to load jury-viz.js')"></script>
+  <script src="js/jury.js" onerror="console.error('Failed to load jury.js')"></script>
+  
+  <script>
+    // Wait for modules to load before enabling test controls
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check if required modules loaded
+      if (!window.FinalFaceoff || !window.startJuryVote) {
+        window.addJuryLog('ERROR: Required jury modules failed to load', 'jury');
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnStart').textContent = 'Modules Not Loaded';
+        return;
+      }
+      
+      window.addJuryLog('Modules loaded successfully', 'default');
+    });
+    
+    // Test controls
+    document.getElementById('btnStart').addEventListener('click', async () => {
+      // Verify modules are available
+      if (!window.startJuryVote) {
+        window.addJuryLog('ERROR: startJuryVote not available', 'jury');
+        return;
+      }
+      
+      document.getElementById('log').innerHTML = '';
+      window.addJuryLog('Starting jury vote flow...', 'jury');
+      
+      // Clear TV
+      document.getElementById('tv').innerHTML = '';
+      document.getElementById('panel').innerHTML = '';
+      
+      try {
+        await window.startJuryVote();
+        window.addJuryLog('Jury vote flow completed!', 'jury');
+      } catch (e) {
+        window.addJuryLog('ERROR: ' + e.message, 'jury');
+        console.error('Jury vote error:', e);
+      }
+    });
+    
+    document.getElementById('btnClear').addEventListener('click', () => {
+      document.getElementById('tv').innerHTML = '<div style="text-align: center; opacity: 0.5;"><div style="font-size: 3rem;">📺</div><div style="margin-top: 12px;">Cleared</div></div>';
+      document.getElementById('panel').innerHTML = '';
+      document.getElementById('log').innerHTML = '';
+      
+      // Remove any overlays
+      document.querySelectorAll('.finale-fullscreen-overlay, .winner-celebration').forEach(el => el.remove());
+    });
+    
+    document.getElementById('btnInspect').addEventListener('click', () => {
+      window.addJuryLog('=== DOM INSPECTION ===', 'jury');
+      
+      // Check for duplicate elements
+      const overlays = document.querySelectorAll('.finale-fullscreen-overlay');
+      window.addJuryLog(`Fullscreen overlays: ${overlays.length}`, overlays.length > 1 ? 'jury' : 'default');
+      
+      const faceoffs = document.querySelectorAll('.finalFaceoff');
+      window.addJuryLog(`Faceoff containers: ${faceoffs.length}`, faceoffs.length > 1 ? 'jury' : 'default');
+      
+      const messageAreas = document.querySelectorAll('.fo-message-area');
+      window.addJuryLog(`Message areas: ${messageAreas.length}`, messageAreas.length > 1 ? 'jury' : 'default');
+      
+      // Check for old-style elements
+      const juryPanels = document.querySelectorAll('.juryPanelHost, .juryGrid');
+      window.addJuryLog(`Old jury panels: ${juryPanels.length}`, juryPanels.length > 0 ? 'jury' : 'default');
+      
+      const graphBoxes = document.querySelectorAll('#juryGraphBox, .final-graph, .jury-graph');
+      window.addJuryLog(`Old graph boxes: ${graphBoxes.length}`, graphBoxes.length > 0 ? 'jury' : 'default');
+      
+      // Check panel content
+      const panelContent = document.getElementById('panel').children.length;
+      window.addJuryLog(`Panel children: ${panelContent}`, panelContent > 0 ? 'jury' : 'default');
+      
+      // Check TV content (should be empty or have winner display)
+      const tvContent = document.getElementById('tv').children.length;
+      window.addJuryLog(`TV children: ${tvContent}`, 'default');
+      
+      window.addJuryLog('=== INSPECTION COMPLETE ===', 'jury');
+    });
+  </script>
+</body>
+</html>

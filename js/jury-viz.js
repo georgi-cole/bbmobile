@@ -127,8 +127,8 @@
   }
 
   .fo-avatar{
-    width: min(35vw, 350px);
-    height: min(35vw, 350px);
+    width: min(22vw, 180px);
+    height: min(22vw, 180px);
     object-fit: cover;
     border-radius: 16px;
     background: #111;
@@ -606,8 +606,8 @@
       gap: 12px;
     }
     .fo-avatar{
-      width: min(40vw, 150px);
-      height: min(40vw, 150px);
+      width: min(35vw, 140px);
+      height: min(35vw, 140px);
     }
     .fo-name{
       font-size: clamp(16px, 4vw, 24px);
