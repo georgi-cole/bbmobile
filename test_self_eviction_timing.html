@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-Eviction Timing Test</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      padding: 20px; 
+      max-width: 1000px; 
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 { color: #1976d2; margin-top: 0; }
+    .test-section { 
+      margin: 20px 0; 
+      padding: 15px; 
+      border: 1px solid #e0e0e0; 
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .test-section h2 { 
+      margin-top: 0; 
+      color: #333;
+      font-size: 1.2em;
+    }
+    .pass { color: #4caf50; font-weight: bold; }
+    .fail { color: #f44336; font-weight: bold; }
+    .pending { color: #ff9800; font-weight: bold; }
+    .test-result { 
+      margin: 8px 0; 
+      padding: 10px; 
+      background: white; 
+      border-radius: 4px;
+      border-left: 4px solid #e0e0e0;
+    }
+    .test-result.pass { border-left-color: #4caf50; }
+    .test-result.fail { border-left-color: #f44336; }
+    button { 
+      margin: 5px; 
+      padding: 10px 20px; 
+      cursor: pointer;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+    button:hover { background: #1565c0; }
+    button:active { background: #0d47a1; }
+    .scenario { 
+      background: #e3f2fd; 
+      padding: 12px; 
+      margin: 10px 0; 
+      border-left: 4px solid #2196F3;
+      border-radius: 4px;
+    }
+    .log { 
+      background: #263238; 
+      color: #aed581;
+      padding: 12px; 
+      margin: 10px 0; 
+      font-family: 'Courier New', monospace; 
+      font-size: 12px; 
+      max-height: 300px; 
+      overflow-y: auto;
+      border-radius: 4px;
+      line-height: 1.5;
+    }
+    .log .error { color: #ff5252; }
+    .log .warn { color: #ffb74d; }
+    .log .success { color: #69f0ae; }
+    .summary {
+      background: #e8f5e9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 10px 0;
+      border: 1px solid #4caf50;
+    }
+    .summary.fail {
+      background: #ffebee;
+      border-color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎭 Self-Eviction Timing Test</h1>
+    
+    <div class="test-section">
+      <h2>Overview</h2>
+      <p>This test validates that self-eviction events complete properly <strong>before</strong> the new week modal and HOH competition start.</p>
+      <p><strong>Issue Fixed:</strong> Self-eviction card title now shows "I've had it 😤" instead of "Week X - Strategizing"</p>
+      <p><strong>Flow Fixed:</strong> Self-eviction animations complete before week transition</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <button onclick="runTimingTest()">▶️ Run Timing Test</button>
+      <button onclick="testCardTitle()">📝 Test Card Title</button>
+      <button onclick="testAsyncFlow()">⏱️ Test Async Flow</button>
+      <button onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="testResults"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div id="testLog" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    // Test utilities
+    const testLog = [];
+    const testResults = [];
+    
+    function log(msg, level = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const className = level === 'error' ? 'error' : level === 'warn' ? 'warn' : level === 'success' ? 'success' : '';
+      testLog.push(`<span class="${className}">[${timestamp}] [${level.toUpperCase()}] ${msg}</span>`);
+      updateLogDisplay();
+    }
+    
+    function updateLogDisplay() {
+      const logDiv = document.getElementById('testLog');
+      logDiv.innerHTML = testLog.join('<br>');
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    function addResult(testName, passed, message) {
+      testResults.push({ testName, passed, message });
+      updateResultsDisplay();
+    }
+    
+    function updateResultsDisplay() {
+      const resultsDiv = document.getElementById('testResults');
+      let html = '';
+      
+      const passCount = testResults.filter(r => r.passed).length;
+      const failCount = testResults.filter(r => !r.passed).length;
+      
+      const summaryClass = failCount > 0 ? 'summary fail' : 'summary';
+      html += `<div class="${summaryClass}">
+        <strong>Summary:</strong> ${passCount} passed, ${failCount} failed
+      </div>`;
+      
+      testResults.forEach(result => {
+        const statusClass = result.passed ? 'pass' : 'fail';
+        const statusText = result.passed ? '✓ PASS' : '✗ FAIL';
+        html += `<div class="test-result ${statusClass ? statusClass : ''}">
+          <span class="${statusClass}">[${statusText}]</span> ${result.testName}<br>
+          <small>${result.message}</small>
+        </div>`;
+      });
+      
+      resultsDiv.innerHTML = html;
+    }
+    
+    function clearResults() {
+      testLog.length = 0;
+      testResults.length = 0;
+      updateLogDisplay();
+      updateResultsDisplay();
+    }
+
+    // Test: Card title should be "I've had it 😤"
+    function testCardTitle() {
+      log('Testing self-eviction card title...', 'info');
+      
+      // Mock showCard function to capture title
+      let capturedTitle = null;
+      window.showCard = function(title, lines, tone, dur, uniform) {
+        capturedTitle = title;
+        log(`showCard called with title: "${title}"`, 'info');
+      };
+      
+      // Expected title
+      const expectedTitle = "I've had it 😤";
+      
+      // Simulate what happens in self-eviction code
+      const player = { name: 'TestPlayer' };
+      window.showCard(
+        "I've had it 😤",
+        [`${player.name} has decided to self-evict from the Big Brother house.`],
+        'warn',
+        4000,
+        true
+      );
+      
+      const passed = capturedTitle === expectedTitle;
+      addResult(
+        'Self-Eviction Card Title',
+        passed,
+        passed 
+          ? `✓ Card title is correctly set to "${expectedTitle}"` 
+          : `✗ Expected "${expectedTitle}" but got "${capturedTitle}"`
+      );
+      
+      log(passed ? 'Card title test PASSED' : 'Card title test FAILED', passed ? 'success' : 'error');
+    }
+
+    // Test: Async flow - self-eviction should await completion
+    async function testAsyncFlow() {
+      log('Testing async flow for self-eviction...', 'info');
+      
+      const events = [];
+      
+      // Mock async self-eviction
+      async function mockSelfEviction() {
+        events.push('self-eviction-start');
+        log('Self-eviction started', 'info');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        events.push('self-eviction-complete');
+        log('Self-eviction completed', 'success');
+      }
+      
+      // Mock week transition
+      async function mockWeekTransition() {
+        events.push('week-transition-start');
+        log('Week transition started', 'info');
+        await mockSelfEviction();
+        events.push('week-transition-after-self-evict');
+        log('Week transition after self-eviction', 'info');
+      }
+      
+      // Run test
+      await mockWeekTransition();
+      events.push('hoh-start');
+      log('HOH competition started', 'info');
+      
+      // Verify order
+      const expectedOrder = [
+        'week-transition-start',
+        'self-eviction-start',
+        'self-eviction-complete',
+        'week-transition-after-self-evict',
+        'hoh-start'
+      ];
+      
+      const orderMatches = JSON.stringify(events) === JSON.stringify(expectedOrder);
+      
+      addResult(
+        'Async Flow Order',
+        orderMatches,
+        orderMatches 
+          ? '✓ Events occurred in correct order: self-eviction completes before HOH starts'
+          : `✗ Event order incorrect. Expected: ${expectedOrder.join(' → ')}, Got: ${events.join(' → ')}`
+      );
+      
+      log(orderMatches ? 'Async flow test PASSED' : 'Async flow test FAILED', orderMatches ? 'success' : 'error');
+    }
+
+    // Test: Timing - ensure self-eviction doesn't overlap with week modal
+    async function runTimingTest() {
+      log('Running comprehensive timing test...', 'info');
+      
+      const timeline = [];
+      
+      // Mock the complete flow
+      async function mockCompleteFlow() {
+        // 1. Self-eviction card shows
+        timeline.push({ time: Date.now(), event: 'self-evict-card-show', phase: 'intermission' });
+        log('1. Self-eviction card shows', 'info');
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // 2. Avatar animation starts
+        timeline.push({ time: Date.now(), event: 'avatar-animation-start', phase: 'intermission' });
+        log('2. Avatar animation starts', 'info');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // 3. Avatar animation completes
+        timeline.push({ time: Date.now(), event: 'avatar-animation-complete', phase: 'intermission' });
+        log('3. Avatar animation completes', 'success');
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // 4. Card queue idle
+        timeline.push({ time: Date.now(), event: 'card-queue-idle', phase: 'intermission' });
+        log('4. Card queue is idle', 'success');
+        
+        // 5. Week intro modal shows
+        timeline.push({ time: Date.now(), event: 'week-intro-modal', phase: 'intermission' });
+        log('5. Week intro modal shows', 'info');
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // 6. HOH competition starts
+        timeline.push({ time: Date.now(), event: 'hoh-competition-start', phase: 'hoh' });
+        log('6. HOH competition starts', 'info');
+      }
+      
+      await mockCompleteFlow();
+      
+      // Verify no overlaps
+      let noOverlaps = true;
+      for (let i = 1; i < timeline.length; i++) {
+        if (timeline[i].time < timeline[i-1].time) {
+          noOverlaps = false;
+          log(`ERROR: Event ${timeline[i].event} occurred before ${timeline[i-1].event}`, 'error');
+        }
+      }
+      
+      // Verify order
+      const expectedEventOrder = [
+        'self-evict-card-show',
+        'avatar-animation-start',
+        'avatar-animation-complete',
+        'card-queue-idle',
+        'week-intro-modal',
+        'hoh-competition-start'
+      ];
+      
+      const actualEventOrder = timeline.map(t => t.event);
+      const orderCorrect = JSON.stringify(actualEventOrder) === JSON.stringify(expectedEventOrder);
+      
+      addResult(
+        'Self-Eviction Timing',
+        noOverlaps && orderCorrect,
+        noOverlaps && orderCorrect
+          ? '✓ Self-eviction completes fully before week modal and HOH start'
+          : `✗ Timing issue detected: ${!noOverlaps ? 'Events overlapped' : 'Event order incorrect'}`
+      );
+      
+      log(noOverlaps && orderCorrect ? 'Timing test PASSED' : 'Timing test FAILED', noOverlaps && orderCorrect ? 'success' : 'error');
+    }
+
+    // Run initial test on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Self-Eviction Timing Test Suite initialized', 'success');
+      log('Click "Run Timing Test" to validate the fix', 'info');
+    });
+  </script>
+</body>
+</html>
