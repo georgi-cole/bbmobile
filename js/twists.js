@@ -20,12 +20,12 @@
     VOTE_DURATION: 5000,             // Live voting duration
     VOTE_TICK_INTERVAL: 160,         // Vote count update interval
     LEADER_FLASH_DURATION: 600,      // Flash animation for leader change
-    RESULT_WAIT_AFTER_VOTE: 800,     // Pause after voting ends
-    RESULT_CARD_DURATION: 3800,      // Result announcement card duration
+    RESULT_WAIT_AFTER_VOTE: 600,     // Pause after voting ends
+    RESULT_CARD_DURATION: 3500,      // Result announcement card duration
     REVIVE_ANIMATION: 1200,          // Winner revive animation duration
-    FINAL_CARD_DURATION: 4500,       // Final "They're Back" card duration
+    FINAL_CARD_DURATION: 4000,       // Final "They're Back" card duration
     POST_TWIST_BUFFER: 600,          // Buffer before resuming week
-    PHASE_TIMEOUT: 16000,            // Total phase timeout (safety net)
+    PHASE_TIMEOUT: 12000,            // Total phase timeout (safety net - covers voting only)
     PANEL_FADE_OUT: 400,             // Panel fade out transition
     WINNER_CELEBRATION: 1000,        // Winner highlight before cleanup
   };
