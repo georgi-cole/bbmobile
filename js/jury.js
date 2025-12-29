@@ -579,13 +579,18 @@
     
     const container = document.createElement('div');
     container.id = 'humanJuryVoteOverlay';
+    
+    // Mobile-responsive container styling
+    const isMobile = window.innerWidth <= 768;
     container.style.cssText = `
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       width: min(90vw, 900px);
-      padding: 40px 20px;
+      max-height: ${isMobile ? '90vh' : '85vh'};
+      overflow-y: auto;
+      padding: ${isMobile ? '20px 16px' : '40px 20px'};
       background: rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -599,11 +604,11 @@
     const title = document.createElement('div');
     title.textContent = '🎖️ YOUR JURY VOTE 🎖️';
     title.style.cssText = `
-      font-size: clamp(24px, 4vw, 36px);
+      font-size: ${isMobile ? 'clamp(18px, 5vw, 24px)' : 'clamp(24px, 4vw, 36px)'};
       font-weight: 900;
       text-align: center;
       color: #00e0cc;
-      margin-bottom: 32px;
+      margin-bottom: ${isMobile ? '16px' : '32px'};
       text-shadow: 0 0 20px rgba(0, 224, 204, 0.6);
       letter-spacing: 2px;
     `;
@@ -612,10 +617,10 @@
     faceoffContainer.style.cssText = `
       display: grid;
       grid-template-columns: 1fr auto 1fr;
-      gap: clamp(20px, 4vw, 60px);
+      gap: ${isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 4vw, 60px)'};
       align-items: center;
       justify-items: center;
-      margin-bottom: 32px;
+      margin-bottom: ${isMobile ? '16px' : '32px'};
     `;
     
     // Create finalist cards
@@ -625,9 +630,9 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 16px;
-        padding: 20px;
-        border-radius: 16px;
+        gap: ${isMobile ? '8px' : '16px'};
+        padding: ${isMobile ? '12px' : '20px'};
+        border-radius: ${isMobile ? '12px' : '16px'};
         background: rgba(255, 255, 255, 0.05);
         border: 2px solid rgba(255, 255, 255, 0.1);
         transition: all 0.3s ease;
@@ -637,10 +642,10 @@
       avatar.src = getAvatar(finalistId);
       avatar.alt = safeName(finalistId);
       avatar.style.cssText = `
-        width: min(25vw, 200px);
-        height: min(25vw, 200px);
+        width: ${isMobile ? 'min(30vw, 120px)' : 'min(25vw, 200px)'};
+        height: ${isMobile ? 'min(30vw, 120px)' : 'min(25vw, 200px)'};
         object-fit: cover;
-        border-radius: 12px;
+        border-radius: ${isMobile ? '8px' : '12px'};
         border: 3px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
       `;
@@ -653,7 +658,7 @@
       const name = document.createElement('div');
       name.textContent = safeName(finalistId);
       name.style.cssText = `
-        font-size: clamp(18px, 2.5vw, 28px);
+        font-size: ${isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(18px, 2.5vw, 28px)'};
         font-weight: 800;
         color: #ffffff;
         text-align: center;
@@ -669,7 +674,7 @@
     const vs = document.createElement('div');
     vs.textContent = 'VS';
     vs.style.cssText = `
-      font-size: clamp(28px, 5vw, 48px);
+      font-size: ${isMobile ? 'clamp(20px, 6vw, 32px)' : 'clamp(28px, 5vw, 48px)'};
       font-weight: 900;
       color: #00e0cc;
       text-shadow: 0 0 20px rgba(0, 224, 204, 0.6);
@@ -685,17 +690,18 @@
     const buttonsContainer = document.createElement('div');
     buttonsContainer.style.cssText = `
       display: flex;
-      gap: 24px;
+      gap: ${isMobile ? '12px' : '24px'};
       justify-content: center;
-      margin-bottom: 20px;
+      margin-bottom: ${isMobile ? '12px' : '20px'};
+      flex-wrap: wrap;
     `;
     
     const btnA = document.createElement('button');
     btnA.id = 'btnVoteA';
     btnA.textContent = `VOTE ${safeName(A).toUpperCase()}`;
     btnA.style.cssText = `
-      padding: 16px 32px;
-      font-size: clamp(16px, 2vw, 20px);
+      padding: ${isMobile ? '12px 20px' : '16px 32px'};
+      font-size: ${isMobile ? 'clamp(12px, 3vw, 16px)' : 'clamp(16px, 2vw, 20px)'};
       font-weight: 800;
       background: linear-gradient(135deg, #00e0cc 0%, #00b4a0 100%);
       color: #001a18;
@@ -705,6 +711,7 @@
       box-shadow: 0 8px 24px rgba(0, 224, 204, 0.4);
       transition: all 0.3s ease;
       letter-spacing: 1px;
+      ${isMobile ? 'min-width: 120px;' : ''}
     `;
     btnA.onmouseover = function() {
       this.style.transform = 'translateY(-2px)';
@@ -729,7 +736,7 @@
     const instructions = document.createElement('div');
     instructions.textContent = 'Cast your vote for the winner';
     instructions.style.cssText = `
-      font-size: clamp(14px, 2vw, 18px);
+      font-size: ${isMobile ? 'clamp(12px, 3vw, 14px)' : 'clamp(14px, 2vw, 18px)'};
       color: #aaa;
       text-align: center;
       font-style: italic;
