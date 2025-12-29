@@ -14,6 +14,22 @@
   function gp(id){ return global.getP?.(id); }
   function rand(){ return (global.rng?.() ?? Math.random()); }
 
+  // ======= JUROR RETURN TIMING CONSTANTS =======
+  const JUROR_RETURN_TIMING = {
+    ANNOUNCEMENT_MODAL: 4000,        // Initial announcement modal duration
+    VOTE_DURATION: 5000,             // Live voting duration
+    VOTE_TICK_INTERVAL: 160,         // Vote count update interval
+    LEADER_FLASH_DURATION: 600,      // Flash animation for leader change
+    RESULT_WAIT_AFTER_VOTE: 600,     // Pause after voting ends
+    RESULT_CARD_DURATION: 3500,      // Result announcement card duration
+    REVIVE_ANIMATION: 1200,          // Winner revive animation duration
+    FINAL_CARD_DURATION: 4000,       // Final "They're Back" card duration
+    POST_TWIST_BUFFER: 600,          // Buffer before resuming week
+    PHASE_TIMEOUT: 12000,            // Total phase timeout (safety net - covers voting only)
+    PANEL_FADE_OUT: 400,             // Panel fade out transition
+    WINNER_CELEBRATION: 1000,        // Winner highlight before cleanup
+  };
+
   // ======= CENTRALIZED JUROR RETURN HELPERS =======
   
   /**
@@ -135,6 +151,8 @@
   }
 
   // Expose helpers on global
+  global.getInitialPlayersCount = getInitialPlayersCount;
+  global.getJurorReturnRequiredJurors = getJurorReturnRequiredJurors;
   global.isJurorReturnEligible = isJurorReturnEligible;
   global.decideJurorReturnThisWeek = decideJurorReturnThisWeek;
 
@@ -280,16 +298,15 @@
           emojis: '👁️⚖️🔙',
           subtitle: 'A jury member re-enters the house!',
           tone: 'special',
-          duration: 4000
+          duration: JUROR_RETURN_TIMING.ANNOUNCEMENT_MODAL
         });
       } catch (e) {
         console.error('[twists] Error showing juror return modal:', e);
       }
     }
 
-    // Clamp vote duration to 1200-5000ms range
-    const cfgValue = Number(g.cfg?.tJurorReturnVoteMs || g.cfg?.tJurorVoteMs || 6500);
-    const voteDurationMs = Math.min(Math.max(1200, cfgValue), 5000);
+    // Use constant for vote duration
+    const voteDurationMs = JUROR_RETURN_TIMING.VOTE_DURATION;
     
     g.__returnTwist={
       jurors: jurors.slice(),
@@ -306,7 +323,7 @@
       _domCache:null,
     };
 
-    global.setPhase?.('return_twist', 16, ()=>{
+    global.setPhase?.('return_twist', JUROR_RETURN_TIMING.PHASE_TIMEOUT / 1000, ()=>{
       if(!g.__returnTwist?.finished) finalizeAmericaReturnVote(true);
     });
 
@@ -318,7 +335,7 @@
   function seedReturnCounts(st){
     if(st._seeded) return;
     st._seeded=true;
-    let base=6 + Math.random()*4;
+    const base=6 + Math.random()*4;
     st.jurors.forEach((id,i)=>{
       const initial = base + i + Math.random()*3;
       st.counts.set(id, initial);
@@ -338,7 +355,7 @@
       if(Date.now()-st.started >= st.durationMs){
         finalizeAmericaReturnVote(false);
       }
-    }, 160);
+    }, JUROR_RETURN_TIMING.VOTE_TICK_INTERVAL);
 
     st._heartbeat=setInterval(()=>{
       updateReturnTwistCards();
@@ -380,7 +397,7 @@
         if(cache.slot){
           cache.slot.classList.toggle('jrLeading',isLead);
         }
-        if(isLead && leader==null) leader=id;
+        if(isLead && leader===null) leader=id;
       } else {
         // Fallback to querySelector (for compatibility)
         const panel=document.querySelector('#panel .jrVotePanel'); if(!panel) return;
@@ -389,24 +406,29 @@
         const pctSpan=slot.querySelector('.jrPct');
         if(pctSpan) pctSpan.textContent=pct+'%';
         slot.classList.toggle('jrLeading',isLead);
-        if(isLead && leader==null) leader=id;
+        if(isLead && leader===null) leader=id;
       }
     });
 
     // ARIA live update for leader change
-    if(st.lastLeader!==leader && leader!=null){
+    if(st.lastLeader!==leader && leader!==null){
       st.lastLeader=leader;
       const leaderName = global.safeName?.(leader) || 'Juror';
       
-      if(useCached && st._domCache[leader]?.card){
-        const lc = st._domCache[leader].card;
-        lc.classList.add('flash');
-        setTimeout(()=>lc.classList.remove('flash'),1100);
+      // Add flash to leader slot (using jrSlot instead of orphaned rtCard)
+      if(useCached && st._domCache[leader]?.slot){
+        const leaderSlot = st._domCache[leader].slot;
+        leaderSlot.classList.add('flash');
+        setTimeout(()=>leaderSlot.classList.remove('flash'), JUROR_RETURN_TIMING.LEADER_FLASH_DURATION);
       } else {
-        const grid=document.querySelector('#panel #rtGrid');
-        if(grid){
-          const lc=grid.querySelector(`.rtCard[data-id="${leader}"]`);
-          if(lc){ lc.classList.add('flash'); setTimeout(()=>lc.classList.remove('flash'),1100); }
+        // Fallback: find slot by data-id
+        const panel=document.querySelector('#panel .jrVotePanel');
+        if(panel){
+          const leaderSlot=panel.querySelector(`.jrSlot[data-id="${leader}"]`);
+          if(leaderSlot){ 
+            leaderSlot.classList.add('flash'); 
+            setTimeout(()=>leaderSlot.classList.remove('flash'), JUROR_RETURN_TIMING.LEADER_FLASH_DURATION);
+          }
         }
       }
       
@@ -418,23 +440,11 @@
         if(liveRegion) liveRegion.textContent = `${leaderName} is now in the lead`;
       }
     }
-
-    // Update countdown timer with cached reference
-    const remain=Math.max(0,Math.ceil((st.durationMs - (Date.now()-st.started))/1000));
-    const countdownText = `Time: ${remain}s`;
-    
-    if(useCached && st._domCache.countdown){
-      st._domCache.countdown.textContent = countdownText;
-    } else {
-      const cd=document.getElementById('rtCountdown');
-      if(cd) cd.textContent = countdownText;
-    }
   }
 
   // Constants for juror return UI
   const JUROR_RETURN_PANEL_SELECTORS = '.jrVotePanel, .jrPanel, .jrModalHost';
   const MAIN_AVATAR_SELECTORS = '[data-id="{id}"] img, [data-player-id="{id}"] img, .player-avatar[data-id="{id}"]';
-  const REVIVE_ANIMATION_DURATION = 1400; // ms, matches CSS animation
 
   /**
    * Wait for the voting panel to be removed from DOM
@@ -490,7 +500,7 @@
     // Show result card using global.showCard if available
     if(typeof global.showCard === 'function'){
       try{
-        global.showCard('America Votes — Result', [message], 'jury', 3800, true);
+        global.showCard('America Votes — Result', [message], 'jury', JUROR_RETURN_TIMING.RESULT_CARD_DURATION, true);
       }catch(e){
         console.warn('[showJurorReturnResult] showCard failed:', e);
       }
@@ -512,7 +522,7 @@
         document.body.appendChild(overlayContainer);
       }
       overlayContainer.appendChild(modal);
-      setTimeout(()=>modal.remove(), 3800);
+      setTimeout(()=>modal.remove(), JUROR_RETURN_TIMING.RESULT_CARD_DURATION);
     }
     
     // Trigger revive animation on main screen avatar (not panel avatar since panel is gone)
@@ -522,13 +532,13 @@
     
     if(mainAvatar && typeof global.animateReviveAvatar === 'function'){
       try{
-        await global.animateReviveAvatar(mainAvatar, REVIVE_ANIMATION_DURATION);
+        await global.animateReviveAvatar(mainAvatar, JUROR_RETURN_TIMING.REVIVE_ANIMATION);
       }catch(e){
         console.warn('[showJurorReturnResult] Animation failed:', e);
         // Fallback: add class directly
         try{
           mainAvatar.classList.add('revive-avatar');
-          await new Promise(resolve => setTimeout(resolve, REVIVE_ANIMATION_DURATION));
+          await new Promise(resolve => setTimeout(resolve, JUROR_RETURN_TIMING.REVIVE_ANIMATION));
           mainAvatar.classList.remove('revive-avatar');
         }catch(e2){
           console.warn('[showJurorReturnResult] Fallback animation also failed:', e2);
@@ -539,7 +549,7 @@
     }
     
     // Small delay to let animation be visible
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise(resolve => setTimeout(resolve, JUROR_RETURN_TIMING.RESULT_WAIT_AFTER_VOTE));
   }
 
   async function finalizeAmericaReturnVote(){
@@ -574,12 +584,8 @@
 
     const sorted=st.jurors.map(id=>({id,c:st.counts.get(id)||0})).sort((a,b)=>b.c-a.c);
     const winnerId=sorted.length?sorted[0].id:null;
-    
-    // Clean up panel immediately after voting ends (before showing results)
-    // This removes the modal from screen so it doesn't block during result announcement
-    cleanupReturnPanel();
 
-    if(winnerId!=null){
+    if(winnerId!==null){
       const w=gp(winnerId);
       // Normalize percentage: compute (winnerRaw / totalCount) * 100
       const totalCount = [...st.counts.values()].reduce((a,b)=>a+b,0) || 1;
@@ -597,7 +603,7 @@
       }
       
       g.__returnFlashId=winnerId;
-      setTimeout(()=>{ g.__returnFlashId=null; global.updateHud?.(); },6500);
+      setTimeout(()=>{ g.__returnFlashId=null; global.updateHud?.(); }, JUROR_RETURN_TIMING.PHASE_TIMEOUT - JUROR_RETURN_TIMING.POST_TWIST_BUFFER);
       // Flags already set at eligibility check
       
       // Update PlayerService after player returns
@@ -605,18 +611,26 @@
         global.PlayerService.setAlivePlayers(g.players);
       }
       
-      // Show result announcement and animation BEFORE cleanup/resume to prevent phase overlap
+      // Show result announcement and animation with proper sequential flow
       (async () => {
         try{
-          // Show result with animation after panel is removed
+          // Step 1: Celebrate winner (highlight slot)
+          await celebrateWinner(winnerId);
+          
+          // Step 2: Fade out panel smoothly
+          await fadeOutPanel();
+          
+          // Step 3: Clean up panel from DOM
+          cleanupReturnPanel();
+          
+          // Step 4: Show result with animation after panel is removed
           await showJurorReturnResult(winnerId, winnerPercent);
           
-          // Show final card
-          global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
+          // Step 5: Show final card
+          global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',JUROR_RETURN_TIMING.FINAL_CARD_DURATION,true);
           await global.cardQueueWaitIdle?.();
           
-          // NOW clean up panel and resume game flow after all UI completes
-          cleanupReturnPanel();
+          // Step 6: Resume game flow after all UI completes
           resumeWeekAfterReturn();
         }catch(e){
           console.error('[finalizeAmericaReturnVote] Error in result announcement:', e);
@@ -634,6 +648,53 @@
       cleanupReturnPanel();
       resumeWeekAfterReturn();
     }
+  }
+
+  /**
+   * Fade out the voting panel smoothly before removal
+   * @returns {Promise<void>} Resolves after fade completes
+   */
+  async function fadeOutPanel(){
+    const panel = document.getElementById('panel');
+    if(!panel) return;
+    
+    const modalHost = panel.querySelector('.jrModalHost');
+    if(!modalHost) return;
+    
+    // Add fade-out class for smooth transition
+    modalHost.style.transition = `opacity ${JUROR_RETURN_TIMING.PANEL_FADE_OUT}ms ease-out`;
+    modalHost.style.opacity = '0';
+    
+    // Wait for transition to complete
+    await new Promise(resolve => setTimeout(resolve, JUROR_RETURN_TIMING.PANEL_FADE_OUT));
+  }
+
+  /**
+   * Highlight winner slot with celebration animation
+   * @param {number} winnerId - ID of the winning juror
+   * @returns {Promise<void>} Resolves after celebration animation
+   */
+  async function celebrateWinner(winnerId){
+    if(!winnerId) return;
+    
+    const g = global.game;
+    const st = g?.__returnTwist;
+    if(!st) return;
+    
+    const panel = document.querySelector('#panel .jrVotePanel');
+    if(!panel) return;
+    
+    const winnerSlot = panel.querySelector(`.jrSlot[data-id="${winnerId}"]`);
+    if(!winnerSlot){
+      console.warn('[celebrateWinner] Winner slot not found:', winnerId);
+      return;
+    }
+    
+    // Add winner class for celebration animation
+    winnerSlot.classList.add('jrWinner');
+    
+    // Wait for celebration animation
+    await new Promise(resolve => setTimeout(resolve, JUROR_RETURN_TIMING.WINNER_CELEBRATION));
   }
 
   function cleanupReturnPanel(){
