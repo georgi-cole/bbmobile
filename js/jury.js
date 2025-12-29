@@ -245,44 +245,15 @@
     return winner;
   }
 
-  // ===== Optional panel tiles (kept) =====
+  // ===== LEGACY: Old panel tiles (DEPRECATED - no longer used) =====
+  // These functions are kept for backward compatibility but are no-ops.
+  // The fullscreen overlay system (FinalFaceoff) is now used exclusively.
   function renderJuryBallotsPanel(jurors, A, B){
-    const panel = document.getElementById('panel'); if(!panel) return;
-    const host=document.createElement('div'); host.className='juryPanelHost';
-    host.innerHTML = `<h3>Jury Ballots</h3><div class="juryGrid" id="juryGrid"></div>`;
-    panel.appendChild(host);
-    const grid=host.querySelector('#juryGrid');
-    jurors.forEach(id=>{
-      const tile=document.createElement('div'); tile.className='jpTile'; tile.dataset.jid=String(id);
-      const j=gp(id);
-      const jurorAvatar = getAvatar(id);
-      const aAvatar = getAvatar(A);
-      const bAvatar = getAvatar(B);
-      tile.innerHTML = `
-        <div class="jpHead">
-          <img class="jpJuror" src="${jurorAvatar}" alt="${safeName(id)}" onerror="console.warn('[jury] avatar fallback for ${safeName(id)}');this.onerror=null;this.src='${getAvatarFallback(safeName(id))}'">
-          <div class="jpName">${safeName(id)}</div>
-        </div>
-        <div class="jpRow">
-          <img class="jpFace finalist" data-fid="${A}" src="${aAvatar}" alt="${safeName(A)}" onerror="console.warn('[jury] avatar fallback for ${safeName(A)}');this.onerror=null;this.src='${getAvatarFallback(safeName(A))}'">
-          <div class="jpArrow">→</div>
-          <img class="jpFace finalist" data-fid="${B}" src="${bAvatar}" alt="${safeName(B)}" onerror="console.warn('[jury] avatar fallback for ${safeName(B)}');this.onerror=null;this.src='${getAvatarFallback(safeName(B))}'">
-        </div>
-        <div class="jpMeta"><span class="tiny muted">Waiting…</span></div>
-      `;
-      grid.appendChild(tile);
-    });
+    console.warn('[jury] renderJuryBallotsPanel is deprecated and no longer renders UI');
+    return; // No-op: fullscreen overlay handles all UI
   }
   function juryPanelOnBallot(jurorId, pickId){
-    const tile = document.querySelector(`.jpTile[data-jid="${jurorId}"]`);
-    if(!tile) return;
-    tile.classList.add('jpPick');
-    tile.querySelectorAll('.jpFace.finalist').forEach(img=>{
-      const fid = +img.getAttribute('data-fid');
-      img.classList.toggle('picked', fid===pickId);
-    });
-    const meta = tile.querySelector('.jpMeta');
-    if(meta) meta.innerHTML = `<span class="tiny ok">Voted: ${safeName(pickId)}</span>`;
+    return; // No-op: not used with fullscreen overlay
   }
 
   // ===== Faceoff UI and styles (with auto-fit and centered) =====
@@ -390,29 +361,12 @@
     st._fitCleanup = ()=>{ try{ ro.disconnect(); }catch{} window.removeEventListener('resize', schedule); };
   }
 
-  // Render the Faceoff using new fullscreen overlay system
+  // ===== LEGACY: renderFinaleGraph (DEPRECATED) =====
+  // This function is kept for backward compatibility but is a no-op.
+  // The fullscreen overlay is now mounted directly in startFinaleRefactorFlow().
   function renderFinaleGraph(A, B, totalJurors){
-    const need = Math.floor(totalJurors/2)+1;
-    
-    const leftPlayer = g.getP?.(A) || { id: A, name: String(A) };
-    const rightPlayer = g.getP?.(B) || { id: B, name: String(B) };
-    
-    // Set avatar URLs on player objects for FinalFaceoff
-    leftPlayer.avatar = getAvatar(A);
-    rightPlayer.avatar = getAvatar(B);
-    
-    // Mount in fullscreen overlay mode
-    if (typeof g.FinalFaceoff?.mount === 'function') {
-      g.FinalFaceoff.mount({
-        left: leftPlayer,
-        right: rightPlayer,
-        majority: need,
-        fullscreen: true
-      });
-      console.log('[jury] Faceoff mounted in fullscreen overlay');
-    } else {
-      console.warn('[jury] FinalFaceoff.mount not available');
-    }
+    console.warn('[jury] renderFinaleGraph is deprecated - overlay is mounted in startFinaleRefactorFlow()');
+    return; // No-op: overlay already mounted in main flow
   }
 
   // Vote message - use new FinalFaceoff API
@@ -1699,8 +1653,7 @@
       const newScoreB = pick === B ? scoreB + 1 : scoreB;
       console.info(`[jury] voteReveal juror=${jid} finalist=${pick} scoreA=${newScoreA} scoreB=${newScoreB}`);
       
-      // Update UI - use only upper vote cards with dynamic reasons (no duplicate bottom overlay)
-      try{ juryPanelOnBallot(jid, pick); }catch{}
+      // Update fullscreen overlay UI with vote
       const a=votes.get(A)||0, b=votes.get(B)||0;
       updateFinaleGraph(a,b);
       addFaceoffVoteCard(safeName(jid), safeName(pick), dynamicReason);
