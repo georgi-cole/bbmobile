@@ -566,7 +566,10 @@
   
   // NEW: Render human voting UI inside fullscreen overlay with horizontal layout
   function renderHumanJuryUIInOverlay(overlay, A, B){
-    if(!overlay) return null;
+    if(!overlay) {
+      console.error('[jury] Cannot render voting UI: overlay element is required');
+      return null;
+    }
     
     const container = document.createElement('div');
     container.id = 'humanJuryVoteOverlay';
@@ -756,10 +759,19 @@
   // NEW: Wait for human jury vote inside overlay
   function waitForHumanJuryVoteInOverlay(overlay, A, B){
     return new Promise(resolve=>{
+      if (!overlay) {
+        console.error('[jury] Cannot render voting UI: overlay is required');
+        // Don't auto-vote for human - this is an error condition
+        // Return null to signal caller to handle this case
+        resolve(null);
+        return;
+      }
+      
       const box = renderHumanJuryUIInOverlay(overlay, A, B);
       if(!box) {
-        console.warn('[jury] Failed to render voting UI in overlay');
-        resolve(ballotPick(g.game?.humanId, A, B));
+        console.error('[jury] Failed to render voting UI in overlay');
+        // Don't auto-vote for human - this is an error condition
+        resolve(null);
         return;
       }
       
@@ -896,8 +908,13 @@
     return gg.finale;
   }
 
-  // Phase 1: Anonymous Jury Casting (blind voting without revealing picks)
-  // overlay parameter: if provided, human voting UI will render inside the overlay
+  /**
+   * Phase 1: Anonymous Jury Casting (blind voting without revealing picks)
+   * @param {Array} jurors - Array of juror IDs
+   * @param {*} A - First finalist ID
+   * @param {*} B - Second finalist ID
+   * @param {HTMLElement|null} overlay - Optional fullscreen overlay element. If provided, human voting UI renders inside overlay.
+   */
   async function startJuryCastingPhase(jurors, A, B, overlay = null){
     const gg = g.game || {};
     const finale = ensureFinaleState();
@@ -935,7 +952,7 @@
         // Race between vote and timeout
         pick = await Promise.race([votePromise, timeoutPromise]);
         
-        // If timeout (pick is null), use affinity-based fallback
+        // If timeout OR UI error (pick is null), use affinity-based fallback
         if (pick === null) {
           pick = ballotPick(jid, A, B);
           console.info(`[juryCast] human vote fallback juror=${jid} pick=${pick}`);
