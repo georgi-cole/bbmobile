@@ -1566,6 +1566,8 @@
       // Show result card with vote summary and eviction phrase (two-line format like multi)
       if (typeof global.EvictionModal?.show === 'function') {
         // Parse vote summary to extract vote counts
+        // Expected format: "Name VoteCount — Name VoteCount" (e.g., "Alice 5 — Bob 2")
+        // The evicted player is determined by having the highest vote count (votes to evict)
         let votesFor = 0, votesAgainst = 0;
         if (voteSummary) {
           const parts = voteSummary.split(' — ');

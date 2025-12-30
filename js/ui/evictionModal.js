@@ -179,6 +179,16 @@
         onClose = null
       } = options;
 
+      // Track if modal has been dismissed to prevent double-resolve
+      let dismissed = false;
+      const dismiss = () => {
+        if (dismissed) return;
+        dismissed = true;
+        hide();
+        if (onClose) onClose();
+        resolve();
+      };
+
       // Determine if evicted (red) or survived (green)
       const isEvicted = votesFor > votesAgainst;
       const accentColor = isEvicted ? '#ef4444' : '#10b981';
@@ -325,11 +335,7 @@
         
         // Auto-dismiss after 3 seconds of showing the result
         setTimeout(() => {
-          hide();
-          if (onClose) onClose();
-          if (overlay._resolvePromise) {
-            overlay._resolvePromise();
-          }
+          dismiss();
         }, 3000);
       }, REVEAL_DELAY);
 
@@ -337,25 +343,15 @@
       const handleKeydown = (e) => {
         if (e.key === 'Escape') {
           e.preventDefault();
-          hide();
-          if (onClose) onClose();
-          resolve();
+          dismiss();
         }
       };
       overlay.addEventListener('keydown', handleKeydown);
 
       // Backdrop click to close
       backdrop.addEventListener('click', () => {
-        hide();
-        if (onClose) onClose();
-        resolve();
+        dismiss();
       });
-
-      // Store resolve for external hide calls
-      overlay._resolvePromise = () => {
-        if (onClose) onClose();
-        resolve();
-      };
     });
   }
 

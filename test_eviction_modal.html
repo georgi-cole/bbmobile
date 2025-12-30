@@ -180,8 +180,8 @@
       </button>
       
       <button class="test-btn" onclick="testManualClose()">
-        <strong>Test 4: Manual Close Only</strong>
-        <small>No auto-dismiss - requires ESC or backdrop click</small>
+        <strong>Test 4: Eviction with Close Options</strong>
+        <small>Modal auto-dismisses after reveal, or close early with ESC or backdrop click</small>
       </button>
       
       <button class="test-btn" onclick="testFromTVContainer()">
@@ -271,10 +271,10 @@
       console.log('[Test 3] Modal dismissed');
     }
     
-    // Test 4: Manual close only
+    // Test 4: Close options
     async function testManualClose() {
-      console.log('[Test 4] Showing modal with manual close only...');
-      alert('This modal will stay open until you press ESC or click the backdrop.');
+      console.log('[Test 4] Showing modal with auto-dismiss and manual close options...');
+      alert('This modal will auto-dismiss after showing the result, but you can also close it early with ESC or backdrop click.');
       await window.EvictionModal.show({
         name: 'Charlie',
         votesFor: 6,
