@@ -323,8 +323,8 @@
       if(winnerData.scoreFormatted !== ''){
         const winnerScore = document.createElement('div');
         
-        // Show "Score:" prefix only when not in raw score mode
-        const scorePrefix = rawScoreMode ? '' : 'Score: ';
+        // For raw scores, don't add "Score:" prefix as the display is self-descriptive
+        const scorePrefix = (rawScoreMode && winnerData.rawScoreDisplay) ? '' : 'Score: ';
         winnerScore.textContent = `${scorePrefix}${winnerData.scoreFormatted}`;
         winnerScore.style.cssText = `
           font-size: 1.05rem;

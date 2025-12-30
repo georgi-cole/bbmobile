@@ -48,7 +48,7 @@
         return false;
       }
       
-      // Default: all other games support high scores
+      // Default: skill-based games support high scores
       return true;
     },
 

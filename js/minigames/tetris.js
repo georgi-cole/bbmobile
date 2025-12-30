@@ -429,8 +429,12 @@
         }
       }
       
-      // Final score calculation - keep existing normalization
-      const finalScore = Math.min(100, Math.floor((score / 1000) * 100));
+      // Final score calculation
+      // Normalize game score (which can reach into thousands) to 0-100 scale
+      // Formula: (score / 1000) * 100 caps very high scores at 100
+      const SCORE_SCALE_FACTOR = 1000; // Points needed for max normalized score
+      const NORMALIZED_MAX = 100;      // Maximum normalized score
+      const finalScore = Math.min(NORMALIZED_MAX, Math.floor((score / SCORE_SCALE_FACTOR) * NORMALIZED_MAX));
       
       const resultDiv = document.createElement('div');
       resultDiv.style.cssText = `

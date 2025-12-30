@@ -559,8 +559,9 @@
         instructions.style.color = '#ff6b6b';
       }
       
-      // Score based on food eaten - NO CAPS, unlimited scoring
-      // Each food = 10 points, clamped to 100 for normalization compatibility
+      // Score based on food eaten - Each food = 10 points
+      // Capped at 100 for compatibility with existing scoring normalization system
+      // The raw food count (not capped) is tracked separately for high scores
       const rawScore = Math.min(100, foodEaten * 10);
       const maxScore = 100;
       

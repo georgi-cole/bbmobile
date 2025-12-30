@@ -192,6 +192,34 @@
   <script src="js/minigames/snake.js"></script>
   <script src="js/minigames/tetris.js"></script>
   <script src="js/minigames/count-house.js"></script>
+  
+  <!-- Results popup and dependencies -->
+  <script>
+    // Mock global formatCompetitionScoreInt if not available
+    if(!window.formatCompetitionScoreInt) {
+      window.formatCompetitionScoreInt = function(value) {
+        if(value == null || value === '') return '';
+        const num = Number(value);
+        if(isNaN(num)) return String(value);
+        return Math.round(num).toString();
+      };
+    }
+    
+    // Mock getDicebearUrl for avatar fallback
+    if(!window.getDicebearUrl) {
+      window.getDicebearUrl = function(seed) {
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      };
+    }
+    
+    // Mock resolveAvatar
+    if(!window.resolveAvatar) {
+      window.resolveAvatar = function(player) {
+        const name = typeof player === 'string' ? player : (player?.name || 'Player');
+        return window.getDicebearUrl(name);
+      };
+    }
+  </script>
   <script src="js/results-popup.js"></script>
 
   <script>
