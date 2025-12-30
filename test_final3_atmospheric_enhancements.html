@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 3 Atmospheric Enhancements - Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0e1a;
+      color: #cedbeb;
+      margin: 0;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #141824;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+    h1 {
+      color: #ffd96b;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #96cfff;
+      margin-bottom: 32px;
+      font-size: 0.95rem;
+    }
+    .test-section {
+      margin-bottom: 32px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.15);
+    }
+    .test-section h2 {
+      color: #96cfff;
+      font-size: 1.2rem;
+      margin-top: 0;
+      margin-bottom: 16px;
+      border-bottom: 2px solid rgba(150, 207, 255, 0.2);
+      padding-bottom: 8px;
+    }
+    .test-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .btn {
+      background: linear-gradient(135deg, #2a3f5f, #1a2f4f);
+      color: #eaf4ff;
+      border: 1px solid #3d5a75;
+      border-radius: 8px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #3a4f6f, #2a3f5f);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3563a7, #2553a7);
+      border-color: #4573b7;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4573b7, #3563a7);
+    }
+    .btn-warn {
+      background: linear-gradient(135deg, #996b1a, #795b0a);
+      border-color: #b98b2a;
+    }
+    .btn-warn:hover {
+      background: linear-gradient(135deg, #b98b2a, #996b1a);
+    }
+    .test-info {
+      color: #7a9fc4;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(96, 165, 250, 0.08);
+      border-left: 3px solid #60a5fa;
+      border-radius: 4px;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #96cfff;
+    }
+    .status-success {
+      border-left: 3px solid #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+    }
+    .status-error {
+      border-left: 3px solid #ff6b6b;
+      background: rgba(255, 107, 107, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎬 Final 3 Atmospheric Enhancements</h1>
+    <div class="subtitle">Phase 2 - Test Suite</div>
+
+    <!-- Part 1: Cinematics -->
+    <div class="test-section">
+      <h2>🏆 Part Transition Cinematics</h2>
+      <div class="test-info">
+        Test the cinematic overlays that play between Final 3 competition parts.
+        These should display dramatic transitions with player avatars, animations, and skip functionality.
+      </div>
+      <div class="test-buttons">
+        <button class="btn btn-primary" onclick="testPart1Cinematic()">Part 1 Winner</button>
+        <button class="btn btn-primary" onclick="testPart2Cinematic()">Part 2 Winner</button>
+        <button class="btn btn-primary" onclick="testFinalShowdownIntro()">Final Showdown Intro</button>
+        <button class="btn btn-primary" onclick="testFinalHOHCinematic()">Final HOH Crowned</button>
+      </div>
+      <div id="cinematics-status"></div>
+    </div>
+
+    <!-- Part 2: Road to Finale -->
+    <div class="test-section">
+      <h2>📜 Road to Finale Recap</h2>
+      <div class="test-info">
+        Test the recap sequence that plays before jury voting.
+        Shows season overview, Final 2 stats, and jury introduction.
+      </div>
+      <div class="test-buttons">
+        <button class="btn btn-primary" onclick="testRoadToFinale()">Show Recap</button>
+        <button class="btn btn-warn" onclick="resetRecapFlag()">Reset Recap Flag</button>
+      </div>
+      <div id="recap-status"></div>
+    </div>
+
+    <!-- Part 3: AI Deliberation -->
+    <div class="test-section">
+      <h2>🤖 AI Deliberation Animation</h2>
+      <div class="test-info">
+        Test the AI HOH "thinking" animation that plays before the Final 3 eviction decision.
+        Shows HOH avatar, nominees, and rotating thought bubbles.
+      </div>
+      <div class="test-buttons">
+        <button class="btn btn-primary" onclick="testAIDeliberation(false)">Without Plea</button>
+        <button class="btn btn-primary" onclick="testAIDeliberation(true)">With Plea</button>
+      </div>
+      <div id="deliberation-status"></div>
+    </div>
+
+    <!-- Part 4: Full Flow Test -->
+    <div class="test-section">
+      <h2>🎮 Full Flow Test</h2>
+      <div class="test-info">
+        Test all cinematics in sequence to verify the complete Final 3 atmospheric experience.
+      </div>
+      <div class="test-buttons">
+        <button class="btn btn-primary" onclick="testFullFlow()">Run Full Sequence</button>
+      </div>
+      <div id="flow-status"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Mock game environment
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', hoh: false, evicted: false, nominated: false, stats: { hohWins: 2, vetoWins: 3, timesSaved: 1 }, nominatedCount: 2 },
+        { id: 2, name: 'Bob', hoh: false, evicted: false, nominated: false, stats: { hohWins: 1, vetoWins: 2, timesSaved: 0 }, nominatedCount: 3 },
+        { id: 3, name: 'Charlie', hoh: false, evicted: false, nominated: false, stats: { hohWins: 3, vetoWins: 1, timesSaved: 2 }, nominatedCount: 1 },
+        { id: 4, name: 'Diana', hoh: false, evicted: true, juror: true, stats: { hohWins: 0, vetoWins: 1 }, nominatedCount: 4 },
+        { id: 5, name: 'Eve', hoh: false, evicted: true, juror: true, stats: { hohWins: 1, vetoWins: 0 }, nominatedCount: 2 },
+        { id: 6, name: 'Frank', hoh: false, evicted: true, juror: true, stats: { hohWins: 2, vetoWins: 2 }, nominatedCount: 1 },
+        { id: 7, name: 'Grace', hoh: false, evicted: true, juror: true, stats: { hohWins: 1, vetoWins: 1 }, nominatedCount: 3 }
+      ],
+      hohId: 1,
+      nominees: [2, 3],
+      finalTwo: [1, 2],
+      juryHouse: [4, 5, 6, 7],
+      season: 1,
+      week: 8,
+      __recapShown: false,
+      __pleaSubmitted: false
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+
+    // Mock avatar resolver
+    window.resolveAvatar = function(playerId) {
+      const player = window.getP(playerId);
+      if (!player) return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(String(playerId))}`;
+      return player.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+    };
+
+    window.getAvatarFallback = function(name) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
+    };
+
+    // Mock music system
+    window.phaseMusic = function(phase) {
+      console.log('[Test] Playing music for phase:', phase);
+    };
+
+    // Status display helpers
+    function showStatus(elementId, message, isError = false) {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.innerHTML = `<div class="status ${isError ? 'status-error' : 'status-success'}">${message}</div>`;
+      }
+    }
+
+    // Test functions
+    async function testPart1Cinematic() {
+      showStatus('cinematics-status', '▶️ Playing Part 1 winner cinematic...');
+      try {
+        if (window.FinaleCinematics) {
+          await window.FinaleCinematics.showPart1WinnerCinematic(1);
+          showStatus('cinematics-status', '✅ Part 1 cinematic completed successfully!');
+        } else {
+          showStatus('cinematics-status', '❌ FinaleCinematics module not loaded', true);
+        }
+      } catch (e) {
+        showStatus('cinematics-status', '❌ Error: ' + e.message, true);
+      }
+    }
+
+    async function testPart2Cinematic() {
+      showStatus('cinematics-status', '▶️ Playing Part 2 winner cinematic...');
+      try {
+        if (window.FinaleCinematics) {
+          await window.FinaleCinematics.showPart2WinnerCinematic(2);
+          showStatus('cinematics-status', '✅ Part 2 cinematic completed successfully!');
+        } else {
+          showStatus('cinematics-status', '❌ FinaleCinematics module not loaded', true);
+        }
+      } catch (e) {
+        showStatus('cinematics-status', '❌ Error: ' + e.message, true);
+      }
+    }
+
+    async function testFinalShowdownIntro() {
+      showStatus('cinematics-status', '▶️ Playing Final Showdown intro...');
+      try {
+        if (window.FinaleCinematics) {
+          await window.FinaleCinematics.showFinalShowdownIntroCinematic(1, 2);
+          showStatus('cinematics-status', '✅ Final Showdown intro completed successfully!');
+        } else {
+          showStatus('cinematics-status', '❌ FinaleCinematics module not loaded', true);
+        }
+      } catch (e) {
+        showStatus('cinematics-status', '❌ Error: ' + e.message, true);
+      }
+    }
+
+    async function testFinalHOHCinematic() {
+      showStatus('cinematics-status', '▶️ Playing Final HOH cinematic...');
+      try {
+        if (window.FinaleCinematics) {
+          await window.FinaleCinematics.showFinalHOHCinematic(1);
+          showStatus('cinematics-status', '✅ Final HOH cinematic completed successfully!');
+        } else {
+          showStatus('cinematics-status', '❌ FinaleCinematics module not loaded', true);
+        }
+      } catch (e) {
+        showStatus('cinematics-status', '❌ Error: ' + e.message, true);
+      }
+    }
+
+    async function testRoadToFinale() {
+      showStatus('recap-status', '▶️ Playing Road to Finale recap...');
+      try {
+        if (window.RoadToFinale) {
+          await window.RoadToFinale.showRoadToFinaleRecap();
+          showStatus('recap-status', '✅ Road to Finale recap completed successfully!');
+        } else {
+          showStatus('recap-status', '❌ RoadToFinale module not loaded', true);
+        }
+      } catch (e) {
+        showStatus('recap-status', '❌ Error: ' + e.message, true);
+      }
+    }
+
+    function resetRecapFlag() {
+      window.game.__recapShown = false;
+      showStatus('recap-status', '🔄 Recap flag reset - you can show it again');
+    }
+
+    async function testAIDeliberation(withPlea) {
+      showStatus('deliberation-status', `▶️ Playing AI deliberation ${withPlea ? 'with' : 'without'} plea...`);
+      try {
+        if (window.AIDeliberation) {
+          await window.AIDeliberation.showAIDeliberation(1, [2, 3], withPlea, 6000);
+          showStatus('deliberation-status', '✅ AI deliberation completed successfully!');
+        } else {
+          showStatus('deliberation-status', '❌ AIDeliberation module not loaded', true);
+        }
+      } catch (e) {
+        showStatus('deliberation-status', '❌ Error: ' + e.message, true);
+      }
+    }
+
+    async function testFullFlow() {
+      showStatus('flow-status', '▶️ Starting full Final 3 atmospheric sequence...');
+      
+      try {
+        // Part 1
+        showStatus('flow-status', '▶️ Part 1: Winner reveal...');
+        await window.FinaleCinematics.showPart1WinnerCinematic(1);
+        
+        // Part 2
+        showStatus('flow-status', '▶️ Part 2: Winner reveal...');
+        await window.FinaleCinematics.showPart2WinnerCinematic(2);
+        
+        // Final Showdown Intro
+        showStatus('flow-status', '▶️ Final Showdown: Intro...');
+        await window.FinaleCinematics.showFinalShowdownIntroCinematic(1, 2);
+        
+        // Final HOH
+        showStatus('flow-status', '▶️ Final HOH: Crowning...');
+        await window.FinaleCinematics.showFinalHOHCinematic(1);
+        
+        // AI Deliberation
+        showStatus('flow-status', '▶️ AI Deliberation...');
+        await window.AIDeliberation.showAIDeliberation(1, [2, 3], false, 5000);
+        
+        // Road to Finale (reset flag first)
+        window.game.__recapShown = false;
+        showStatus('flow-status', '▶️ Road to Finale: Recap...');
+        await window.RoadToFinale.showRoadToFinaleRecap();
+        
+        showStatus('flow-status', '✅ Full sequence completed successfully! All cinematics working.');
+      } catch (e) {
+        showStatus('flow-status', '❌ Error during sequence: ' + e.message, true);
+      }
+    }
+
+    // Check module loading on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        console.log('[Test] Checking module availability...');
+        console.log('FinaleCinematics:', !!window.FinaleCinematics);
+        console.log('RoadToFinale:', !!window.RoadToFinale);
+        console.log('AIDeliberation:', !!window.AIDeliberation);
+        
+        if (!window.FinaleCinematics || !window.RoadToFinale || !window.AIDeliberation) {
+          console.warn('[Test] Some modules not loaded - check script tags in index.html');
+        }
+      }, 1000);
+    });
+  </script>
+
+  <!-- Load the actual modules -->
+  <script src="js/finale-cinematics.js"></script>
+  <script src="js/road-to-finale.js"></script>
+  <script src="js/ai-deliberation.js"></script>
+</body>
+</html>

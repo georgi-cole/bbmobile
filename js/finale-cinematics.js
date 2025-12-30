@@ -379,14 +379,14 @@
       overlay.appendChild(content);
       document.body.appendChild(overlay);
 
-      // Auto-dismiss after duration
-      const autoDismissTimer = setTimeout(() => {
-        dismissCinematic();
-      }, duration);
+      // Auto-dismiss timer (declared before dismissCinematic to avoid hoisting error)
+      let autoDismissTimer = null;
 
       // Click to skip
       const dismissCinematic = () => {
-        clearTimeout(autoDismissTimer);
+        if (autoDismissTimer) {
+          clearTimeout(autoDismissTimer);
+        }
         overlay.style.opacity = '0';
         overlay.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
@@ -394,6 +394,9 @@
           resolve();
         }, 300);
       };
+
+      // Auto-dismiss after duration
+      autoDismissTimer = setTimeout(dismissCinematic, duration);
 
       overlay.addEventListener('click', dismissCinematic);
     });
