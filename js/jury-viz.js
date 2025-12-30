@@ -1005,10 +1005,8 @@
     // FIX 3: COMPLETELY CLEAR the overlay before showing winner content
     // This prevents old voting UI from being visible behind the winner
     if (state.overlay) {
-      // Remove all child elements from overlay (voting UI, message areas, etc.)
-      while (state.overlay.firstChild) {
-        state.overlay.removeChild(state.overlay.firstChild);
-      }
+      // Use modern replaceChildren() for better performance
+      state.overlay.replaceChildren();
       console.log('[jury-viz] Overlay cleared before winner display');
     }
     
