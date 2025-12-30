@@ -820,6 +820,31 @@
       flex-direction: column;
       text-align: center;
     }
+  }
+  
+  /* Reduced motion support for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .finale-fullscreen-overlay {
+      animation: none !important;
+      background: radial-gradient(ellipse at center, 
+        rgba(20, 30, 50, 0.95) 0%, 
+        rgba(5, 10, 20, 0.98) 100%);
+    }
+    .finale-fullscreen-overlay::before {
+      animation: none !important;
+      opacity: 0.5;
+    }
+    .finalFaceoff::before {
+      animation: none !important;
+      opacity: 0.8;
+    }
+    .finalFaceoff .fo-message-area.visible {
+      animation: none !important;
+    }
+    .floating-emoji,
+    .confetti {
+      animation-duration: 1s !important;
+    }
   }`;
   const style = document.createElement('style');
   style.id = 'faceoff-css';
@@ -958,8 +983,11 @@
           state.messageAvatar.onerror = function() {
             console.warn('[jury-viz] Juror avatar fallback for:', jurorName);
             this.onerror = null;
-            // Use dicebear fallback
-            this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(jurorName || 'juror')}`;
+            // Use global getDicebearUrl or fallback implementation
+            const getDicebearUrl = window.getDicebearUrl || window.global?.getDicebearUrl || function(seed) {
+              return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+            };
+            this.src = getDicebearUrl(jurorName || 'juror');
           };
         } else {
           state.messageAvatar.style.display = 'none';
