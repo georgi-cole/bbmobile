@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Spectator Mode Fullscreen Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg, #0d151f);
+      color: var(--ink, #e3ecf5);
+      font-family: system-ui, sans-serif;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: var(--card, #132132);
+      border-radius: 12px;
+    }
+    h1 {
+      color: #ffdc8b;
+      margin-bottom: 20px;
+    }
+    .test-btn {
+      margin: 10px 0;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--card-2, #162435);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    .test-info {
+      color: var(--muted, #95a9c0);
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎬 Spectator Mode Fullscreen Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <p class="test-info">
+        This test verifies that spectator mode now displays in fullscreen overlay
+        instead of rendering inside the #panel element.
+      </p>
+      
+      <button class="btn primary test-btn" onclick="testFinal3Part2()">
+        Test Final 3 - Part 2 (2 competitors)
+      </button>
+      
+      <button class="btn primary test-btn" onclick="testFinal3Part3()">
+        Test Final 3 - Part 3 (2 finalists)
+      </button>
+      
+      <button class="btn primary test-btn" onclick="testWithPhotos()">
+        Test with Player Photos
+      </button>
+    </div>
+
+    <div class="test-section">
+      <h2>Expected Behavior</h2>
+      <ul class="test-info">
+        <li>✅ Spectator view should appear as fullscreen overlay</li>
+        <li>✅ Should NOT be constrained to #panel element</li>
+        <li>✅ Should have dark backdrop with blur effect</li>
+        <li>✅ Player avatars should use actual photos (not Dicebear fallback)</li>
+        <li>✅ Should show dynamic score updates</li>
+        <li>✅ Should show animated progress messages</li>
+        <li>✅ Skip button should be prominent and accessible</li>
+        <li>✅ Space/Enter keys should trigger skip</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Visual Improvements</h2>
+      <ul class="test-info">
+        <li>🎨 Enhanced competitor cards with shimmer effects</li>
+        <li>🎨 Larger avatars with glowing borders</li>
+        <li>🎨 Dynamic score display with flash animations</li>
+        <li>🎨 Improved shadows and depth</li>
+        <li>🎨 Better typography with text shadows</li>
+        <li>🎨 Enhanced progress bar with glow effect</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/spectator-view.js"></script>
+
+  <script>
+    // Mock game state
+    if (!window.game) window.game = {};
+    if (!window.game.cfg) window.game.cfg = {};
+    
+    // Mock event bus
+    if (!window.game.bus) {
+      window.game.bus = {
+        emit: function(event, data) {
+          console.log('[EventBus]', event, data);
+        },
+        on: function(event, handler) {
+          console.log('[EventBus] Registered handler for:', event);
+        }
+      };
+    }
+
+    // Mock players
+    const mockPlayers = [
+      { id: 1, name: 'Alice', avatar: 'alice', photo: 'avatars/alice.png' },
+      { id: 2, name: 'Bob', avatar: 'bob', photo: 'avatars/bob.png' },
+      { id: 3, name: 'Charlie', avatar: 'charlie', photo: 'avatars/charlie.png' },
+      { id: 4, name: 'Diana', avatar: 'diana', photo: 'avatars/diana.png' }
+    ];
+
+    window.getP = function(id) {
+      return mockPlayers.find(p => p.id === id);
+    };
+
+    function testFinal3Part2() {
+      console.log('Testing Final 3 - Part 2');
+      
+      if (!window.SpectatorView) {
+        alert('SpectatorView module not loaded!');
+        return;
+      }
+
+      window.SpectatorView.show({
+        competitorIds: [1, 2],
+        gameType: 'memory',
+        phase: 'Final 3 — Part 2',
+        onSkip: function() {
+          console.log('Skip callback triggered');
+          alert('Competition skipped! Results would appear here.');
+        }
+      });
+    }
+
+    function testFinal3Part3() {
+      console.log('Testing Final 3 - Part 3');
+      
+      if (!window.SpectatorView) {
+        alert('SpectatorView module not loaded!');
+        return;
+      }
+
+      window.SpectatorView.show({
+        competitorIds: [2, 3],
+        gameType: 'clicker',
+        phase: 'Final 3 — Part 3',
+        onSkip: function() {
+          console.log('Skip callback triggered');
+          alert('Competition skipped! Results would appear here.');
+        }
+      });
+    }
+
+    function testWithPhotos() {
+      console.log('Testing with player photos');
+      
+      if (!window.SpectatorView) {
+        alert('SpectatorView module not loaded!');
+        return;
+      }
+
+      // Mock players with explicit photo URLs
+      const photoplayers = [
+        { id: 5, name: 'Emma', avatar: 'emma', photo: 'https://via.placeholder.com/100/FF6B9D/FFFFFF?text=E' },
+        { id: 6, name: 'Frank', avatar: 'frank', photo: 'https://via.placeholder.com/100/4A90E2/FFFFFF?text=F' }
+      ];
+
+      const oldGetP = window.getP;
+      window.getP = function(id) {
+        return photoplayers.find(p => p.id === id) || oldGetP(id);
+      };
+
+      window.SpectatorView.show({
+        competitorIds: [5, 6],
+        gameType: 'math',
+        phase: 'Final 3 — Part 2',
+        onSkip: function() {
+          console.log('Skip callback triggered');
+          alert('Competition skipped!');
+          window.getP = oldGetP; // Restore
+        }
+      });
+    }
+
+    // Log module status
+    console.log('SpectatorView module loaded:', !!window.SpectatorView);
+    console.log('SpectatorView.show available:', typeof window.SpectatorView?.show === 'function');
+  </script>
+</body>
+</html>
