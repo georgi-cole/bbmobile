@@ -9583,3 +9583,185 @@ html.eviction-vote-open body {
    Now loaded directly in index.html for better reliability on GitHub Pages.
    See index.html: livevote-compact.css and livevote-compact-fullyfit.css
    ============================================================================ */
+
+/* ============================================================================
+   SPECTATOR VIEW - Final 3 Flow Optimization
+   Used when user is not competing or when jury member watches finale
+   ============================================================================ */
+.spectator-view {
+  animation: fadeIn 0.4s ease;
+}
+
+.spectator-competitors {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.spectator-competitor {
+  background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
+  border: 2px solid #6b7a99;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 140px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.spectator-competitor:hover {
+  transform: translateY(-2px);
+}
+
+.spectator-game-preview {
+  background: linear-gradient(145deg, rgba(30,30,60,0.9) 0%, rgba(20,20,40,0.9) 100%);
+  border: 2px solid #4a5a7a;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spectator-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(107, 122, 153, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.spectator-progress-bar .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffdc8b 0%, #ffa500 100%);
+  width: 0%;
+  transition: width 2s ease;
+}
+
+.spectator-updates {
+  min-height: 60px;
+  margin-bottom: 20px;
+}
+
+.spectator-update-text {
+  font-size: 1rem;
+  color: #cedbeb;
+  font-style: italic;
+}
+
+/* Mobile responsiveness for spectator view */
+@media (max-width: 600px) {
+  .spectator-competitors {
+    gap: 16px;
+  }
+  
+  .spectator-competitor {
+    min-width: 120px;
+    padding: 12px;
+  }
+  
+  .spectator-game-preview {
+    padding: 16px;
+    min-height: 100px;
+  }
+}
+
+/* ============================================================================
+   FINAL PLEA MODAL - Final 3 Flow Optimization
+   Shown when user is nominee before AI HOH makes eviction decision
+   ============================================================================ */
+.final-plea-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: linear-gradient(135deg, rgba(20,20,40,0.97) 0%, rgba(10,10,30,0.98) 100%);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalFadeIn 0.4s ease;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.plea-option {
+  background: rgba(30,30,60,0.8);
+  border: 2px solid #6b7a99;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #cedbeb;
+  width: 100%;
+}
+
+.plea-option:hover {
+  background: rgba(35,35,65,0.9);
+  border-color: #8a9ab8;
+  transform: translateX(4px);
+}
+
+.plea-option:active {
+  transform: scale(0.98);
+}
+
+/* Mobile responsiveness for final plea */
+@media (max-width: 600px) {
+  .final-plea-modal {
+    padding: 12px;
+  }
+  
+  .plea-option {
+    padding: 12px;
+  }
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
