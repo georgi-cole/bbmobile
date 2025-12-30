@@ -12,8 +12,12 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   };
 
-  // Sleep helper
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  // Sleep helper with FFWD support
+  // When fast-forward is active, this function will use normalized (compressed) duration
+  function sleep(ms){ 
+    const duration = global.normalizeDuration ? global.normalizeDuration(ms) : ms;
+    return new Promise(r => setTimeout(r, duration)); 
+  }
 
   /**
    * Main function: Run eviction visual enhancement
