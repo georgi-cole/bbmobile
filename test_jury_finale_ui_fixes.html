@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jury Finale UI Fixes Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2rem;
+      color: #00e0cc;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .info {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .info h2 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      color: #00e0cc;
+    }
+    
+    .info ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .info li {
+      padding: 6px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+    
+    .info li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00e0cc;
+      font-weight: bold;
+    }
+    
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .status {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .status .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .status .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-time {
+      color: #00e0cc;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎖️ Jury Finale UI Fixes Test</h1>
+    
+    <div class="info">
+      <h2>Test Scenarios</h2>
+      <ul>
+        <li>Single Modal - No overlapping UI during voting</li>
+        <li>Vote counters hidden during user voting phase</li>
+        <li>First juror vote appears within 1 second</li>
+        <li>Juror messages with avatars in speech bubbles</li>
+        <li>Smaller finalist avatars during reveal</li>
+        <li>Clean winner display with inline runner-up</li>
+        <li>Improved atmosphere with particles and glassmorphism</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button onclick="testVotingPhase()">Test Voting Phase (Human Juror)</button>
+      <button onclick="testRevealPhase()">Test Reveal Phase</button>
+      <button onclick="testWinnerPhase()">Test Winner Phase</button>
+      <button onclick="testFullFlow()">Test Full Flow</button>
+      <button onclick="clearOverlay()">Clear Overlay</button>
+    </div>
+    
+    <div class="status" id="status">
+      <div class="log-entry"><span class="log-time">[INFO]</span> Test ready. Click a button to begin.</div>
+    </div>
+  </div>
+
+  <!-- Load required dependencies -->
+  <script src="js/jury-viz.js"></script>
+  <script>
+    // Mock game state
+    window.game = {
+      players: [
+        { id: 1, name: 'Rae', avatar: './avatars/Rae.png', evicted: false },
+        { id: 2, name: 'Nova', avatar: './avatars/Nova.png', evicted: false },
+        { id: 3, name: 'Pax', avatar: './avatars/Pax.png', evicted: true, juror: true },
+        { id: 4, name: 'Dex', avatar: './avatars/Dex.png', evicted: true, juror: true },
+        { id: 5, name: 'Luna', avatar: './avatars/Luna.png', evicted: true, juror: true },
+        { id: 6, name: 'Kai', avatar: './avatars/Kai.png', evicted: true, juror: true },
+        { id: 7, name: 'Zara', avatar: './avatars/Zara.png', evicted: true, juror: true },
+        { id: 8, name: 'Rex', avatar: './avatars/Rex.png', evicted: true, juror: true },
+        { id: 9, name: 'Mira', avatar: './avatars/Mira.png', evicted: true, juror: true },
+      ],
+      juryHouse: [3, 4, 5, 6, 7, 8, 9],
+      finalTwo: [1, 2],
+      humanId: 3
+    };
+    
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || 'Unknown';
+    
+    function log(message, type = 'INFO') {
+      const status = document.getElementById('status');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="log-time">[${type}]</span> ${message}`;
+      status.appendChild(entry);
+      status.scrollTop = status.scrollHeight;
+    }
+    
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    async function testVotingPhase() {
+      log('Starting voting phase test...');
+      
+      // Mount faceoff in fullscreen
+      window.FinalFaceoff.mount({
+        left: window.game.players[0],
+        right: window.game.players[1],
+        majority: 4,
+        fullscreen: true
+      });
+      
+      log('Faceoff mounted with vote counters at 0-0');
+      await sleep(500);
+      
+      // Hide faceoff to simulate voting phase
+      window.FinalFaceoff.hideFaceoff();
+      log('Faceoff hidden - vote counters should not be visible');
+      
+      // Simulate voting UI (would be rendered by jury.js)
+      const overlay = document.querySelector('.finale-fullscreen-overlay');
+      if (overlay) {
+        const votingUI = document.createElement('div');
+        votingUI.style.cssText = `
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(12px);
+          border: 2px solid rgba(0, 224, 204, 0.4);
+          border-radius: 20px;
+          padding: 40px;
+          text-align: center;
+          color: white;
+          z-index: 10001;
+        `;
+        votingUI.innerHTML = `
+          <h2 style="color: #00e0cc; margin-bottom: 20px;">🎖️ YOUR JURY VOTE 🎖️</h2>
+          <p>This is where the voting UI would appear</p>
+          <p style="margin-top: 10px; opacity: 0.7; font-size: 14px;">No vote counters visible behind this modal</p>
+        `;
+        overlay.appendChild(votingUI);
+        log('Voting UI displayed (simulated)');
+        
+        await sleep(3000);
+        votingUI.remove();
+      }
+      
+      // Show faceoff for reveal
+      window.FinalFaceoff.showFaceoff();
+      log('Faceoff shown for reveal - avatars should be smaller now');
+      log('✓ Voting phase test complete');
+    }
+    
+    async function testRevealPhase() {
+      log('Starting reveal phase test...');
+      
+      // Ensure faceoff is mounted
+      if (!document.querySelector('.finalFaceoff')) {
+        window.FinalFaceoff.mount({
+          left: window.game.players[0],
+          right: window.game.players[1],
+          majority: 4,
+          fullscreen: true
+        });
+        window.FinalFaceoff.showFaceoff();
+      }
+      
+      log('Simulating jury vote reveals...');
+      
+      const jurors = [
+        { id: 3, name: 'Pax', vote: 2 },
+        { id: 4, name: 'Dex', vote: 1 },
+        { id: 5, name: 'Luna', vote: 2 },
+        { id: 6, name: 'Kai', vote: 2 },
+        { id: 7, name: 'Zara', vote: 1 },
+        { id: 8, name: 'Rex', vote: 2 },
+        { id: 9, name: 'Mira', vote: 2 }
+      ];
+      
+      let countLeft = 0;
+      let countRight = 0;
+      
+      for (const juror of jurors) {
+        await sleep(1000); // 1 second between reveals (FIX 3)
+        
+        const votedFor = juror.vote === 1 ? 'left' : 'right';
+        if (votedFor === 'left') countLeft++;
+        else countRight++;
+        
+        // Show vote card with avatar
+        const jurorData = window.getP(juror.id);
+        const reason = `${window.safeName(juror.vote)}'s game speaks for itself.`;
+        window.FinalFaceoff.showVoteCard(
+          juror.name, 
+          window.safeName(juror.vote), 
+          reason,
+          jurorData.avatar
+        );
+        
+        // Update counts
+        window.FinalFaceoff.onVote(votedFor, { left: countLeft, right: countRight });
+        
+        log(`${juror.name} votes for ${window.safeName(juror.vote)} (${countLeft}-${countRight})`);
+      }
+      
+      log('✓ Reveal phase test complete - Check speech bubbles with avatars');
+    }
+    
+    async function testWinnerPhase() {
+      log('Starting winner phase test...');
+      
+      // Ensure faceoff is mounted
+      if (!document.querySelector('.finalFaceoff')) {
+        window.FinalFaceoff.mount({
+          left: window.game.players[0],
+          right: window.game.players[1],
+          majority: 4,
+          fullscreen: true
+        });
+      }
+      
+      await sleep(500);
+      
+      // Show winner celebration
+      const winner = window.game.players[1]; // Nova
+      const runnerUp = window.game.players[0]; // Rae
+      const finalVotes = 'Rae: 2 • Nova: 5';
+      
+      window.FinalFaceoff.showWinnerCelebration(winner, runnerUp, finalVotes);
+      log('Winner celebration displayed with confetti and runner-up inline');
+      log('✓ Winner phase test complete - Check golden glow and runner-up position');
+      
+      await sleep(8000);
+      log('Celebration complete - overlay can now be closed');
+    }
+    
+    async function testFullFlow() {
+      log('=== Starting Full Jury Finale Flow ===');
+      
+      await testVotingPhase();
+      await sleep(1000);
+      
+      await testRevealPhase();
+      await sleep(2000);
+      
+      await testWinnerPhase();
+      
+      log('=== Full flow complete ===');
+    }
+    
+    function clearOverlay() {
+      window.FinalFaceoff.destroy();
+      log('Overlay cleared');
+    }
+    
+    // Log initial state
+    log('Jury finale UI fixes test loaded');
+    log('7 jurors, 2 finalists (Rae vs Nova)');
+  </script>
+</body>
+</html>
