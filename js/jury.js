@@ -1570,6 +1570,17 @@
   async function startFinaleRefactorFlow(){
     const gg=g.game||{};
     
+    // Show Road to Finale recap if available
+    if (global.RoadToFinale?.showRoadToFinaleRecap) {
+      try {
+        console.info('[jury] Showing Road to Finale recap...');
+        await global.RoadToFinale.showRoadToFinaleRecap();
+        console.info('[jury] Road to Finale recap complete');
+      } catch (e) {
+        console.warn('[jury] Road to Finale recap error:', e);
+      }
+    }
+    
     // Flush all pending cards before entering finale
     if(typeof g.flushAllCards === 'function'){
       g.flushAllCards('enter-finale');
