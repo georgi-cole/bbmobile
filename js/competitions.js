@@ -2238,7 +2238,16 @@
         pleaBtn.style.cssText = 'width: 100%;';
         pleaBtn.onclick = () => {
           const humanPlayer = global.getP(humanId);
-          const otherNominee = global.getP(g.nominees.find(id => id !== humanId));
+          const otherNomineeId = g.nominees.find(id => id !== humanId);
+          
+          // Validate that we have both nominees before showing plea
+          if (!otherNomineeId) {
+            console.warn('[F3Decision] Could not find other nominee, skipping plea');
+            output.innerHTML += '\n✗ Error: Could not determine other nominee';
+            return;
+          }
+          
+          const otherNominee = global.getP(otherNomineeId);
           
           global.FinalPlea.show({
             nominee: humanPlayer,

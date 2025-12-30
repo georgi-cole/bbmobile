@@ -390,6 +390,10 @@
 
       if (updateText) {
         updateText.style.animation = 'none';
+        // Force reflow: This DOM read forces the browser to recalculate styles,
+        // which is necessary to restart the CSS animation. Without this,
+        // setting the animation property again wouldn't trigger a new animation
+        // because the browser optimizes away the change if no reflow occurs.
         void updateText.offsetWidth; // Trigger reflow
         updateText.style.animation = 'fadeIn 0.5s ease';
         updateText.textContent = message;
