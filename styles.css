@@ -5464,6 +5464,7 @@ img{ max-width:100%; display:block; }
 @keyframes resultsModalFadeIn{ from{ opacity:0; } to{ opacity:1; } }
 @keyframes resultsModalFadeOut{ to{ opacity:0; } }
 @keyframes resultsCardSlideIn{ from{ opacity:0; transform:translateY(30px) scale(0.95); } to{ opacity:1; transform:translateY(0) scale(1); } }
+@keyframes personalBestPulse{ 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.9; } }
 
 /* === TV-docked jury visuals — ensure no cut-offs and no ticker overlap ==== */
 .juryVizDock{
