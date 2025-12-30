@@ -48,7 +48,7 @@
    * @param {string} options.gameType - Type of minigame (e.g., 'memory', 'clicker')
    * @param {string} options.phase - Phase name (e.g., 'Part 2', 'Part 3')
    * @param {Function} options.onSkip - Callback when user clicks skip
-   * @param {HTMLElement} options.container - Container element (defaults to #panel)
+   * @param {HTMLElement} options.container - Container element (defaults to fullscreen overlay)
    */
   function show(options) {
     const {
@@ -56,13 +56,8 @@
       gameType = 'competition',
       phase = 'Competition',
       onSkip = null,
-      container = document.getElementById('panel')
+      container = null // Now optional, defaults to fullscreen
     } = options;
-
-    if (!container) {
-      console.error('[SpectatorView] Container not found');
-      return;
-    }
 
     // Clean up any existing view
     cleanup();
@@ -75,25 +70,43 @@
     skipCallback = onSkip;
     updateCount = 0;
 
-    // Create spectator view container
+    // Create fullscreen overlay container
     const view = document.createElement('div');
-    view.className = 'spectator-view';
+    view.className = 'spectator-view spectator-fullscreen';
     view.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: linear-gradient(135deg, rgba(10,15,25,0.98) 0%, rgba(15,20,35,0.98) 100%);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       padding: 20px;
-      text-align: center;
       animation: fadeIn 0.4s ease;
+      overflow-y: auto;
+    `;
+
+    // Content wrapper for scrollable content
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.cssText = `
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
     `;
 
     // Title
     const title = document.createElement('h3');
     title.textContent = `🎬 ${phase} in Progress`;
     title.style.cssText = `
-      font-size: 1.4rem;
+      font-size: 1.8rem;
       font-weight: 700;
       color: #ffdc8b;
-      margin: 0 0 24px 0;
+      margin: 0 0 32px 0;
+      text-shadow: 0 2px 12px rgba(255, 220, 139, 0.5);
     `;
-    view.appendChild(title);
+    contentWrapper.appendChild(title);
 
     // Competitors container
     const competitorsBox = document.createElement('div');
@@ -101,8 +114,8 @@
     competitorsBox.style.cssText = `
       display: flex;
       justify-content: center;
-      gap: 24px;
-      margin-bottom: 24px;
+      gap: 32px;
+      margin-bottom: 32px;
       flex-wrap: wrap;
     `;
 
@@ -114,25 +127,42 @@
       competitorCard.className = 'spectator-competitor';
       competitorCard.style.cssText = `
         background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
-        border: 2px solid #6b7a99;
-        border-radius: 12px;
-        padding: 16px;
-        min-width: 140px;
+        border: 3px solid #6b7a99;
+        border-radius: 16px;
+        padding: 24px;
+        min-width: 180px;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 64px rgba(107,122,153,0.2);
       `;
 
-      // Avatar
+      // Animated background shimmer
+      const shimmer = document.createElement('div');
+      shimmer.style.cssText = `
+        position: absolute;
+        inset: -50%;
+        background: linear-gradient(90deg, transparent, rgba(255,220,139,0.1), transparent);
+        animation: shimmer 3s ease infinite;
+        pointer-events: none;
+      `;
+      competitorCard.appendChild(shimmer);
+
+      // Avatar - use actual player photo via resolveAvatar
       const avatar = document.createElement('img');
-      avatar.src = getDicebearUrl(player.avatar || player.name);
+      const avatarUrl = global.resolveAvatar?.(player) || getDicebearUrl(player.avatar || player.name);
+      avatar.src = avatarUrl;
       avatar.alt = player.name;
       avatar.style.cssText = `
-        width: 80px;
-        height: 80px;
+        width: 100px;
+        height: 100px;
         border-radius: 50%;
-        border: 3px solid #ffdc8b;
-        margin-bottom: 12px;
+        border: 4px solid #ffdc8b;
+        margin-bottom: 16px;
         animation: pulse 2s ease infinite;
+        box-shadow: 0 4px 16px rgba(255,220,139,0.4);
+        object-fit: cover;
+        position: relative;
+        z-index: 1;
       `;
       competitorCard.appendChild(avatar);
 
@@ -140,10 +170,12 @@
       const name = document.createElement('div');
       name.textContent = player.name;
       name.style.cssText = `
-        font-size: 1rem;
-        font-weight: 600;
+        font-size: 1.2rem;
+        font-weight: 700;
         color: #cedbeb;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
+        position: relative;
+        z-index: 1;
       `;
       competitorCard.appendChild(name);
 
@@ -152,49 +184,69 @@
       status.className = 'competitor-status';
       status.textContent = 'Competing...';
       status.style.cssText = `
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         color: #ffdc8b;
-        font-weight: 500;
+        font-weight: 600;
+        position: relative;
+        z-index: 1;
       `;
       competitorCard.appendChild(status);
+
+      // Score display (simulated)
+      const score = document.createElement('div');
+      score.className = 'competitor-score';
+      score.textContent = '---';
+      score.style.cssText = `
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #83bfff;
+        margin-top: 12px;
+        font-family: 'Courier New', monospace;
+        position: relative;
+        z-index: 1;
+      `;
+      competitorCard.appendChild(score);
 
       competitorsBox.appendChild(competitorCard);
     });
 
-    view.appendChild(competitorsBox);
+    contentWrapper.appendChild(competitorsBox);
 
     // Game preview box
     const gamePreview = document.createElement('div');
     gamePreview.className = 'spectator-game-preview';
     gamePreview.style.cssText = `
       background: linear-gradient(145deg, rgba(30,30,60,0.9) 0%, rgba(20,20,40,0.9) 100%);
-      border: 2px solid #4a5a7a;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      min-height: 120px;
+      border: 3px solid #4a5a7a;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 32px;
+      min-height: 160px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
     `;
 
     const gameIcon = document.createElement('div');
     gameIcon.textContent = getGameIcon(gameType);
     gameIcon.style.cssText = `
-      font-size: 3rem;
-      margin-bottom: 12px;
+      font-size: 4rem;
+      margin-bottom: 16px;
       animation: pulse 2s ease infinite;
+      filter: drop-shadow(0 4px 16px rgba(255,220,139,0.3));
     `;
     gamePreview.appendChild(gameIcon);
 
     const gameName = document.createElement('div');
     gameName.textContent = getGameDisplayName(gameType);
     gameName.style.cssText = `
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-size: 1.3rem;
+      font-weight: 700;
       color: #cedbeb;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
     `;
     gamePreview.appendChild(gameName);
 
@@ -202,11 +254,13 @@
     progressBar.className = 'spectator-progress-bar';
     progressBar.style.cssText = `
       width: 100%;
-      height: 8px;
+      max-width: 400px;
+      height: 12px;
       background: rgba(107, 122, 153, 0.3);
-      border-radius: 4px;
+      border-radius: 6px;
       overflow: hidden;
-      margin-top: 12px;
+      margin-top: 16px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
     `;
 
     const progressFill = document.createElement('div');
@@ -217,58 +271,67 @@
       width: 0%;
       transition: width 2s ease;
       animation: shimmer 2s ease infinite;
+      box-shadow: 0 0 16px rgba(255,220,139,0.6);
     `;
     progressBar.appendChild(progressFill);
     gamePreview.appendChild(progressBar);
 
-    view.appendChild(gamePreview);
+    contentWrapper.appendChild(gamePreview);
 
     // Progress updates container
     const updatesBox = document.createElement('div');
     updatesBox.className = 'spectator-updates';
     updatesBox.style.cssText = `
-      min-height: 60px;
-      margin-bottom: 20px;
+      min-height: 80px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
 
     const updateText = document.createElement('div');
     updateText.className = 'spectator-update-text';
     updateText.style.cssText = `
-      font-size: 1rem;
+      font-size: 1.2rem;
       color: #cedbeb;
       font-style: italic;
       animation: fadeIn 0.5s ease;
+      text-align: center;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
     `;
     updateText.textContent = 'Competition starting...';
     updatesBox.appendChild(updateText);
 
-    view.appendChild(updatesBox);
+    contentWrapper.appendChild(updatesBox);
 
     // Skip button
     const skipBtn = document.createElement('button');
     skipBtn.className = 'btn primary';
     skipBtn.textContent = 'Skip to Results ⏭️';
     skipBtn.style.cssText = `
-      padding: 12px 24px;
-      font-size: 1rem;
-      font-weight: 600;
+      padding: 16px 32px;
+      font-size: 1.1rem;
+      font-weight: 700;
       margin-top: 12px;
+      box-shadow: 0 4px 16px rgba(131,191,255,0.4);
     `;
     skipBtn.onclick = () => handleSkip();
-    view.appendChild(skipBtn);
+    contentWrapper.appendChild(skipBtn);
 
     // Info text
     const infoText = document.createElement('div');
     infoText.style.cssText = `
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       color: #8a9ab8;
-      margin-top: 16px;
+      margin-top: 20px;
     `;
     infoText.textContent = 'Press Space or Enter to skip';
-    view.appendChild(infoText);
+    contentWrapper.appendChild(infoText);
 
-    container.innerHTML = '';
-    container.appendChild(view);
+    view.appendChild(contentWrapper);
+    
+    // Mount to body for fullscreen experience
+    document.body.appendChild(view);
     currentView = view;
 
     // Set up keyboard shortcut
@@ -365,9 +428,27 @@
       }
     }, 500);
 
+    // Simulate score updates
+    const scoreElements = document.querySelectorAll('.competitor-score');
+    let currentScores = competitorIds.map(() => 0);
+
     // Update messages periodically
     progressInterval = setInterval(() => {
       updateCount++;
+
+      // Update scores with random increments
+      scoreElements.forEach((el, idx) => {
+        if (idx < currentScores.length) {
+          const increment = Math.floor(Math.random() * 150) + 50;
+          currentScores[idx] += increment;
+          el.textContent = currentScores[idx].toString();
+          
+          // Add flash animation on update
+          el.style.animation = 'none';
+          void el.offsetWidth; // Force reflow
+          el.style.animation = 'scoreFlash 0.5s ease';
+        }
+      });
 
       // Select random message
       let message;
@@ -401,7 +482,7 @@
 
       // Emit progress event
       if (global.game?.bus) {
-        global.game.bus.emit('spectator:progress', { message, updateCount });
+        global.game.bus.emit('spectator:progress', { message, updateCount, scores: currentScores });
       }
 
     }, 3000 + Math.random() * 2000); // 3-5 seconds between updates
