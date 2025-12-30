@@ -1194,7 +1194,8 @@ header.innerHTML = `
       
       // Evicted overlay with SVG brush X - add only once (check data-evictAnimated)
       // Suppress rendering if visual animation is in progress for this player
-      if(p.evicted){
+      // Issue #982: Skip red X for runner-up (they should be grayed but not show eviction cross)
+      if(p.evicted && !isRunnerUp){
         const isSuppressed = game.__suppressEvictedHudUntilVisualDone && 
                             game.__pendingEvictionVisuals?.has(p.id);
         
@@ -1218,7 +1219,8 @@ header.innerHTML = `
       }
 
       const img=document.createElement('img');
-      img.className='top-tile-avatar roster-avatar' + (p.evicted?' grayed':'');
+      // Issue #982: Apply grayed filter to evicted players OR runner-up
+      img.className='top-tile-avatar roster-avatar' + (p.evicted || isRunnerUp ?' grayed':'');
       img.src=getAvatar(p); img.alt=p.name||'guest';
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);

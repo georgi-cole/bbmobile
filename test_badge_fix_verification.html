@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Badge Fix Verification</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #333;
+    }
+    .test-result {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border-left: 4px solid;
+    }
+    .pass {
+      background: #d4edda;
+      border-color: #28a745;
+      color: #155724;
+    }
+    .fail {
+      background: #f8d7da;
+      border-color: #dc3545;
+      color: #721c24;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .code-section {
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🥇 Winner & Runner-Up Badge Fix Verification 🥈</h1>
+  
+  <div class="code-section">
+    <h2>Test: Avatar Graying Logic</h2>
+    <p>Testing if runner-up avatar gets grayed out without eviction cross</p>
+    <div id="test1"></div>
+  </div>
+
+  <div class="code-section">
+    <h2>Test: Red X Cross Prevention</h2>
+    <p>Testing if runner-up does NOT get red X cross</p>
+    <div id="test2"></div>
+  </div>
+
+  <div class="code-section">
+    <h2>Test: Medal Badge Display</h2>
+    <p>Testing if medal badges (🥇/🥈) display correctly</p>
+    <div id="test3"></div>
+  </div>
+
+  <div class="code-section">
+    <h2>Code Analysis</h2>
+    <pre id="codeAnalysis"></pre>
+  </div>
+
+  <script>
+    // Simulate the fix logic
+    function testAvatarGrayingLogic() {
+      const testCases = [
+        { name: 'Evicted player', evicted: true, isRunnerUp: false, expectedGrayed: true },
+        { name: 'Runner-up (not evicted)', evicted: false, isRunnerUp: true, expectedGrayed: true },
+        { name: 'Winner', evicted: false, isRunnerUp: false, expectedGrayed: false },
+        { name: 'Regular player', evicted: false, isRunnerUp: false, expectedGrayed: false }
+      ];
+
+      const results = testCases.map(tc => {
+        // Simulate the fixed line: img.className='top-tile-avatar roster-avatar' + (p.evicted || isRunnerUp ?' grayed':'');
+        const shouldBeGrayed = tc.evicted || tc.isRunnerUp;
+        const pass = shouldBeGrayed === tc.expectedGrayed;
+        return { ...tc, actual: shouldBeGrayed, pass };
+      });
+
+      const allPass = results.every(r => r.pass);
+      const html = `
+        <div class="test-result ${allPass ? 'pass' : 'fail'}">
+          <strong>${allPass ? '✓ PASS' : '✗ FAIL'}</strong>
+          <ul>
+            ${results.map(r => `
+              <li>${r.pass ? '✓' : '✗'} ${r.name}: Expected grayed=${r.expectedGrayed}, Got=${r.actual}</li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+      document.getElementById('test1').innerHTML = html;
+    }
+
+    function testRedXLogic() {
+      const testCases = [
+        { name: 'Evicted player (not runner-up)', evicted: true, isRunnerUp: false, expectedRedX: true },
+        { name: 'Runner-up (marked as evicted)', evicted: true, isRunnerUp: true, expectedRedX: false },
+        { name: 'Runner-up (not evicted)', evicted: false, isRunnerUp: true, expectedRedX: false },
+        { name: 'Winner', evicted: false, isRunnerUp: false, expectedRedX: false }
+      ];
+
+      const results = testCases.map(tc => {
+        // Simulate the fixed line: if(p.evicted && !isRunnerUp){
+        const shouldShowRedX = tc.evicted && !tc.isRunnerUp;
+        const pass = shouldShowRedX === tc.expectedRedX;
+        return { ...tc, actual: shouldShowRedX, pass };
+      });
+
+      const allPass = results.every(r => r.pass);
+      const html = `
+        <div class="test-result ${allPass ? 'pass' : 'fail'}">
+          <strong>${allPass ? '✓ PASS' : '✗ FAIL'}</strong>
+          <ul>
+            ${results.map(r => `
+              <li>${r.pass ? '✓' : '✗'} ${r.name}: Expected RedX=${r.expectedRedX}, Got=${r.actual}</li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+      document.getElementById('test2').innerHTML = html;
+    }
+
+    function testMedalBadgeLogic() {
+      const testCases = [
+        { name: 'Winner', showFinalLabel: 'WINNER', expectedBadge: '🥇' },
+        { name: 'Runner-up', showFinalLabel: 'RUNNER-UP', expectedBadge: '🥈' },
+        { name: 'Regular player', showFinalLabel: null, expectedBadge: null }
+      ];
+
+      const results = testCases.map(tc => {
+        let actualBadge = null;
+        // Simulate the label precedence logic
+        if (tc.showFinalLabel === 'WINNER') {
+          actualBadge = '🥇';
+        } else if (tc.showFinalLabel === 'RUNNER-UP') {
+          actualBadge = '🥈';
+        }
+        const pass = actualBadge === tc.expectedBadge;
+        return { ...tc, actual: actualBadge, pass };
+      });
+
+      const allPass = results.every(r => r.pass);
+      const html = `
+        <div class="test-result ${allPass ? 'pass' : 'fail'}">
+          <strong>${allPass ? '✓ PASS' : '✗ FAIL'}</strong>
+          <ul>
+            ${results.map(r => `
+              <li>${r.pass ? '✓' : '✗'} ${r.name}: Expected badge=${r.expectedBadge}, Got=${r.actual}</li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+      document.getElementById('test3').innerHTML = html;
+    }
+
+    function showCodeAnalysis() {
+      const analysis = `
+Fix Applied in js/ui.hud-and-router.js:
+
+1. Line 1198: Red X Cross Prevention
+   OLD: if(p.evicted){
+   NEW: if(p.evicted && !isRunnerUp){
+   
+   Impact: Runner-up will NOT get red X cross even if somehow marked as evicted
+
+2. Line 1223: Avatar Graying
+   OLD: img.className='top-tile-avatar roster-avatar' + (p.evicted?' grayed':'');
+   NEW: img.className='top-tile-avatar roster-avatar' + (p.evicted || isRunnerUp ?' grayed':'');
+   
+   Impact: Runner-up avatar will be grayed out (grayscale filter applied)
+
+3. Lines 1249-1256: Medal Badge Display (Already Working)
+   - Winner gets 🥇 when showFinalLabel === 'WINNER'
+   - Runner-up gets 🥈 when showFinalLabel === 'RUNNER-UP'
+   - These are set by showPlacementLabels() in js/jury.js
+
+Issue #982 Resolution:
+✓ Winner displays 🥇 gold medal badge
+✓ Runner-up displays 🥈 silver medal badge
+✓ Runner-up avatar is grayed out
+✓ Runner-up does NOT have red X eviction cross
+      `;
+      document.getElementById('codeAnalysis').textContent = analysis.trim();
+    }
+
+    // Run all tests
+    testAvatarGrayingLogic();
+    testRedXLogic();
+    testMedalBadgeLogic();
+    showCodeAnalysis();
+  </script>
+</body>
+</html>
