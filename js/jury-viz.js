@@ -170,99 +170,6 @@
     0%{ text-shadow: 0 0 20px rgba(0, 224, 204, 0.6), 0 4px 8px rgba(0, 0, 0, 0.8); }
     100%{ text-shadow: 0 0 30px rgba(0, 224, 204, 0.9), 0 4px 12px rgba(0, 0, 0, 0.8); }
   }
-  
-  /* Speech bubble message area with juror avatar - enhanced with glow and pointer */
-  .finalFaceoff .fo-message-area{
-    position: fixed;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(90%, 800px);
-    background: rgba(30, 45, 65, 0.95);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 224, 204, 0.4);
-    border-radius: 16px;
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.7),
-      0 0 30px rgba(0, 224, 204, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-    pointer-events: none;
-    transform: translateX(-50%) translateY(20px);
-  }
-  
-  /* Speech bubble pointer toward center */
-  .finalFaceoff .fo-message-area::before {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-bottom: 10px solid rgba(30, 45, 65, 0.95);
-    filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.3));
-  }
-  
-  .finalFaceoff .fo-message-area.visible{
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-    animation: messageGlow 2s ease-in-out infinite alternate;
-  }
-  
-  @keyframes messageGlow {
-    0% {
-      box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.7),
-        0 0 30px rgba(0, 224, 204, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    }
-    100% {
-      box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.7),
-        0 0 40px rgba(0, 224, 204, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    }
-  }
-  
-  .finalFaceoff .fo-message-avatar{
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    border-radius: 50%;
-    border: 2px solid rgba(0, 224, 204, 0.6);
-    object-fit: cover;
-    box-shadow: 0 0 12px rgba(0, 224, 204, 0.3);
-  }
-  .finalFaceoff .fo-message-content{
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .finalFaceoff .fo-message-juror{
-    font-size: clamp(13px, 2vw, 17px);
-    font-weight: 700;
-    color: #00e0cc;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  }
-  .finalFaceoff .fo-message-text{
-    font-size: clamp(14px, 2vw, 18px);
-    font-weight: 400;
-    color: #ffffff;
-    font-style: italic;
-    line-height: 1.4;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  }
 
   .finalFaceoff .fo-slot{
     position: relative;
@@ -793,23 +700,6 @@
     .fo-votes{
       font-size: clamp(20px, 5vw, 32px);
     }
-    .finalFaceoff .fo-message-area{
-      bottom: 20px;
-      padding: 12px 14px;
-      width: min(94%, 360px);
-      gap: 10px;
-    }
-    .finalFaceoff .fo-message-avatar{
-      width: 42px;
-      height: 42px;
-      min-width: 42px;
-    }
-    .finalFaceoff .fo-message-juror{
-      font-size: clamp(12px, 3vw, 14px);
-    }
-    .finalFaceoff .fo-message-text{
-      font-size: clamp(13px, 3.2vw, 16px);
-    }
     .winner-avatar-large{
       width: min(70vw, 300px);
       height: min(70vw, 300px);
@@ -837,9 +727,6 @@
     .finalFaceoff::before {
       animation: none !important;
       opacity: 0.8;
-    }
-    .finalFaceoff .fo-message-area.visible {
-      animation: none !important;
     }
     .floating-emoji,
     .confetti {
@@ -927,27 +814,12 @@
     
     rightSlot.append(rightImg, rightName, rightPill);
 
-    // Message area at bottom with avatar support
-    const messageArea = el('div', 'fo-message-area');
-    const messageAvatar = el('img', 'fo-message-avatar');
-    messageAvatar.alt = 'Juror';
-    const messageContent = el('div', 'fo-message-content');
-    const messageJuror = el('div', 'fo-message-juror');
-    const messageText = el('div', 'fo-message-text');
-    messageContent.append(messageJuror, messageText);
-    messageArea.append(messageAvatar, messageContent);
-
     wrap.append(leftSlot, vs, rightSlot);
     mountAt.appendChild(wrap);
-    mountAt.appendChild(messageArea);
 
     state = {
       wrap, 
-      overlay, 
-      messageArea,
-      messageAvatar,
-      messageJuror, 
-      messageText,
+      overlay,
       left:  { meta:left,  slot:leftSlot,  img:leftImg, votesEl:leftVotes, pill:leftPill, count:0 },
       right: { meta:right, slot:rightSlot, img:rightImg, votesEl:rightVotes, pill:rightPill, count:0 },
       majority: majority || 0,
@@ -961,49 +833,109 @@
   function showVoteCard(jurorName, votedName, reason, jurorAvatar){
     if(!state) return;
     
-    // Use single message area at bottom with avatar
-    if (state.messageJuror && state.messageText && state.messageArea && state.messageAvatar) {
-      // First hide any existing message with smooth fade
-      if (state.messageArea.classList.contains('visible')) {
-        state.messageArea.classList.remove('visible');
-        // Wait for fade out before showing new message
-        setTimeout(() => showNewMessage(), 400);
-      } else {
-        showNewMessage();
-      }
-      
-      function showNewMessage() {
-        state.messageJuror.textContent = jurorName;
-        state.messageText.textContent = reason || `I vote for ${votedName} to win Big Brother.`;
-        
-        // Set juror avatar if provided
-        if (jurorAvatar) {
-          state.messageAvatar.src = jurorAvatar;
-          state.messageAvatar.style.display = 'block';
-          state.messageAvatar.onerror = function() {
-            console.warn('[jury-viz] Juror avatar fallback for:', jurorName);
-            this.onerror = null;
-            // Use global getDicebearUrl or fallback implementation
-            const getDicebearUrl = window.getDicebearUrl || window.global?.getDicebearUrl || function(seed) {
-              return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
-            };
-            this.src = getDicebearUrl(jurorName || 'juror');
-          };
-        } else {
-          state.messageAvatar.style.display = 'none';
-        }
-        
-        // Show message with smooth fade-in
-        requestAnimationFrame(() => {
-          state.messageArea.classList.add('visible');
-        });
-        
-        // Hide after delay with smooth fade-out
-        setTimeout(() => {
-          state.messageArea.classList.remove('visible');
-        }, 2600);
-      }
+    // Use card-based system similar to nominee declarations
+    // Create card with juror avatar and vote reason
+    const card = document.createElement('div');
+    card.className = 'revealCard diaryRoomCard jury-vote-card';
+    card.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10002;
+      max-width: min(480px, 90%);
+      animation: cardFloatIn 0.5s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+    `;
+    
+    // Card title with juror name
+    const title = el('h3');
+    title.textContent = jurorName;
+    title.style.cssText = `
+      font-size: clamp(1.1rem, 3vw, 1.3rem);
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      text-shadow: 0 0 20px rgba(0, 224, 204, 0.5);
+    `;
+    
+    // Avatar and content container
+    const content = el('div');
+    content.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    `;
+    
+    // Juror avatar
+    if (jurorAvatar) {
+      const avatar = el('img');
+      avatar.src = jurorAvatar;
+      avatar.alt = jurorName;
+      avatar.className = 'rc-face';
+      avatar.style.cssText = `
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid rgba(0, 224, 204, 0.5);
+        box-shadow: 0 0 16px rgba(0, 224, 204, 0.3);
+      `;
+      avatar.onerror = function() {
+        console.warn('[jury-viz] Juror avatar fallback for:', jurorName);
+        this.onerror = null;
+        const getDicebearUrl = window.getDicebearUrl || window.global?.getDicebearUrl || function(seed) {
+          return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+        };
+        this.src = getDicebearUrl(jurorName || 'juror');
+      };
+      content.appendChild(avatar);
     }
+    
+    // Vote text
+    const voteText = el('div');
+    voteText.textContent = reason || `I vote for ${votedName} to win Big Brother.`;
+    voteText.style.cssText = `
+      flex: 1;
+      font-size: clamp(0.9rem, 2.5vw, 1.05rem);
+      line-height: 1.5;
+      color: #e8f4ff;
+      font-style: italic;
+    `;
+    content.appendChild(voteText);
+    
+    // Finalist badge
+    const badge = el('div');
+    badge.textContent = `Vote for ${votedName}`;
+    badge.style.cssText = `
+      text-align: center;
+      padding: 8px 16px;
+      background: rgba(0, 224, 204, 0.15);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 20px;
+      font-size: clamp(0.8rem, 2vw, 0.95rem);
+      font-weight: 600;
+      color: #00e0cc;
+    `;
+    
+    card.appendChild(title);
+    card.appendChild(content);
+    card.appendChild(badge);
+    
+    // Add to overlay
+    if (state.overlay) {
+      state.overlay.appendChild(card);
+    } else {
+      document.body.appendChild(card);
+    }
+    
+    // Remove after delay
+    setTimeout(() => {
+      card.style.animation = 'holdOut 0.6s ease-in forwards';
+      setTimeout(() => {
+        card.remove();
+      }, 600);
+    }, 2600);
   }
   
   // Hide the faceoff UI (for voting phase)
