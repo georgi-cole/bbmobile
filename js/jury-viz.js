@@ -1002,6 +1002,21 @@
   function showWinnerCelebration(winner, runnerUp, finalVotes) {
     if (!state) return;
     
+    // FIX 3: COMPLETELY CLEAR the overlay before showing winner content
+    // This prevents old voting UI from being visible behind the winner
+    if (state.overlay) {
+      // Remove all child elements from overlay (voting UI, message areas, etc.)
+      while (state.overlay.firstChild) {
+        state.overlay.removeChild(state.overlay.firstChild);
+      }
+      console.log('[jury-viz] Overlay cleared before winner display');
+    }
+    
+    // Also clear the wrap element if it exists separately
+    if (state.wrap && state.wrap.parentNode) {
+      state.wrap.remove();
+    }
+    
     const celebration = el('div', 'winner-celebration');
     
     // Winner display
