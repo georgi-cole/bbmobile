@@ -245,131 +245,16 @@
     return winner;
   }
 
-  // ===== LEGACY: Old panel tiles (DEPRECATED - no longer used) =====
-  // These functions are kept for backward compatibility but are no-ops.
-  // The fullscreen overlay system (FinalFaceoff) is now used exclusively.
-  // MIGRATION: Use FinalFaceoff.mount() in fullscreen mode instead.
-  function renderJuryBallotsPanel(jurors, A, B){
-    console.warn('[jury] renderJuryBallotsPanel is deprecated - use FinalFaceoff fullscreen overlay instead');
-    return; // No-op: fullscreen overlay handles all UI
-  }
-  function juryPanelOnBallot(jurorId, pickId){
-    return; // No-op: not used with fullscreen overlay
-  }
-
-  // ===== Faceoff UI and styles (with auto-fit and centered) =====
-  (function injectFaceoffCSS(){
-    if (document.getElementById('faceoff-css')) return;
-    const css = `
-    /* Centering wrapper around the scaled block */
-    .fo-center{ width:100%; display:flex; justify-content:center; }
-
-    /* Auto-fit wrapper scales content so it never clips inside parent; keep centered */
-    .fo-fit{
-      position:relative; transform-origin: top center; will-change: transform;
-      display:flex; flex-direction:column; align-items:center; gap:8px;
-    }
-
-    /* Message belt (fixed above; never overlays portraits) */
-    .fo-belt{ width:100%; min-height:46px; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:1 }
-    .fo-bubble{ background:rgba(0,0,0,.45); padding:8px 12px; border-radius:10px; font-size:clamp(13px,1.4vw,17px); line-height:1.25; color:#e8f9ff; text-align:center; max-width:92%; box-shadow:0 6px 18px rgba(0,0,0,.35); opacity:0; transform:translateY(-4px); transition:opacity .22s ease,transform .22s ease }
-    .fo-bubble.show{ opacity:1; transform:translateY(0) }
-
-    /* Portrait layout — inline-grid + width:auto so the pair can be truly centered */
-    .finalFaceoff{
-      position:relative; display:inline-grid; grid-template-columns:1fr 1fr;
-      gap:clamp(14px,2vw,24px); align-items:start; justify-items:center;
-      width:auto; max-width:100%; padding:12px; box-sizing:border-box; min-height:280px;
-    }
-    .fo-slot{ position:relative; display:grid; grid-template-rows:auto auto auto; gap:8px; align-items:center; justify-items:center; padding:10px 12px; width:clamp(190px,24vw,280px); border-radius:14px; background:rgba(255,255,255,.04); box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); transition:box-shadow .25s ease; overflow:visible }
-    .fo-slot.fo-leader{ box-shadow:inset 0 0 0 2px #4dd, 0 0 24px rgba(0,255,230,.25) }
-    .fo-avatar{ width:clamp(108px,15vw,170px); height:clamp(108px,15vw,170px); object-fit:cover; border-radius:12px; background:#111; box-shadow:0 8px 24px rgba(0,0,0,.35) }
-    .fo-name{ font-size:clamp(14px,1.4vw,18px); font-weight:700; letter-spacing:.3px; text-align:center }
-    .fo-votes{ font-size:clamp(15px,1.6vw,22px); font-weight:800; background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.65)); -webkit-background-clip:text; color:transparent }
-
-    .fo-badge{ position:absolute; top:8px; left:50%; transform:translateX(-50%); background:#00e0cc; color:#001a18; font-weight:800; font-size:12px; padding:6px 10px; border-radius:999px; box-shadow:0 2px 10px rgba(0,224,204,.3); letter-spacing:.3px; z-index:2; display:none }
-
-    @keyframes foPulse{0%{box-shadow:inset 0 0 0 2px rgba(0,224,204,0),0 0 0 rgba(0,224,204,0)}40%{box-shadow:inset 0 0 0 2px rgba(0,224,204,.8),0 0 24px rgba(0,224,204,.25)}100%{box-shadow:inset 0 0 0 2px rgba(0,224,204,.2),0 0 0 rgba(0,224,204,0)}}
-    .fo-pulse{ animation: foPulse 600ms ease }
-
-    .fo-tally,.fo-winner{ position:absolute; left:50%; transform:translateX(-50%); padding:8px 14px; border-radius:10px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.12); color:#f2feff; font-weight:800; text-align:center; box-shadow:0 8px 24px rgba(0,0,0,.35); z-index:3 }
-    .fo-tally{ top:42px; font-size:clamp(13px,1.6vw,18px) }
-    .fo-winner{ bottom:16px; font-size:clamp(15px,2.0vw,22px) }
-
-    .fo-medal{ position:absolute; inset:0; display:grid; place-items:center; z-index:4; pointer-events:none }
-    .fo-medal .medal-wrap{ display:grid; place-items:center; width:180px; height:180px; border-radius:999px; background:radial-gradient(ellipse at center,rgba(255,255,255,.06),rgba(0,0,0,.3)); border:1px solid rgba(255,255,255,.12); box-shadow:0 20px 60px rgba(0,0,0,.45) }
-    .fo-medal .medal{ font-size:72px; animation:spin 2s linear infinite; filter:drop-shadow(0 10px 20px rgba(0,0,0,.45)) }
-    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-
-    .fo-ribbon{ position:absolute; top:-10px; left:12px; background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.18); color:#e9fcff; font-weight:800; font-size:11px; padding:6px 8px; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,.35); z-index:3 }
-    .fo-ribbon.right{ left:auto; right:12px }
-
-    /* Fade out animation for tally removal */
-    .fadeOutFast{ opacity:0; transition:opacity .45s ease; }
-
-    @media (max-width: 1120px){ .finalFaceoff{ grid-template-columns:1fr; gap:14px } }
-    `;
-    const style=document.createElement('style'); style.id='faceoff-css'; style.textContent=css; document.head.appendChild(style);
-  })();
-
-  const faceoff = { state: null };
-
-  // Find the nearest ancestor that likely clips (overflow not visible or rounded)
-  function findMaskAncestor(el){
-    let n = el?.parentElement;
-    let depth = 0;
-    while(n && depth < 8){
-      const cs = getComputedStyle(n);
-      const ovY = cs.overflowY || cs.overflow;
-      const radius = parseFloat(cs.borderTopLeftRadius) || 0;
-      const clips = (ovY && ovY !== 'visible') || radius > 0.1;
-      if (clips) return n;
-      n = n.parentElement; depth++;
-    }
-    return el?.parentElement || document.body;
-  }
-
-  // Auto-fit scaling so content never clips inside the mask ancestor
-  function installAutoFit(box){
-    const st = faceoff.state; if(!st) return;
-
-    const fit = st.els.fit;
-    const mask = findMaskAncestor(box);
-    if (!fit || !mask) return;
-
-    let raf = 0;
-    const doFit = ()=>{
-      raf = 0;
-      try{
-        fit.style.transform = 'scale(1)';
-        const maskRect = mask.getBoundingClientRect();
-        const fitRect  = fit.getBoundingClientRect();
-        const avail = Math.max(80, (maskRect.top + maskRect.height) - fitRect.top - 8);
-        const need = fit.scrollHeight;
-        const scale = Math.max(0.5, Math.min(1, avail / need));
-        fit.style.transform = `scale(${scale})`;
-      }catch(e){}
-    };
-    const schedule = ()=>{ if (!raf) raf = requestAnimationFrame(doFit); };
-
-    const ro = new ResizeObserver(schedule);
-    try{ ro.observe(mask); ro.observe(fit); }catch{}
-    st._fitRO = ro;
-    st._fitSchedule = schedule;
-
-    schedule();
-    window.addEventListener('resize', schedule);
-    st._fitCleanup = ()=>{ try{ ro.disconnect(); }catch{} window.removeEventListener('resize', schedule); };
-  }
-
-  // ===== LEGACY: renderFinaleGraph (DEPRECATED) =====
-  // This function is kept for backward compatibility but is a no-op.
-  // The fullscreen overlay is now mounted directly in startFinaleRefactorFlow().
-  // MIGRATION: The overlay is created automatically - no manual render needed.
-  function renderFinaleGraph(A, B, totalJurors){
-    console.warn('[jury] renderFinaleGraph is deprecated - overlay auto-mounted in startFinaleRefactorFlow()');
-    return; // No-op: overlay already mounted in main flow
-  }
+  // ===== LEGACY FUNCTIONS REMOVED =====
+  // All old UI rendering code has been deleted. The fullscreen overlay system 
+  // in jury-viz.js is now used exclusively. No panel-based rendering is allowed.
+  // - renderJuryBallotsPanel: REMOVED (was no-op)
+  // - juryPanelOnBallot: REMOVED (was no-op)
+  // - injectFaceoffCSS: REMOVED (CSS now in jury-viz.js only)
+  // - faceoff.state: REMOVED (not needed for fullscreen)
+  // - findMaskAncestor: REMOVED (was for old in-place rendering)
+  // - installAutoFit: REMOVED (was for old in-place rendering)
+  // - renderFinaleGraph: REMOVED (was deprecated no-op)
 
   // Vote message - use new FinalFaceoff API
   function addFaceoffVoteCard(jurorName, finalistName, dynamicReason){
@@ -381,9 +266,10 @@
   // Update counts / pulse / leader glow using new API
   function updateFinaleGraph(aCount,bCount){
     if (typeof g.FinalFaceoff?.onVote === 'function') {
-      // Determine which side got the vote
-      const prevA = faceoff.state?.counts?.a || 0;
-      const prevB = faceoff.state?.counts?.b || 0;
+      // Track previous counts in module-local storage
+      if (!g.__juryVoteCounts) g.__juryVoteCounts = { a: 0, b: 0 };
+      const prevA = g.__juryVoteCounts.a;
+      const prevB = g.__juryVoteCounts.b;
       
       if (aCount > prevA) {
         g.FinalFaceoff.onVote('left', { left: aCount, right: bCount });
@@ -394,10 +280,9 @@
         g.FinalFaceoff.setCounts({ left: aCount, right: bCount });
       }
       
-      // Store in legacy state for compatibility
-      if (!faceoff.state) faceoff.state = { counts: {} };
-      faceoff.state.counts.a = aCount;
-      faceoff.state.counts.b = bCount;
+      // Update stored counts
+      g.__juryVoteCounts.a = aCount;
+      g.__juryVoteCounts.b = bCount;
     }
   }
 
@@ -414,24 +299,10 @@
   }
 
   function showPlacementLabels(winnerId){
-    const st = faceoff.state; if(!st?.els?.root) return;
-    st.els.root.querySelectorAll('.fo-ribbon').forEach(x=>x.remove());
-    const leftIsWinner = String(st.A) === String(winnerId);
+    // Note: This function is kept for backwards compatibility with the old rendering system
+    // but is no longer needed with the fullscreen overlay. The overlay handles winner display.
+    // We still execute the label-setting logic for game state updates.
     
-    // Create medal labels instead of text ribbons
-    const l = document.createElement('div'); 
-    l.className='fo-ribbon'; 
-    l.innerHTML = leftIsWinner ? '🥇 1st' : '🥈 2nd';
-    
-    const r = document.createElement('div'); 
-    r.className='fo-ribbon right'; 
-    r.innerHTML = leftIsWinner ? '🥈 2nd' : '🥇 1st';
-    
-    st.els.leftSlot.appendChild(l);
-    st.els.rightSlot.appendChild(r);
-    st._fitSchedule && st._fitSchedule();
-    
-    // Issue 4: Set final labels and clear other states
     const [A, B] = finalists();
     const winner = gp(winnerId);
     const runnerUp = gp(A === winnerId ? B : A);
@@ -510,25 +381,11 @@
     console.info('[publicFav] tallyHidden');
   }
 
-  function celebrateMajority(name){
-    try{ g.showBigCard?.('Majority Clinched', [name+' has secured the majority!'], 2200); g.victory?.(); }catch{}
-  }
-
-  // Human vote UI
-  function renderHumanJuryUI(A,B){
-    const panel=document.getElementById('panel'); if(!panel) return;
-    const box=document.createElement('div'); box.className='minigame-host'; box.id='humanJuryVote';
-    box.innerHTML=`
-      <h3>Your Jury Vote</h3>
-      <div class="row" style="gap:8px; margin-top:8px">
-        <button class="btn ok" id="btnVoteA">Vote ${safeName(A)}</button>
-        <button class="btn danger" id="btnVoteB">Vote ${safeName(B)}</button>
-      </div>
-      <div class="tiny muted" style="margin-top:6px">Cast your vote for the winner.</div>
-    `;
-    panel.appendChild(box);
-    return box;
-  }
+  
+  // ===== LEGACY FUNCTIONS REMOVED =====
+  // renderHumanJuryUI(A, B) - REMOVED - rendered to #panel (old broken approach)
+  // waitForHumanJuryVote(A, B) - REMOVED - used old renderHumanJuryUI
+  // The fullscreen overlay versions below are the only correct implementations.
   
   /**
    * Render human voting UI inside fullscreen overlay with horizontal layout
@@ -718,23 +575,9 @@
     return container;
   }
   
-  function waitForHumanJuryVote(A,B){
-    return new Promise(resolve=>{
-      const box = renderHumanJuryUI(A,B);
-      const kill = (choice)=>{
-        try{
-          const txt = document.createElement('div');
-          txt.className='tiny ok'; txt.style.marginTop='6px';
-          txt.textContent=`Your ballot: ${safeName(choice)}.`;
-          box.appendChild(txt);
-          box.querySelectorAll('button').forEach(b=>b.disabled=true);
-        }catch{}
-        resolve(choice);
-      };
-      box?.querySelector('#btnVoteA')?.addEventListener('click', ()=>kill(A));
-      box?.querySelector('#btnVoteB')?.addEventListener('click', ()=>kill(B));
-    });
-  }
+  // ===== LEGACY FUNCTION REMOVED =====
+  // waitForHumanJuryVote(A, B) - REMOVED - used old renderHumanJuryUI that rendered to #panel
+  // Use waitForHumanJuryVoteInOverlay instead, which renders inside the fullscreen overlay.
   
   /**
    * Wait for human jury vote inside fullscreen overlay
@@ -923,27 +766,32 @@
       if (humanIsJuror && jid === humanId) {
         console.info('[juryCast] waiting for human vote juror=' + jid);
         
-        // Choose voting UI based on whether overlay is available
-        const votePromise = overlay 
-          ? waitForHumanJuryVoteInOverlay(overlay, A, B)
-          : waitForHumanJuryVote(A, B);
-          
-        const timeoutPromise = new Promise(resolve => {
-          setTimeout(() => {
-            console.warn('[juryCast] human vote timeout, using affinity fallback');
-            resolve(null);
-          }, 30000); // 30 seconds
-        });
-        
-        // Race between vote and timeout
-        pick = await Promise.race([votePromise, timeoutPromise]);
-        
-        // If timeout OR UI error (pick is null), use affinity-based fallback
-        if (pick === null) {
+        // CRITICAL: Overlay must be provided. The fullscreen overlay should be created
+        // BEFORE calling startJuryCastingPhase (see startFinaleRefactorFlow line ~1734)
+        if (!overlay) {
+          console.error('[juryCast] CRITICAL: No overlay provided for human voting! Using fallback.');
           pick = ballotPick(jid, A, B);
-          console.info(`[juryCast] human vote fallback juror=${jid} pick=${pick}`);
+          console.info(`[juryCast] human vote fallback (no overlay) juror=${jid} pick=${pick}`);
         } else {
-          console.info(`[juryCast] human vote submitted juror=${jid} pick=${pick}`);
+          const votePromise = waitForHumanJuryVoteInOverlay(overlay, A, B);
+          
+          const timeoutPromise = new Promise(resolve => {
+            setTimeout(() => {
+              console.warn('[juryCast] human vote timeout, using affinity fallback');
+              resolve(null);
+            }, 30000); // 30 seconds
+          });
+          
+          // Race between vote and timeout
+          pick = await Promise.race([votePromise, timeoutPromise]);
+          
+          // If timeout OR UI error (pick is null), use affinity-based fallback
+          if (pick === null) {
+            pick = ballotPick(jid, A, B);
+            console.info(`[juryCast] human vote fallback juror=${jid} pick=${pick}`);
+          } else {
+            console.info(`[juryCast] human vote submitted juror=${jid} pick=${pick}`);
+          }
         }
       } else {
         // AI juror
