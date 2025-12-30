@@ -256,10 +256,11 @@
   // - installAutoFit: REMOVED (was for old in-place rendering)
   // - renderFinaleGraph: REMOVED (was deprecated no-op)
 
-  // Vote message - use new FinalFaceoff API
-  function addFaceoffVoteCard(jurorName, finalistName, dynamicReason){
+  // Vote message - use new FinalFaceoff API with avatar
+  function addFaceoffVoteCard(jurorName, finalistName, dynamicReason, jurorId){
     if (typeof g.FinalFaceoff?.showVoteCard === 'function') {
-      g.FinalFaceoff.showVoteCard(jurorName, finalistName, dynamicReason);
+      const jurorAvatar = getAvatar(jurorId);
+      g.FinalFaceoff.showVoteCard(jurorName, finalistName, dynamicReason, jurorAvatar);
     }
   }
 
@@ -758,6 +759,11 @@
     const humanId = gg.humanId;
     const humanIsJuror = humanId && jurors.includes(humanId);
     
+    // Hide the faceoff UI if human needs to vote (to prevent showing 0-0)
+    if (humanIsJuror && typeof g.FinalFaceoff?.hideFaceoff === 'function') {
+      g.FinalFaceoff.hideFaceoff();
+    }
+    
     // Cast votes anonymously
     for(const jid of jurors){
       let pick;
@@ -806,6 +812,11 @@
       g.addJuryLog?.(`${safeName(jid)}: ${banter}`, 'muted');
       
       await sleep(800);
+    }
+    
+    // Show the faceoff UI for reveal phase with smaller avatars
+    if (typeof g.FinalFaceoff?.showFaceoff === 'function') {
+      g.FinalFaceoff.showFaceoff();
     }
     
     finale.castingDone = true;
@@ -1506,7 +1517,7 @@
       // Update fullscreen overlay UI with vote
       const a=votes.get(A)||0, b=votes.get(B)||0;
       updateFinaleGraph(a,b);
-      addFaceoffVoteCard(safeName(jid), safeName(pick), dynamicReason);
+      addFaceoffVoteCard(safeName(jid), safeName(pick), dynamicReason, jid);
       
       // Check for majority clinch (but don't fast-track unless would exceed cap)
       if (!majorityReached && (a >= need || b >= need)) {
@@ -1629,8 +1640,8 @@
       await g.cardQueueWaitIdle?.();
     } catch(e) {}
     
-    // Setup gap: 1.5s (was 0.5s)
-    await sleep(1500);
+    // Setup gap: reduced to 1 second (FIX 3)
+    await sleep(1000);
     
     // PHASE 2: Jury reveal (no Public Favourite before jury)
     const result = await startJuryRevealPhase(jurors, A, B);
