@@ -58,7 +58,9 @@
       topThree = [],
       winnerEmoji = '👑',
       duration = 5000,
-      minDisplayTime = 5000
+      minDisplayTime = 5000,
+      rawScoreMode = false,           // If true, display raw scores instead of normalized
+      isNewPersonalBest = false       // If true, show personal best indicator
     } = options;
     
     if(!topThree || topThree.length === 0) return;
@@ -94,6 +96,7 @@
       let player = null;
       let name = '';
       let scoreRaw = '';
+      let rawScoreDisplay = null;
       let id = null;
       
       if(typeof entry === 'object'){
@@ -101,6 +104,7 @@
         if(id) player = global.getP?.(id);
         name = entry.name || player?.name || 'Player';
         scoreRaw = entry.score !== undefined ? entry.score : (entry.sc !== undefined ? entry.sc : '');
+        rawScoreDisplay = entry.rawScoreDisplay || null;
       } else {
         name = entry || 'Player';
       }
@@ -118,9 +122,15 @@
         console.info(`[results-popup] avatar url=${avatarUrl} player=${id || name} (no resolver)`);
       }
       
-      const scoreFormatted = formatCompetitionScoreInt(scoreRaw); // Use integer formatting
+      // Determine score display based on mode
+      let scoreFormatted;
+      if(rawScoreMode && rawScoreDisplay){
+        scoreFormatted = rawScoreDisplay;
+      } else {
+        scoreFormatted = formatCompetitionScoreInt(scoreRaw); // Use integer formatting
+      }
       
-      return { id, name, scoreRaw, scoreFormatted, avatarUrl };
+      return { id, name, scoreRaw, scoreFormatted, rawScoreDisplay, avatarUrl };
     }
     
     // Log popup display
@@ -312,7 +322,10 @@
       
       if(winnerData.scoreFormatted !== ''){
         const winnerScore = document.createElement('div');
-        winnerScore.textContent = `Score: ${winnerData.scoreFormatted}`;
+        
+        // For raw scores, don't add "Score:" prefix as the display is self-descriptive
+        const scorePrefix = (rawScoreMode && winnerData.rawScoreDisplay) ? '' : 'Score: ';
+        winnerScore.textContent = `${scorePrefix}${winnerData.scoreFormatted}`;
         winnerScore.style.cssText = `
           font-size: 1.05rem;
           font-weight: 600;
@@ -320,6 +333,22 @@
           text-align: center;
         `;
         winnerSection.appendChild(winnerScore);
+        
+        // Add personal best indicator if applicable
+        if(isNewPersonalBest){
+          const pbIndicator = document.createElement('div');
+          pbIndicator.textContent = '🏆 New Personal Best!';
+          pbIndicator.style.cssText = `
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffd96b;
+            text-align: center;
+            margin-top: 8px;
+            text-shadow: 0 2px 8px rgba(255,217,107,0.4);
+            animation: personalBestPulse 1.5s ease-in-out infinite;
+          `;
+          winnerSection.appendChild(pbIndicator);
+        }
       }
       
       card.appendChild(winnerSection);

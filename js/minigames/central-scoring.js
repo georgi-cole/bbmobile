@@ -156,7 +156,9 @@
      * @param {number} params.maxScore - Maximum possible raw score (default 100)
      * @param {number} params.compBeast - Player's competition beast rating (0-1 or 0-10)
      * @param {number} params.difficultyMultiplier - Difficulty adjustment (default 1.0)
-     * @returns {number} Final competition score (0-1000)
+     * @param {boolean} params.returnRawScore - If true, return object with both raw and normalized scores
+     * @param {string} params.rawScoreDisplay - Human-readable raw score (e.g., "23 food eaten")
+     * @returns {number|Object} Final competition score (0-1000) or object with {finalScore, rawScore, rawScoreDisplay}
      */
     calculateFinalScore(params){
       const {
@@ -164,7 +166,9 @@
         minScore = 0,
         maxScore = 100,
         compBeast = 0.5,
-        difficultyMultiplier = 1.0
+        difficultyMultiplier = 1.0,
+        returnRawScore = false,
+        rawScoreDisplay = null
       } = params;
       
       // Normalize raw score to 0-1000
@@ -181,8 +185,18 @@
       
       // Apply multiplier and clamp to scale (0-1500 max for exceptional performance)
       const finalScore = normalizedScore * finalMultiplier;
+      const finalScoreRounded = Math.round(Math.max(0, Math.min(SCALE * 1.5, finalScore)));
       
-      return Math.round(Math.max(0, Math.min(SCALE * 1.5, finalScore)));
+      // Return extended object if requested
+      if(returnRawScore){
+        return {
+          finalScore: finalScoreRounded,
+          rawScore: rawScore,
+          rawScoreDisplay: rawScoreDisplay || String(rawScore)
+        };
+      }
+      
+      return finalScoreRounded;
     }
   };
 

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoring System Integration Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { color: #4a90e2; margin-bottom: 10px; }
+    .subtitle { color: #95a9c0; margin-bottom: 30px; font-size: 0.95rem; }
+    h2 { color: #5bd68a; margin-top: 30px; border-bottom: 2px solid #2c3a4d; padding-bottom: 8px; }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .test-case {
+      background: #0f1419;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border-left: 4px solid #4a90e2;
+    }
+    .test-case h3 {
+      margin-top: 0;
+      color: #83bfff;
+      font-size: 1.1rem;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    button.secondary {
+      background: linear-gradient(135deg, #5bd68a 0%, #4ab570 100%);
+    }
+    button.danger {
+      background: linear-gradient(135deg, #e24a4a 0%, #bd3535 100%);
+    }
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    .checklist li {
+      padding: 8px 12px;
+      margin: 6px 0;
+      background: #0f1419;
+      border-radius: 4px;
+      border-left: 3px solid #2c3a4d;
+    }
+    .checklist li.pass {
+      border-left-color: #5bd68a;
+      background: rgba(91, 214, 138, 0.1);
+    }
+    .checklist li.fail {
+      border-left-color: #e24a4a;
+      background: rgba(226, 74, 74, 0.1);
+    }
+    #gameContainer {
+      min-height: 500px;
+      margin-top: 20px;
+      background: #0a0e14;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .info-box {
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+    }
+    .success-box {
+      background: rgba(91, 214, 138, 0.1);
+      border: 1px solid rgba(91, 214, 138, 0.3);
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Scoring System Integration Test</h1>
+  <div class="subtitle">Visual verification of raw scores, personal bests, and score consolidation</div>
+
+  <div class="test-section">
+    <h2>Test Instructions</h2>
+    <div class="info-box">
+      <p><strong>What to test:</strong></p>
+      <ol>
+        <li>Play each game below and verify that:
+          <ul>
+            <li>High score is shown before starting (if you've played before)</li>
+            <li>Raw score is displayed in end-game card (e.g., "23 food eaten")</li>
+            <li>"🏆 New Personal Best!" appears when you beat your record</li>
+            <li>Results modal shows true score, not normalized score</li>
+            <li>Scores are only shown 2 times (end-game + results modal)</li>
+          </ul>
+        </li>
+        <li>Try beating your high score to see the personal best celebration</li>
+        <li>Clear high scores to test from scratch</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Quick Actions</h2>
+    <button class="danger" onclick="clearAllHighScores()">🗑️ Clear All High Scores</button>
+    <button class="secondary" onclick="showAllHighScores()">📊 View All High Scores</button>
+    <div id="highScoreDisplay" style="margin-top: 15px;"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Cases</h2>
+
+    <div class="test-case">
+      <h3>Test 1: Snake - Raw Score Display</h3>
+      <p><strong>What to verify:</strong></p>
+      <ul>
+        <li>✅ Before game: "Your Best: X food" is shown (if exists)</li>
+        <li>✅ After game: See actual food eaten count (e.g., "23 food eaten")</li>
+        <li>✅ No 15-food cap - can score unlimited food</li>
+        <li>✅ Personal best indicator if you beat your record</li>
+      </ul>
+      <button onclick="testSnake()">Play Snake</button>
+    </div>
+
+    <div class="test-case">
+      <h3>Test 2: Tetris - Lines Cleared</h3>
+      <p><strong>What to verify:</strong></p>
+      <ul>
+        <li>✅ Before game: "Your Best: X lines" is shown (if exists)</li>
+        <li>✅ After game: See actual lines cleared (e.g., "45 lines cleared")</li>
+        <li>✅ Personal best indicator if you beat your record</li>
+      </ul>
+      <button onclick="testTetris()">Play Tetris</button>
+    </div>
+
+    <div class="test-case">
+      <h3>Test 3: Count House - Points Display</h3>
+      <p><strong>What to verify:</strong></p>
+      <ul>
+        <li>✅ Before game: "Best: X" is shown (if exists)</li>
+        <li>✅ After game: See actual points earned</li>
+        <li>✅ Personal best indicator if you beat your record</li>
+      </ul>
+      <button onclick="testCountHouse()">Play Count House</button>
+    </div>
+
+    <div class="test-case">
+      <h3>Test 4: Results Popup Integration</h3>
+      <p><strong>What to verify:</strong></p>
+      <ul>
+        <li>✅ Results modal shows raw score (e.g., "23 food eaten")</li>
+        <li>✅ Personal best indicator appears in results modal</li>
+        <li>✅ Score only shown 2 times total</li>
+      </ul>
+      <button onclick="testResultsPopup()">Test Results Popup</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Game Container</h2>
+    <div id="gameContainer"></div>
+  </div>
+
+  <!-- Load all dependencies -->
+  <script src="js/bbSeededRng.js"></script>
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/central-scoring.js"></script>
+  <script src="js/minigames/high-score-manager.js"></script>
+  <script src="js/minigames/snake.js"></script>
+  <script src="js/minigames/tetris.js"></script>
+  <script src="js/minigames/count-house.js"></script>
+  
+  <!-- Results popup and dependencies -->
+  <script>
+    // Mock global formatCompetitionScoreInt if not available
+    if(!window.formatCompetitionScoreInt) {
+      window.formatCompetitionScoreInt = function(value) {
+        if(value == null || value === '') return '';
+        const num = Number(value);
+        if(isNaN(num)) return String(value);
+        return Math.round(num).toString();
+      };
+    }
+    
+    // Mock getDicebearUrl for avatar fallback
+    if(!window.getDicebearUrl) {
+      window.getDicebearUrl = function(seed) {
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      };
+    }
+    
+    // Mock resolveAvatar
+    if(!window.resolveAvatar) {
+      window.resolveAvatar = function(player) {
+        const name = typeof player === 'string' ? player : (player?.name || 'Player');
+        return window.getDicebearUrl(name);
+      };
+    }
+  </script>
+  <script src="js/results-popup.js"></script>
+
+  <script>
+    // Mock MinigameScoring if needed
+    if(!window.MinigameScoring) {
+      window.MinigameScoring = {
+        normalize: function(rawScore, minScore, maxScore) {
+          if(maxScore === minScore) return 500;
+          return Math.round(((rawScore - minScore) / (maxScore - minScore)) * 1000);
+        }
+      };
+    }
+
+    function clearAllHighScores() {
+      if(confirm('Clear all high scores? This cannot be undone.')) {
+        window.HighScoreManager.clearAllHighScores();
+        alert('✅ All high scores cleared!');
+        showAllHighScores();
+      }
+    }
+
+    function showAllHighScores() {
+      const display = document.getElementById('highScoreDisplay');
+      const scores = window.HighScoreManager.getAllHighScores();
+      
+      if(Object.keys(scores).length === 0) {
+        display.innerHTML = '<div class="info-box">No high scores yet. Play some games!</div>';
+        return;
+      }
+      
+      let html = '<div class="success-box"><strong>Current High Scores:</strong><ul class="checklist">';
+      for(const [game, data] of Object.entries(scores)) {
+        const date = new Date(data.timestamp).toLocaleString();
+        html += `<li class="pass"><strong>${game}</strong>: ${data.displayValue} <small>(${date})</small></li>`;
+      }
+      html += '</ul></div>';
+      
+      display.innerHTML = html;
+    }
+
+    function testSnake() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<h3 style="color:#5bd68a;">🐍 Playing Snake...</h3><p style="color:#95a9c0;">Watch for high score display before game and raw score after!</p>';
+      
+      window.MiniGames.snake.render(container, (scoreData) => {
+        console.log('Snake completed with data:', scoreData);
+        
+        // Show results in a mock results popup
+        if(typeof scoreData === 'object' && window.showResultsPopup) {
+          window.showResultsPopup({
+            title: 'Snake Results',
+            phase: 'test',
+            topThree: [
+              {
+                id: 'human',
+                name: 'You',
+                score: scoreData.score,
+                rawScoreDisplay: scoreData.rawScoreDisplay
+              }
+            ],
+            winnerEmoji: '🏆',
+            duration: 5000,
+            rawScoreMode: true,
+            isNewPersonalBest: scoreData.isNewPersonalBest
+          });
+        } else {
+          container.innerHTML += `
+            <div class="success-box">
+              <h3>Game Complete!</h3>
+              <p><strong>Score Data:</strong> ${JSON.stringify(scoreData, null, 2)}</p>
+            </div>
+          `;
+        }
+        
+        showAllHighScores();
+      }, { debugMode: true, variant: 'normal' });
+    }
+
+    function testTetris() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<h3 style="color:#5bd68a;">🎮 Playing Tetris...</h3><p style="color:#95a9c0;">Watch for high score display before game and raw score after!</p>';
+      
+      window.MiniGames.tetris.render(container, (scoreData) => {
+        console.log('Tetris completed with data:', scoreData);
+        
+        // Show results in a mock results popup
+        if(typeof scoreData === 'object' && window.showResultsPopup) {
+          window.showResultsPopup({
+            title: 'Tetris Results',
+            phase: 'test',
+            topThree: [
+              {
+                id: 'human',
+                name: 'You',
+                score: scoreData.score,
+                rawScoreDisplay: scoreData.rawScoreDisplay
+              }
+            ],
+            winnerEmoji: '🏆',
+            duration: 5000,
+            rawScoreMode: true,
+            isNewPersonalBest: scoreData.isNewPersonalBest
+          });
+        } else {
+          container.innerHTML += `
+            <div class="success-box">
+              <h3>Game Complete!</h3>
+              <p><strong>Score Data:</strong> ${JSON.stringify(scoreData, null, 2)}</p>
+            </div>
+          `;
+        }
+        
+        showAllHighScores();
+      }, { debugMode: true });
+    }
+
+    function testCountHouse() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<h3 style="color:#5bd68a;">🏠 Playing Count House...</h3><p style="color:#95a9c0;">Watch for high score display before game and raw score after!</p>';
+      
+      window.MiniGames.countHouse.render(container, (scoreData) => {
+        console.log('Count House completed with data:', scoreData);
+        
+        // Show results in a mock results popup
+        if(typeof scoreData === 'object' && window.showResultsPopup) {
+          window.showResultsPopup({
+            title: 'Count House Results',
+            phase: 'test',
+            topThree: [
+              {
+                id: 'human',
+                name: 'You',
+                score: scoreData.score,
+                rawScoreDisplay: scoreData.rawScoreDisplay
+              }
+            ],
+            winnerEmoji: '🏆',
+            duration: 5000,
+            rawScoreMode: true,
+            isNewPersonalBest: scoreData.isNewPersonalBest
+          });
+        } else {
+          container.innerHTML += `
+            <div class="success-box">
+              <h3>Game Complete!</h3>
+              <p><strong>Score Data:</strong> ${JSON.stringify(scoreData, null, 2)}</p>
+            </div>
+          `;
+        }
+        
+        showAllHighScores();
+      }, { debugMode: true, competitionMode: false });
+    }
+
+    function testResultsPopup() {
+      if(!window.showResultsPopup) {
+        alert('Results popup not loaded!');
+        return;
+      }
+      
+      // Test with raw score data
+      window.showResultsPopup({
+        title: 'Test Competition Results',
+        phase: 'test',
+        topThree: [
+          {
+            id: 'player1',
+            name: 'Winner',
+            score: 950,
+            rawScoreDisplay: '23 food eaten'
+          },
+          {
+            id: 'player2',
+            name: 'Runner Up',
+            score: 800,
+            rawScoreDisplay: '18 food eaten'
+          },
+          {
+            id: 'player3',
+            name: 'Third Place',
+            score: 650,
+            rawScoreDisplay: '12 food eaten'
+          }
+        ],
+        winnerEmoji: '🏆',
+        duration: 5000,
+        rawScoreMode: true,
+        isNewPersonalBest: true
+      });
+    }
+
+    // Auto-show high scores on load
+    window.addEventListener('load', () => {
+      setTimeout(showAllHighScores, 500);
+    });
+  </script>
+</body>
+</html>

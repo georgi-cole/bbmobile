@@ -340,6 +340,17 @@
       title.className = 'snake-nokia-title';
       wrapper.appendChild(title);
       
+      // Show high score if available
+      if(g.HighScoreManager){
+        const highScoreDisplay = g.HighScoreManager.getHighScoreDisplay('snake');
+        if(highScoreDisplay){
+          const highScoreEl = document.createElement('div');
+          highScoreEl.textContent = highScoreDisplay;
+          highScoreEl.style.cssText = 'font-size:0.8rem;color:#ffd96b;font-weight:600;margin:-8px 0 0 0;text-align:center;';
+          wrapper.appendChild(highScoreEl);
+        }
+      }
+      
       const instructions = document.createElement('p');
       instructions.textContent = portalMode ? 'Eat food, grow, edges wrap around!' : 'Eat food, avoid walls and yourself!';
       instructions.className = 'snake-nokia-instructions';
@@ -548,23 +559,24 @@
         instructions.style.color = '#ff6b6b';
       }
       
-      // Score based on food eaten
-      let rawScore;
-      if(foodEaten >= 15){
-        rawScore = 100;
-      } else if(foodEaten >= 10){
-        rawScore = 70 + (foodEaten - 10) * 6;
-      } else if(foodEaten >= 5){
-        rawScore = 40 + (foodEaten - 5) * 6;
-      } else {
-        rawScore = foodEaten * 8;
-      }
-      
-      rawScore = Math.min(100, Math.round(rawScore));
+      // Score based on food eaten - Each food = 10 points
+      // Capped at 100 for compatibility with existing scoring normalization system
+      // The raw food count (not capped) is tracked separately for high scores
+      const rawScore = Math.min(100, foodEaten * 10);
       const maxScore = 100;
       
-      // Determine if player succeeded (legacy threshold for backward compatibility)
-      const playerSucceeded = rawScore >= 60;
+      // Determine if player succeeded (ate at least 5 food)
+      const playerSucceeded = foodEaten >= 5;
+      
+      // Check for new personal best
+      let isNewBest = false;
+      if(g.HighScoreManager){
+        isNewBest = g.HighScoreManager.isNewBest('snake', foodEaten);
+        if(isNewBest){
+          g.HighScoreManager.setHighScore('snake', foodEaten, `${foodEaten} food`);
+          console.info(`[Snake] New personal best: ${foodEaten} food!`);
+        }
+      }
       
       // Apply new centralized outcome logic in competition mode
       let finalScore = rawScore;
@@ -578,7 +590,7 @@
         finalScore = outcome.finalScore;
         
         // If player succeeded but didn't win, coerce to loss band for consistent UX
-        if(rawScore >= 60 && !outcome.didWin && !g.cfg?.debugAlwaysWin){
+        if(playerSucceeded && !outcome.didWin && !g.cfg?.debugAlwaysWin){
           finalScore = g.GameUtils.coerceSuccessToLossScore(finalScore);
           console.log('[Snake] Win probability applied: success forced to loss, score:', finalScore);
         }
@@ -590,7 +602,15 @@
         }
       }
       
-      setTimeout(() => onComplete(finalScore), 1500);
+      // Store metadata about raw score for display purposes
+      const scoreData = {
+        score: finalScore,
+        rawScore: foodEaten,
+        rawScoreDisplay: `${foodEaten} food eaten`,
+        isNewPersonalBest: isNewBest
+      };
+      
+      setTimeout(() => onComplete(scoreData), 1500);
     }
     
     // Controls - Keyboard
