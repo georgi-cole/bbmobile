@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>High Score Manager Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { color: #4a90e2; }
+    h2 { color: #5bd68a; margin-top: 30px; }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    button.danger {
+      background: linear-gradient(135deg, #e24a4a 0%, #bd3535 100%);
+    }
+    .result {
+      background: #0f1419;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .success { color: #5bd68a; }
+    .error { color: #ff6b6b; }
+    .info { color: #83bfff; }
+    #gameContainer {
+      min-height: 400px;
+      margin-top: 20px;
+    }
+    .high-score-display {
+      background: #2a3f54;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏆 High Score Manager Test</h1>
+  
+  <div class="test-section">
+    <h2>1. Basic API Tests</h2>
+    <button onclick="testBasicAPI()">Run Basic API Tests</button>
+    <button class="danger" onclick="clearAllScores()">Clear All Scores</button>
+    <div id="basicResults" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. High Score Storage Tests</h2>
+    <button onclick="testStorage()">Test High Score Storage</button>
+    <div id="storageResults" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Current High Scores</h2>
+    <button onclick="displayAllScores()">Show All High Scores</button>
+    <div id="allScoresDisplay" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Snake Game Integration Test</h2>
+    <p>Play Snake to test:</p>
+    <ul>
+      <li>High score display before game</li>
+      <li>Raw score tracking (food eaten)</li>
+      <li>Personal best notification</li>
+      <li>Unlimited scoring (no 15-food cap)</li>
+    </ul>
+    <button onclick="testSnakeGame()">Launch Snake Game</button>
+    <div id="gameContainer"></div>
+    <div id="snakeResults" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Manual High Score Entry</h2>
+    <p>Manually set a high score for testing:</p>
+    <input type="text" id="gameKey" placeholder="Game key (e.g., snake)" style="padding:8px; margin:5px; background:#0f1419; color:#e3ecf5; border:1px solid #2c3a4d; border-radius:4px;">
+    <input type="number" id="scoreValue" placeholder="Score" style="padding:8px; margin:5px; background:#0f1419; color:#e3ecf5; border:1px solid #2c3a4d; border-radius:4px; width:100px;">
+    <input type="text" id="displayValue" placeholder="Display (e.g., 15 food)" style="padding:8px; margin:5px; background:#0f1419; color:#e3ecf5; border:1px solid #2c3a4d; border-radius:4px;">
+    <button onclick="setManualScore()">Set High Score</button>
+    <div id="manualResults" class="result"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/high-score-manager.js"></script>
+  <script src="js/minigames/snake.js"></script>
+  
+  <script>
+    // Mock registry if needed
+    if(!window.MinigameRegistry) {
+      window.MinigameRegistry = {
+        getGame: function(key) {
+          return { key: key, type: 'puzzle', supportsHighScores: true };
+        }
+      };
+    }
+
+    function testBasicAPI() {
+      const results = document.getElementById('basicResults');
+      let output = '<div class="info">Running Basic API Tests...</div>';
+      
+      try {
+        // Test 1: Check module exists
+        if(window.HighScoreManager) {
+          output += '<div class="success">✓ HighScoreManager module loaded</div>';
+        } else {
+          output += '<div class="error">✗ HighScoreManager module not found!</div>';
+          results.innerHTML = output;
+          return;
+        }
+        
+        // Test 2: Check methods exist
+        const methods = ['getHighScore', 'setHighScore', 'isNewBest', 'getAllHighScores', 'clearHighScore', 'clearAllHighScores', 'getHighScoreDisplay', 'supportsHighScores'];
+        methods.forEach(method => {
+          if(typeof window.HighScoreManager[method] === 'function') {
+            output += `<div class="success">✓ Method exists: ${method}()</div>`;
+          } else {
+            output += `<div class="error">✗ Method missing: ${method}()</div>`;
+          }
+        });
+        
+        // Test 3: Test supportsHighScores
+        const supportsSnake = window.HighScoreManager.supportsHighScores('snake');
+        output += `<div class="${supportsSnake ? 'success' : 'error'}">Snake supports high scores: ${supportsSnake}</div>`;
+        
+      } catch(e) {
+        output += `<div class="error">Error: ${e.message}</div>`;
+      }
+      
+      results.innerHTML = output;
+    }
+
+    function testStorage() {
+      const results = document.getElementById('storageResults');
+      let output = '<div class="info">Testing High Score Storage...</div>';
+      
+      try {
+        // Clear existing scores
+        window.HighScoreManager.clearAllHighScores();
+        output += '<div class="info">Cleared all scores</div>';
+        
+        // Test 1: Set a high score
+        const isNew = window.HighScoreManager.setHighScore('testGame', 100, '100 points');
+        output += `<div class="${isNew ? 'success' : 'error'}">Set initial score: ${isNew}</div>`;
+        
+        // Test 2: Get the high score
+        const score = window.HighScoreManager.getHighScore('testGame');
+        if(score && score.score === 100 && score.displayValue === '100 points') {
+          output += '<div class="success">✓ Retrieved score correctly</div>';
+          output += `<div class="info">Score: ${score.score}, Display: ${score.displayValue}</div>`;
+        } else {
+          output += '<div class="error">✗ Retrieved score incorrect</div>';
+        }
+        
+        // Test 3: Try to set a lower score (should fail)
+        const isNewLower = window.HighScoreManager.setHighScore('testGame', 50, '50 points');
+        if(!isNewLower) {
+          output += '<div class="success">✓ Correctly rejected lower score</div>';
+        } else {
+          output += '<div class="error">✗ Incorrectly accepted lower score</div>';
+        }
+        
+        // Test 4: Set a higher score
+        const isNewHigher = window.HighScoreManager.setHighScore('testGame', 150, '150 points');
+        if(isNewHigher) {
+          output += '<div class="success">✓ Accepted higher score</div>';
+        } else {
+          output += '<div class="error">✗ Failed to accept higher score</div>';
+        }
+        
+        // Test 5: Verify the higher score was saved
+        const newScore = window.HighScoreManager.getHighScore('testGame');
+        if(newScore && newScore.score === 150) {
+          output += '<div class="success">✓ Higher score saved correctly</div>';
+        } else {
+          output += '<div class="error">✗ Higher score not saved</div>';
+        }
+        
+        // Test 6: Test isNewBest
+        const isNew175 = window.HighScoreManager.isNewBest('testGame', 175);
+        const isNew100 = window.HighScoreManager.isNewBest('testGame', 100);
+        output += `<div class="${isNew175 ? 'success' : 'error'}">isNewBest(175): ${isNew175}</div>`;
+        output += `<div class="${!isNew100 ? 'success' : 'error'}">isNewBest(100): ${isNew100}</div>`;
+        
+        // Test 7: Get display string
+        const display = window.HighScoreManager.getHighScoreDisplay('testGame');
+        output += `<div class="success">Display string: "${display}"</div>`;
+        
+      } catch(e) {
+        output += `<div class="error">Error: ${e.message}</div>`;
+      }
+      
+      results.innerHTML = output;
+    }
+
+    function displayAllScores() {
+      const results = document.getElementById('allScoresDisplay');
+      const scores = window.HighScoreManager.getAllHighScores();
+      
+      if(Object.keys(scores).length === 0) {
+        results.innerHTML = '<div class="info">No high scores saved yet</div>';
+        return;
+      }
+      
+      let output = '<div class="success">Current High Scores:</div>';
+      for(const [game, data] of Object.entries(scores)) {
+        const date = new Date(data.timestamp).toLocaleString();
+        output += `<div class="high-score-display">
+          <strong>${game}</strong>: ${data.displayValue} (Score: ${data.score})<br>
+          <small>Set on: ${date}</small>
+        </div>`;
+      }
+      
+      results.innerHTML = output;
+    }
+
+    function clearAllScores() {
+      if(confirm('Clear all high scores?')) {
+        window.HighScoreManager.clearAllHighScores();
+        alert('All high scores cleared!');
+        displayAllScores();
+      }
+    }
+
+    function testSnakeGame() {
+      const container = document.getElementById('gameContainer');
+      const results = document.getElementById('snakeResults');
+      container.innerHTML = '';
+      results.style.display = 'none';
+      
+      // Launch Snake game
+      window.MiniGames.snake.render(container, (scoreData) => {
+        console.log('Snake game ended. Score data:', scoreData);
+        
+        // Display results
+        results.style.display = 'block';
+        let output = '<div class="success">Game Completed!</div>';
+        
+        if(typeof scoreData === 'object') {
+          output += `<div class="info">Normalized Score: ${scoreData.score}</div>`;
+          output += `<div class="success">Raw Score: ${scoreData.rawScoreDisplay}</div>`;
+          output += `<div class="${scoreData.isNewPersonalBest ? 'success' : 'info'}">New Personal Best: ${scoreData.isNewPersonalBest ? 'Yes! 🏆' : 'No'}</div>`;
+        } else {
+          output += `<div class="info">Score: ${scoreData}</div>`;
+        }
+        
+        // Check if high score was saved
+        const highScore = window.HighScoreManager.getHighScore('snake');
+        if(highScore) {
+          output += `<div class="info">Current High Score: ${highScore.displayValue}</div>`;
+        }
+        
+        results.innerHTML = output;
+      }, { debugMode: true, variant: 'normal' });
+    }
+
+    function setManualScore() {
+      const gameKey = document.getElementById('gameKey').value.trim();
+      const scoreValue = parseInt(document.getElementById('scoreValue').value);
+      const displayValue = document.getElementById('displayValue').value.trim();
+      const results = document.getElementById('manualResults');
+      
+      if(!gameKey || isNaN(scoreValue)) {
+        results.innerHTML = '<div class="error">Please fill in game key and score</div>';
+        return;
+      }
+      
+      const isNew = window.HighScoreManager.setHighScore(gameKey, scoreValue, displayValue || scoreValue.toString());
+      
+      if(isNew) {
+        results.innerHTML = `<div class="success">✓ New high score set for ${gameKey}!</div>`;
+        displayAllScores();
+      } else {
+        results.innerHTML = `<div class="info">Score not better than existing high score for ${gameKey}</div>`;
+      }
+    }
+
+    // Auto-run basic tests on load
+    window.addEventListener('load', () => {
+      setTimeout(testBasicAPI, 500);
+    });
+  </script>
+</body>
+</html>

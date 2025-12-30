@@ -957,18 +957,30 @@
 
     // Use new results popup if enabled
     if (useNewPopup && typeof global.showResultsPopup === 'function') {
-      const formattedTopThree = topThree.map(entry => ({
-        id: entry.id,
-        name: entry.name,
-        score: entry.sc || entry.score
-      }));
+      const formattedTopThree = topThree.map(entry => {
+        // Preserve raw score data if available
+        const baseData = {
+          id: entry.id,
+          name: entry.name,
+          score: entry.sc || entry.score
+        };
+        
+        // Add raw score display if available
+        if(entry.rawScoreDisplay) {
+          baseData.rawScoreDisplay = entry.rawScoreDisplay;
+        }
+        
+        return baseData;
+      });
 
       return global.showResultsPopup({
         title: title,
         phase: global.game?.phase || '',
         topThree: formattedTopThree,
         winnerEmoji: winnerEmoji,
-        duration: winnerDuration
+        duration: winnerDuration,
+        rawScoreMode: formattedTopThree[0]?.rawScoreDisplay ? true : false,
+        isNewPersonalBest: topThree[0]?.isNewPersonalBest || false
       });
     }
 
