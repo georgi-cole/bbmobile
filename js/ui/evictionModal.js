@@ -322,6 +322,15 @@
         // Announce result to screen reader
         const announcement = `${name}, by a vote of ${votesFor} to ${votesAgainst}, you have been ${isEvicted ? 'evicted' : 'saved'}`;
         liveRegion.textContent = announcement;
+        
+        // Auto-dismiss after 3 seconds of showing the result
+        setTimeout(() => {
+          hide();
+          if (onClose) onClose();
+          if (overlay._resolvePromise) {
+            overlay._resolvePromise();
+          }
+        }, 3000);
       }, REVEAL_DELAY);
 
       // Keyboard handler

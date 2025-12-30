@@ -1194,8 +1194,8 @@
         
         // Prepare vote counts for dramatic modal
         const evictedVotes = counts.get(evId) || 0;
-        const sorted = [...counts.entries()].sort((a,b)=>b[1]-a[1]);
-        const runnerUpVotes = sorted.length > 1 ? sorted[1][1] : 0;
+        const sortedCounts = [...counts.entries()].sort((a,b)=>b[1]-a[1]);
+        const runnerUpVotes = sortedCounts.length > 1 ? sortedCounts[1][1] : 0;
         
         // Use new dramatic eviction modal with animations
         if (typeof global.EvictionModal?.show === 'function') {
