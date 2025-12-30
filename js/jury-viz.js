@@ -9,16 +9,18 @@
 (function injectFaceoffStyles(){
   if (document.getElementById('faceoff-css')) return;
   const css = `
-  /* Fullscreen cinematic overlay with improved atmosphere */
+  /* Fullscreen cinematic overlay with enhanced atmosphere */
   .finale-fullscreen-overlay{
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: radial-gradient(ellipse at center, 
-      rgba(20, 30, 50, 0.95) 0%, 
-      rgba(5, 10, 20, 0.98) 100%);
+    /* Enhanced animated gradient with color breathing */
+    background: 
+      radial-gradient(ellipse at center, 
+        rgba(20, 30, 50, 0.95) 0%, 
+        rgba(5, 10, 20, 0.98) 100%);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     z-index: 10000;
@@ -29,12 +31,46 @@
     opacity: 0;
     transition: opacity 0.5s ease;
     pointer-events: auto;
+    /* Animated gradient shift */
+    animation: atmosphereBreath 12s ease-in-out infinite alternate;
   }
+  
+  @keyframes atmosphereBreath {
+    0% {
+      background: 
+        radial-gradient(ellipse at center, 
+          rgba(20, 30, 50, 0.95) 0%, 
+          rgba(5, 10, 20, 0.98) 100%);
+    }
+    100% {
+      background: 
+        radial-gradient(ellipse at center, 
+          rgba(25, 35, 60, 0.95) 0%, 
+          rgba(10, 15, 30, 0.98) 100%);
+    }
+  }
+  
   .finale-fullscreen-overlay.visible{
     opacity: 1;
   }
   
-  /* Floating particles effect */
+  /* Vignette effect - darker edges */
+  .finale-fullscreen-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at center, 
+      transparent 0%,
+      transparent 40%,
+      rgba(0, 0, 0, 0.4) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  /* Enhanced floating particles with varied sizes */
   .finale-fullscreen-overlay::before {
     content: '';
     position: absolute;
@@ -42,16 +78,30 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px);
-    background-size: 60px 60px;
-    animation: floatParticles 30s linear infinite;
+    background-image: 
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.2) 1px, transparent 1px),
+      radial-gradient(circle at 60% 70%, rgba(255,255,255,0.15) 2px, transparent 2px),
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 1.5px, transparent 1.5px),
+      radial-gradient(circle at 40% 80%, rgba(0,224,204,0.1) 1px, transparent 1px);
+    background-size: 60px 60px, 90px 90px, 120px 120px, 150px 150px;
+    background-position: 0 0, 20px 20px, 40px 40px, 60px 60px;
+    animation: floatParticles 40s linear infinite;
     pointer-events: none;
     z-index: 1;
   }
   
   @keyframes floatParticles {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-60px); }
+    0% { 
+      transform: translateY(0) translateX(0); 
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+    100% { 
+      transform: translateY(-120px) translateX(20px); 
+      opacity: 1;
+    }
   }
   
   .finalFaceoff{
@@ -67,6 +117,35 @@
     box-sizing: border-box;
     min-height: 400px;
     z-index: 2;
+  }
+  
+  /* Spotlight/stage lighting effect from top */
+  .finalFaceoff::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200%;
+    height: 400px;
+    background: 
+      radial-gradient(ellipse at center top, 
+        rgba(0, 224, 204, 0.08) 0%,
+        transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+    animation: spotlightPulse 8s ease-in-out infinite alternate;
+  }
+  
+  @keyframes spotlightPulse {
+    0% {
+      opacity: 0.6;
+      transform: translateX(-50%) scaleY(1);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(-50%) scaleY(1.1);
+    }
   }
   
   /* Hide faceoff during voting phase */
@@ -92,57 +171,97 @@
     100%{ text-shadow: 0 0 30px rgba(0, 224, 204, 0.9), 0 4px 12px rgba(0, 0, 0, 0.8); }
   }
   
-  /* Speech bubble message area with juror avatar */
+  /* Speech bubble message area with juror avatar - enhanced with glow and pointer */
   .finalFaceoff .fo-message-area{
     position: fixed;
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
     width: min(90%, 800px);
-    background: rgba(30, 45, 65, 0.9);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(0, 224, 204, 0.3);
+    background: rgba(30, 45, 65, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 224, 204, 0.4);
     border-radius: 16px;
-    padding: 12px 16px;
+    padding: 14px 18px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
-                0 0 20px rgba(0, 224, 204, 0.2);
+    gap: 14px;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.7),
+      0 0 30px rgba(0, 224, 204, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
     z-index: 10001;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease, transform 0.4s ease;
     pointer-events: none;
+    transform: translateX(-50%) translateY(20px);
   }
+  
+  /* Speech bubble pointer toward center */
+  .finalFaceoff .fo-message-area::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid rgba(30, 45, 65, 0.95);
+    filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.3));
+  }
+  
   .finalFaceoff .fo-message-area.visible{
     opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    animation: messageGlow 2s ease-in-out infinite alternate;
   }
+  
+  @keyframes messageGlow {
+    0% {
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.7),
+        0 0 30px rgba(0, 224, 204, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    100% {
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.7),
+        0 0 40px rgba(0, 224, 204, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+  }
+  
   .finalFaceoff .fo-message-avatar{
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
     border-radius: 50%;
-    border: 2px solid rgba(0, 224, 204, 0.5);
+    border: 2px solid rgba(0, 224, 204, 0.6);
     object-fit: cover;
+    box-shadow: 0 0 12px rgba(0, 224, 204, 0.3);
   }
   .finalFaceoff .fo-message-content{
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
   }
   .finalFaceoff .fo-message-juror{
-    font-size: clamp(12px, 1.8vw, 16px);
+    font-size: clamp(13px, 2vw, 17px);
     font-weight: 700;
     color: #00e0cc;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
   .finalFaceoff .fo-message-text{
     font-size: clamp(14px, 2vw, 18px);
     font-weight: 400;
-    color: #e8f4ff;
+    color: #ffffff;
     font-style: italic;
-    line-height: 1.3;
+    line-height: 1.4;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   }
 
   .finalFaceoff .fo-slot{
@@ -676,12 +795,17 @@
     }
     .finalFaceoff .fo-message-area{
       bottom: 20px;
-      padding: 16px 20px;
-      width: min(92%, 380px);
+      padding: 12px 14px;
+      width: min(94%, 360px);
+      gap: 10px;
+    }
+    .finalFaceoff .fo-message-avatar{
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
     }
     .finalFaceoff .fo-message-juror{
       font-size: clamp(12px, 3vw, 14px);
-      margin-bottom: 6px;
     }
     .finalFaceoff .fo-message-text{
       font-size: clamp(13px, 3.2vw, 16px);
@@ -814,24 +938,43 @@
     
     // Use single message area at bottom with avatar
     if (state.messageJuror && state.messageText && state.messageArea && state.messageAvatar) {
-      state.messageJuror.textContent = jurorName;
-      state.messageText.textContent = reason || `I vote for ${votedName} to win Big Brother.`;
-      
-      // Set juror avatar if provided
-      if (jurorAvatar) {
-        state.messageAvatar.src = jurorAvatar;
-        state.messageAvatar.style.display = 'block';
+      // First hide any existing message with smooth fade
+      if (state.messageArea.classList.contains('visible')) {
+        state.messageArea.classList.remove('visible');
+        // Wait for fade out before showing new message
+        setTimeout(() => showNewMessage(), 400);
       } else {
-        state.messageAvatar.style.display = 'none';
+        showNewMessage();
       }
       
-      // Show message
-      state.messageArea.classList.add('visible');
-      
-      // Hide after delay
-      setTimeout(() => {
-        state.messageArea.classList.remove('visible');
-      }, 2400);
+      function showNewMessage() {
+        state.messageJuror.textContent = jurorName;
+        state.messageText.textContent = reason || `I vote for ${votedName} to win Big Brother.`;
+        
+        // Set juror avatar if provided
+        if (jurorAvatar) {
+          state.messageAvatar.src = jurorAvatar;
+          state.messageAvatar.style.display = 'block';
+          state.messageAvatar.onerror = function() {
+            console.warn('[jury-viz] Juror avatar fallback for:', jurorName);
+            this.onerror = null;
+            // Use dicebear fallback
+            this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(jurorName || 'juror')}`;
+          };
+        } else {
+          state.messageAvatar.style.display = 'none';
+        }
+        
+        // Show message with smooth fade-in
+        requestAnimationFrame(() => {
+          state.messageArea.classList.add('visible');
+        });
+        
+        // Hide after delay with smooth fade-out
+        setTimeout(() => {
+          state.messageArea.classList.remove('visible');
+        }, 2600);
+      }
     }
   }
   
