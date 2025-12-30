@@ -9,16 +9,18 @@
 (function injectFaceoffStyles(){
   if (document.getElementById('faceoff-css')) return;
   const css = `
-  /* Fullscreen cinematic overlay */
+  /* Fullscreen cinematic overlay with improved atmosphere */
   .finale-fullscreen-overlay{
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.92);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: radial-gradient(ellipse at center, 
+      rgba(20, 30, 50, 0.95) 0%, 
+      rgba(5, 10, 20, 0.98) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     z-index: 10000;
     display: flex;
     flex-direction: column;
@@ -30,6 +32,26 @@
   }
   .finale-fullscreen-overlay.visible{
     opacity: 1;
+  }
+  
+  /* Floating particles effect */
+  .finale-fullscreen-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: floatParticles 30s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  @keyframes floatParticles {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-60px); }
   }
   
   .finalFaceoff{
@@ -44,6 +66,13 @@
     padding: 40px 20px;
     box-sizing: border-box;
     min-height: 400px;
+    z-index: 2;
+  }
+  
+  /* Hide faceoff during voting phase */
+  .finalFaceoff.hidden-for-voting {
+    opacity: 0;
+    pointer-events: none;
   }
   /* VS divider between finalists */
   .finalFaceoff .fo-vs{
@@ -63,19 +92,22 @@
     100%{ text-shadow: 0 0 30px rgba(0, 224, 204, 0.9), 0 4px 12px rgba(0, 0, 0, 0.8); }
   }
   
-  /* Single message area at bottom - no overlap */
+  /* Speech bubble message area with juror avatar */
   .finalFaceoff .fo-message-area{
     position: fixed;
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
     width: min(90%, 800px);
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(30, 45, 65, 0.9);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 2px solid rgba(0, 224, 204, 0.3);
+    border: 1px solid rgba(0, 224, 204, 0.3);
     border-radius: 16px;
-    padding: 20px 28px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
                 0 0 20px rgba(0, 224, 204, 0.2);
     z-index: 10001;
@@ -86,20 +118,31 @@
   .finalFaceoff .fo-message-area.visible{
     opacity: 1;
   }
+  .finalFaceoff .fo-message-avatar{
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 224, 204, 0.5);
+    object-fit: cover;
+  }
+  .finalFaceoff .fo-message-content{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
   .finalFaceoff .fo-message-juror{
-    font-size: clamp(14px, 2vw, 18px);
+    font-size: clamp(12px, 1.8vw, 16px);
     font-weight: 700;
     color: #00e0cc;
-    margin-bottom: 8px;
-    text-align: center;
   }
   .finalFaceoff .fo-message-text{
-    font-size: clamp(15px, 2.2vw, 20px);
+    font-size: clamp(14px, 2vw, 18px);
     font-weight: 400;
-    color: #e8f9ff;
-    text-align: center;
+    color: #e8f4ff;
     font-style: italic;
-    line-height: 1.4;
+    line-height: 1.3;
   }
 
   .finalFaceoff .fo-slot{
@@ -112,9 +155,12 @@
     padding: 24px 20px;
     width: min(40vw, 450px);
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: rgba(15, 25, 40, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 224, 204, 0.25);
+    box-shadow: 0 0 60px rgba(0, 224, 204, 0.1),
+                0 25px 50px rgba(0, 0, 0, 0.5);
     transition: all 0.3s ease;
   }
   .finalFaceoff .fo-slot.fo-leader{
@@ -122,8 +168,6 @@
     box-shadow: 0 0 40px rgba(0, 224, 204, 0.3),
                 0 8px 32px rgba(0, 0, 0, 0.4);
     transform: scale(1.02);
-  }
-    transform: translateY(-2px);
   }
 
   .fo-avatar{
@@ -134,6 +178,13 @@
     background: #111;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
     border: 3px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.3s ease;
+  }
+  
+  /* Smaller avatars during reveal phase */
+  .finalFaceoff.reveal-phase .fo-avatar{
+    width: min(18vw, 140px);
+    height: min(18vw, 140px);
   }
 
   .fo-name{
@@ -447,20 +498,21 @@
     height: min(50vw, 400px);
     object-fit: cover;
     border-radius: 20px;
-    border: 4px solid rgba(255, 215, 0, 0.6);
-    box-shadow: 0 0 60px rgba(255, 215, 0, 0.5),
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4),
+                0 0 60px rgba(255, 215, 0, 0.2),
                 0 16px 48px rgba(0, 0, 0, 0.8);
-    animation: winnerGlow 2s ease-in-out infinite alternate;
+    animation: winnerPulse 2s ease-in-out infinite;
   }
-  @keyframes winnerGlow{
-    0%{ 
-      border-color: rgba(255, 215, 0, 0.6);
-      box-shadow: 0 0 60px rgba(255, 215, 0, 0.5),
+  @keyframes winnerPulse{
+    0%, 100%{ 
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.4),
+                  0 0 60px rgba(255, 215, 0, 0.2),
                   0 16px 48px rgba(0, 0, 0, 0.8);
     }
-    100%{ 
-      border-color: rgba(255, 215, 0, 0.9);
-      box-shadow: 0 0 80px rgba(255, 215, 0, 0.8),
+    50%{ 
+      box-shadow: 0 0 50px rgba(255, 215, 0, 0.6),
+                  0 0 90px rgba(255, 215, 0, 0.3),
                   0 16px 48px rgba(0, 0, 0, 0.8);
     }
   }
@@ -726,11 +778,15 @@
     
     rightSlot.append(rightImg, rightName, rightPill);
 
-    // Message area at bottom
+    // Message area at bottom with avatar support
     const messageArea = el('div', 'fo-message-area');
+    const messageAvatar = el('img', 'fo-message-avatar');
+    messageAvatar.alt = 'Juror';
+    const messageContent = el('div', 'fo-message-content');
     const messageJuror = el('div', 'fo-message-juror');
     const messageText = el('div', 'fo-message-text');
-    messageArea.append(messageJuror, messageText);
+    messageContent.append(messageJuror, messageText);
+    messageArea.append(messageAvatar, messageContent);
 
     wrap.append(leftSlot, vs, rightSlot);
     mountAt.appendChild(wrap);
@@ -739,7 +795,8 @@
     state = {
       wrap, 
       overlay, 
-      messageArea, 
+      messageArea,
+      messageAvatar,
       messageJuror, 
       messageText,
       left:  { meta:left,  slot:leftSlot,  img:leftImg, votesEl:leftVotes, pill:leftPill, count:0 },
@@ -752,13 +809,21 @@
     console.log('[jury-viz] Final Faceoff UI mounted', fullscreen ? '(fullscreen)' : '(in-place)');
   }
 
-  function showVoteCard(jurorName, votedName, reason){
+  function showVoteCard(jurorName, votedName, reason, jurorAvatar){
     if(!state) return;
     
-    // Use single message area at bottom
-    if (state.messageJuror && state.messageText && state.messageArea) {
+    // Use single message area at bottom with avatar
+    if (state.messageJuror && state.messageText && state.messageArea && state.messageAvatar) {
       state.messageJuror.textContent = jurorName;
       state.messageText.textContent = reason || `I vote for ${votedName} to win Big Brother.`;
+      
+      // Set juror avatar if provided
+      if (jurorAvatar) {
+        state.messageAvatar.src = jurorAvatar;
+        state.messageAvatar.style.display = 'block';
+      } else {
+        state.messageAvatar.style.display = 'none';
+      }
       
       // Show message
       state.messageArea.classList.add('visible');
@@ -768,6 +833,21 @@
         state.messageArea.classList.remove('visible');
       }, 2400);
     }
+  }
+  
+  // Hide the faceoff UI (for voting phase)
+  function hideFaceoff(){
+    if(!state || !state.wrap) return;
+    state.wrap.classList.add('hidden-for-voting');
+    console.log('[jury-viz] Faceoff hidden for voting');
+  }
+  
+  // Show the faceoff UI (for reveal phase)
+  function showFaceoff(){
+    if(!state || !state.wrap) return;
+    state.wrap.classList.remove('hidden-for-voting');
+    state.wrap.classList.add('reveal-phase');
+    console.log('[jury-viz] Faceoff shown for reveal');
   }
 
   function setCounts({ left, right }){
@@ -987,6 +1067,7 @@
     showFinalTally, showWinnerMessage,
     showCrown, showCheckCard, 
     showWinnerCelebration, createConfetti, createFloatingEmojis,
+    hideFaceoff, showFaceoff,
     destroy
   };
 
