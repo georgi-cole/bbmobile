@@ -1787,7 +1787,7 @@
     // New system: Wait for human submission, then generate synthetic opponents
   }
 
-  function finishF3P1() {
+  async function finishF3P1() {
     const g = global.game; if (g.phase !== 'final3_comp1') return;
     const ids = global.alivePlayers().map(p => p.id);
     for (const id of ids) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
@@ -1820,8 +1820,23 @@
 
     g.__f3p1Winner = winner;
     global.addLog(`Final 3 Part 1: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
-    safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', 4500, true);
-    setTimeout(() => startF3P2(losers), 4600);
+    
+    // Show cinematic transition if available
+    if (global.FinaleCinematics?.showPart1WinnerCinematic) {
+      try {
+        await global.FinaleCinematics.showPart1WinnerCinematic(winner);
+      } catch (e) {
+        console.warn('[F3P1] Cinematic error:', e);
+        // Fallback to card
+        safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', 4500, true);
+        await new Promise(resolve => setTimeout(resolve, 4600));
+      }
+    } else {
+      safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', 4500, true);
+      await new Promise(resolve => setTimeout(resolve, 4600));
+    }
+    
+    startF3P2(losers);
   }
 
   function renderF3P2(panel) {
@@ -1959,7 +1974,7 @@
     }
   }
 
-  function finishF3P2() {
+  async function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
     const duo = (g.__f3_duo || []).slice();
     
@@ -1976,11 +1991,24 @@
     g.__f3p2Winner = winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
     
-    // If skip was requested, use shorter delay
-    const delay = skipRequested ? 1500 : 4500;
+    // Show cinematic transition if available
+    if (global.FinaleCinematics?.showPart2WinnerCinematic) {
+      try {
+        await global.FinaleCinematics.showPart2WinnerCinematic(winner);
+      } catch (e) {
+        console.warn('[F3P2] Cinematic error:', e);
+        // Fallback to card
+        const delay = skipRequested ? 1500 : 4500;
+        safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
+        await new Promise(resolve => setTimeout(resolve, delay + 100));
+      }
+    } else {
+      const delay = skipRequested ? 1500 : 4500;
+      safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
+      await new Promise(resolve => setTimeout(resolve, delay + 100));
+    }
     
-    safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
-    setTimeout(() => startF3P3(), delay + 100);
+    startF3P3();
   }
 
   function renderF3P3(panel) {
@@ -2026,14 +2054,32 @@
     }
   }
 
-  function startF3P3() {
+  async function startF3P3() {
     const g = global.game;
-
-    safeShowCard('🏆 Part 3 — Final Showdown', [
-      'The winners of Parts 1 and 2 compete.',
-      'The winner becomes the Final Head of Household.',
-      'The Final HOH will choose who to evict.'
-    ], 'hoh', 4500, true);
+    
+    // Show Final Showdown intro cinematic if available
+    const finalists = [g.__f3p1Winner, g.__f3p2Winner].filter(Boolean);
+    if (finalists.length === 2 && global.FinaleCinematics?.showFinalShowdownIntroCinematic) {
+      try {
+        await global.FinaleCinematics.showFinalShowdownIntroCinematic(finalists[0], finalists[1]);
+      } catch (e) {
+        console.warn('[F3P3] Cinematic error:', e);
+        // Fallback to card
+        safeShowCard('🏆 Part 3 — Final Showdown', [
+          'The winners of Parts 1 and 2 compete.',
+          'The winner becomes the Final Head of Household.',
+          'The Final HOH will choose who to evict.'
+        ], 'hoh', 4500, true);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } else {
+      safeShowCard('🏆 Part 3 — Final Showdown', [
+        'The winners of Parts 1 and 2 compete.',
+        'The winner becomes the Final Head of Household.',
+        'The Final HOH will choose who to evict.'
+      ], 'hoh', 4500, true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
     (function waitCards() {
       if (typeof global.cardQueueWaitIdle === 'function') {
@@ -2118,7 +2164,7 @@
     }
   }
 
-  function finishF3P3() {
+  async function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
     const finalists = (g.__f3_finalists || []).slice();
     
@@ -2151,13 +2197,26 @@
 
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`, 'ok');
     
-    // If skip was requested, use shorter delay
-    const delay = skipRequested ? 2000 : 5000;
+    // Show Final HOH cinematic if available
+    if (global.FinaleCinematics?.showFinalHOHCinematic) {
+      try {
+        await global.FinaleCinematics.showFinalHOHCinematic(winner);
+      } catch (e) {
+        console.warn('[F3P3] Cinematic error:', e);
+        // Fallback to card
+        const delay = skipRequested ? 2000 : 5000;
+        safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
+        await new Promise(resolve => setTimeout(resolve, delay + 50));
+      }
+    } else {
+      const delay = skipRequested ? 2000 : 5000;
+      safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
+      await new Promise(resolve => setTimeout(resolve, delay + 50));
+    }
     
-    safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
     global.tv.say('Final 3 Eviction Ceremony');
     global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
-    setTimeout(() => global.renderFinal3DecisionPanel?.(), delay + 50);
+    global.renderFinal3DecisionPanel?.();
   }
 
   function renderFinal3DecisionPanel() {
@@ -2517,11 +2576,28 @@
 
     g.__f3EvictionInProgress = true;
 
+    const hoh = global.getP(g.hohId);
     const target = id ?? aiPickFinal3Eviction();
-    const ev = global.getP(target); const hoh = global.getP(g.hohId);
+    const ev = global.getP(target);
+    
     if (!ev) {
       g.__f3EvictionInProgress = false;
       return;
+    }
+
+    // Show AI deliberation if HOH is AI and deliberation module is available
+    if (hoh && !hoh.human && global.AIDeliberation?.showAIDeliberation) {
+      try {
+        const pleaSubmitted = !!g.__pleaSubmitted;
+        await global.AIDeliberation.showAIDeliberation(
+          g.hohId,
+          g.nominees,
+          pleaSubmitted,
+          7000 // 7 seconds deliberation
+        );
+      } catch (e) {
+        console.warn('[F3Decision] AI deliberation error:', e);
+      }
     }
 
     g.__f3EvictionResolved = true;
