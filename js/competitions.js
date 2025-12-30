@@ -1825,10 +1825,45 @@
   }
 
   function renderF3P2(panel) {
+    const g = global.game;
+    const humanId = g.humanId;
+    const duo = g.__f3_duo || [];
+    
+    // Check if human won Part 1 (not in duo)
+    const humanWonPart1 = humanId && !duo.includes(humanId);
+    
+    // Check if human is in jury (evicted and in jury house)
+    const human = global.getP?.(humanId);
+    const humanInJury = human && human.evicted && g.juryHouse?.includes(humanId);
+    
     panel.innerHTML = '';
-    // Use inline status instead of below-TV message
-    if (window.TvStatus?.set) {
-      window.TvStatus.set('Final 3 — Part 2 (head-to-head) is running…');
+    
+    // Show spectator view if human won Part 1 or is in jury
+    if ((humanWonPart1 || humanInJury) && global.SpectatorView) {
+      console.info('[F3P2] Showing spectator view for', humanInJury ? 'jury member' : 'Part 1 winner');
+      
+      // Determine game type from stored key or pick a generic one
+      const gameType = g.__f3p2GameKey || 'competition';
+      
+      global.SpectatorView.show({
+        competitorIds: duo,
+        gameType: gameType,
+        phase: 'Final 3 — Part 2',
+        onSkip: () => {
+          // Skip to results - fast forward to end of phase
+          if (g.phase === 'final3_comp2') {
+            console.info('[F3P2] Skip requested, forcing phase completion');
+            g.__skipRequested = true;
+            finishF3P2();
+          }
+        },
+        container: panel
+      });
+    } else {
+      // Use inline status instead of below-TV message
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Final 3 — Part 2 (head-to-head) is running…');
+      }
     }
   }
 
@@ -1892,6 +1927,7 @@
             }, 500);
           } else {
             const mg = pickMinigameType();
+            g.__f3p2GameKey = mg; // Track game key for spectator view
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
             // Use inline status instead of below-TV message
             if (window.TvStatus?.set) {
@@ -1926,20 +1962,67 @@
   function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
     const duo = (g.__f3_duo || []).slice();
+    
+    // Check if skip was requested from spectator view
+    const skipRequested = g.__skipRequested;
+    if (skipRequested) {
+      console.info('[F3P2] Skip requested, showing quick reveal');
+      g.__skipRequested = false;
+    }
+    
     for (const id of duo) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
     const sorted = [...g.lastCompScores.entries()].filter(([id]) => duo.includes(id)).sort((a, b) => b[1] - a[1]);
     const winner = sorted[0][0];
     g.__f3p2Winner = winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
-    safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', 4500);
-    setTimeout(() => startF3P3(), 4600);
+    
+    // If skip was requested, use shorter delay
+    const delay = skipRequested ? 1500 : 4500;
+    
+    safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
+    setTimeout(() => startF3P3(), delay + 100);
   }
 
   function renderF3P3(panel) {
+    const g = global.game;
+    const humanId = g.humanId;
+    const finalists = g.__f3_finalists || [];
+    
+    // Check if human lost both Part 1 and Part 2 (not in finalists)
+    const humanLostBoth = humanId && !finalists.includes(humanId);
+    
+    // Check if human is in jury (evicted and in jury house)
+    const human = global.getP?.(humanId);
+    const humanInJury = human && human.evicted && g.juryHouse?.includes(humanId);
+    
     panel.innerHTML = '';
-    // Use inline status instead of below-TV message
-    if (window.TvStatus?.set) {
-      window.TvStatus.set('Final 3 — Part 3 (final showdown) is running…');
+    
+    // Show spectator view if human lost both parts or is in jury
+    if ((humanLostBoth || humanInJury) && global.SpectatorView) {
+      console.info('[F3P3] Showing spectator view for', humanInJury ? 'jury member' : 'eliminated player');
+      
+      // Determine game type from stored key or pick a generic one
+      const gameType = g.__f3p3GameKey || 'competition';
+      
+      global.SpectatorView.show({
+        competitorIds: finalists,
+        gameType: gameType,
+        phase: 'Final 3 — Part 3',
+        onSkip: () => {
+          // Skip to results - fast forward to end of phase
+          if (g.phase === 'final3_comp3') {
+            console.info('[F3P3] Skip requested, forcing phase completion');
+            g.__skipRequested = true;
+            finishF3P3();
+          }
+        },
+        container: panel
+      });
+    } else {
+      // Use inline status instead of below-TV message
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Final 3 — Part 3 (final showdown) is running…');
+      }
     }
   }
 
@@ -2003,6 +2086,7 @@
             }, 500);
           } else {
             const mg = pickMinigameType();
+            g.__f3p3GameKey = mg; // Track game key for spectator view
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
             // Use inline status instead of below-TV message
             if (window.TvStatus?.set) {
@@ -2037,6 +2121,14 @@
   function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
     const finalists = (g.__f3_finalists || []).slice();
+    
+    // Check if skip was requested from spectator view
+    const skipRequested = g.__skipRequested;
+    if (skipRequested) {
+      console.info('[F3P3] Skip requested, showing quick reveal');
+      g.__skipRequested = false;
+    }
+    
     for (const id of finalists) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
     const sorted = [...g.lastCompScores.entries()].filter(([id]) => finalists.includes(id)).sort((a, b) => b[1] - a[1]);
     const winner = sorted[0][0], loser = sorted[1][0];
@@ -2058,10 +2150,14 @@
     if (typeof global.updateHud === 'function') global.updateHud();
 
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`, 'ok');
-    safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', 5000);
+    
+    // If skip was requested, use shorter delay
+    const delay = skipRequested ? 2000 : 5000;
+    
+    safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
     global.tv.say('Final 3 Eviction Ceremony');
     global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
-    setTimeout(() => global.renderFinal3DecisionPanel?.(), 50);
+    setTimeout(() => global.renderFinal3DecisionPanel?.(), delay + 50);
   }
 
   function renderFinal3DecisionPanel() {
@@ -2110,7 +2206,73 @@
       hint.textContent = 'Choose wisely — this decision determines who sits beside you in the Final 2.';
       box.appendChild(hint);
     } else {
-      const note = document.createElement('div'); note.className = 'tiny muted'; note.textContent = 'AI will make the decision at end.'; box.appendChild(note);
+      // AI HOH - check if human is a nominee and show Final Plea
+      const humanId = g.humanId;
+      const humanIsNominee = g.nominees.includes(humanId);
+      
+      if (humanIsNominee && !g.__pleaSubmitted && global.FinalPlea) {
+        console.info('[F3Decision] Human is nominee, showing Final Plea option');
+        
+        // Show plea option in panel
+        const pleaInfo = document.createElement('div');
+        pleaInfo.style.cssText = `
+          margin-top: 16px;
+          padding: 16px;
+          background: rgba(255,220,139,0.1);
+          border: 2px solid rgba(255,220,139,0.3);
+          border-radius: 12px;
+        `;
+        
+        const pleaText = document.createElement('div');
+        pleaText.style.cssText = `
+          font-size: 1rem;
+          color: #cedbeb;
+          margin-bottom: 12px;
+        `;
+        pleaText.textContent = 'You have a chance to make your case to stay in the game.';
+        pleaInfo.appendChild(pleaText);
+        
+        const pleaBtn = document.createElement('button');
+        pleaBtn.className = 'btn primary';
+        pleaBtn.textContent = 'Make Your Final Plea 🗣️';
+        pleaBtn.style.cssText = 'width: 100%;';
+        pleaBtn.onclick = () => {
+          const humanPlayer = global.getP(humanId);
+          const otherNomineeId = g.nominees.find(id => id !== humanId);
+          
+          // Validate that we have both nominees before showing plea
+          if (!otherNomineeId) {
+            console.warn('[F3Decision] Could not find other nominee, skipping plea');
+            output.innerHTML += '\n✗ Error: Could not determine other nominee';
+            return;
+          }
+          
+          const otherNominee = global.getP(otherNomineeId);
+          
+          global.FinalPlea.show({
+            nominee: humanPlayer,
+            hoh: hoh,
+            otherNominee: otherNominee,
+            onSubmit: (pleaData) => {
+              if (pleaData) {
+                // Store plea influence for AI decision
+                g.__pleaInfluence = pleaData.influence;
+                console.info('[F3Decision] Plea submitted with influence:', pleaData.influence);
+              }
+              // Re-render panel to show waiting state
+              renderFinal3DecisionPanel();
+            }
+          });
+        };
+        pleaInfo.appendChild(pleaBtn);
+        box.appendChild(pleaInfo);
+      }
+      
+      const note = document.createElement('div'); note.className = 'tiny muted'; 
+      note.textContent = g.__pleaSubmitted 
+        ? 'Your plea has been heard. AI will make the decision at end.' 
+        : 'AI will make the decision at end.';
+      box.appendChild(note);
     }
     panel.appendChild(box);
   }
@@ -2265,9 +2427,47 @@
   }
 
   function aiPickFinal3Eviction() {
-    const g = global.game; const hoh = global.getP(g.hohId); const [a, b] = g.nominees;
-    const ha = (hoh.affinity[a] ?? 0), hb = (hoh.affinity[b] ?? 0); if (ha < hb - 0.05) return a; if (hb < ha - 0.05) return b;
-    const ta = global.getP(a).threat || 0.5, tb = global.getP(b).threat || 0.5; return ta >= tb ? a : b;
+    const g = global.game; 
+    const hoh = global.getP(g.hohId); 
+    const [a, b] = g.nominees;
+    
+    // Base decision on affinity
+    const ha = (hoh.affinity[a] ?? 0);
+    const hb = (hoh.affinity[b] ?? 0);
+    
+    // Apply plea influence if available
+    const pleaInfluence = g.__pleaInfluence || 0;
+    const humanId = g.humanId;
+    
+    let adjustedHa = ha;
+    let adjustedHb = hb;
+    
+    // If human made a plea, adjust their affinity
+    if (pleaInfluence > 0 && humanId) {
+      if (humanId === a) {
+        adjustedHa += pleaInfluence; // Increase affinity for human
+        console.info('[F3Decision] Applied plea influence to nominee A (human):', pleaInfluence);
+      } else if (humanId === b) {
+        adjustedHb += pleaInfluence; // Increase affinity for human
+        console.info('[F3Decision] Applied plea influence to nominee B (human):', pleaInfluence);
+      }
+    }
+    
+    // Make decision based on adjusted affinity
+    if (adjustedHa < adjustedHb - 0.05) {
+      console.info('[F3Decision] AI evicting nominee A based on affinity');
+      return a;
+    }
+    if (adjustedHb < adjustedHa - 0.05) {
+      console.info('[F3Decision] AI evicting nominee B based on affinity');
+      return b;
+    }
+    
+    // Fallback to threat assessment
+    const ta = global.getP(a).threat || 0.5;
+    const tb = global.getP(b).threat || 0.5;
+    console.info('[F3Decision] AI deciding based on threat level');
+    return ta >= tb ? a : b;
   }
 
   function generateEvicteeReply(evictee, hoh) {
