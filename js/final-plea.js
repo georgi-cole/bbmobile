@@ -432,14 +432,14 @@
    * @returns {number} Influence value 0-0.2
    */
   function calculateInfluence(data) {
-    const { nominee, hoh, otherNominee, selectedOption } = data;
-    const g = global.game;
+    const { nominee, hoh, selectedOption } = data;
+    // Note: otherNominee available in data but not used in calculation
 
     // Base swing chance
     let influence = 0;
 
     // Factor 1: Affinity with HOH (40% weight)
-    const affinity = calculateAffinity(nominee, hoh, g);
+    const affinity = calculateAffinity(nominee, hoh);
     influence += affinity * 0.08; // Up to 0.08 from affinity
 
     // Factor 2: HOH persona traits (30% weight)
@@ -468,7 +468,7 @@
   /**
    * Calculate affinity between nominee and HOH
    */
-  function calculateAffinity(nominee, hoh, game) {
+  function calculateAffinity(nominee, hoh /*, _game */) {
     // Try to get affinity from social relations
     if (global.SocialRelations?.getAffinity) {
       try {

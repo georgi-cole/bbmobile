@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 3 Flow Optimization Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .test-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary-3);
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    .test-btn:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+    }
+    .test-output {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      min-height: 100px;
+      font-family: monospace;
+      color: var(--ink);
+    }
+    #panel {
+      min-height: 400px;
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 20px;
+      background: var(--card-2);
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 Final 3 Flow Optimization - Manual Test</h1>
+  
+  <div class="test-section">
+    <h2>1. Spectator View Test</h2>
+    <p>Test the spectator view component with AI players competing.</p>
+    <div class="test-controls">
+      <button class="test-btn" onclick="testSpectatorView()">Show Spectator View</button>
+      <button class="test-btn" onclick="cleanupSpectator()">Cleanup Spectator View</button>
+    </div>
+    <div id="spectator-output" class="test-output">
+      Ready for spectator view test...
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Final Plea Test</h2>
+    <p>Test the final plea modal with different options.</p>
+    <div class="test-controls">
+      <button class="test-btn" onclick="testFinalPlea()">Show Final Plea Modal</button>
+      <button class="test-btn" onclick="testPleaInfluence()">Test Plea Influence Calculation</button>
+    </div>
+    <div id="plea-output" class="test-output">
+      Ready for final plea test...
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Integration Test Panel</h2>
+    <p>This is where the integrated components will render during Final 3 phases.</p>
+    <div id="panel"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Event Bus Monitor</h2>
+    <p>Monitor events emitted by spectator view and final plea.</p>
+    <div id="event-output" class="test-output">
+      Listening for events...
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Initialize minimal game state
+    window.game = window.game || {};
+    window.game.bus = window.game.bus || {
+      on: function(event, handler) {
+        if (!this._handlers) this._handlers = {};
+        if (!this._handlers[event]) this._handlers[event] = [];
+        this._handlers[event].push(handler);
+      },
+      emit: function(event, data) {
+        console.log('[EventBus]', event, data);
+        const output = document.getElementById('event-output');
+        if (output) {
+          const timestamp = new Date().toLocaleTimeString();
+          output.innerHTML += `\n[${timestamp}] ${event}: ${JSON.stringify(data, null, 2)}`;
+        }
+        if (this._handlers && this._handlers[event]) {
+          this._handlers[event].forEach(h => h(data));
+        }
+      }
+    };
+
+    // Mock player data
+    window.getP = function(id) {
+      const players = {
+        1: { id: 1, name: 'Alice', avatar: 'alice', human: false, evicted: false, affinity: { 2: 0.7, 3: 0.4 }, loyalty: 0.8, aggression: 0.3, compBeast: 0.6 },
+        2: { id: 2, name: 'Bob', avatar: 'bob', human: false, evicted: false, affinity: { 1: 0.6, 3: 0.5 }, loyalty: 0.5, aggression: 0.7, compBeast: 0.8 },
+        3: { id: 3, name: 'Charlie', avatar: 'charlie', human: true, evicted: false, affinity: { 1: 0.5, 2: 0.6 }, loyalty: 0.7, aggression: 0.4, compBeast: 0.5 }
+      };
+      return players[id];
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
+    };
+
+    // Mock SocialRelations
+    window.SocialRelations = {
+      getAffinity: function(a, b) {
+        const playerA = window.getP(a);
+        return playerA && playerA.affinity ? (playerA.affinity[b] || 0.5) : 0.5;
+      }
+    };
+  </script>
+  
+  <script src="js/spectator-view.js"></script>
+  <script src="js/final-plea.js"></script>
+
+  <script>
+    // Test functions
+    function testSpectatorView() {
+      const output = document.getElementById('spectator-output');
+      output.innerHTML = 'Showing spectator view with Alice and Bob competing...';
+      
+      const panel = document.getElementById('panel');
+      
+      window.SpectatorView.show({
+        competitorIds: [1, 2],
+        gameType: 'memory',
+        phase: 'Final 3 — Part 2 (TEST)',
+        onSkip: () => {
+          output.innerHTML += '\n✓ Skip button clicked!';
+          setTimeout(() => {
+            output.innerHTML += '\n✓ Reveal sequence completed';
+          }, 2500);
+        },
+        container: panel
+      });
+      
+      output.innerHTML += '\n✓ Spectator view rendered in panel';
+    }
+
+    function cleanupSpectator() {
+      const output = document.getElementById('spectator-output');
+      window.SpectatorView.cleanup();
+      output.innerHTML = 'Spectator view cleaned up.\n✓ Panel cleared\n✓ Event listeners removed';
+    }
+
+    function testFinalPlea() {
+      const output = document.getElementById('plea-output');
+      output.innerHTML = 'Showing final plea modal for Charlie (human) vs Alice...\nHOH: Bob';
+      
+      window.FinalPlea.show({
+        nominee: window.getP(3), // Charlie (human)
+        hoh: window.getP(2), // Bob
+        otherNominee: window.getP(1), // Alice
+        onSubmit: (pleaData) => {
+          if (pleaData) {
+            output.innerHTML += `\n✓ Plea submitted!`;
+            output.innerHTML += `\n  Influence: ${(pleaData.influence * 100).toFixed(1)}%`;
+            output.innerHTML += `\n  Successful: ${pleaData.successful ? 'Yes' : 'No'}`;
+            output.innerHTML += `\n  Message: "${pleaData.plea}"`;
+          } else {
+            output.innerHTML += '\n✗ Plea skipped';
+          }
+        }
+      });
+      
+      output.innerHTML += '\n✓ Final plea modal opened';
+    }
+
+    function testPleaInfluence() {
+      const output = document.getElementById('plea-output');
+      output.innerHTML = 'Testing plea influence calculation...\n';
+      
+      // Test with alliance plea (high loyalty HOH)
+      const testOption = {
+        id: 'alliance',
+        text: "We've been allies all season—honor our bond",
+        weight: 1.0
+      };
+      
+      const influence = window.FinalPlea.calculateInfluence({
+        nominee: window.getP(3), // Charlie
+        hoh: window.getP(2), // Bob (loyalty: 0.5, aggression: 0.7, compBeast: 0.8)
+        otherNominee: window.getP(1), // Alice
+        selectedOption: testOption
+      });
+      
+      output.innerHTML += `\nTest Scenario:`;
+      output.innerHTML += `\n  Nominee: Charlie (human)`;
+      output.innerHTML += `\n  HOH: Bob (Loyalty: 0.5, Aggression: 0.7, CompBeast: 0.8)`;
+      output.innerHTML += `\n  Other Nominee: Alice`;
+      output.innerHTML += `\n  Plea Type: Alliance (weight: 1.0)`;
+      output.innerHTML += `\n\nCalculated Influence: ${(influence * 100).toFixed(1)}%`;
+      output.innerHTML += `\n(Max possible: 20%)`;
+      
+      if (influence >= 0 && influence <= 0.2) {
+        output.innerHTML += `\n✓ Influence is within expected range (0-20%)`;
+      } else {
+        output.innerHTML += `\n✗ ERROR: Influence out of range!`;
+      }
+    }
+
+    // Listen for events
+    window.game.bus.on('spectator:started', (data) => {
+      console.log('Spectator started:', data);
+    });
+
+    window.game.bus.on('spectator:progress', (data) => {
+      console.log('Spectator progress:', data);
+    });
+
+    window.game.bus.on('spectator:skip', () => {
+      console.log('Spectator skip requested');
+    });
+
+    window.game.bus.on('plea:submitted', (data) => {
+      console.log('Plea submitted:', data);
+    });
+
+    // Auto-run basic test on load
+    window.addEventListener('load', () => {
+      console.log('Final 3 Flow Optimization Test loaded');
+      console.log('SpectatorView available:', !!window.SpectatorView);
+      console.log('FinalPlea available:', !!window.FinalPlea);
+    });
+  </script>
+</body>
+</html>
