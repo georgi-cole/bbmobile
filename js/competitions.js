@@ -1962,13 +1962,25 @@
   function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
     const duo = (g.__f3_duo || []).slice();
+    
+    // Check if skip was requested from spectator view
+    const skipRequested = g.__skipRequested;
+    if (skipRequested) {
+      console.info('[F3P2] Skip requested, showing quick reveal');
+      g.__skipRequested = false;
+    }
+    
     for (const id of duo) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
     const sorted = [...g.lastCompScores.entries()].filter(([id]) => duo.includes(id)).sort((a, b) => b[1] - a[1]);
     const winner = sorted[0][0];
     g.__f3p2Winner = winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
-    safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', 4500);
-    setTimeout(() => startF3P3(), 4600);
+    
+    // If skip was requested, use shorter delay
+    const delay = skipRequested ? 1500 : 4500;
+    
+    safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
+    setTimeout(() => startF3P3(), delay + 100);
   }
 
   function renderF3P3(panel) {
@@ -2109,6 +2121,14 @@
   function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
     const finalists = (g.__f3_finalists || []).slice();
+    
+    // Check if skip was requested from spectator view
+    const skipRequested = g.__skipRequested;
+    if (skipRequested) {
+      console.info('[F3P3] Skip requested, showing quick reveal');
+      g.__skipRequested = false;
+    }
+    
     for (const id of finalists) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
     const sorted = [...g.lastCompScores.entries()].filter(([id]) => finalists.includes(id)).sort((a, b) => b[1] - a[1]);
     const winner = sorted[0][0], loser = sorted[1][0];
@@ -2130,10 +2150,14 @@
     if (typeof global.updateHud === 'function') global.updateHud();
 
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`, 'ok');
-    safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', 5000);
+    
+    // If skip was requested, use shorter delay
+    const delay = skipRequested ? 2000 : 5000;
+    
+    safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
     global.tv.say('Final 3 Eviction Ceremony');
     global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
-    setTimeout(() => global.renderFinal3DecisionPanel?.(), 50);
+    setTimeout(() => global.renderFinal3DecisionPanel?.(), delay + 50);
   }
 
   function renderFinal3DecisionPanel() {
