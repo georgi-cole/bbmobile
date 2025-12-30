@@ -15,9 +15,9 @@
   };
 
   // Constants
-  const PARTICLE_COUNT = 50; // Increased from 30
-  const ANIMATION_DURATION = 2500; // Increased from 2000ms - longer vote count animation
-  const REVEAL_DELAY = 4000; // Increased from 2200ms - longer dramatic pause (3-4 seconds)
+  const PARTICLE_COUNT = 30;
+  const ANIMATION_DURATION = 2000; // Vote count animation duration
+  const REVEAL_DELAY = 2200; // Delay before name reveal
 
   /**
    * Preload audio files (graceful failure if files don't exist)
@@ -179,16 +179,6 @@
         onClose = null
       } = options;
 
-      // Track if modal has been dismissed to prevent double-resolve
-      let dismissed = false;
-      const dismiss = () => {
-        if (dismissed) return;
-        dismissed = true;
-        hide();
-        if (onClose) onClose();
-        resolve();
-      };
-
       // Determine if evicted (red) or survived (green)
       const isEvicted = votesFor > votesAgainst;
       const accentColor = isEvicted ? '#ef4444' : '#10b981';
@@ -313,12 +303,6 @@
           nameReveal.classList.add('revealed');
           nameReveal.style.opacity = '1';
           
-          // Add camera shake effect to card
-          card.classList.add('shake');
-          setTimeout(() => {
-            card.classList.remove('shake');
-          }, 500);
-          
           // Play reveal sound
           playAudio(audioContext.revealSound);
           
@@ -332,26 +316,31 @@
         // Announce result to screen reader
         const announcement = `${name}, by a vote of ${votesFor} to ${votesAgainst}, you have been ${isEvicted ? 'evicted' : 'saved'}`;
         liveRegion.textContent = announcement;
-        
-        // Auto-dismiss after 3 seconds of showing the result
-        setTimeout(() => {
-          dismiss();
-        }, 3000);
       }, REVEAL_DELAY);
 
       // Keyboard handler
       const handleKeydown = (e) => {
         if (e.key === 'Escape') {
           e.preventDefault();
-          dismiss();
+          hide();
+          if (onClose) onClose();
+          resolve();
         }
       };
       overlay.addEventListener('keydown', handleKeydown);
 
       // Backdrop click to close
       backdrop.addEventListener('click', () => {
-        dismiss();
+        hide();
+        if (onClose) onClose();
+        resolve();
       });
+
+      // Store resolve for external hide calls
+      overlay._resolvePromise = () => {
+        if (onClose) onClose();
+        resolve();
+      };
     });
   }
 
