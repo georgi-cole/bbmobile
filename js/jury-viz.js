@@ -854,7 +854,7 @@
     if (!state) return;
     if (typeof left  === 'number') state.left.count  = left;
     if (typeof right === 'number') state.right.count = right;
-    writeCounts(); updateLeaderGlow(); updateBadge();
+    writeCounts(); updateLeaderGlow();
   }
 
   function onVote(which, counts){
