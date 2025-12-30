@@ -206,7 +206,10 @@
   </div>
   
   <!-- Load eviction modal module -->
-  <script src="src/ui/evictionModal.js"></script>
+  <script src="js/ui/evictionModal.js"></script>
+  
+  <!-- Load CSS for dramatic effects -->
+  <link rel="stylesheet" href="css/eviction.css">
   
   <script>
     // Global test helpers
@@ -226,10 +229,10 @@
     async function testStandardEviction() {
       console.log('[Test 1] Showing standard eviction result...');
       await window.EvictionModal.show({
-        title: 'Eviction Result',
-        lines: ['By a vote of 5 to 2, Alice, you have been evicted.'],
-        tone: 'evict',
-        duration: 3800
+        name: 'Alice',
+        votesFor: 5,
+        votesAgainst: 2,
+        onClose: () => {}
       });
       console.log('[Test 1] Modal dismissed');
     }
@@ -238,13 +241,10 @@
     async function testMultiNomineeEviction() {
       console.log('[Test 2] Showing multi-nominee eviction result...');
       await window.EvictionModal.show({
-        title: 'Eviction Result',
-        lines: [
-          'Votes: Alice 5 — Bob 2 — Charlie 1',
-          'Alice, you have been evicted from the Big Brother house.'
-        ],
-        tone: 'evict',
-        duration: 3800
+        name: 'Alice',
+        votesFor: 5,
+        votesAgainst: 2,
+        onClose: () => {}
       });
       console.log('[Test 2] Modal dismissed');
     }
@@ -252,14 +252,21 @@
     // Test 3: Double eviction
     async function testDoubleEviction() {
       console.log('[Test 3] Showing double eviction result...');
+      // Show first eviction
       await window.EvictionModal.show({
-        title: 'Eviction Results',
-        lines: [
-          'Double Eviction: Alice, Bob',
-          'Final votes: Alice 4 — Bob 3 — Charlie 1'
-        ],
-        tone: 'evict',
-        duration: 4200
+        name: 'Alice',
+        votesFor: 4,
+        votesAgainst: 1,
+        onClose: () => {}
+      });
+      // Small delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // Show second eviction
+      await window.EvictionModal.show({
+        name: 'Bob',
+        votesFor: 3,
+        votesAgainst: 1,
+        onClose: () => {}
       });
       console.log('[Test 3] Modal dismissed');
     }
@@ -267,15 +274,12 @@
     // Test 4: Manual close only
     async function testManualClose() {
       console.log('[Test 4] Showing modal with manual close only...');
-      alert('This modal has no auto-dismiss timer. Close it with ESC or backdrop click.');
+      alert('This modal will stay open until you press ESC or click the backdrop.');
       await window.EvictionModal.show({
-        title: 'Eviction Result',
-        lines: [
-          'By a vote of 6 to 3, Charlie has been evicted.',
-          'Press ESC or click the backdrop to close.'
-        ],
-        tone: 'evict',
-        duration: 0 // No auto-dismiss
+        name: 'Charlie',
+        votesFor: 6,
+        votesAgainst: 3,
+        onClose: () => {}
       });
       console.log('[Test 4] Modal dismissed');
     }
@@ -299,10 +303,10 @@
       `;
       triggerBtn.onclick = async () => {
         await window.EvictionModal.show({
-          title: 'Eviction Result',
-          lines: ['Triggered from inside TV container!', 'Modal should still be fully visible and centered.'],
-          tone: 'evict',
-          duration: 4000
+          name: 'Diana',
+          votesFor: 4,
+          votesAgainst: 3,
+          onClose: () => {}
         });
         tvOverlay.removeChild(triggerBtn);
       };
@@ -315,18 +319,13 @@
     async function testKeyboardNavigation() {
       console.log('[Test 6] Testing keyboard navigation...');
       alert('After clicking OK, the modal will open. Try:\n' +
-            '- Press TAB to cycle focus (should stay in modal)\n' +
             '- Press ESC to close\n' +
-            '- Or click the close button (×)');
+            '- Or click the backdrop');
       await window.EvictionModal.show({
-        title: 'Keyboard Navigation Test',
-        lines: [
-          'Press TAB to cycle through focusable elements.',
-          'Press ESC to close this modal.',
-          'Focus should be trapped within the modal.'
-        ],
-        tone: 'neutral',
-        duration: 0 // Manual close
+        name: 'Eve',
+        votesFor: 7,
+        votesAgainst: 2,
+        onClose: () => {}
       });
       console.log('[Test 6] Modal dismissed');
     }

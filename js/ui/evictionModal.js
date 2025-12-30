@@ -15,9 +15,9 @@
   };
 
   // Constants
-  const PARTICLE_COUNT = 30;
-  const ANIMATION_DURATION = 2000; // Vote count animation duration
-  const REVEAL_DELAY = 2200; // Delay before name reveal
+  const PARTICLE_COUNT = 50; // Increased from 30
+  const ANIMATION_DURATION = 2500; // Increased from 2000ms - longer vote count animation
+  const REVEAL_DELAY = 4000; // Increased from 2200ms - longer dramatic pause (3-4 seconds)
 
   /**
    * Preload audio files (graceful failure if files don't exist)
@@ -302,6 +302,12 @@
         if (!prefersReducedMotion()) {
           nameReveal.classList.add('revealed');
           nameReveal.style.opacity = '1';
+          
+          // Add camera shake effect to card
+          card.classList.add('shake');
+          setTimeout(() => {
+            card.classList.remove('shake');
+          }, 500);
           
           // Play reveal sound
           playAudio(audioContext.revealSound);
