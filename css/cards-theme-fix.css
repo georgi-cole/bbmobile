@@ -44,6 +44,14 @@
   --card-heading-gradient-to: #f0f8ff;
 }
 
+/* Competition cards size consistency - match ceremony cards (F3 reference) */
+.competition-instructions-card {
+  /* Use same max-width as tv-inline-card for consistency */
+  max-width: min(var(--tv-inline-card-max-width, 780px), 92%) !important;
+  /* Ensure proper centering in TV overlay */
+  margin: 0 auto !important;
+}
+
 .revealCard h3,
 .reveal-card h3,
 .challenge-card h3,

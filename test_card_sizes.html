@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Card Size Consistency Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/cards-theme-fix.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg, #0a0f18);
+      color: var(--text, #d8e6f5);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section {
+      margin: 40px 0;
+      padding: 20px;
+      background: var(--card, #0d1b2a);
+      border-radius: 12px;
+      border: 1px solid var(--line, #1f3248);
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #66b8ff;
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+    }
+    .section h3 {
+      color: #88c7ff;
+      font-size: 1.1rem;
+      margin: 20px 0 10px;
+    }
+    .faux-tv-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 768px;
+      margin: 20px auto;
+      background: #0b121a;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 400px;
+    }
+    .faux-tv-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      background: linear-gradient(145deg, #0d1623 0%, #0a0f18 100%);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 12px;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 12;
+    }
+    .card-showcase {
+      margin: 15px 0;
+    }
+    .measurements {
+      font-size: 0.75rem;
+      color: #88c7ff;
+      margin-top: 8px;
+      padding: 8px;
+      background: rgba(102, 184, 255, 0.1);
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    .test-btn {
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #2a4766, #1f3a58);
+      border: 1px solid #4a6d8f;
+      border-radius: 8px;
+      color: #e3f2ff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .test-btn:hover {
+      background: linear-gradient(135deg, #345578, #264561);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .info-box {
+      padding: 12px;
+      background: rgba(102, 184, 255, 0.08);
+      border-left: 3px solid #66b8ff;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin: 15px 0;
+    }
+    .issue-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #ff6b6b;
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎴 Card Size Consistency Test</h1>
+    
+    <div class="info-box">
+      <strong>Issue:</strong> Cards throughout the game have inconsistent sizes, text overflow issues, and HOH/POV competition cards touch the horizontal edges of the faux TV.
+      <br><br>
+      <strong>Goal:</strong> Use F3 Part 1 card explanation size as the maximum reference and ensure consistent padding from TV edges.
+    </div>
+
+    <div class="section">
+      <h2>Current Issues</h2>
+      <ul>
+        <li>Inconsistent max-width across card types <span class="issue-badge">BUG</span></li>
+        <li>Competition cards (HOH/POV) touching faux TV edges <span class="issue-badge">VISUAL</span></li>
+        <li>Text unnecessarily spanning multiple lines <span class="issue-badge">UX</span></li>
+        <li>Different padding/margin behavior between card types <span class="issue-badge">INCONSISTENT</span></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Test Cards in Faux TV Context</h2>
+      
+      <div class="btn-group">
+        <button class="test-btn" onclick="showCompetitionCard()">Show Competition Card (HOH/POV)</button>
+        <button class="test-btn" onclick="showCeremonyCard()">Show Ceremony Card</button>
+        <button class="test-btn" onclick="showF3Card()">Show F3 Part 1 Card (Reference)</button>
+        <button class="test-btn" onclick="showLongTextCard()">Show Long Text Card</button>
+        <button class="test-btn" onclick="clearCard()">Clear</button>
+      </div>
+
+      <div class="faux-tv-wrapper">
+        <div class="faux-tv-inner tv-screen">
+          <div id="tvOverlay"></div>
+        </div>
+      </div>
+
+      <div id="measurements" class="measurements" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>Card Type Reference</h2>
+      
+      <h3>1. Competition Instructions Card <span class="issue-badge">TOUCHES EDGES</span></h3>
+      <div class="info-box">
+        <strong>Class:</strong> <code>.competition-instructions-card</code><br>
+        <strong>Used for:</strong> HOH and POV competition instructions<br>
+        <strong>Current Issue:</strong> No horizontal margin, touches TV edges<br>
+        <strong>Current max-width:</strong> Not explicitly set (uses parent container)
+      </div>
+
+      <h3>2. TV Inline Card (Ceremony)</h3>
+      <div class="info-box">
+        <strong>Class:</strong> <code>.tv-inline-card, .ceremony-card</code><br>
+        <strong>Used for:</strong> Nomination, veto, eviction ceremonies<br>
+        <strong>Current max-width:</strong> <code>min(780px, 92%)</code><br>
+        <strong>Defined in:</strong> css/tv-inline-cards.css
+      </div>
+
+      <h3>3. Reveal Card (Diary Room)</h3>
+      <div class="info-box">
+        <strong>Class:</strong> <code>.revealCard.diaryRoomCard</code><br>
+        <strong>Used for:</strong> Various game announcements and results<br>
+        <strong>Current max-width:</strong> <code>min(520px, 92%)</code> with <code>max-height: 78%</code><br>
+        <strong>Defined in:</strong> styles.css line 1118-1124
+      </div>
+
+      <h3>4. F3 Part 1 Card (Reference Size) <span style="color: #66ff66;">✓ REFERENCE</span></h3>
+      <div class="info-box">
+        <strong>Used for:</strong> Final 3 Part 1 competition explanation<br>
+        <strong>Should be:</strong> Maximum size reference for all cards<br>
+        <strong>Characteristics:</strong> Well-balanced text-to-container ratio, good readability
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Proposed Changes</h2>
+      <ul>
+        <li><strong>Standardize max-width:</strong> Use F3 card size as reference (~780px max)</li>
+        <li><strong>Add horizontal padding:</strong> Ensure 16-20px gap from TV edges for all cards</li>
+        <li><strong>Consistent sizing:</strong> All cards should use same constraint system</li>
+        <li><strong>Responsive behavior:</strong> Scale proportionally on smaller screens</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function showCompetitionCard() {
+      const overlay = document.getElementById('tvOverlay');
+      overlay.innerHTML = `
+        <div class="competition-instructions-card" id="testCard">
+          <h2>HOH Competition</h2>
+          <p style="margin: 12px 0;">
+            Welcome to the Head of Household competition! The winner will be safe for the week 
+            and will nominate two houseguests for eviction.
+          </p>
+          <p style="margin: 12px 0;">
+            This is an endurance competition. Tap as fast as you can to accumulate points. 
+            The houseguest with the highest score when time expires wins HOH.
+          </p>
+          <button class="test-btn" style="width: 100%; margin-top: 12px;">START COMPETITION</button>
+        </div>
+      `;
+      measureCard();
+    }
+
+    function showCeremonyCard() {
+      const overlay = document.getElementById('tvOverlay');
+      overlay.innerHTML = `
+        <div class="tv-inline-card ceremony-card" id="testCard">
+          <h3>Nomination Ceremony</h3>
+          <p>
+            The Head of Household has nominated two houseguests for eviction this week.
+          </p>
+          <p>
+            These nominations are not final. The Power of Veto competition will determine 
+            the final nominees for this week's eviction.
+          </p>
+          <p style="margin-top: 16px; font-weight: 600; color: #ffdc8b;">
+            This nomination ceremony is adjourned.
+          </p>
+        </div>
+      `;
+      measureCard();
+    }
+
+    function showF3Card() {
+      const overlay = document.getElementById('tvOverlay');
+      overlay.innerHTML = `
+        <div class="tv-inline-card" id="testCard">
+          <h3>Final 3 – Part 1</h3>
+          <p>
+            Welcome to Part 1 of the Final Head of Household competition!
+          </p>
+          <p>
+            All three remaining houseguests will compete in this endurance challenge. 
+            The winner advances directly to Part 3 of the competition and is guaranteed 
+            a spot in the Final 2.
+          </p>
+          <p>
+            The two losers will face off in Part 2. The Part 2 winner will join the 
+            Part 1 winner in Part 3, where they'll compete to become the Final HOH.
+          </p>
+          <p style="margin-top: 16px; font-weight: 600;">
+            This is the most important competition of the season. Good luck!
+          </p>
+          <button class="test-btn" style="width: 100%; margin-top: 12px;">BEGIN PART 1</button>
+        </div>
+      `;
+      measureCard();
+    }
+
+    function showLongTextCard() {
+      const overlay = document.getElementById('tvOverlay');
+      overlay.innerHTML = `
+        <div class="tv-inline-card" id="testCard">
+          <h3>Special Power Activated</h3>
+          <p>
+            Congratulations! You have activated a special power that will change the game. 
+            This power allows you to make a significant strategic move that could alter 
+            the course of the competition.
+          </p>
+          <p>
+            You must decide how to use this power within the next 24 hours. Consider your 
+            options carefully, as this decision could be the difference between making it 
+            to the end or being sent to the jury house.
+          </p>
+          <p>
+            The other houseguests will not know you have this power until you choose to 
+            reveal it. Use this information wisely and think about the timing of your move.
+          </p>
+          <p>
+            Remember: with great power comes great responsibility. Make your choice count!
+          </p>
+          <div style="margin-top: 16px; display: flex; gap: 8px;">
+            <button class="test-btn" style="flex: 1;">Use Power Now</button>
+            <button class="test-btn" style="flex: 1;">Save for Later</button>
+          </div>
+        </div>
+      `;
+      measureCard();
+    }
+
+    function clearCard() {
+      document.getElementById('tvOverlay').innerHTML = '';
+      document.getElementById('measurements').style.display = 'none';
+    }
+
+    function measureCard() {
+      const card = document.getElementById('testCard');
+      const overlay = document.getElementById('tvOverlay');
+      const tvWrapper = overlay.closest('.faux-tv-inner');
+      
+      if (!card || !tvWrapper) return;
+
+      // Wait for render
+      requestAnimationFrame(() => {
+        const cardRect = card.getBoundingClientRect();
+        const tvRect = tvWrapper.getBoundingClientRect();
+        const overlayRect = overlay.getBoundingClientRect();
+        
+        const leftGap = cardRect.left - tvRect.left;
+        const rightGap = tvRect.right - cardRect.right;
+        const topGap = cardRect.top - tvRect.top;
+        const bottomGap = tvRect.bottom - cardRect.bottom;
+        
+        const measurements = document.getElementById('measurements');
+        measurements.style.display = 'block';
+        measurements.innerHTML = `
+          <strong>Card Measurements:</strong><br>
+          Card width: ${cardRect.width.toFixed(1)}px<br>
+          Card height: ${cardRect.height.toFixed(1)}px<br>
+          TV inner width: ${tvRect.width.toFixed(1)}px<br>
+          TV inner height: ${tvRect.height.toFixed(1)}px<br>
+          <br>
+          <strong>Gaps from TV edges:</strong><br>
+          Left gap: ${leftGap.toFixed(1)}px ${leftGap < 16 ? '<span style="color: #ff6b6b;">⚠️ TOO CLOSE</span>' : '<span style="color: #66ff66;">✓</span>'}<br>
+          Right gap: ${rightGap.toFixed(1)}px ${rightGap < 16 ? '<span style="color: #ff6b6b;">⚠️ TOO CLOSE</span>' : '<span style="color: #66ff66;">✓</span>'}<br>
+          Top gap: ${topGap.toFixed(1)}px<br>
+          Bottom gap: ${bottomGap.toFixed(1)}px<br>
+          <br>
+          <strong>Classes:</strong> ${card.className}
+        `;
+      });
+    }
+
+    // Show default card on load
+    window.addEventListener('load', () => {
+      showCompetitionCard();
+    });
+  </script>
+</body>
+</html>
