@@ -1410,24 +1410,25 @@
     // Shuffle reveal order
     const order = jurors.slice().sort(()=>rng()-.5);
     
-    // Calculate pacing with tripled durations
-    const numJurors = order.length;
-    const maxTotalMs = 180000; // 180s cap (was 45s)
-    const minSlotMs = 1200; // Minimum slot duration when compressed
+    // Timing constants for jury reveal pacing
+    const MAX_JURY_REVEAL_DURATION_MS = 60000; // 60s cap for better pacing
+    const MIN_SLOT_DURATION_MS = 800; // Minimum slot duration when compressed
     
-    // Tripled baseline durations (for 9 jurors):
-    // Intro cards handled elsewhere
-    // Early jurors (1-3): 5.4s each (was 1.8s)
-    // Mid jurors (4-6): 7.2s each (was 2.4s)
-    // Late jurors (7-8): 9.0s each (was 3.0s)
-    // Final juror (9): 12.0s (was 4.0s)
+    // Calculate pacing with optimized durations for better UX
+    const numJurors = order.length;
+    
+    // Optimized baseline durations (for 9 jurors):
+    // Early jurors (1-3): 1.8s each (faster initial pace)
+    // Mid jurors (4-6): 2.4s each (build tension)
+    // Late jurors (7-8): 3.0s each (increase drama)
+    // Final juror (9): 4.0s (maximum drama for final vote)
     
     function getBaselineDuration(index, total) {
       const position = index + 1;
-      if (position <= 3) return 5400; // Early
-      if (position <= 6) return 7200; // Mid
-      if (position < total) return 9000; // Late
-      return 12000; // Final juror
+      if (position <= 3) return 1800; // Early
+      if (position <= 6) return 2400; // Mid
+      if (position < total) return 3000; // Late
+      return 4000; // Final juror
     }
     
     // Calculate baseline total
@@ -1438,25 +1439,25 @@
     
     // Log pacing summary
     const totalPlannedMs = baselineMs;
-    console.info(`[jury] pacing totalPlannedMs=${totalPlannedMs} cap=${maxTotalMs} compressed=${baselineMs > maxTotalMs}`);
+    console.info(`[jury] pacing totalPlannedMs=${totalPlannedMs} cap=${MAX_JURY_REVEAL_DURATION_MS} compressed=${baselineMs > MAX_JURY_REVEAL_DURATION_MS}`);
     
     // Determine if compression needed
     let durations = [];
     let compressionApplied = false;
     
-    if (baselineMs > maxTotalMs) {
+    if (baselineMs > MAX_JURY_REVEAL_DURATION_MS) {
       // Apply compression: evenly distribute maxTotalMs across all reveals
-      const slotDur = Math.max(minSlotMs, maxTotalMs / numJurors);
+      const slotDur = Math.max(MIN_SLOT_DURATION_MS, MAX_JURY_REVEAL_DURATION_MS / numJurors);
       durations = new Array(numJurors).fill(slotDur);
       compressionApplied = true;
-      console.info(`[jury] pacing compressed newCap=180s remaining=${numJurors} slotDur=${slotDur.toFixed(1)}ms`);
+      console.info(`[jury] pacing compressed newCap=60s remaining=${numJurors} slotDur=${slotDur.toFixed(1)}ms`);
     } else {
       // No compression needed, use baseline durations with jitter
       for (let i = 0; i < numJurors; i++) {
         const base = getBaselineDuration(i, numJurors);
         // Add jitter ±0.4s (±400ms)
         const jitter = (rng() * 2 - 1) * 400;
-        durations.push(Math.max(minSlotMs, base + jitter));
+        durations.push(Math.max(MIN_SLOT_DURATION_MS, base + jitter));
       }
     }
     
@@ -1530,9 +1531,18 @@
     // Remove fast-forward button
     if (ffBtn) ffBtn.remove();
     
-    // Winner suspense delay: 9.0s (was 3.0s)
-    const suspenseDelay = finale.fastForwardActive ? 500 : 9000;
+    // Suspense timing constants
+    const FAST_FORWARD_SUSPENSE_MS = 500;
+    const NORMAL_SUSPENSE_MS = 3000;
+    
+    // Winner suspense delay: 3.0s (dramatic but not too long)
+    const suspenseDelay = finale.fastForwardActive ? FAST_FORWARD_SUSPENSE_MS : NORMAL_SUSPENSE_MS;
     await sleep(suspenseDelay);
+    
+    // Tiebreaker timing constants
+    const TIEBREAKER_FAST_FORWARD_MS = 500;
+    const TIEBREAKER_DISPLAY_MS = 2400;
+    const TIEBREAKER_POST_DELAY_MS = 800;
     
     // Determine winner
     const a=votes.get(A)||0, b=votes.get(B)||0;
@@ -1542,9 +1552,9 @@
       // Tiebreaker: America's Vote
       winner = americasVoteWinner(A, B);
       votes.set(winner, (votes.get(winner)||0)+1);
-      await sleep(finale.fastForwardActive ? 500 : 2400);
+      await sleep(finale.fastForwardActive ? TIEBREAKER_FAST_FORWARD_MS : TIEBREAKER_DISPLAY_MS);
       updateFinaleGraph(votes.get(A)||0, votes.get(B)||0);
-      await sleep(finale.fastForwardActive ? 200 : 800);
+      await sleep(finale.fastForwardActive ? TIEBREAKER_FAST_FORWARD_MS/2 : TIEBREAKER_POST_DELAY_MS);
     } else {
       winner = a>b ? A : B;
     }
@@ -1627,20 +1637,11 @@
     // REMOVED: Don't call renderFinaleGraph here as overlay already mounted above
     // REMOVED: Don't call renderJuryBallotsPanel - we're using fullscreen overlay only
     
-    // Intro cards before reveal (tripled durations)
-    // Intro card 1: 6.0s (was 2.0s)
-    try {
-      await g.showCard?.('Jury Votes', ['The jury has deliberated...'], 'jury', 6000, true);
-      await g.cardQueueWaitIdle?.();
-    } catch(e) {}
+    // Intro cards before reveal - SHORTENED for better UX
+    // Skip intro cards entirely for faster pacing
+    // User already knows jury voting is happening from the event modal above
     
-    // Intro card 2: 4.5s (was 1.5s)
-    try {
-      await g.showCard?.('Time to Reveal', ['Let\'s reveal the votes one by one'], 'jury', 4500, true);
-      await g.cardQueueWaitIdle?.();
-    } catch(e) {}
-    
-    // Setup gap: reduced to 1 second (FIX 3)
+    // Setup gap: 1 second maximum before first vote (FIX 1: Timing)
     await sleep(1000);
     
     // PHASE 2: Jury reveal (no Public Favourite before jury)

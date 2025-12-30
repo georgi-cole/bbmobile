@@ -854,7 +854,7 @@
     if (!state) return;
     if (typeof left  === 'number') state.left.count  = left;
     if (typeof right === 'number') state.right.count = right;
-    writeCounts(); updateLeaderGlow(); updateBadge();
+    writeCounts(); updateLeaderGlow();
   }
 
   function onVote(which, counts){
@@ -1001,6 +1001,19 @@
   // Show winner celebration overlay
   function showWinnerCelebration(winner, runnerUp, finalVotes) {
     if (!state) return;
+    
+    // FIX 3: COMPLETELY CLEAR the overlay before showing winner content
+    // This prevents old voting UI from being visible behind the winner
+    if (state.overlay) {
+      // Use modern replaceChildren() for better performance
+      state.overlay.replaceChildren();
+      console.log('[jury-viz] Overlay cleared before winner display');
+    }
+    
+    // Also clear the wrap element if it exists separately
+    if (state.wrap && state.wrap.parentNode) {
+      state.wrap.remove();
+    }
     
     const celebration = el('div', 'winner-celebration');
     
