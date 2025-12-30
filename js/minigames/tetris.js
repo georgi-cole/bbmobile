@@ -73,6 +73,17 @@
     title.textContent = 'Tetris';
     title.style.cssText = 'margin:0;font-size:1.4rem;color:#e3ecf5;';
     
+    // Show high score if available
+    if(g.HighScoreManager){
+      const highScoreDisplay = g.HighScoreManager.getHighScoreDisplay('tetris');
+      if(highScoreDisplay){
+        const highScoreEl = document.createElement('div');
+        highScoreEl.textContent = highScoreDisplay;
+        highScoreEl.style.cssText = 'font-size:0.8rem;color:#ffd96b;font-weight:600;margin:-8px 0 0 0;text-align:center;';
+        title.insertAdjacentElement('afterend', highScoreEl);
+      }
+    }
+    
     const statsDiv = document.createElement('div');
     statsDiv.style.cssText = 'display:flex;gap:20px;font-size:0.9rem;';
     
@@ -408,7 +419,17 @@
       
       document.removeEventListener('keydown', handleKeyboard);
       
-      // Final score calculation
+      // Check for new personal best (using lines cleared as the metric)
+      let isNewBest = false;
+      if(g.HighScoreManager){
+        isNewBest = g.HighScoreManager.isNewBest('tetris', lines);
+        if(isNewBest){
+          g.HighScoreManager.setHighScore('tetris', lines, `${lines} lines`);
+          console.info(`[Tetris] New personal best: ${lines} lines!`);
+        }
+      }
+      
+      // Final score calculation - keep existing normalization
       const finalScore = Math.min(100, Math.floor((score / 1000) * 100));
       
       const resultDiv = document.createElement('div');
@@ -437,6 +458,14 @@
         <div style="color:#f7b955;font-size:1.1rem;margin-bottom:12px;">Level: ${level}</div>
       `;
       
+      // Add personal best indicator if applicable
+      if(isNewBest){
+        const pbText = document.createElement('div');
+        pbText.textContent = '🏆 New Personal Best!';
+        pbText.style.cssText = 'font-size:0.95rem;color:#ffd96b;font-weight:700;margin-bottom:10px;';
+        statsText.appendChild(pbText);
+      }
+      
       const finalScoreText = document.createElement('div');
       finalScoreText.textContent = `Final: ${finalScore}/100`;
       finalScoreText.style.cssText = 'font-size:1.3rem;color:#5bd68a;font-weight:600;';
@@ -448,7 +477,14 @@
       
       setTimeout(() => {
         if(typeof onComplete === 'function') {
-          onComplete(finalScore);
+          // Return score data with raw score info
+          const scoreData = {
+            score: finalScore,
+            rawScore: lines,
+            rawScoreDisplay: `${lines} lines cleared`,
+            isNewPersonalBest: isNewBest
+          };
+          onComplete(scoreData);
         }
       }, 3000);
     }

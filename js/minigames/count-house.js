@@ -4,27 +4,6 @@
 (function(g){
   'use strict';
 
-  const STORAGE_KEY = 'bb_sp_competitions_v1';
-
-  function saveScore(gameName, score){
-    try {
-      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      if(!data[gameName] || score > data[gameName]){
-        data[gameName] = score;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      }
-    } catch(e){}
-  }
-
-  function loadBestScore(gameName){
-    try {
-      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      return data[gameName] || 0;
-    } catch(e){
-      return 0;
-    }
-  }
-
   function render(container, onComplete, options = {}){
     container.innerHTML = '';
     
@@ -40,7 +19,13 @@
     title.textContent = 'Count House';
     title.style.cssText = 'margin:0;font-size:1.2rem;color:#e3ecf5;';
     
-    const bestScore = loadBestScore('countHouse');
+    // Use centralized HighScoreManager if available
+    let bestScore = 0;
+    if(g.HighScoreManager){
+      const highScore = g.HighScoreManager.getHighScore('countHouse');
+      bestScore = highScore ? highScore.score : 0;
+    }
+    
     const bestDisplay = document.createElement('div');
     bestDisplay.textContent = `Best: ${Math.round(bestScore)}`;
     bestDisplay.style.cssText = 'font-size:0.75rem;color:#95a9c0;';
@@ -179,6 +164,16 @@
       // Calculate raw score: perfect = 100, -5 points per unit off, min 20
       const rawScore = Math.max(20, 100 - (difference * 5));
       
+      // Check for new personal best (using raw score)
+      let isNewBest = false;
+      if(g.HighScoreManager){
+        isNewBest = g.HighScoreManager.isNewBest('countHouse', rawScore);
+        if(isNewBest){
+          g.HighScoreManager.setHighScore('countHouse', rawScore, `${rawScore} points`);
+          console.info(`[CountHouse] New personal best: ${rawScore} points!`);
+        }
+      }
+      
       // Use MinigameScoring to calculate final score (SCALE=1000)
           const finalScore = g.MinigameScoring ? 
             g.MinigameScoring.calculateFinalScore({
@@ -195,14 +190,18 @@
       input.disabled = true;
       gameActive = false;
       
-      // Save best score
-      saveScore('countHouse', finalScore);
-      
       // Cleanup
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       
       setTimeout(() => {
-        onComplete(finalScore);
+        // Return score data with metadata
+        const scoreData = {
+          score: Math.round(finalScore),
+          rawScore: rawScore,
+          rawScoreDisplay: `${rawScore} points`,
+          isNewPersonalBest: isNewBest
+        };
+        onComplete(scoreData);
       }, 2000);
     });
     
