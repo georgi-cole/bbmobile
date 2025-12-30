@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jury UI Enhancements Demo</title>
+  <script src="js/jury-viz.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    
+    .demo-controls {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 20000;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid rgba(0, 224, 204, 0.5);
+    }
+    
+    .demo-controls h2 {
+      color: #00e0cc;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+    }
+    
+    .demo-controls button {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .demo-controls button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.4);
+    }
+    
+    .feature-label {
+      color: #e8f4ff;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+      padding: 8px;
+      background: rgba(0, 224, 204, 0.1);
+      border-radius: 4px;
+    }
+    
+    .feature-label strong {
+      color: #00e0cc;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-controls">
+    <h2>🎬 Jury UI Enhancements</h2>
+    <div class="feature-label">
+      <strong>Enhancements:</strong><br>
+      ✓ Animated gradient background<br>
+      ✓ Spotlight effect<br>
+      ✓ Multi-layer floating particles<br>
+      ✓ Vignette effect<br>
+      ✓ Speech bubble vote messages<br>
+      ✓ Glow animations
+    </div>
+    <button onclick="showDemo()">Show Enhanced Faceoff</button>
+    <button onclick="showVoteMessage()">Show Vote Message</button>
+    <button onclick="hideDemo()">Close Demo</button>
+  </div>
+
+  <script>
+    function showDemo() {
+      // Mock player data
+      const leftPlayer = {
+        id: 1,
+        name: 'Alice',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice'
+      };
+      
+      const rightPlayer = {
+        id: 2,
+        name: 'Bob',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob'
+      };
+      
+      // Mount the faceoff in fullscreen mode
+      if (window.FinalFaceoff) {
+        window.FinalFaceoff.mount({
+          left: leftPlayer,
+          right: rightPlayer,
+          majority: 5,
+          fullscreen: true
+        });
+        
+        console.log('✓ Enhanced faceoff UI mounted');
+        
+        // Simulate some votes after a delay
+        setTimeout(() => {
+          window.FinalFaceoff.onVote('left', { left: 1, right: 0 });
+        }, 2000);
+        
+        setTimeout(() => {
+          window.FinalFaceoff.onVote('right', { left: 1, right: 1 });
+        }, 4000);
+        
+        setTimeout(() => {
+          window.FinalFaceoff.onVote('left', { left: 2, right: 1 });
+        }, 6000);
+      } else {
+        alert('FinalFaceoff not loaded. Make sure jury-viz.js is properly loaded.');
+      }
+    }
+    
+    function showVoteMessage() {
+      if (window.FinalFaceoff) {
+        const jurors = [
+          { name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+          { name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+          { name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' }
+        ];
+        
+        const reasons = [
+          "Alice played a strong social game and earned my respect throughout the season.",
+          "I'm voting for Bob because his strategic gameplay was masterful.",
+          "Alice made bold moves at critical moments that deserve to win."
+        ];
+        
+        let index = 0;
+        const interval = setInterval(() => {
+          if (index < jurors.length) {
+            const juror = jurors[index];
+            const finalist = index % 2 === 0 ? 'Alice' : 'Bob';
+            window.FinalFaceoff.showVoteCard(
+              juror.name,
+              finalist,
+              reasons[index],
+              juror.avatar
+            );
+            index++;
+          } else {
+            clearInterval(interval);
+          }
+        }, 3000);
+      }
+    }
+    
+    function hideDemo() {
+      if (window.FinalFaceoff) {
+        window.FinalFaceoff.destroy();
+        console.log('✓ Demo closed');
+      }
+    }
+    
+    // Show demo on load after a brief delay
+    setTimeout(() => {
+      console.log('🎬 Jury UI Enhancements Demo Ready');
+      console.log('Click "Show Enhanced Faceoff" to see the enhancements');
+    }, 500);
+  </script>
+</body>
+</html>
