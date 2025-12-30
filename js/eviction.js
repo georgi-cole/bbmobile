@@ -1069,13 +1069,13 @@
       g.eviction.__resultCardShown = true;
       
       if (!useLv2) {
-        // Use new eviction modal for better visibility (not clipped by TV overlay)
+        // Use new dramatic eviction modal with animations and effects
         if (typeof global.EvictionModal?.show === 'function') {
           await global.EvictionModal.show({
-            title: 'Eviction Result',
-            lines: [`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],
-            tone: 'evict',
-            duration: 3800
+            name: evName,
+            votesFor: finalA,
+            votesAgainst: finalB,
+            onClose: () => {}
           });
         } else {
           // Fallback to old card system if modal not loaded
@@ -1097,12 +1097,12 @@
             tone: 'evict'
           });
         } else if (typeof global.EvictionModal?.show === 'function') {
-          // Desktop/wide: Viewport-level modal (escapes TV clipping)
+          // Desktop/wide: Viewport-level dramatic modal with animations
           await global.EvictionModal.show({
-            title: 'Eviction Result',
-            lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
-            tone: 'evict',
-            duration: 3600
+            name: evName,
+            votesFor: finalA,
+            votesAgainst: finalB,
+            onClose: () => {}
           });
         } else {
           // Fallback: Legacy page-level card system
@@ -1192,13 +1192,18 @@
         // Set guard flag to prevent duplicate result cards
         g.eviction.__resultCardShown = true;
         
-        // Use new eviction modal for better visibility
+        // Prepare vote counts for dramatic modal
+        const evictedVotes = counts.get(evId) || 0;
+        const sortedCounts = [...counts.entries()].sort((a,b)=>b[1]-a[1]);
+        const runnerUpVotes = sortedCounts.length > 1 ? sortedCounts[1][1] : 0;
+        
+        // Use new dramatic eviction modal with animations
         if (typeof global.EvictionModal?.show === 'function') {
           await global.EvictionModal.show({
-            title: 'Eviction Result',
-            lines: [`Votes: ${parts}`, `${global.safeName(evId)}, ${pickEvictionPhrase()}`],
-            tone: 'evict',
-            duration: 3800
+            name: global.safeName(evId),
+            votesFor: evictedVotes,
+            votesAgainst: runnerUpVotes,
+            onClose: () => {}
           });
         } else {
           // Fallback to old card system
@@ -1448,14 +1453,28 @@
 
     const parts=[...counts.keys()].map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
     const names=evictedIds.map(global.safeName).join(', ');
-    // Use new eviction modal for better visibility (supports multiple evictions)
+    
+    // Use new dramatic eviction modal - show each eviction sequentially
     if (typeof global.EvictionModal?.show === 'function') {
-      await global.EvictionModal.show({
-        title: 'Eviction Results',
-        lines: [`${modeLabel}: ${names}`, `Final votes: ${parts}`],
-        tone: 'evict',
-        duration: 4200
-      });
+      for (const evId of evictedIds) {
+        const evictedVotes = counts.get(evId) || 0;
+        const sorted = [...counts.entries()].sort((a,b)=>b[1]-a[1]);
+        // Find runner-up (next highest who wasn't evicted)
+        const runnerUp = sorted.find(([id]) => !evictedIds.includes(id));
+        const runnerUpVotes = runnerUp ? runnerUp[1] : 0;
+        
+        await global.EvictionModal.show({
+          name: global.safeName(evId),
+          votesFor: evictedVotes,
+          votesAgainst: runnerUpVotes,
+          onClose: () => {}
+        });
+        
+        // Small delay between evictions in multi-eviction scenarios
+        if (evictedIds.indexOf(evId) < evictedIds.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
     } else {
       // Fallback to old card system
       global.showCard('Eviction Results',[`${modeLabel}: ${names}`,`Final votes: ${parts}`],'evict',4200,true);
@@ -1546,11 +1565,29 @@
       
       // Show result card with vote summary and eviction phrase (two-line format like multi)
       if (typeof global.EvictionModal?.show === 'function') {
+        // Parse vote summary to extract vote counts
+        // Expected format: "Name VoteCount — Name VoteCount" (e.g., "Alice 5 — Bob 2")
+        // The evicted player is determined by having the highest vote count (votes to evict)
+        let votesFor = 0, votesAgainst = 0;
+        if (voteSummary) {
+          const parts = voteSummary.split(' — ');
+          if (parts.length >= 2) {
+            // Extract vote counts from format "Name Count — Name Count"
+            const votes = parts.map(part => {
+              const match = part.match(/(\d+)$/);
+              return match ? parseInt(match[1], 10) : 0;
+            });
+            // Evicted player has more votes (votes to evict)
+            votesFor = Math.max(...votes);
+            votesAgainst = Math.min(...votes);
+          }
+        }
+        
         await global.EvictionModal.show({
-          title: 'Eviction Result',
-          lines: voteSummary ? [`Votes: ${voteSummary}`, `${evName}, ${pickEvictionPhrase()}`] : [`${evName}, ${pickEvictionPhrase()}`],
-          tone: 'evict',
-          duration: 3800
+          name: evName,
+          votesFor: votesFor,
+          votesAgainst: votesAgainst,
+          onClose: () => {}
         });
       } else {
         // Fallback to old card system
