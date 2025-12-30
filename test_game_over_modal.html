@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Over Modal Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0d151f;
+      color: #e0e8f0;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+    }
+    .test-panel {
+      max-width: 800px;
+      margin: 0 auto;
+      background: linear-gradient(145deg, #1a2533, #0f1925);
+      border: 1px solid rgba(110, 160, 220, 0.18);
+      border-radius: 16px;
+      padding: 30px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #6fd3ff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #9bbdff;
+    }
+    button {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background: #4574b8;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .pass {
+      color: #4ade80;
+    }
+    .fail {
+      color: #f87171;
+    }
+    input[type="number"] {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e0e8f0;
+      padding: 8px;
+      border-radius: 4px;
+      width: 80px;
+      margin: 0 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="test-panel">
+  <h1>🎮 Game Over Modal Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>1. Jury Eligibility Logic Tests</h2>
+    <p>Testing the makesJury() function with different scenarios</p>
+    <button onclick="testJuryLogic()">Run Logic Tests</button>
+    <div id="logic-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Visual Modal Test</h2>
+    <p>Test the modal appearance with custom parameters</p>
+    <div>
+      <label>Players Left: <input type="number" id="playersLeft" value="16" min="3" max="20"></label>
+      <label>Jury Size: <input type="number" id="jurySize" value="7" min="5" max="11"></label>
+    </div>
+    <button onclick="testModalDisplay()">Show Game Over Modal</button>
+    <div id="modal-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Integration Scenarios</h2>
+    <p>Test modal with specific game scenarios</p>
+    <button onclick="testScenario('7-jury-16th')">16th Place (7-person jury)</button>
+    <button onclick="testScenario('7-jury-10th')">10th Place (7-person jury)</button>
+    <button onclick="testScenario('7-jury-9th')">9th Place (7-person jury - First Juror)</button>
+    <button onclick="testScenario('9-jury-12th')">12th Place (9-person jury)</button>
+    <button onclick="testScenario('9-jury-11th')">11th Place (9-person jury - First Juror)</button>
+    <div id="scenario-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Edge Cases</h2>
+    <p>Test boundary conditions</p>
+    <button onclick="testEdgeCases()">Run Edge Case Tests</button>
+    <div id="edge-results" class="result"></div>
+  </div>
+</div>
+
+<script src="js/game-over-modal.js"></script>
+
+<script>
+  // Initialize minimal global setup
+  window.game = window.game || {};
+  window.game.cfg = { jurySize: 7, enableJuryHouse: true };
+  
+  // Mock functions needed by game-over-modal.js
+  window.ProfileService = {
+    setCurrentProfile: (profile) => console.log('Set profile:', profile),
+    incrementSeason: () => console.log('Increment season'),
+    setGuestMode: () => console.log('Guest mode')
+  };
+  
+  window.ProfileModal = {
+    show: (options) => {
+      console.log('ProfileModal.show called with:', options);
+      // Simulate user selection after 1 second
+      setTimeout(() => {
+        if (options.onGuest) {
+          console.log('Simulating guest selection');
+          options.onGuest();
+        }
+      }, 1000);
+    }
+  };
+  
+  window.Game = {
+    rebuildGame: (reset) => {
+      console.log('rebuildGame called with reset:', reset);
+    },
+    startOpeningSequence: () => {
+      console.log('startOpeningSequence called');
+    }
+  };
+
+  function testJuryLogic() {
+    const results = [];
+    const tests = [
+      // 7-person jury tests (jurors = 9th-3rd)
+      { playersLeft: 16, jurySize: 7, expected: false, desc: '16th place, 7-jury (pre-jury)' },
+      { playersLeft: 15, jurySize: 7, expected: false, desc: '15th place, 7-jury (pre-jury)' },
+      { playersLeft: 14, jurySize: 7, expected: false, desc: '14th place, 7-jury (pre-jury)' },
+      { playersLeft: 13, jurySize: 7, expected: false, desc: '13th place, 7-jury (pre-jury)' },
+      { playersLeft: 12, jurySize: 7, expected: false, desc: '12th place, 7-jury (pre-jury)' },
+      { playersLeft: 11, jurySize: 7, expected: false, desc: '11th place, 7-jury (pre-jury)' },
+      { playersLeft: 10, jurySize: 7, expected: false, desc: '10th place, 7-jury (pre-jury)' },
+      { playersLeft: 9, jurySize: 7, expected: true, desc: '9th place, 7-jury (FIRST JUROR)' },
+      { playersLeft: 8, jurySize: 7, expected: true, desc: '8th place, 7-jury (juror)' },
+      { playersLeft: 7, jurySize: 7, expected: true, desc: '7th place, 7-jury (juror)' },
+      { playersLeft: 6, jurySize: 7, expected: true, desc: '6th place, 7-jury (juror)' },
+      { playersLeft: 5, jurySize: 7, expected: true, desc: '5th place, 7-jury (juror)' },
+      { playersLeft: 4, jurySize: 7, expected: true, desc: '4th place, 7-jury (juror)' },
+      { playersLeft: 3, jurySize: 7, expected: true, desc: '3rd place, 7-jury (LAST JUROR)' },
+      
+      // 9-person jury tests (jurors = 11th-3rd)
+      { playersLeft: 16, jurySize: 9, expected: false, desc: '16th place, 9-jury (pre-jury)' },
+      { playersLeft: 15, jurySize: 9, expected: false, desc: '15th place, 9-jury (pre-jury)' },
+      { playersLeft: 14, jurySize: 9, expected: false, desc: '14th place, 9-jury (pre-jury)' },
+      { playersLeft: 13, jurySize: 9, expected: false, desc: '13th place, 9-jury (pre-jury)' },
+      { playersLeft: 12, jurySize: 9, expected: false, desc: '12th place, 9-jury (pre-jury)' },
+      { playersLeft: 11, jurySize: 9, expected: true, desc: '11th place, 9-jury (FIRST JUROR)' },
+      { playersLeft: 10, jurySize: 9, expected: true, desc: '10th place, 9-jury (juror)' },
+      { playersLeft: 9, jurySize: 9, expected: true, desc: '9th place, 9-jury (juror)' },
+      { playersLeft: 8, jurySize: 9, expected: true, desc: '8th place, 9-jury (juror)' },
+      { playersLeft: 3, jurySize: 9, expected: true, desc: '3rd place, 9-jury (LAST JUROR)' },
+    ];
+
+    tests.forEach(test => {
+      const result = window.GameOverModal.makesJury(test.playersLeft, test.jurySize);
+      const passed = result === test.expected;
+      results.push({
+        desc: test.desc,
+        expected: test.expected,
+        actual: result,
+        passed
+      });
+    });
+
+    const passCount = results.filter(r => r.passed).length;
+    const totalCount = results.length;
+    
+    let html = `<strong>Results: ${passCount}/${totalCount} tests passed</strong><br><br>`;
+    results.forEach(r => {
+      const status = r.passed ? '<span class="pass">✓ PASS</span>' : '<span class="fail">✗ FAIL</span>';
+      html += `${status} - ${r.desc}<br>`;
+      if (!r.passed) {
+        html += `  Expected: ${r.expected}, Got: ${r.actual}<br>`;
+      }
+    });
+    
+    document.getElementById('logic-results').innerHTML = html;
+  }
+
+  async function testModalDisplay() {
+    const playersLeft = parseInt(document.getElementById('playersLeft').value);
+    const jurySize = parseInt(document.getElementById('jurySize').value);
+    const madeJury = window.GameOverModal.makesJury(playersLeft, jurySize);
+    
+    const results = document.getElementById('modal-results');
+    results.innerHTML = `Testing with ${playersLeft} players left, jury size ${jurySize}<br>` +
+                       `Makes jury: ${madeJury ? '<span class="pass">YES</span>' : '<span class="fail">NO</span>'}<br>` +
+                       `${!madeJury ? 'Showing Game Over modal...' : 'Player made jury - no modal needed'}`;
+    
+    if (!madeJury) {
+      await window.GameOverModal.show({
+        playerName: 'Test Player',
+        placement: playersLeft,
+        jurySize: jurySize
+      });
+      results.innerHTML += '<br><span class="pass">Modal closed successfully</span>';
+    }
+  }
+
+  async function testScenario(scenario) {
+    const scenarios = {
+      '7-jury-16th': { playersLeft: 16, jurySize: 7, name: '16th Place (Pre-jury)' },
+      '7-jury-10th': { playersLeft: 10, jurySize: 7, name: '10th Place (Pre-jury)' },
+      '7-jury-9th': { playersLeft: 9, jurySize: 7, name: '9th Place (First Juror)' },
+      '9-jury-12th': { playersLeft: 12, jurySize: 9, name: '12th Place (Pre-jury)' },
+      '9-jury-11th': { playersLeft: 11, jurySize: 9, name: '11th Place (First Juror)' }
+    };
+    
+    const config = scenarios[scenario];
+    const madeJury = window.GameOverModal.makesJury(config.playersLeft, config.jurySize);
+    
+    const results = document.getElementById('scenario-results');
+    results.innerHTML = `Testing scenario: ${config.name}<br>` +
+                       `Players left: ${config.playersLeft}, Jury size: ${config.jurySize}<br>` +
+                       `Makes jury: ${madeJury ? '<span class="pass">YES</span>' : '<span class="fail">NO</span>'}<br>`;
+    
+    if (!madeJury) {
+      results.innerHTML += 'Showing Game Over modal...';
+      await window.GameOverModal.show({
+        playerName: 'Test Player',
+        placement: config.playersLeft,
+        jurySize: config.jurySize
+      });
+      results.innerHTML += '<br><span class="pass">Modal closed successfully</span>';
+    } else {
+      results.innerHTML += '<span class="pass">No modal shown (player made jury)</span>';
+    }
+  }
+
+  function testEdgeCases() {
+    const results = [];
+    const tests = [
+      // Edge cases
+      { playersLeft: 2, jurySize: 7, expected: false, desc: 'Final 2 (2nd place)' },
+      { playersLeft: 1, jurySize: 7, expected: false, desc: 'Winner (1st place)' },
+      { playersLeft: 3, jurySize: 7, expected: true, desc: 'Last juror (3rd place)' },
+      { playersLeft: 4, jurySize: 5, expected: true, desc: '4th place with 5-person jury' },
+      { playersLeft: 8, jurySize: 5, expected: false, desc: '8th place with 5-person jury (pre-jury)' },
+    ];
+
+    tests.forEach(test => {
+      const result = window.GameOverModal.makesJury(test.playersLeft, test.jurySize);
+      const passed = result === test.expected;
+      results.push({
+        desc: test.desc,
+        expected: test.expected,
+        actual: result,
+        passed
+      });
+    });
+
+    const passCount = results.filter(r => r.passed).length;
+    const totalCount = results.length;
+    
+    let html = `<strong>Edge Cases: ${passCount}/${totalCount} tests passed</strong><br><br>`;
+    results.forEach(r => {
+      const status = r.passed ? '<span class="pass">✓ PASS</span>' : '<span class="fail">✗ FAIL</span>';
+      html += `${status} - ${r.desc}<br>`;
+      if (!r.passed) {
+        html += `  Expected: ${r.expected}, Got: ${r.actual}<br>`;
+      }
+    });
+    
+    document.getElementById('edge-results').innerHTML = html;
+  }
+
+  // Auto-run logic tests on page load
+  window.addEventListener('load', () => {
+    console.log('Game Over Modal Test Page Loaded');
+    console.log('GameOverModal available:', typeof window.GameOverModal !== 'undefined');
+  });
+</script>
+
+</body>
+</html>

@@ -8,6 +8,9 @@
 (function(global){
   const JURY_START_AT=9;
   
+  // Game Over modal timing constant
+  const GAME_OVER_MODAL_DELAY = 1500; // ms - delay before showing Game Over modal after eviction animation
+  
   // Tie-break timeout: maximum time to wait for human HOH to break a tie
   // After this timeout, the tie is auto-resolved using HOH affinity
   const TIE_BREAK_TIMEOUT_MS = 15000; // 15 seconds
@@ -1411,6 +1414,24 @@
         if(!g.juryHouse?.includes(id)) g.juryHouse=(g.juryHouse||[]).concat([id]);
       }
       try{ global.juryOnEviction?.(id); }catch{}
+      
+      // Check if human player was evicted before making jury (Game Over check)
+      if(id === g.humanId && g.cfg.enableJuryHouse && typeof global.GameOverModal !== 'undefined'){
+        const jurySize = g.cfg.jurySize || 7;
+        const playersLeftWhenEvicted = global.alivePlayers().length + evictedIds.length; // Include all players being evicted this round
+        const madeJury = global.GameOverModal.makesJury(playersLeftWhenEvicted, jurySize);
+        
+        if(!madeJury){
+          console.info(`[eviction] Human player evicted pre-jury in multi-eviction at ${playersLeftWhenEvicted} players left - showing Game Over modal`);
+          
+          // Store flag to show modal after eviction sequence completes
+          g.__showGameOverModal = {
+            playerName: p.name,
+            placement: playersLeftWhenEvicted,
+            jurySize: jurySize
+          };
+        }
+      }
     }
     
     // Clear all badges immediately after eviction reveal (Issue #1)
@@ -1470,6 +1491,18 @@
     // Clean up any remaining vote UI after multi-eviction
     if (global.closeAllVoteUI) {
       global.closeAllVoteUI();
+    }
+
+    // Show Game Over modal if human player was evicted pre-jury
+    if(g.__showGameOverModal){
+      const modalData = g.__showGameOverModal;
+      delete g.__showGameOverModal;
+      
+      console.info(`[eviction] Showing Game Over modal for human player after multi-eviction`);
+      
+      setTimeout(async () => {
+        await global.GameOverModal.show(modalData);
+      }, GAME_OVER_MODAL_DELAY);
     }
 
     postEvictionRouting();
@@ -1536,6 +1569,26 @@
       if(!g.juryHouse?.includes(evId)) g.juryHouse=(g.juryHouse||[]).concat([evId]);
     }
     try{ global.juryOnEviction?.(evId); }catch{}
+
+    // Check if human player was evicted before making jury (Game Over check)
+    if(evId === g.humanId && g.cfg.enableJuryHouse && typeof global.GameOverModal !== 'undefined'){
+      const jurySize = g.cfg.jurySize || 7;
+      const playersLeftWhenEvicted = global.alivePlayers().length + 1; // +1 because player just got evicted
+      const madeJury = global.GameOverModal.makesJury(playersLeftWhenEvicted, jurySize);
+      
+      if(!madeJury){
+        console.info(`[eviction] Human player evicted pre-jury at ${playersLeftWhenEvicted} players left - showing Game Over modal`);
+        
+        // Show Game Over modal after a brief delay (let eviction animation complete)
+        setTimeout(async () => {
+          await global.GameOverModal.show({
+            playerName: ev.name,
+            placement: playersLeftWhenEvicted,
+            jurySize: jurySize
+          });
+        }, GAME_OVER_MODAL_DELAY);
+      }
+    }
 
     // Clear all badges immediately after eviction reveal (Issue #1)
     g.nominees=[]; g.vetoHolder=null; g.nomsLocked=false;

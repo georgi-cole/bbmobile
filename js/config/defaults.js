@@ -22,6 +22,7 @@
     
     // Core game mechanics
     enableJuryHouse: true,
+    jurySize: 7,        // Number of jurors (7 = recent seasons BB25/BB27, 9 = older seasons)
     doubleChance: 18,   // %
     tripleChance: 7,    // %
     returnChance: 10,   // % chance a juror returns (mid-season)
