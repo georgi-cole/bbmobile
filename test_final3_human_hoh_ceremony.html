@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Final 3 Human HOH Ceremony</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, rgba(20,20,40,0.97) 0%, rgba(10,10,30,0.98) 100%);
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(30, 30, 60, 0.8);
+      border: 2px solid #6b7a99;
+      border-radius: 16px;
+      padding: 24px;
+      color: #cedbeb;
+    }
+    
+    h1 {
+      color: #ffd96b;
+      margin-top: 0;
+    }
+    
+    .test-section {
+      margin: 24px 0;
+      padding: 16px;
+      background: rgba(20, 20, 40, 0.6);
+      border-radius: 12px;
+    }
+    
+    .test-btn {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      border: 2px solid #60a5fa;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 8px 8px 8px 0;
+    }
+    
+    .test-btn:hover {
+      background: linear-gradient(135deg, #60a5fa, #2563eb);
+    }
+    
+    .status {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(150, 207, 255, 0.1);
+      border: 1px solid rgba(150, 207, 255, 0.3);
+    }
+    
+    .success {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+      color: #6ee7b7;
+    }
+    
+    .error {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎬 Test Final 3 Human HOH Ceremony</h1>
+    
+    <div class="test-section">
+      <h2>Test Setup</h2>
+      <p>This test demonstrates the new fullscreen ceremony UI when the human player is the Final HOH.</p>
+      <button class="test-btn" onclick="setupTestGame()">Initialize Test Game</button>
+      <div id="setup-status" class="status" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      
+      <h3>Scenario 1: Basic Ceremony</h3>
+      <p>Shows ceremony with two AI nominees and basic pleas</p>
+      <button class="test-btn" onclick="testBasicCeremony()">Run Test</button>
+      <div id="test1-status" class="status" style="display: none;"></div>
+      
+      <h3>Scenario 2: Strong Alliance</h3>
+      <p>Shows ceremony where one nominee has high affinity with HOH</p>
+      <button class="test-btn" onclick="testStrongAlliance()">Run Test</button>
+      <div id="test2-status" class="status" style="display: none;"></div>
+      
+      <h3>Scenario 3: Weak Competitor</h3>
+      <p>Shows ceremony where one nominee has fewer comp wins</p>
+      <button class="test-btn" onclick="testWeakCompetitor()">Run Test</button>
+      <div id="test3-status" class="status" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Manual Visual Test</h2>
+      <p>Click button to show the ceremony with custom data:</p>
+      <button class="test-btn" onclick="showCeremonyManual()">Show Ceremony</button>
+      <div id="manual-status" class="status" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/bootstrap.js"></script>
+  <script src="js/human-hoh-ceremony.js"></script>
+  
+  <script>
+    // Mock game state and functions
+    window.game = {
+      players: [],
+      humanId: 'human1',
+      week: 10,
+      phase: 'final3_decision'
+    };
+    
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.resolveAvatar = function(playerId) {
+      const player = window.getP(playerId);
+      if (!player) return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(String(playerId))}`;
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+    };
+    
+    window.getAvatarFallback = function(name) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
+    };
+    
+    window.pausePhaseTimer = function() {
+      console.log('[Test] Phase timer paused');
+    };
+    
+    window.resumePhaseTimer = function() {
+      console.log('[Test] Phase timer resumed');
+    };
+    
+    window.showEvictionJustificationModal = function(evictee, hoh, onConfirm, onCancel) {
+      console.log('[Test] Showing justification modal for', evictee.name);
+      const confirmed = confirm(`Confirm eviction of ${evictee.name}?`);
+      if (confirmed) {
+        onConfirm();
+      } else if (onCancel) {
+        onCancel();
+      }
+    };
+    
+    function setupTestGame() {
+      const statusEl = document.getElementById('setup-status');
+      statusEl.style.display = 'block';
+      statusEl.className = 'status';
+      statusEl.textContent = 'Setting up test game...';
+      
+      // Create test players
+      window.game.players = [
+        {
+          id: 'human1',
+          name: 'You',
+          human: true,
+          affinity: { 'ai1': 0.3, 'ai2': -0.1 },
+          compWins: 3
+        },
+        {
+          id: 'ai1',
+          name: 'Echo',
+          human: false,
+          affinity: { 'human1': 0.3, 'ai2': 0.1 },
+          compWins: 4
+        },
+        {
+          id: 'ai2',
+          name: 'Ivy',
+          human: false,
+          affinity: { 'human1': -0.1, 'ai1': 0.1 },
+          compWins: 2
+        }
+      ];
+      
+      window.game.hohId = 'human1';
+      window.game.nominees = ['ai1', 'ai2'];
+      
+      setTimeout(() => {
+        statusEl.className = 'status success';
+        statusEl.textContent = '✓ Test game initialized! HOH: You, Nominees: Echo & Ivy';
+      }, 500);
+    }
+    
+    function testBasicCeremony() {
+      const statusEl = document.getElementById('test1-status');
+      statusEl.style.display = 'block';
+      statusEl.className = 'status';
+      
+      if (!window.HumanHOHCeremony) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '✗ HumanHOHCeremony module not loaded';
+        return;
+      }
+      
+      if (!window.game.hohId) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '✗ Please initialize test game first';
+        return;
+      }
+      
+      statusEl.textContent = 'Showing basic ceremony...';
+      
+      const hoh = window.getP(window.game.hohId);
+      const nominees = window.game.nominees.map(id => window.getP(id));
+      
+      window.HumanHOHCeremony.show({
+        hoh: hoh,
+        nominees: nominees,
+        onEvict: (evictedId) => {
+          const evicted = window.getP(evictedId);
+          statusEl.className = 'status success';
+          statusEl.textContent = `✓ Ceremony completed! ${evicted.name} was evicted.`;
+          console.log('[Test] Evicted:', evicted.name);
+        }
+      });
+      
+      statusEl.className = 'status success';
+      statusEl.textContent = '✓ Ceremony shown! Check the fullscreen overlay.';
+    }
+    
+    function testStrongAlliance() {
+      const statusEl = document.getElementById('test2-status');
+      statusEl.style.display = 'block';
+      statusEl.className = 'status';
+      
+      if (!window.HumanHOHCeremony) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '✗ HumanHOHCeremony module not loaded';
+        return;
+      }
+      
+      // Modify affinity for this test
+      const ai1 = window.getP('ai1');
+      if (ai1) {
+        ai1.affinity['human1'] = 0.8; // Strong alliance
+      }
+      
+      statusEl.textContent = 'Showing ceremony with strong alliance...';
+      
+      const hoh = window.getP(window.game.hohId);
+      const nominees = window.game.nominees.map(id => window.getP(id));
+      
+      window.HumanHOHCeremony.show({
+        hoh: hoh,
+        nominees: nominees,
+        onEvict: (evictedId) => {
+          const evicted = window.getP(evictedId);
+          statusEl.className = 'status success';
+          statusEl.textContent = `✓ Ceremony completed! ${evicted.name} was evicted.`;
+          
+          // Reset affinity
+          ai1.affinity['human1'] = 0.3;
+        }
+      });
+      
+      statusEl.className = 'status success';
+      statusEl.textContent = '✓ Ceremony shown with strong alliance plea! Check fullscreen.';
+    }
+    
+    function testWeakCompetitor() {
+      const statusEl = document.getElementById('test3-status');
+      statusEl.style.display = 'block';
+      statusEl.className = 'status';
+      
+      if (!window.HumanHOHCeremony) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '✗ HumanHOHCeremony module not loaded';
+        return;
+      }
+      
+      statusEl.textContent = 'Showing ceremony emphasizing weak competitor...';
+      
+      const hoh = window.getP(window.game.hohId);
+      const nominees = window.game.nominees.map(id => window.getP(id));
+      
+      window.HumanHOHCeremony.show({
+        hoh: hoh,
+        nominees: nominees,
+        onEvict: (evictedId) => {
+          const evicted = window.getP(evictedId);
+          statusEl.className = 'status success';
+          statusEl.textContent = `✓ Ceremony completed! ${evicted.name} was evicted.`;
+        }
+      });
+      
+      statusEl.className = 'status success';
+      statusEl.textContent = '✓ Ceremony shown! Ivy should emphasize being weaker competitor.';
+    }
+    
+    function showCeremonyManual() {
+      const statusEl = document.getElementById('manual-status');
+      statusEl.style.display = 'block';
+      statusEl.className = 'status';
+      
+      if (!window.HumanHOHCeremony) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '✗ HumanHOHCeremony module not loaded';
+        return;
+      }
+      
+      if (!window.game.hohId) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '✗ Please initialize test game first';
+        return;
+      }
+      
+      const hoh = window.getP(window.game.hohId);
+      const nominees = window.game.nominees.map(id => window.getP(id));
+      
+      window.HumanHOHCeremony.show({
+        hoh: hoh,
+        nominees: nominees,
+        onEvict: (evictedId) => {
+          const evicted = window.getP(evictedId);
+          statusEl.className = 'status success';
+          statusEl.textContent = `✓ You evicted ${evicted.name}. The remaining player will join you in Final 2!`;
+        }
+      });
+      
+      statusEl.className = 'status';
+      statusEl.textContent = 'Ceremony displayed! Interact with the fullscreen UI.';
+    }
+    
+    // Auto-initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test] Page loaded, modules ready');
+      setTimeout(() => {
+        setupTestGame();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

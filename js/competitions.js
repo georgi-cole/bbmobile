@@ -2272,37 +2272,59 @@
     }
 
     if (hoh.human) {
-      const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '12px';
-      const btnA = document.createElement('button'); btnA.className = 'btn danger'; btnA.textContent = `Evict ${a.name}`;
-      const btnB = document.createElement('button'); btnB.className = 'btn danger'; btnB.textContent = `Evict ${b.name}`;
-
-      btnA.disabled = !!g.__f3EvictionInProgress;
-      btnB.disabled = !!g.__f3EvictionInProgress;
-
-      const disableAll = () => {
-        btnA.disabled = true;
-        btnB.disabled = true;
-      };
-
-      btnA.onclick = () => {
-        if (g.__f3EvictionInProgress) return;
-        showEvictionJustificationModal(a, hoh, () => {
-          disableAll();
-          global.finalizeFinal3Decision?.(a.id);
+      // Use new fullscreen ceremony UI for human HOH
+      if (global.HumanHOHCeremony?.show) {
+        console.info('[F3Decision] Showing fullscreen ceremony for human HOH');
+        global.HumanHOHCeremony.show({
+          hoh: hoh,
+          nominees: [a, b],
+          onEvict: (evictedId) => {
+            if (g.__f3EvictionInProgress) return;
+            g.__f3EvictionInProgress = true;
+            global.finalizeFinal3Decision?.(evictedId);
+          }
         });
-      };
-      btnB.onclick = () => {
-        if (g.__f3EvictionInProgress) return;
-        showEvictionJustificationModal(b, hoh, () => {
-          disableAll();
-          global.finalizeFinal3Decision?.(b.id);
-        });
-      };
+        
+        // Show waiting message in panel
+        const note = document.createElement('div');
+        note.className = 'tiny muted';
+        note.textContent = 'Fullscreen ceremony in progress...';
+        box.appendChild(note);
+      } else {
+        // Fallback to old UI if ceremony module not loaded
+        console.warn('[F3Decision] HumanHOHCeremony not available, using legacy UI');
+        const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '12px';
+        const btnA = document.createElement('button'); btnA.className = 'btn danger'; btnA.textContent = `Evict ${a.name}`;
+        const btnB = document.createElement('button'); btnB.className = 'btn danger'; btnB.textContent = `Evict ${b.name}`;
 
-      row.append(btnA, btnB); box.appendChild(row);
-      const hint = document.createElement('div'); hint.className = 'tiny muted'; hint.style.marginTop = '8px';
-      hint.textContent = 'Choose wisely — this decision determines who sits beside you in the Final 2.';
-      box.appendChild(hint);
+        btnA.disabled = !!g.__f3EvictionInProgress;
+        btnB.disabled = !!g.__f3EvictionInProgress;
+
+        const disableAll = () => {
+          btnA.disabled = true;
+          btnB.disabled = true;
+        };
+
+        btnA.onclick = () => {
+          if (g.__f3EvictionInProgress) return;
+          showEvictionJustificationModal(a, hoh, () => {
+            disableAll();
+            global.finalizeFinal3Decision?.(a.id);
+          });
+        };
+        btnB.onclick = () => {
+          if (g.__f3EvictionInProgress) return;
+          showEvictionJustificationModal(b, hoh, () => {
+            disableAll();
+            global.finalizeFinal3Decision?.(b.id);
+          });
+        };
+
+        row.append(btnA, btnB); box.appendChild(row);
+        const hint = document.createElement('div'); hint.className = 'tiny muted'; hint.style.marginTop = '8px';
+        hint.textContent = 'Choose wisely — this decision determines who sits beside you in the Final 2.';
+        box.appendChild(hint);
+      }
     } else {
       // AI HOH - check if human is a nominee and show Final Plea
       const humanId = g.humanId;
@@ -2523,6 +2545,7 @@
     modal.appendChild(content);
     document.body.appendChild(modal);
   }
+  global.showEvictionJustificationModal = showEvictionJustificationModal;
 
   function aiPickFinal3Eviction() {
     const g = global.game; 
