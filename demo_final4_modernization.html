@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 4 Modernization Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1420;
+      color: #eee;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .demo-container {
+      background: rgba(40,40,80,0.5);
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #96cfff;
+      margin-top: 30px;
+    }
+    .scenario {
+      background: #132132;
+      border: 1px solid #26405b;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .scenario h3 {
+      color: #7cffad;
+      margin-top: 0;
+    }
+    button {
+      background: #ffdc8b;
+      color: #1a1a2e;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #ffc86b;
+    }
+    button.danger {
+      background: linear-gradient(135deg, #e44, #c21);
+      color: white;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      background: rgba(124,255,173,0.1);
+      border: 1px solid #7cffad;
+      color: #7cffad;
+    }
+    .info {
+      color: #96cfff;
+      font-style: italic;
+      margin: 10px 0;
+    }
+    .legacy-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .comparison-box {
+      background: rgba(20,20,40,0.6);
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid;
+    }
+    .legacy {
+      border-color: #e44;
+    }
+    .modern {
+      border-color: #7cffad;
+    }
+    .label {
+      font-weight: bold;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    .legacy .label {
+      color: #ff6b6b;
+    }
+    .modern .label {
+      color: #7cffad;
+    }
+    img {
+      max-width: 100%;
+      border-radius: 8px;
+      border: 2px solid #444;
+    }
+    .screenshot-placeholder {
+      background: rgba(0,0,0,0.3);
+      padding: 40px;
+      text-align: center;
+      border: 2px dashed #666;
+      border-radius: 8px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 Final 4 Voting UI Modernization Demo</h1>
+  
+  <div class="demo-container">
+    <h2>Overview</h2>
+    <p>This demo showcases the modernized Final 4 voting experience with two key improvements:</p>
+    <ol>
+      <li><strong>POV Holder Fullscreen Voting:</strong> Modern fullscreen overlay with "Cast Your Sole Vote" title</li>
+      <li><strong>Nominee Plea System:</strong> Nominees can present pleas to influence the POV holder's decision</li>
+    </ol>
+  </div>
+
+  <div class="demo-container">
+    <h2>🔄 Before & After Comparison</h2>
+    
+    <div class="legacy-comparison">
+      <div class="comparison-box legacy">
+        <div class="label">❌ LEGACY (Before)</div>
+        <p>Voting buttons in #panel below TV viewport</p>
+        <ul style="color: #ff9999;">
+          <li>Limited visibility</li>
+          <li>Small buttons in panel</li>
+          <li>Inconsistent with regular eviction UI</li>
+          <li>No nominee interaction</li>
+        </ul>
+      </div>
+      
+      <div class="comparison-box modern">
+        <div class="label">✅ MODERN (After)</div>
+        <p>Fullscreen voting overlay + plea system</p>
+        <ul style="color: #99ff99;">
+          <li>Full-screen focus</li>
+          <li>Large, clear voting interface</li>
+          <li>Matches regular eviction flow</li>
+          <li>Interactive plea system for nominees</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <h2>📱 Scenario 1: User is POV Holder</h2>
+    
+    <div class="scenario">
+      <h3>When: User wins POV at Final 4</h3>
+      <p class="info">The user has sole power to evict. A fullscreen overlay appears with large, clear voting options.</p>
+      
+      <div class="status">
+        ✓ Implementation: <code>handleFinal4HumanPOVVote()</code> → <code>showFullscreenEvictionVote({ isFinal4: true })</code>
+      </div>
+      
+      <button onclick="demoScenario1()">▶️ Demo POV Holder Fullscreen Voting</button>
+      
+      <h4 style="margin-top: 20px;">Features:</h4>
+      <ul>
+        <li><strong>Custom Title:</strong> "Cast Your Sole Vote" (instead of generic "Cast Your Vote to Evict")</li>
+        <li><strong>Fullscreen Overlay:</strong> Takes over entire screen for maximum visibility</li>
+        <li><strong>Large Nominee Cards:</strong> Clear avatars and names</li>
+        <li><strong>Timer Display:</strong> Countdown shows remaining decision time</li>
+        <li><strong>Mobile Optimized:</strong> Responsive design works on all devices</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <h2>💬 Scenario 2: User is Nominee</h2>
+    
+    <div class="scenario">
+      <h3>When: User is nominated (not POV, not HOH)</h3>
+      <p class="info">The user can present a plea to the POV holder before they vote, similar to Final 3 HOH plea system.</p>
+      
+      <div class="status">
+        ✓ Implementation: <code>handleFinal4NomineePlea()</code> → <code>FinalPlea.show()</code> with influence calculation
+      </div>
+      
+      <button onclick="demoScenario2()">▶️ Demo Nominee Plea System</button>
+      
+      <h4 style="margin-top: 20px;">Features:</h4>
+      <ul>
+        <li><strong>Plea Modal:</strong> Reuses Final 3 HOH plea system UI</li>
+        <li><strong>Strategic Messaging:</strong> User can craft their case to stay</li>
+        <li><strong>Influence Calculation:</strong> Plea affects AI POV holder decision (0-20% swing)</li>
+        <li><strong>Relationship Factor:</strong> Stronger relationships = more influence</li>
+      </ul>
+      
+      <h4>How Plea Influence Works:</h4>
+      <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 5px; margin: 10px 0;">
+        <code style="color: #7cffad;">
+          pleaInfluence = 0 to 0.2 (up to 20% decision swing)<br>
+          evictionScore = (-affinity) + threat - pleaBonus<br>
+          → Lower score = less likely to be evicted
+        </code>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <h2>👀 Scenario 3: User is HOH (Observer)</h2>
+    
+    <div class="scenario">
+      <h3>When: User is HOH at Final 4</h3>
+      <p class="info">The user observes as the POV holder makes the decision. Shows existing panel UI.</p>
+      
+      <div class="status">
+        ✓ Implementation: <code>renderFinal4EvictionPanel()</code> (existing behavior maintained)
+      </div>
+      
+      <button onclick="demoScenario3()">▶️ Demo HOH Observer View</button>
+      
+      <h4 style="margin-top: 20px;">Features:</h4>
+      <ul>
+        <li><strong>Status Updates:</strong> See POV holder's decision progress</li>
+        <li><strong>Nominee Display:</strong> Shows who is on the block</li>
+        <li><strong>Power Info:</strong> Displays POV holder and HOH info</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <h2>🔧 Technical Implementation</h2>
+    
+    <div class="scenario">
+      <h3>Flow Logic</h3>
+      <pre style="background: #000; padding: 15px; border-radius: 5px; overflow-x: auto; color: #7cffad;">
+startFinal4Eviction()
+    ↓
+Detect user role
+    ↓
+    ├─→ User is POV holder
+    │       ↓
+    │   handleFinal4HumanPOVVote()
+    │       ↓
+    │   showFullscreenEvictionVote({ isFinal4: true })
+    │       ↓
+    │   Title: "Cast Your Sole Vote"
+    │       ↓
+    │   User selects → finalizeFinal4Eviction()
+    │
+    ├─→ User is nominee
+    │       ↓
+    │   handleFinal4NomineePlea()
+    │       ↓
+    │   FinalPlea.show()
+    │       ↓
+    │   Store influence → AI decides
+    │
+    └─→ User is HOH (observer)
+            ↓
+        renderFinal4EvictionPanel()
+      </pre>
+    </div>
+  </div>
+
+  <!-- Hidden elements for game simulation -->
+  <div id="tv" style="display: none;">
+    <div class="tvViewport"></div>
+  </div>
+  <div id="panel" style="display: none;"></div>
+
+  <script src="js/config/defaults.js"></script>
+  <script src="js/avatar-helper.js"></script>
+  <script src="js/livevote-fullscreen.js"></script>
+  <script src="js/veto.js"></script>
+  
+  <script>
+    // Mock game state
+    window.game = {
+      humanId: 1,
+      hohId: 2,
+      vetoHolder: 1,
+      nominees: [3, 4],
+      week: 10,
+      phase: 'final4_eviction',
+      cfg: {
+        tVote: 30,
+        final4CombinedPower: true
+      },
+      players: [
+        { id: 1, name: 'You', human: true, evicted: false, avatar: null, affinity: { 3: 0.7, 4: 0.3 } },
+        { id: 2, name: 'Alex', human: false, evicted: false, avatar: null, affinity: { 1: 0.8, 3: 0.4, 4: 0.6 } },
+        { id: 3, name: 'Casey', human: false, evicted: false, avatar: null, threat: 0.6 },
+        { id: 4, name: 'Drew', human: false, evicted: false, avatar: null, threat: 0.4 }
+      ]
+    };
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+    
+    window.closeAllVoteUI = function() {
+      const overlay = document.querySelector('.fullscreen-eviction-vote');
+      if (overlay) overlay.remove();
+      document.documentElement.classList.remove('eviction-vote-open');
+    };
+
+    window.showCard = function(title, lines, tone, duration, queue) {
+      console.log(`[Card] ${title}:`, lines.join(', '));
+    };
+
+    window.cardQueueWaitIdle = function() {
+      return Promise.resolve();
+    };
+
+    window.resolveAvatar = function(player) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+    };
+
+    // Demo functions
+    function demoScenario1() {
+      alert('🎬 SCENARIO 1: User is POV Holder\n\n' +
+            'Opening fullscreen voting overlay...\n\n' +
+            'Features you\'ll see:\n' +
+            '✓ "Cast Your Sole Vote" title\n' +
+            '✓ Large nominee cards with avatars\n' +
+            '✓ Timer countdown\n' +
+            '✓ Fullscreen overlay\n\n' +
+            'This replaces the legacy panel buttons shown in the issue screenshot.');
+      
+      // Simulate POV holder flow
+      if (typeof window.showFullscreenEvictionVote === 'function') {
+        window.showFullscreenEvictionVote({
+          nominees: window.game.nominees,
+          isFinal4: true,
+          isTieBreak: false,
+          onVote: function(selectedId) {
+            alert(`You voted to evict ${window.safeName(selectedId)}!\n\nThis would trigger finalizeFinal4Eviction() in the actual game.`);
+            window.closeAllVoteUI();
+          }
+        });
+      } else {
+        alert('⚠️ showFullscreenEvictionVote function not loaded. Please ensure js/livevote-fullscreen.js is included.');
+      }
+    }
+
+    function demoScenario2() {
+      alert('🎬 SCENARIO 2: User is Nominee\n\n' +
+            'This scenario shows the plea system...\n\n' +
+            'In the actual game, you would see:\n' +
+            '✓ FinalPlea modal (similar to Final 3)\n' +
+            '✓ Options to craft your case\n' +
+            '✓ Relationship-based influence\n' +
+            '✓ AI POV holder considers your plea\n\n' +
+            'Plea influence: 0-0.2 (up to 20% swing)\n' +
+            'Formula: evictionScore = (-affinity) + threat - pleaBonus');
+      
+      // Show simulation info
+      const human = window.getP(1);
+      const holder = window.getP(window.game.vetoHolder);
+      const affinity = holder.affinity[1] || 0;
+      const maxInfluence = 0.2;
+      const expectedInfluence = affinity * maxInfluence;
+      
+      alert(`📊 INFLUENCE CALCULATION:\n\n` +
+            `Your relationship with ${holder.name}: ${(affinity * 100).toFixed(0)}%\n` +
+            `Maximum possible influence: ${(maxInfluence * 100).toFixed(0)}%\n` +
+            `Expected plea influence: ${(expectedInfluence * 100).toFixed(1)}%\n\n` +
+            `This means your plea could reduce your eviction score by ${(expectedInfluence * 100).toFixed(1)}%, making you less likely to be evicted.`);
+    }
+
+    function demoScenario3() {
+      alert('🎬 SCENARIO 3: User is HOH (Observer)\n\n' +
+            'This scenario maintains existing behavior...\n\n' +
+            'You would see:\n' +
+            '✓ Panel UI showing POV holder info\n' +
+            '✓ Nominee display\n' +
+            '✓ "POV holder is deciding..." status\n' +
+            '✓ No voting options (you\'re just observing)\n\n' +
+            'This uses the existing renderFinal4EvictionPanel() function.');
+    }
+
+    // Auto-show info on load
+    window.addEventListener('load', function() {
+      console.log('%c🎬 Final 4 Modernization Demo Loaded', 'color: #7cffad; font-size: 16px; font-weight: bold;');
+      console.log('%cTry the three demo scenarios above to see the modernized UI!', 'color: #96cfff; font-size: 14px;');
+    });
+  </script>
+</body>
+</html>

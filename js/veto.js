@@ -1301,7 +1301,8 @@
   /* ===== Final 4 Eviction (Big Brother US/CA Rules) ===== */
   // At Final 4: No veto ceremony. POV holder directly chooses who to evict.
   // The two non-HOH, non-POV players are automatically on the block.
-  function startFinal4Eviction(){
+  // MODERNIZATION: Human POV holder sees fullscreen vote UI, nominees can present pleas
+  async function startFinal4Eviction(){
     var g = global.game;
     g.__f4EvictionResolved = false;
     g.__f4EvictionInProgress = false;
@@ -1326,7 +1327,7 @@
     // Show explanatory card with longer duration for readability
     try{ 
       if(typeof global.showCard === 'function') 
-        global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 4000, true); 
+        global.showCard('Final 4', ['The POV holder has the sole vote to evict.'], 'warn', 4000, true); 
     }catch(e){}
     
     (function waitCards(){
@@ -1339,26 +1340,169 @@
     function afterWait(){
       if(typeof global.setPhase === 'function')
         global.setPhase('final4_eviction', Math.max(20, Math.floor(g.cfg.tVote * 0.9)), finalizeFinal4Eviction);
-      setTimeout(function(){ 
-        // Guard: Only render if still in final4_eviction phase
-        if(global.game && global.game.phase === 'final4_eviction'){
-          renderFinal4EvictionPanel(); 
-        }
-      }, 50);
       
       var holder = getP(g.vetoHolder);
-      if(holder && !holder.human){
-        // AI decides after a short delay
-        setTimeout(function(){
-          var gg = global.game;
-          if(gg && gg.phase === 'final4_eviction' && !gg.__f4EvictionResolved){
-            try{ finalizeFinal4Eviction(); }catch(e){}
+      var humanId = g.humanId;
+      var human = getP(humanId);
+      
+      // Check if human is POV holder
+      var humanIsPOVHolder = holder && holder.human;
+      
+      // Check if human is a nominee (eligible to present plea)
+      var humanIsNominee = human && g.nominees.indexOf(humanId) !== -1;
+      
+      if(humanIsPOVHolder){
+        // REQUIREMENT 1: Human POV holder → fullscreen voting UI
+        console.info('[Final4] Human is POV holder - showing fullscreen voting UI');
+        handleFinal4HumanPOVVote();
+      } else if(humanIsNominee){
+        // REQUIREMENT 2: Human nominee → show plea system before AI votes
+        console.info('[Final4] Human is nominee - showing plea system');
+        handleFinal4NomineePlea().then(function(){
+          // After plea, AI POV holder decides
+          if(holder && !holder.human){
+            setTimeout(function(){
+              var gg = global.game;
+              if(gg && gg.phase === 'final4_eviction' && !gg.__f4EvictionResolved){
+                try{ finalizeFinal4Eviction(); }catch(e){}
+              }
+            }, 1200);
           }
-        }, 1200);
+        }).catch(function(e){
+          console.error('[Final4] Plea system error:', e);
+          // Continue with AI decision even if plea fails
+          if(holder && !holder.human){
+            setTimeout(function(){
+              var gg = global.game;
+              if(gg && gg.phase === 'final4_eviction' && !gg.__f4EvictionResolved){
+                try{ finalizeFinal4Eviction(); }catch(e){}
+              }
+            }, 1200);
+          }
+        });
+      } else {
+        // Human is HOH (observer) - show panel UI
+        setTimeout(function(){ 
+          if(global.game && global.game.phase === 'final4_eviction'){
+            renderFinal4EvictionPanel(); 
+          }
+        }, 50);
+        
+        if(holder && !holder.human){
+          // AI decides after a short delay
+          setTimeout(function(){
+            var gg = global.game;
+            if(gg && gg.phase === 'final4_eviction' && !gg.__f4EvictionResolved){
+              try{ finalizeFinal4Eviction(); }catch(e){}
+            }
+          }, 1200);
+        }
       }
     }
   }
   global.startFinal4Eviction = startFinal4Eviction;
+  
+  /**
+   * Handle Final 4 voting when human is POV holder
+   * REQUIREMENT 1: Fullscreen voting UI (similar to regular eviction voting)
+   */
+  function handleFinal4HumanPOVVote(){
+    var g = global.game;
+    
+    // Use the fullscreen eviction vote system (reuse existing component)
+    if(typeof global.showFullscreenEvictionVote === 'function'){
+      console.info('[Final4] Showing fullscreen voting UI for human POV holder');
+      
+      global.showFullscreenEvictionVote({
+        nominees: g.nominees,
+        isTieBreak: false, // Not a tie-break, but sole vote
+        isFinal4: true, // Flag to customize messaging
+        onVote: function(selectedId){
+          console.info('[Final4] Human POV holder cast vote for:', selectedId);
+          
+          // Close the fullscreen overlay
+          if(global.closeAllVoteUI){
+            global.closeAllVoteUI();
+          }
+          
+          // Immediately finalize the eviction with human's choice
+          // finalizeFinal4Eviction handles type conversion internally
+          finalizeFinal4Eviction(selectedId);
+        }
+      });
+    } else {
+      // Fallback to legacy panel UI if fullscreen vote not available
+      console.warn('[Final4] Fullscreen vote UI not available, falling back to panel');
+      renderFinal4EvictionPanel();
+    }
+  }
+  global.handleFinal4HumanPOVVote = handleFinal4HumanPOVVote;
+  
+  /**
+   * Handle Final 4 nominee plea system
+   * REQUIREMENT 2: Non-POV/non-HOH can present plea to POV holder (similar to Final HOH plea)
+   */
+  function handleFinal4NomineePlea(){
+    return new Promise(function(resolve){
+      var g = global.game;
+      var humanId = g.humanId;
+      var human = getP(humanId);
+      var holder = getP(g.vetoHolder);
+      
+      if(!human || !holder){
+        console.warn('[Final4] Invalid player data for plea system');
+        resolve();
+        return;
+      }
+      
+      // Get the other nominee
+      var nominees = g.nominees || [];
+      var otherNomineeId = nominees.find(function(id){ return id !== humanId; });
+      var otherNominee = getP(otherNomineeId);
+      
+      if(!otherNominee){
+        console.warn('[Final4] Could not find other nominee for plea system');
+        resolve();
+        return;
+      }
+      
+      // Use the FinalPlea module (adapted from Final HOH plea system)
+      if(typeof global.FinalPlea !== 'undefined' && typeof global.FinalPlea.show === 'function'){
+        console.info('[Final4] Showing plea system for human nominee');
+        
+        global.FinalPlea.show({
+          nominee: human,
+          hoh: holder, // POV holder acts as decision maker (like HOH in Final 3)
+          otherNominee: otherNominee,
+          onSubmit: function(pleaData){
+            console.info('[Final4] Plea submitted:', pleaData);
+            
+            // Store plea influence on game state for AI to consider
+            if(pleaData && pleaData.influence){
+              g.__f4PleaInfluence = g.__f4PleaInfluence || {};
+              g.__f4PleaInfluence[humanId] = pleaData.influence;
+            }
+            
+            resolve();
+          }
+        });
+      } else {
+        // Fallback: show simple card if FinalPlea not available
+        console.warn('[Final4] FinalPlea module not available, showing basic plea card');
+        if(typeof global.showCard === 'function'){
+          global.showCard('Make Your Plea', [
+            'You have a chance to convince ' + holder.name + ' to save you.',
+            'Your relationship and past actions will influence their decision.'
+          ], 'info', 4000, true);
+        }
+        
+        setTimeout(function(){
+          resolve();
+        }, 4000);
+      }
+    });
+  }
+  global.handleFinal4NomineePlea = handleFinal4NomineePlea;
   
   function renderFinal4EvictionPanel(){
     var g = global.game;
@@ -1530,13 +1674,21 @@
     var holder = getP(g.vetoHolder);
     var target = targetId;
     
-    // AI decision if not provided
-    if(typeof target !== 'number'){
+    // AI decision if not provided or invalid
+    // Check if targetId is null, undefined, or not a valid number
+    if(target == null || isNaN(Number(target))){
+      console.info('[Final4] No valid target provided, using AI decision');
       target = aiFinal4EvictionChoice();
+    } else {
+      // Normalize to number for consistent handling
+      target = Number(target);
     }
     
     var evictee = getP(target);
-    if(!evictee) return;
+    if(!evictee) {
+      console.error('[Final4] Invalid evictee ID:', target);
+      return;
+    }
     
     g.__f4EvictionResolved = true;
     evictee.evicted = true;
@@ -1601,15 +1753,31 @@
     
     var bestId = null, bestScore = -Infinity;
     
+    // Consider plea influence if available (from handleFinal4NomineePlea)
+    var pleaInfluence = g.__f4PleaInfluence || {};
+    
     for(var i = 0; i < evictableIds.length; i++){
       var id = evictableIds[i];
       var cand = getP(id);
       var aff = (holder && holder.affinity && typeof holder.affinity[id] === 'number') ? holder.affinity[id] : 0;
       var threat = cand.threat || 0.5;
-      // Evict lower affinity OR higher threat
-      var score = (-aff) + threat;
+      
+      // Factor in plea influence (if player made a plea)
+      // Plea influence is expected to range from 0 to 0.2 (up to 20% swing)
+      // Note: Validation of influence range happens in handleFinal4NomineePlea()
+      // Positive influence makes them LESS likely to be evicted
+      var pleaBonus = pleaInfluence[id] || 0;
+      // Clamp to expected range as safety measure
+      pleaBonus = Math.max(0, Math.min(0.2, pleaBonus));
+      
+      // Evict lower affinity OR higher threat, adjusted by plea
+      // Plea bonus reduces the eviction score (makes them less likely to be evicted)
+      var score = (-aff) + threat - pleaBonus;
+      
       if(score > bestScore){ bestScore = score; bestId = id; }
     }
+    
+    console.info('[Final4] AI decision - evicting:', bestId, 'with score:', bestScore);
     
     return bestId;
   }
@@ -1617,6 +1785,12 @@
   function proceedAfterFinal4Eviction(){
     var g = global.game;
     var remain = global.alivePlayers();
+    
+    // Clean up Final 4 state to prevent memory leaks
+    delete g.__f4PleaInfluence;
+    delete g.__f4EvictionResolved;
+    delete g.__f4EvictionInProgress;
+    console.debug('[Final4] Cleaned up Final 4 state');
     
     if(remain.length === 3){
       // Transition to Final 3

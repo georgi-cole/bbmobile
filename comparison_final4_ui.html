@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 4 UI Comparison</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1420;
+      color: #eee;
+      padding: 40px;
+      margin: 0;
+    }
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    .side {
+      background: rgba(40,40,80,0.5);
+      border: 3px solid;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+    }
+    .legacy {
+      border-color: #ff4444;
+    }
+    .modern {
+      border-color: #44ff88;
+    }
+    h1 {
+      text-align: center;
+      color: #ffdc8b;
+      font-size: 2.5rem;
+      margin-bottom: 40px;
+    }
+    h2 {
+      font-size: 1.8rem;
+      margin-top: 0;
+      margin-bottom: 30px;
+    }
+    .legacy h2 {
+      color: #ff6b6b;
+    }
+    .modern h2 {
+      color: #7cffad;
+    }
+    .tag {
+      display: inline-block;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    .legacy .tag {
+      background: #ff4444;
+      color: white;
+    }
+    .modern .tag {
+      background: #44ff88;
+      color: #0f1420;
+    }
+    .screenshot {
+      background: #000;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .screenshot img {
+      width: 100%;
+      display: block;
+    }
+    .features {
+      text-align: left;
+      margin: 20px 0;
+    }
+    .features h3 {
+      color: #96cfff;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+    .features ul {
+      list-style: none;
+      padding: 0;
+    }
+    .features li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .features li:last-child {
+      border-bottom: none;
+    }
+    .legacy .features li::before {
+      content: '❌ ';
+      margin-right: 8px;
+    }
+    .modern .features li::before {
+      content: '✅ ';
+      margin-right: 8px;
+    }
+    .arrow {
+      font-size: 4rem;
+      color: #ffdc8b;
+      text-align: center;
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 Final 4 UI Modernization</h1>
+  
+  <div class="comparison">
+    <div class="side legacy">
+      <div class="tag">BEFORE</div>
+      <h2>❌ Legacy Panel UI</h2>
+      
+      <div class="screenshot">
+        <img src="https://github.com/user-attachments/assets/c2316067-c91e-403f-87c6-d406a403f73b" alt="Legacy UI">
+      </div>
+      
+      <div class="features">
+        <h3>Issues:</h3>
+        <ul>
+          <li>Small buttons in panel below TV</li>
+          <li>Limited visibility and focus</li>
+          <li>Inconsistent with regular eviction flow</li>
+          <li>No nominee interaction</li>
+          <li>Hard to see on mobile devices</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="side modern">
+      <div class="tag">AFTER</div>
+      <h2>✅ Modern Fullscreen UI</h2>
+      
+      <div class="screenshot">
+        <img src="https://github.com/user-attachments/assets/04d33b2f-5452-4229-ae94-b0624147c64a" alt="Modern UI">
+      </div>
+      
+      <div class="features">
+        <h3>Improvements:</h3>
+        <ul>
+          <li>Fullscreen overlay with focus</li>
+          <li>Large, clear voting interface</li>
+          <li>Matches regular eviction UI</li>
+          <li>Interactive plea system</li>
+          <li>Mobile-optimized design</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <div class="arrow">→</div>
+  
+  <div style="text-align: center; margin-top: 40px;">
+    <h2 style="color: #96cfff;">Key Features</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 20px auto; text-align: left;">
+      <div style="background: rgba(40,40,80,0.5); padding: 20px; border-radius: 8px;">
+        <h3 style="color: #7cffad;">📱 Custom Title</h3>
+        <p>"Cast Your Sole Vote" instead of generic eviction text</p>
+      </div>
+      <div style="background: rgba(40,40,80,0.5); padding: 20px; border-radius: 8px;">
+        <h3 style="color: #7cffad;">⏱️ Timer Display</h3>
+        <p>Countdown shows remaining decision time</p>
+      </div>
+      <div style="background: rgba(40,40,80,0.5); padding: 20px; border-radius: 8px;">
+        <h3 style="color: #7cffad;">💬 Nominee Plea System</h3>
+        <p>Nominees can influence POV holder decision (0-20% swing)</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

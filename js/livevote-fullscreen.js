@@ -88,6 +88,7 @@
    * @param {number[]} options.nominees - Array of nominee player IDs
    * @param {Function} options.onVote - Callback when vote is cast: onVote(nomineeId)
    * @param {boolean} options.isTieBreak - If true, show "Tie-Breaker" title
+   * @param {boolean} options.isFinal4 - If true, show "Final 4 Sole Vote" title and messaging
    * @returns {Promise<number>} Selected nominee ID to evict
    */
   function showFullscreenEvictionVote(options) {
@@ -95,6 +96,7 @@
     var nominees = options.nominees || [];
     var onVote = options.onVote || function(){};
     var isTieBreak = options.isTieBreak || false;
+    var isFinal4 = options.isFinal4 || false;
     
     return new Promise(function(resolve) {
       // Guard: no nominees
@@ -124,7 +126,14 @@
       
       var titleEl = document.createElement('div');
       titleEl.className = 'fev-title';
-      titleEl.textContent = isTieBreak ? 'Tie-Breaker Vote' : 'Cast Your Vote to Evict';
+      // Customize title based on context
+      if (isFinal4) {
+        titleEl.textContent = 'Cast Your Sole Vote';
+      } else if (isTieBreak) {
+        titleEl.textContent = 'Tie-Breaker Vote';
+      } else {
+        titleEl.textContent = 'Cast Your Vote to Evict';
+      }
       header.appendChild(titleEl);
       
       // Timer display with hourglass icon and progress bar
@@ -309,6 +318,27 @@
       }
       
       content.appendChild(grid);
+      
+      // Final 4 inline banner (if applicable)
+      if (isFinal4) {
+        var banner = document.createElement('div');
+        banner.className = 'fev-final4-banner';
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
+        
+        var icon = document.createElement('span');
+        icon.className = 'fev-banner-icon';
+        icon.textContent = '⚠️';
+        icon.setAttribute('aria-hidden', 'true');
+        banner.appendChild(icon);
+        
+        var text = document.createElement('span');
+        text.className = 'fev-banner-text';
+        text.innerHTML = '<strong>Sole Vote:</strong> The POV holder has sole power to evict at Final 4.';
+        banner.appendChild(text);
+        
+        content.appendChild(banner);
+      }
       
       // EVICT button (disabled until nominee is selected)
       evictBtn = document.createElement('button');
