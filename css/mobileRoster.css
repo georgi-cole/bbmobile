@@ -121,11 +121,11 @@ body[data-mobile-roster-active="true"] #rosterBar {
   flex: 0 0 auto;
   width: 100%;
   /* Height = TV overlay height + extra buffer to prevent any overlap
-   * Increased to 3x row gap + 16px for extra safety margin to handle 16 players
+   * Increased buffer to 24px (from 16px) to handle 16 players with reduced 1px gaps
    * The JS overlaySpacing module updates --tv-overlay-height dynamically.
    */
-  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 1px) * 3) + 16px);
-  min-height: calc((var(--avatar-row-gap, 1px) * 3) + 16px + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 1px) * 5) + 24px);
+  min-height: calc((var(--avatar-row-gap, 1px) * 5) + 24px + env(safe-area-inset-bottom, 0px));
   /* Invisible spacer */
   pointer-events: none;
   /* Debug: uncomment to visualize spacer */
@@ -941,11 +941,11 @@ body[data-mobile-roster-active="true"] #tvNow {
 
 /* When mobile roster is active, adjust faux TV positioning.
  * IMPORTANT: Use positive top margin (never negative) to prevent overlap with roster grid.
- * The margin must equal the grid gap to maintain visual consistency.
+ * Increased margin to provide adequate spacing with reduced 1px gaps.
  * This ensures the TV overlay never covers the last roster row avatars or player names.
  */
 body[data-mobile-roster-active="true"] .tv {
-  margin-top: var(--mobile-roster-gap, 2px); /* Match grid gap for consistent spacing */
+  margin-top: 8px; /* Increased from 1px to provide better separation with tight grid gaps */
   position: relative;
   overflow: hidden;
   /* Prevent the TV from intruding into the roster area */
