@@ -114,12 +114,13 @@
     competitorsBox.style.cssText = `
       display: flex;
       flex-direction: row;
-      justify-content: space-around;
+      justify-content: center;
       align-items: center;
-      gap: 16px;
+      gap: clamp(8px, 2vw, 16px);
       margin-bottom: 32px;
       flex-wrap: nowrap;
       width: 100%;
+      padding: 0 8px;
     `;
 
     competitorIds.forEach(playerId => {
@@ -132,13 +133,16 @@
         background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
         border: 3px solid #6b7a99;
         border-radius: 16px;
-        padding: 20px;
-        flex: 0 0 auto;
-        max-width: 45%;
-        min-width: 160px;
+        padding: clamp(12px, 3vw, 20px);
+        flex: 1 1 0;
+        max-width: 48%;
+        min-width: 0;
         position: relative;
         overflow: hidden;
         box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 64px rgba(107,122,153,0.2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       `;
 
       // Animated background shimmer
@@ -158,8 +162,8 @@
       avatar.src = avatarUrl;
       avatar.alt = player.name;
       avatar.style.cssText = `
-        width: 80px;
-        height: 80px;
+        width: clamp(60px, 15vw, 80px);
+        height: clamp(60px, 15vw, 80px);
         border-radius: 50%;
         border: 4px solid #ffdc8b;
         margin-bottom: 12px;
@@ -168,6 +172,7 @@
         object-fit: cover;
         position: relative;
         z-index: 1;
+        flex-shrink: 0;
       `;
       competitorCard.appendChild(avatar);
 
@@ -175,12 +180,14 @@
       const name = document.createElement('div');
       name.textContent = player.name;
       name.style.cssText = `
-        font-size: 1.2rem;
+        font-size: clamp(0.9rem, 3vw, 1.2rem);
         font-weight: 700;
         color: #cedbeb;
         margin-bottom: 12px;
         position: relative;
         z-index: 1;
+        text-align: center;
+        word-break: break-word;
       `;
       competitorCard.appendChild(name);
 
@@ -189,11 +196,12 @@
       status.className = 'competitor-status';
       status.textContent = 'Competing...';
       status.style.cssText = `
-        font-size: 0.9rem;
+        font-size: clamp(0.75rem, 2.5vw, 0.9rem);
         color: #ffdc8b;
         font-weight: 600;
         position: relative;
         z-index: 1;
+        text-align: center;
       `;
       competitorCard.appendChild(status);
 
@@ -202,13 +210,14 @@
       score.className = 'competitor-score';
       score.textContent = '---';
       score.style.cssText = `
-        font-size: 1.5rem;
+        font-size: clamp(1.1rem, 4vw, 1.5rem);
         font-weight: 800;
         color: #83bfff;
         margin-top: 12px;
         font-family: 'Courier New', monospace;
         position: relative;
         z-index: 1;
+        text-align: center;
       `;
       competitorCard.appendChild(score);
 

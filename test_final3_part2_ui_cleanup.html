@@ -353,24 +353,24 @@
         <div class="mobile-viewport">
           <div style="padding: 20px; background: linear-gradient(135deg, rgba(10,15,25,0.98) 0%, rgba(15,20,35,0.98) 100%);">
             <h3 style="color: #ffdc8b; text-align: center;">Final 3 — Part 2</h3>
-            <div style="display: flex; flex-direction: row; justify-content: space-around; align-items: center; gap: 16px; margin: 20px 0; flex-wrap: nowrap; width: 100%;">
+            <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; gap: clamp(8px, 2vw, 16px); margin: 20px 0; flex-wrap: nowrap; width: 100%; padding: 0 8px;">
               <!-- Competitor 1 -->
-              <div style="background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%); border: 3px solid #6b7a99; border-radius: 16px; padding: 20px; flex: 0 0 auto; max-width: 45%; min-width: 140px; text-align: center;">
-                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Lia" style="width: 80px; height: 80px; border-radius: 50%; border: 4px solid #ffdc8b; margin-bottom: 12px;">
-                <div style="font-size: 1rem; font-weight: 700; color: #cedbeb; margin-bottom: 8px;">Lia</div>
-                <div style="font-size: 0.85rem; color: #ffdc8b; font-weight: 600;">Competing...</div>
-                <div style="font-size: 1.3rem; font-weight: 800; color: #83bfff; margin-top: 8px; font-family: 'Courier New', monospace;">565</div>
+              <div style="background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%); border: 3px solid #6b7a99; border-radius: 16px; padding: clamp(12px, 3vw, 20px); flex: 1 1 0; max-width: 48%; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center;">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Lia" style="width: clamp(60px, 15vw, 80px); height: clamp(60px, 15vw, 80px); border-radius: 50%; border: 4px solid #ffdc8b; margin-bottom: 12px; flex-shrink: 0;">
+                <div style="font-size: clamp(0.9rem, 3vw, 1.2rem); font-weight: 700; color: #cedbeb; margin-bottom: 8px; word-break: break-word;">Lia</div>
+                <div style="font-size: clamp(0.75rem, 2.5vw, 0.9rem); color: #ffdc8b; font-weight: 600;">Competing...</div>
+                <div style="font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 800; color: #83bfff; margin-top: 8px; font-family: 'Courier New', monospace;">565</div>
               </div>
               <!-- Competitor 2 -->
-              <div style="background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%); border: 3px solid #6b7a99; border-radius: 16px; padding: 20px; flex: 0 0 auto; max-width: 45%; min-width: 140px; text-align: center;">
-                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Lux" style="width: 80px; height: 80px; border-radius: 50%; border: 4px solid #ffdc8b; margin-bottom: 12px;">
-                <div style="font-size: 1rem; font-weight: 700; color: #cedbeb; margin-bottom: 8px;">Lux</div>
-                <div style="font-size: 0.85rem; color: #ffdc8b; font-weight: 600;">Competing...</div>
-                <div style="font-size: 1.3rem; font-weight: 800; color: #83bfff; margin-top: 8px; font-family: 'Courier New', monospace;">642</div>
+              <div style="background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%); border: 3px solid #6b7a99; border-radius: 16px; padding: clamp(12px, 3vw, 20px); flex: 1 1 0; max-width: 48%; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center;">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Lux" style="width: clamp(60px, 15vw, 80px); height: clamp(60px, 15vw, 80px); border-radius: 50%; border: 4px solid #ffdc8b; margin-bottom: 12px; flex-shrink: 0;">
+                <div style="font-size: clamp(0.9rem, 3vw, 1.2rem); font-weight: 700; color: #cedbeb; margin-bottom: 8px; word-break: break-word;">Lux</div>
+                <div style="font-size: clamp(0.75rem, 2.5vw, 0.9rem); color: #ffdc8b; font-weight: 600;">Competing...</div>
+                <div style="font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 800; color: #83bfff; margin-top: 8px; font-family: 'Courier New', monospace;">642</div>
               </div>
             </div>
             <div style="text-align: center; color: #cedbeb; font-size: 0.9rem; margin-top: 20px;">
-              ✅ Horizontal Layout - Both competitors visible side-by-side
+              ✅ Responsive Layout - Avatars scale dynamically based on viewport
             </div>
           </div>
         </div>
