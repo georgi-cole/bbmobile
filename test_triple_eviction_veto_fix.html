@@ -291,7 +291,7 @@
         { replacementId: 7, expected: true, description: 'Another valid nominee' },
         { replacementId: 8, expected: true, description: 'Last valid nominee' },
         { replacementId: 2, expected: false, description: 'Same as saved (should fail)' },
-        { replacementId: 3, expected: false, description: 'Already a nominee (edge case)' }
+        { replacementId: 3, expected: false, description: 'Already a nominee (should fail)' }
       ];
       
       testCases.forEach(test => {
@@ -313,6 +313,52 @@
         log(`  Final nominees: [${finalNominees.join(', ')}]`, 'info');
         log(`  Arrays match: ${arraysMatch}, Is valid: ${isValid}, Expected: ${test.expected}`, 'info');
       });
+      
+      // Test stale state scenario (the actual bug)
+      log('', 'info');
+      log('Testing stale state bug scenario:', 'warn');
+      const staleOriginalNominees = [1, 2]; // From previous ceremony
+      const currentNominees = [2, 3, 4, 5]; // Current triple eviction
+      const staleSavedId = 1;
+      const currentSavedId = 2;
+      const replacement = 6;
+      
+      log(`Scenario: Stale original nominees from previous ceremony`, 'info');
+      log(`  Stale original: [${staleOriginalNominees.join(', ')}]`, 'warn');
+      log(`  Current nominees: [${currentNominees.join(', ')}]`, 'info');
+      log(`  Stale saved ID: ${staleSavedId}`, 'warn');
+      log(`  Current saved ID: ${currentSavedId}`, 'info');
+      log(`  Replacement: ${replacement}`, 'info');
+      
+      // Validate with stale data
+      let staleFinalNominees = staleOriginalNominees.filter(id => id !== staleSavedId);
+      if (staleFinalNominees.indexOf(replacement) === -1) {
+        staleFinalNominees.push(replacement);
+      }
+      const staleMatch = arraysHaveSameElements(staleFinalNominees, staleOriginalNominees);
+      const staleValid = !staleMatch;
+      
+      log(`  With stale data: finalNominees = [${staleFinalNominees.join(', ')}]`, 'info');
+      log(`  Validation result: ${staleValid ? 'VALID' : 'INVALID'}`, staleValid ? 'success' : 'error');
+      
+      if (!staleValid) {
+        log(`  ⚠️ This is the bug! Stale state causes valid replacement to be rejected!`, 'error');
+      }
+      
+      // Validate with correct current data
+      let currentFinalNominees = currentNominees.filter(id => id !== currentSavedId);
+      if (currentFinalNominees.indexOf(replacement) === -1) {
+        currentFinalNominees.push(replacement);
+      }
+      const currentMatch = arraysHaveSameElements(currentFinalNominees, currentNominees);
+      const currentValid = !currentMatch;
+      
+      log(`  With current data: finalNominees = [${currentFinalNominees.join(', ')}]`, 'info');
+      log(`  Validation result: ${currentValid ? 'VALID' : 'INVALID'}`, currentValid ? 'success' : 'error');
+      
+      if (currentValid) {
+        log(`  ✓ With fresh state, replacement is correctly validated!`, 'success');
+      }
     }
 
     function arraysHaveSameElements(arr1, arr2) {
