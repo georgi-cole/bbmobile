@@ -939,6 +939,39 @@
     modalHost.className = 'pfModalHost';
     modalHost.setAttribute('data-bb-card', 'true');
     
+    // Add floating emojis for excitement
+    const emojiData = ['🔥', '⭐', '💯', '👏', '❤️', '🏆', '✨', '💫'];
+    for(let i = 0; i < 12; i++){
+      const emoji = document.createElement('div');
+      emoji.className = 'pfFloatingEmoji';
+      emoji.textContent = emojiData[Math.floor(rng() * emojiData.length)];
+      emoji.style.left = (rng() * 100) + '%';
+      emoji.style.animationDelay = (rng() * 5) + 's';
+      emoji.style.animationDuration = (8 + rng() * 6) + 's';
+      modalHost.appendChild(emoji);
+    }
+    
+    // Add message bubbles for social reactions
+    const messages = [
+      'GO GO GO! 🎉',
+      'My fav! ❤️',
+      'Vote now!',
+      'So close! 😱',
+      'Amazing player! ⭐',
+      'Let\'s do this! 💪',
+      'Who will win? 🤔',
+      'Epic season! 🔥'
+    ];
+    for(let i = 0; i < 8; i++){
+      const bubble = document.createElement('div');
+      bubble.className = 'pfMessageBubble';
+      bubble.textContent = messages[Math.floor(rng() * messages.length)];
+      bubble.style.left = (10 + rng() * 80) + '%';
+      bubble.style.top = (10 + rng() * 80) + '%';
+      bubble.style.animationDelay = (rng() * 4) + 's';
+      modalHost.appendChild(bubble);
+    }
+    
     // Build panel with 4 real player slots (real avatars and names)
     const panel = document.createElement('div');
     panel.className = 'pfPanel';

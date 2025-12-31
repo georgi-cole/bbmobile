@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fan Favorite Modal - Beautified Background</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0e14;
+      color: #eaf4ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .demo-container {
+      text-align: center;
+    }
+    .btn {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: #4573b7;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    h1 {
+      color: #ffdc8b;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 8px rgba(255, 220, 140, 0.5);
+    }
+    .info {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      border: 1px solid rgba(111, 215, 255, 0.2);
+    }
+    .info h3 {
+      color: #6fd7ff;
+      margin-top: 0;
+    }
+    .info ul {
+      text-align: left;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .info li {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>🎉 Beautified Fan Favorite Modal</h1>
+    
+    <div class="info">
+      <h3>✨ New Visual Enhancements</h3>
+      <ul>
+        <li>🌟 Animated gradient background with subtle radial overlays</li>
+        <li>✨ Floating particle effects with dots pattern</li>
+        <li>🔥 12 animated emoji particles (🔥, ⭐, 💯, 👏, ❤️, 🏆, ✨, 💫)</li>
+        <li>💬 8 social reaction message bubbles with comments</li>
+        <li>🎨 Enhanced panel with backdrop blur and glowing border</li>
+        <li>💫 Pulsing glow effect on title text</li>
+        <li>📱 Fully responsive for mobile devices</li>
+      </ul>
+    </div>
+    
+    <button class="btn" onclick="showBeautifiedModal()">Show Beautified Modal</button>
+  </div>
+
+  <script>
+    function showBeautifiedModal() {
+      // Create modal host with beautified background
+      const modalHost = document.createElement('div');
+      modalHost.className = 'pfModalHost';
+      modalHost.setAttribute('data-bb-card', 'true');
+      
+      // Add floating emojis for excitement
+      const emojiData = ['🔥', '⭐', '💯', '👏', '❤️', '🏆', '✨', '💫'];
+      for(let i = 0; i < 12; i++){
+        const emoji = document.createElement('div');
+        emoji.className = 'pfFloatingEmoji';
+        emoji.textContent = emojiData[Math.floor(Math.random() * emojiData.length)];
+        emoji.style.left = (Math.random() * 100) + '%';
+        emoji.style.animationDelay = (Math.random() * 5) + 's';
+        emoji.style.animationDuration = (8 + Math.random() * 6) + 's';
+        modalHost.appendChild(emoji);
+      }
+      
+      // Add message bubbles for social reactions
+      const messages = [
+        'GO GO GO! 🎉',
+        'My fav! ❤️',
+        'Vote now!',
+        'So close! 😱',
+        'Amazing player! ⭐',
+        'Let\'s do this! 💪',
+        'Who will win? 🤔',
+        'Epic season! 🔥'
+      ];
+      for(let i = 0; i < 8; i++){
+        const bubble = document.createElement('div');
+        bubble.className = 'pfMessageBubble';
+        bubble.textContent = messages[Math.floor(Math.random() * messages.length)];
+        bubble.style.left = (10 + Math.random() * 80) + '%';
+        bubble.style.top = (10 + Math.random() * 80) + '%';
+        bubble.style.animationDelay = (Math.random() * 4) + 's';
+        modalHost.appendChild(bubble);
+      }
+      
+      // Create panel
+      const panel = document.createElement('div');
+      panel.className = 'pfPanel';
+      
+      const title = document.createElement('div');
+      title.className = 'pfTitle';
+      title.textContent = 'PUBLIC\'S FAVOURITE PLAYER';
+      panel.appendChild(title);
+      
+      const container = document.createElement('div');
+      container.className = 'pfVotePanel';
+      panel.appendChild(container);
+      
+      // Create 4 candidate slots
+      const candidates = [
+        { name: 'Alice', pct: 15, initial: 'A' },
+        { name: 'Bob', pct: 28, initial: 'B' },
+        { name: 'Charlie', pct: 35, initial: 'C' },
+        { name: 'Diana', pct: 22, initial: 'D' }
+      ];
+      
+      candidates.forEach(candidate => {
+        const slot = document.createElement('div');
+        slot.className = 'pfSlot';
+        if (candidate.pct === 35) slot.classList.add('pfLeading');
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'pfAvatar';
+        avatar.style.cssText = 'background: linear-gradient(135deg, #3d5a72, #2a4058); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.5rem;';
+        avatar.textContent = candidate.initial;
+        slot.appendChild(avatar);
+        
+        const nameLabel = document.createElement('div');
+        nameLabel.className = 'pfName';
+        nameLabel.textContent = candidate.name;
+        slot.appendChild(nameLabel);
+        
+        const pctLabel = document.createElement('div');
+        pctLabel.className = 'pfPct';
+        pctLabel.textContent = candidate.pct + '%';
+        slot.appendChild(pctLabel);
+        
+        container.appendChild(slot);
+      });
+      
+      modalHost.appendChild(panel);
+      document.body.appendChild(modalHost);
+      
+      // Close on click outside
+      modalHost.addEventListener('click', (e) => {
+        if (e.target === modalHost) {
+          modalHost.remove();
+        }
+      });
+      
+      // Add ESC key handler
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          modalHost.remove();
+          document.removeEventListener('keydown', handleEscape);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
+    }
+  </script>
+</body>
+</html>
