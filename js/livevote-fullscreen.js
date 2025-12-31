@@ -319,6 +319,27 @@
       
       content.appendChild(grid);
       
+      // Final 4 inline banner (if applicable)
+      if (isFinal4) {
+        var banner = document.createElement('div');
+        banner.className = 'fev-final4-banner';
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
+        
+        var icon = document.createElement('span');
+        icon.className = 'fev-banner-icon';
+        icon.textContent = '⚠️';
+        icon.setAttribute('aria-hidden', 'true');
+        banner.appendChild(icon);
+        
+        var text = document.createElement('span');
+        text.className = 'fev-banner-text';
+        text.innerHTML = '<strong>Sole Vote:</strong> The POV holder has sole power to evict at Final 4.';
+        banner.appendChild(text);
+        
+        content.appendChild(banner);
+      }
+      
       // EVICT button (disabled until nominee is selected)
       evictBtn = document.createElement('button');
       evictBtn.className = 'fev-evict-btn';

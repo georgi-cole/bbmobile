@@ -8761,6 +8761,53 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   pointer-events: none;
 }
 
+/* Final 4 inline banner */
+.fullscreen-eviction-vote .fev-final4-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  padding: 14px 20px;
+  margin: 20px 0 8px 0;
+  background: rgba(255, 193, 7, 0.15);
+  border: 2px solid rgba(255, 193, 7, 0.5);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  animation: fevSlideUp 0.4s ease-out 0.3s backwards;
+}
+
+.fullscreen-eviction-vote .fev-banner-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.fullscreen-eviction-vote .fev-banner-text {
+  font-size: 0.9rem;
+  color: #ffd54f;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.fullscreen-eviction-vote .fev-banner-text strong {
+  color: #ffeb3b;
+  font-weight: 700;
+}
+
+/* Mobile adjustments for banner */
+@media (max-width: 500px) {
+  .fullscreen-eviction-vote .fev-final4-banner {
+    max-width: 90%;
+    padding: 12px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .fullscreen-eviction-vote .fev-banner-icon {
+    font-size: 1.3rem;
+  }
+}
+
 /* EVICT button */
 .fullscreen-eviction-vote .fev-evict-btn {
   width: 100%;
