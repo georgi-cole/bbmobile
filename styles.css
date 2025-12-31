@@ -4101,10 +4101,10 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
     padding-right: 0 !important;
   }
   
-  /* Remove all horizontal padding from compact HUD for edge-to-edge display */
+  /* Add horizontal padding to compact HUD to align with houseguests header */
   .compact-hud {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
   
   /* Add padding to houseguests header title and chips only */
