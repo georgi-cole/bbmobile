@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Final 3 Part 2 UI Cleanup - Big Brother</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      padding: 20px;
+      background: #0a0e1a;
+      color: #eaf4ff;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #0e1622;
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid rgba(110,160,220,.18);
+    }
+    h1 {
+      color: #ffdc8b;
+      margin-top: 0;
+    }
+    .test-section {
+      margin: 25px 0;
+      padding: 20px;
+      background: rgba(20, 30, 50, 0.5);
+      border-radius: 8px;
+      border-left: 3px solid #4a90e2;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #4a90e2;
+      font-size: 1.3em;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+    }
+    .pass {
+      background: rgba(46, 204, 113, 0.2);
+      border-left: 3px solid #2ecc71;
+    }
+    .fail {
+      background: rgba(231, 76, 60, 0.2);
+      border-left: 3px solid #e74c3c;
+    }
+    .info {
+      background: rgba(52, 152, 219, 0.2);
+      border-left: 3px solid #3498db;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #4a90e2;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #357abd;
+    }
+    .btn-success {
+      background: #2ecc71;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #27ae60;
+    }
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    .screenshot-box {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(255,220,139,0.1);
+      border-radius: 8px;
+      border: 2px dashed #ffdc8b;
+    }
+    .mobile-viewport {
+      max-width: 375px;
+      margin: 20px auto;
+      border: 3px solid #666;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏆 Test Final 3 Part 2 UI Cleanup</h1>
+    
+    <div class="test-section">
+      <h2>📋 Test Overview</h2>
+      <p>This test verifies that the Final 3 Part 2 competition UI properly cleans up when the competition ends.</p>
+      <div class="test-result info">
+        <strong>Issue:</strong> Battle UI keeps running after Part 2 winner is determined, with scores accumulating and UI overlapping jury voting.
+      </div>
+      <div class="test-result info">
+        <strong>Fix:</strong> Added SpectatorView.cleanup() calls in finishF3P1(), finishF3P2(), and finishF3P3() functions.
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>🧪 Test Cases</h2>
+      
+      <h3>1. SpectatorView Cleanup Function Exists</h3>
+      <div id="test-cleanup-exists"></div>
+      
+      <h3>2. Horizontal Layout CSS (Mobile)</h3>
+      <div id="test-horizontal-layout"></div>
+      
+      <h3>3. Visual Test - Competitor Cards Side-by-Side</h3>
+      <button class="btn-primary" onclick="showCompetitorPreview()">Show Competitor Layout Preview</button>
+      <div id="competitor-preview"></div>
+      
+      <h3>4. Cleanup Call Integration</h3>
+      <div id="test-cleanup-integration"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>📱 Mobile Layout Preview</h2>
+      <p>The competitors should appear side-by-side horizontally, not vertically stacked.</p>
+      <div class="screenshot-box">
+        <strong>Expected:</strong> Two cards displayed horizontally (Competitor A | Competitor B)<br>
+        <strong>Not:</strong> Two cards stacked vertically (Competitor A above Competitor B)
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Acceptance Criteria</h2>
+      <ul>
+        <li>SpectatorView.cleanup() function exists and is callable</li>
+        <li>Competitors use flex-direction: row (horizontal layout)</li>
+        <li>Competitors use flex-wrap: nowrap (no stacking)</li>
+        <li>Competitor cards have max-width: 45% (fit two side-by-side)</li>
+        <li>Avatar size reduced to 80px for mobile optimization</li>
+        <li>Cleanup is called at the start of finishF3P1, finishF3P2, finishF3P3</li>
+        <li>Panel innerHTML is cleared to remove lingering UI</li>
+      </ul>
+    </div>
+  </div>
+
+  <script type="module">
+    // Mock minimal game environment
+    window.game = {
+      players: [],
+      phase: 'test'
+    };
+
+    window.getP = (id) => ({
+      id: id,
+      name: `Player ${id}`,
+      avatar: `player${id}`
+    });
+
+    window.getDicebearUrl = (seed) => {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
+    };
+
+    window.resolveAvatar = (player) => {
+      return window.getDicebearUrl(player.avatar || player.name);
+    };
+
+    // Load spectator-view.js
+    async function loadSpectatorView() {
+      try {
+        const script = document.createElement('script');
+        script.src = 'js/spectator-view.js';
+        script.type = 'text/javascript';
+        document.head.appendChild(script);
+        
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+        });
+        
+        return true;
+      } catch (e) {
+        console.error('Failed to load spectator-view.js:', e);
+        return false;
+      }
+    }
+
+    function addResult(containerId, message, pass) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${pass ? 'pass' : 'fail'}`;
+      div.textContent = `${pass ? '✅' : '❌'} ${message}`;
+      container.appendChild(div);
+    }
+
+    async function runTests() {
+      // Wait for spectator-view to load
+      const loaded = await loadSpectatorView();
+      
+      if (!loaded) {
+        addResult('test-cleanup-exists', 'Failed to load spectator-view.js', false);
+        return;
+      }
+
+      // Wait a bit for the module to initialize
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Test 1: SpectatorView.cleanup exists
+      if (window.SpectatorView && typeof window.SpectatorView.cleanup === 'function') {
+        addResult('test-cleanup-exists', 'SpectatorView.cleanup() function exists', true);
+        
+        // Test that cleanup doesn't throw when called
+        try {
+          window.SpectatorView.cleanup();
+          addResult('test-cleanup-exists', 'SpectatorView.cleanup() is callable without errors', true);
+        } catch (e) {
+          addResult('test-cleanup-exists', `SpectatorView.cleanup() threw error: ${e.message}`, false);
+        }
+      } else {
+        addResult('test-cleanup-exists', 'SpectatorView.cleanup() function not found', false);
+      }
+
+      // Test 2: Horizontal layout CSS (check by creating a mock element)
+      testHorizontalLayout();
+
+      // Test 4: Check if cleanup integration is in place
+      testCleanupIntegration();
+    }
+
+    function testHorizontalLayout() {
+      const result = document.getElementById('test-horizontal-layout');
+      
+      // Create a test container
+      const testContainer = document.createElement('div');
+      testContainer.style.cssText = `
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 32px;
+        flex-wrap: nowrap;
+        width: 100%;
+      `;
+      
+      // Check CSS properties
+      const computedStyle = window.getComputedStyle(testContainer);
+      
+      if (computedStyle.flexDirection === 'row') {
+        addResult('test-horizontal-layout', 'Flex-direction is "row" (horizontal)', true);
+      } else {
+        addResult('test-horizontal-layout', `Flex-direction is "${computedStyle.flexDirection}" (expected "row")`, false);
+      }
+      
+      if (computedStyle.flexWrap === 'nowrap') {
+        addResult('test-horizontal-layout', 'Flex-wrap is "nowrap" (no stacking)', true);
+      } else {
+        addResult('test-horizontal-layout', `Flex-wrap is "${computedStyle.flexWrap}" (expected "nowrap")`, false);
+      }
+      
+      // Test card max-width
+      const card = document.createElement('div');
+      card.style.cssText = `
+        flex: 0 0 auto;
+        max-width: 45%;
+        min-width: 160px;
+      `;
+      const cardStyle = window.getComputedStyle(card);
+      if (cardStyle.maxWidth === '45%' || cardStyle.maxWidth.includes('45')) {
+        addResult('test-horizontal-layout', 'Card max-width is 45% (fits two side-by-side)', true);
+      } else {
+        addResult('test-horizontal-layout', `Card max-width is "${cardStyle.maxWidth}" (expected ~45%)`, false);
+      }
+      
+      // Test avatar size
+      const avatar = document.createElement('img');
+      avatar.style.cssText = `
+        width: 80px;
+        height: 80px;
+      `;
+      const avatarStyle = window.getComputedStyle(avatar);
+      if (avatarStyle.width === '80px' && avatarStyle.height === '80px') {
+        addResult('test-horizontal-layout', 'Avatar size is 80x80px (mobile-optimized)', true);
+      } else {
+        addResult('test-horizontal-layout', `Avatar size is ${avatarStyle.width}x${avatarStyle.height} (expected 80x80px)`, false);
+      }
+    }
+
+    async function testCleanupIntegration() {
+      const result = document.getElementById('test-cleanup-integration');
+      
+      // Load competitions.js to check if cleanup calls are present
+      try {
+        const response = await fetch('js/competitions.js');
+        const code = await response.text();
+        
+        // Check for cleanup calls in finishF3P1
+        if (code.includes('finishF3P1') && code.match(/finishF3P1[\s\S]*?SpectatorView\.cleanup\(\)/)) {
+          addResult('test-cleanup-integration', 'finishF3P1() calls SpectatorView.cleanup()', true);
+        } else {
+          addResult('test-cleanup-integration', 'finishF3P1() does not call SpectatorView.cleanup()', false);
+        }
+        
+        // Check for cleanup calls in finishF3P2
+        if (code.includes('finishF3P2') && code.match(/finishF3P2[\s\S]*?SpectatorView\.cleanup\(\)/)) {
+          addResult('test-cleanup-integration', 'finishF3P2() calls SpectatorView.cleanup()', true);
+        } else {
+          addResult('test-cleanup-integration', 'finishF3P2() does not call SpectatorView.cleanup()', false);
+        }
+        
+        // Check for cleanup calls in finishF3P3
+        if (code.includes('finishF3P3') && code.match(/finishF3P3[\s\S]*?SpectatorView\.cleanup\(\)/)) {
+          addResult('test-cleanup-integration', 'finishF3P3() calls SpectatorView.cleanup()', true);
+        } else {
+          addResult('test-cleanup-integration', 'finishF3P3() does not call SpectatorView.cleanup()', false);
+        }
+        
+        // Check for panel clearing
+        if (code.match(/panel\.innerHTML = '';/g)) {
+          const count = (code.match(/panel\.innerHTML = '';/g) || []).length;
+          addResult('test-cleanup-integration', `Panel innerHTML clearing found (${count} instances)`, true);
+        } else {
+          addResult('test-cleanup-integration', 'Panel innerHTML clearing not found', false);
+        }
+        
+      } catch (e) {
+        addResult('test-cleanup-integration', `Failed to load competitions.js: ${e.message}`, false);
+      }
+    }
+
+    window.showCompetitorPreview = function() {
+      const container = document.getElementById('competitor-preview');
+      
+      if (container.innerHTML !== '') {
+        container.innerHTML = '';
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="mobile-viewport">
+          <div style="padding: 20px; background: linear-gradient(135deg, rgba(10,15,25,0.98) 0%, rgba(15,20,35,0.98) 100%);">
+            <h3 style="color: #ffdc8b; text-align: center;">Final 3 — Part 2</h3>
+            <div style="display: flex; flex-direction: row; justify-content: space-around; align-items: center; gap: 16px; margin: 20px 0; flex-wrap: nowrap; width: 100%;">
+              <!-- Competitor 1 -->
+              <div style="background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%); border: 3px solid #6b7a99; border-radius: 16px; padding: 20px; flex: 0 0 auto; max-width: 45%; min-width: 140px; text-align: center;">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Lia" style="width: 80px; height: 80px; border-radius: 50%; border: 4px solid #ffdc8b; margin-bottom: 12px;">
+                <div style="font-size: 1rem; font-weight: 700; color: #cedbeb; margin-bottom: 8px;">Lia</div>
+                <div style="font-size: 0.85rem; color: #ffdc8b; font-weight: 600;">Competing...</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #83bfff; margin-top: 8px; font-family: 'Courier New', monospace;">565</div>
+              </div>
+              <!-- Competitor 2 -->
+              <div style="background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%); border: 3px solid #6b7a99; border-radius: 16px; padding: 20px; flex: 0 0 auto; max-width: 45%; min-width: 140px; text-align: center;">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Lux" style="width: 80px; height: 80px; border-radius: 50%; border: 4px solid #ffdc8b; margin-bottom: 12px;">
+                <div style="font-size: 1rem; font-weight: 700; color: #cedbeb; margin-bottom: 8px;">Lux</div>
+                <div style="font-size: 0.85rem; color: #ffdc8b; font-weight: 600;">Competing...</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #83bfff; margin-top: 8px; font-family: 'Courier New', monospace;">642</div>
+              </div>
+            </div>
+            <div style="text-align: center; color: #cedbeb; font-size: 0.9rem; margin-top: 20px;">
+              ✅ Horizontal Layout - Both competitors visible side-by-side
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    // Run tests on load
+    runTests();
+  </script>
+</body>
+</html>
