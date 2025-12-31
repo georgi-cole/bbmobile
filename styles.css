@@ -4095,16 +4095,16 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   }
   .wrap > .card{ width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
   
-  /* Remove horizontal padding from mobile roster for edge-to-edge display */
+  /* Remove all horizontal padding from mobile roster for edge-to-edge display */
   .mobile-roster-container {
-    padding-left: 0;
-    padding-right: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
   
-  /* Remove horizontal padding from compact HUD for edge-to-edge display */
+  /* Remove all horizontal padding from compact HUD for edge-to-edge display */
   .compact-hud {
-    padding-left: 0;
-    padding-right: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
   
   /* Add padding to houseguests header title and chips only */
@@ -4114,10 +4114,10 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
     padding-top: 8px;
   }
   
-  /* Remove padding from mobile roster active grid for edge-to-edge avatars */
+  /* Remove all padding from mobile roster active grid for edge-to-edge avatars */
   .mobile-roster-active-grid {
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
   
   /* Fixed height for mobile to prevent flashing when popups appear/disappear */
