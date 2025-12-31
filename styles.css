@@ -8795,18 +8795,6 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   font-weight: 700;
 }
 
-/* Mobile adjustments for banner */
-@media (max-width: 500px) {
-  .fullscreen-eviction-vote .fev-final4-banner {
-    max-width: 90%;
-    padding: 12px 16px;
-    font-size: 0.85rem;
-  }
-  
-  .fullscreen-eviction-vote .fev-banner-icon {
-    font-size: 1.3rem;
-  }
-}
 
 /* EVICT button */
 .fullscreen-eviction-vote .fev-evict-btn {
@@ -9367,17 +9355,35 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   }
 }
 
-/* Mobile: Single column on narrow screens */
+/* Mobile: Keep horizontal layout but with smaller avatars */
 @media (max-width: 500px) {
   .fullscreen-eviction-vote .fev-player-grid {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+    flex-wrap: nowrap;
   }
   
   .fullscreen-eviction-vote .fev-player-card {
-    min-width: 200px;
-    max-width: 280px;
+    min-width: 90px;
+    max-width: 110px;
+    padding: 12px 8px;
+    gap: 8px;
+  }
+  
+  .fullscreen-eviction-vote .fev-player-avatar {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .fullscreen-eviction-vote .fev-player-name {
+    font-size: 0.95rem;
+  }
+  
+  .fullscreen-eviction-vote .fev-nom-badge {
+    font-size: 0.65rem;
+    padding: 3px 8px;
   }
   
   .fullscreen-eviction-vote .fev-title {
@@ -9387,6 +9393,19 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   .fullscreen-eviction-vote .fev-evict-btn {
     font-size: 1.2rem;
     min-height: 54px;
+  }
+  
+  .fullscreen-eviction-vote .fev-final4-banner {
+    max-width: 95%;
+    padding: 8px 12px;
+  }
+  
+  .fullscreen-eviction-vote .fev-banner-text {
+    font-size: 0.8rem;
+  }
+  
+  .fullscreen-eviction-vote .fev-banner-icon {
+    font-size: 1.2rem;
   }
 }
 
