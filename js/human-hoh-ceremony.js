@@ -293,7 +293,9 @@
       pleas = strongAlliancePleas;
     } else if (affinity < -0.1) {
       // Poor relationship - try desperate or strategic angle
-      pleas = Math.random() > 0.5 ? desperatePleas : weakerCompetitorPleas;
+      // Use nominee ID hash for deterministic selection
+      const useDesperateAngle = (nominee.id || '').charCodeAt(0) % 2 === 0;
+      pleas = useDesperateAngle ? desperatePleas : weakerCompetitorPleas;
     } else if (otherAffinity > affinity + 0.15) {
       // Other nominee has better relationship - emphasize jury threat
       pleas = juryThreatPleas;
@@ -305,7 +307,10 @@
       pleas = respectfulPleas;
     }
 
-    return pleas[Math.floor(Math.random() * pleas.length)];
+    // Use deterministic selection based on nominee ID and HOH ID
+    const seed = ((nominee.id || '').charCodeAt(0) || 0) + ((hoh.id || '').charCodeAt(0) || 0);
+    const index = seed % pleas.length;
+    return pleas[index];
   }
 
   /**
