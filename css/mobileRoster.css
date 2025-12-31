@@ -121,8 +121,8 @@ body[data-mobile-roster-active="true"] #rosterBar {
    * Increased to 3x row gap + 16px for extra safety margin to handle 16 players
    * The JS overlaySpacing module updates --tv-overlay-height dynamically.
    */
-  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 4px) * 3) + 16px);
-  min-height: calc((var(--avatar-row-gap, 4px) * 3) + 16px + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 2px) * 3) + 16px);
+  min-height: calc((var(--avatar-row-gap, 2px) * 3) + 16px + env(safe-area-inset-bottom, 0px));
   /* Invisible spacer */
   pointer-events: none;
   /* Debug: uncomment to visualize spacer */
