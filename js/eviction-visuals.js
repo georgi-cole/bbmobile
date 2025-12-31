@@ -172,12 +172,8 @@
       avatarEl.style.cssText = '';
       avatarEl.className = '';
       
-      // Remove element
+      // Remove element from DOM
       avatarEl.remove();
-      
-      // Force browser reflow to ensure layout recalculation
-      // This prevents lingering layout effects from CSS transitions
-      void tvContainer.offsetHeight;
     }catch(e){
       console.error('[eviction-visuals] animation error:', e);
       // Cleanup even on error
@@ -274,11 +270,8 @@
       avatarEl.style.cssText = '';
       avatarEl.className = '';
       
-      // Remove element
+      // Remove element from DOM
       avatarEl.remove();
-      
-      // Force browser reflow to ensure layout recalculation
-      void tvContainer.offsetHeight;
       
       console.info('[eviction-visuals] Revival animation complete');
     }catch(e){
