@@ -1426,8 +1426,8 @@
           }
           
           // Immediately finalize the eviction with human's choice
-          // Ensure ID is numeric for consistent handling
-          finalizeFinal4Eviction(+selectedId);
+          // finalizeFinal4Eviction handles type conversion internally
+          finalizeFinal4Eviction(selectedId);
         }
       });
     } else {
@@ -1675,8 +1675,8 @@
     var target = targetId;
     
     // AI decision if not provided or invalid
-    // Check if targetId is null, undefined, or invalid (not a valid player ID)
-    if(target == null || isNaN(target)){
+    // Check if targetId is null, undefined, or not a valid number
+    if(target == null || isNaN(+target)){
       console.info('[Final4] No valid target provided, using AI decision');
       target = aiFinal4EvictionChoice();
     } else {
@@ -1782,6 +1782,12 @@
   function proceedAfterFinal4Eviction(){
     var g = global.game;
     var remain = global.alivePlayers();
+    
+    // Clean up Final 4 state to prevent memory leaks
+    delete g.__f4PleaInfluence;
+    delete g.__f4EvictionResolved;
+    delete g.__f4EvictionInProgress;
+    console.debug('[Final4] Cleaned up Final 4 state');
     
     if(remain.length === 3){
       // Transition to Final 3
