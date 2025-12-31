@@ -1789,6 +1789,19 @@
 
   async function finishF3P1() {
     const g = global.game; if (g.phase !== 'final3_comp1') return;
+    
+    // Clean up SpectatorView if it exists
+    if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
+      global.SpectatorView.cleanup();
+      console.info('[F3P1] SpectatorView cleaned up');
+    }
+    
+    // Clear the panel to remove any lingering UI
+    const panel = document.querySelector('#panel');
+    if (panel) {
+      panel.innerHTML = '';
+    }
+    
     const ids = global.alivePlayers().map(p => p.id);
     for (const id of ids) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
     const arr = [...g.lastCompScores.entries()].filter(([id]) => ids.includes(id)).sort((a, b) => b[1] - a[1]);
@@ -1976,6 +1989,19 @@
 
   async function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
+    
+    // Clean up SpectatorView if it exists
+    if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
+      global.SpectatorView.cleanup();
+      console.info('[F3P2] SpectatorView cleaned up');
+    }
+    
+    // Clear the panel to remove any lingering UI
+    const panel = document.querySelector('#panel');
+    if (panel) {
+      panel.innerHTML = '';
+    }
+    
     const duo = (g.__f3_duo || []).slice();
     
     // Check if skip was requested from spectator view
@@ -2166,6 +2192,19 @@
 
   async function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
+    
+    // Clean up SpectatorView if it exists
+    if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
+      global.SpectatorView.cleanup();
+      console.info('[F3P3] SpectatorView cleaned up');
+    }
+    
+    // Clear the panel to remove any lingering UI
+    const panel = document.querySelector('#panel');
+    if (panel) {
+      panel.innerHTML = '';
+    }
+    
     const finalists = (g.__f3_finalists || []).slice();
     
     // Check if skip was requested from spectator view
