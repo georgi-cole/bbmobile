@@ -3060,7 +3060,7 @@
     // 3. If reason is 'continue', advance to next phase
     if(reason === 'continue'){
       // Give time for summary to be dismissed, then advance
-      console.info('[social-maneuvers] ⏩ Advancing to next phase after Continue');
+      console.info('[social-maneuvers] ⏩ Advancing to next phase after OK');
       
       // Phase advance will be handled by the timer callback or explicit call
       // Don't double-advance here - let the normal flow handle it
@@ -3635,17 +3635,17 @@
     const buttonBar = document.createElement('div');
     buttonBar.style.cssText = 'display: flex; gap: 8px; margin-top: 1.5em; justify-content: center; flex-wrap: wrap;';
 
-    // Details button
+    // More button (opens detailed summary)
     const detailsBtn = document.createElement('button');
     detailsBtn.className = 'btn small';
-    detailsBtn.textContent = 'Details';
+    detailsBtn.textContent = 'More';
     detailsBtn.onclick = () => showDetailedSummary(summary);
     buttonBar.appendChild(detailsBtn);
 
-    // Continue button
+    // OK button (closes summary)
     const continueBtn = document.createElement('button');
     continueBtn.className = 'btn small';
-    continueBtn.textContent = 'Continue';
+    continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
       // Reset summary guard so it can be shown again next phase
@@ -3754,9 +3754,9 @@
   }
 
   function showDetailedSummary(summary){
-    // TASK 3: Pause timer when Details modal opens
+    // TASK 3: Pause timer when More details modal opens
     pausePhaseTimer();
-    console.info('[social-maneuvers] ⏸️ Timer paused for Details modal');
+    console.info('[social-maneuvers] ⏸️ Timer paused for More details modal');
     
     // Create detailed modal
     const modal = document.createElement('div');
@@ -3856,11 +3856,11 @@
     closeBtn.style.cssText = 'display:block;margin:1em auto 0;';
     closeBtn.onclick = () => {
       modal.remove();
-      // TASK 3: Resume timer when Details modal closes
+      // TASK 3: Resume timer when More details modal closes
       resumePhaseTimer();
-      console.info('[social-maneuvers] ▶️ Timer resumed after Details modal closed');
+      console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed');
       // Note: Don't remove backdrop here - it's owned by the summary card
-      // Backdrop will be cleaned up when user clicks Continue on the main summary
+      // Backdrop will be cleaned up when user clicks OK on the main summary
     };
     panel.appendChild(closeBtn);
 
@@ -3871,9 +3871,9 @@
     modal.onclick = (e) => {
       if(e.target === modal) {
         modal.remove();
-        // TASK 3: Resume timer when Details modal closes via backdrop click
+        // TASK 3: Resume timer when More details modal closes via backdrop click
         resumePhaseTimer();
-        console.info('[social-maneuvers] ▶️ Timer resumed after Details modal closed (backdrop click)');
+        console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed (backdrop click)');
         // Note: Don't remove backdrop here - it's owned by the summary card
       }
     };
