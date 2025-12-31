@@ -1799,7 +1799,7 @@
     delete g.__f4PleaInfluence;
     delete g.__f4EvictionResolved;
     delete g.__f4EvictionInProgress;
-    delete g.__f4ToF3TransitionStarted;
+    // Note: __f4ToF3TransitionStarted is NOT deleted here to prevent duplicate transitions
     console.debug('[Final4] Cleaned up Final 4 state');
     
     if(remain.length === 3){
