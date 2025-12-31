@@ -111,7 +111,8 @@
     
     // NOTE: Removed inline style modifications to prevent layout side effects.
     // CSS already provides position:relative and overflow:hidden on .tvViewport
-    // and related containers (see styles.css lines 944-961, 958-961).
+    // and related containers (see styles.css lines 944-953 for .tvViewport,
+    // and lines 958-961 for other TV container variants).
     // Setting inline styles was causing flex layout issues after animation completed.
     
     return container;
