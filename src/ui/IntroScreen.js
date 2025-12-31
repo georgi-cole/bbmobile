@@ -14,8 +14,9 @@ console.info('[IntroScreen] Script executing – pre-init');
 (function() {
   'use strict';
   
-  // CRITICAL: Bind window.game immediately to prevent lost reference
-  const g = window.game = window.game || {};
+  // CRITICAL: Initialize window.game if it doesn't exist, otherwise reference existing
+  if (!window.game) window.game = {};
+  const g = window.game;
 
   let container = null;
   let isVisible = false;

@@ -362,4 +362,4 @@
 
   console.info('[LoadingOverlay] Module loaded');
 
-})(window.game = window.game || {});
+})(window.game || (window.game = {}));

@@ -1,7 +1,7 @@
 // Register a small listener for clock fast-forward requests.
 // This file can be required from bootstrap.js or imported during game init.
 (function registerClockFastForwardListener() {
-  if (!window.game) window.game = window.game || {};
+  if (!window.game) window.game = {};
   if (!window.game.bus) {
     // If the bus doesn't exist yet, retry after a short delay (defensive)
     setTimeout(registerClockFastForwardListener, 250);

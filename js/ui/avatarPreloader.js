@@ -303,4 +303,4 @@
 
   console.info('[AvatarPreloader] Module loaded');
 
-})(window.game = window.game || {});
+})(window.game || (window.game = {}));
