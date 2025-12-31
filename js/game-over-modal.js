@@ -282,6 +282,42 @@
       console.warn('[game-over] failed to clear competition locks:', e);
     }
     
+    // Clear TV display state to prevent any lingering content
+    try {
+      // Clear TV overlay content (where cards/winner display)
+      const tvOverlayContent = document.querySelector('.tvOverlayContent');
+      if (tvOverlayContent) {
+        tvOverlayContent.innerHTML = '';
+        console.info('[game-over] cleared TV overlay content');
+      }
+      
+      // Clear tvViewport content
+      const tvViewport = document.querySelector('.tvViewport');
+      if (tvViewport) {
+        // Remove any cards or overlays but keep the structure
+        const cardsToRemove = tvViewport.querySelectorAll('.revealCard, .decisionCard, .lv2-overlay, .nfs-container');
+        cardsToRemove.forEach(card => {
+          try { card.remove(); } catch(e) {}
+        });
+        console.info('[game-over] cleared TV viewport cards');
+      }
+      
+      // Clear tvOverlay (different from tvOverlayContent)
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.innerHTML = '';
+        console.info('[game-over] cleared TV overlay');
+      }
+      
+      // Reset TV display text
+      const tvNow = document.getElementById('tvNow');
+      if (tvNow) {
+        tvNow.textContent = '';
+      }
+    } catch(e) {
+      console.warn('[game-over] failed to clear TV display:', e);
+    }
+    
     // Clear logs for fresh season
     ['log','logGame','logSocial','logVote','logJury'].forEach(id=>{
       const el=document.getElementById(id);
