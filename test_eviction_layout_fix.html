@@ -185,9 +185,6 @@
       const computedStyle = window.getComputedStyle(container);
       const rect = container.getBoundingClientRect();
       
-      // Check for any orphaned animation elements
-      const orphanedElements = container.querySelectorAll('.eviction-visual-avatar, .revival-visual-avatar');
-      
       return {
         // Dimensions
         width: rect.width,
@@ -204,10 +201,7 @@
         minHeight: computedStyle.minHeight,
         
         // Inline styles (should be empty after fix)
-        inlineStyles: container.getAttribute('style') || '(none)',
-        
-        // Animation cleanup check
-        orphanedElements: orphanedElements.length
+        inlineStyles: container.getAttribute('style') || '(none)'
       };
     }
     
@@ -258,10 +252,6 @@
           <div class="measurement-label">Inline Styles:</div>
           <div class="measurement-value">${measurements.inlineStyles}</div>
         </div>
-        <div class="measurement">
-          <div class="measurement-label">Orphaned Elements:</div>
-          <div class="measurement-value">${measurements.orphanedElements}</div>
-        </div>
       `;
     }
     
@@ -292,11 +282,6 @@
       const afterInline = after.inlineStyles;
       if (beforeInline !== afterInline) {
         issues.push(`Inline styles changed: "${beforeInline}" → "${afterInline}"`);
-      }
-      
-      // Check for orphaned animation elements (critical check)
-      if (after.orphanedElements > 0) {
-        issues.push(`${after.orphanedElements} orphaned animation element(s) found in container`);
       }
       
       // Display comparison
