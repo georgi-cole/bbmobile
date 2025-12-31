@@ -4095,12 +4095,31 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   }
   .wrap > .card{ width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
   
-  /* Add minimal padding to houseguests header so it doesn't touch screen edges */
+  /* Remove horizontal padding from mobile roster for edge-to-edge display */
+  .mobile-roster-container {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  /* Remove horizontal padding from compact HUD for edge-to-edge display */
+  .compact-hud {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  /* Add padding to houseguests header title and chips only */
   .houseguests-header {
     padding-left: 12px;
     padding-right: 12px;
-    padding-top: 12px;
+    padding-top: 8px;
   }
+  
+  /* Remove padding from mobile roster active grid for edge-to-edge avatars */
+  .mobile-roster-active-grid {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  
   /* Fixed height for mobile to prevent flashing when popups appear/disappear */
   .tv{ height:360px; }
   .tv.tvTall{ height:360px; }
