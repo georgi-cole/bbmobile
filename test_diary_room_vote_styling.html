@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diary Room Vote Card Styling Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <link rel="stylesheet" href="css/cards-theme-fix.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background: #1c2b3e;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      color: #e8f4ff;
+    }
+    .btn-test {
+      background: #3563a7;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .btn-test:hover {
+      background: #284866;
+    }
+    #testArea {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎴 Diary Room Observation Mode Vote Card Styling Test</h1>
+  
+  <div class="info-box">
+    <strong>Issue:</strong> During live eviction observation mode, diary room vote cards had inconsistent styling compared to other in-TV cards (F3 Part 1, ceremony cards, etc.).<br><br>
+    <strong>Solution:</strong> Removed inline styles from <code>showDiaryRoomWithAvatars()</code> function to use unified CSS card system.<br><br>
+    <strong>Expected Result:</strong> Vote cards should now match F3 Part 1 inline card styling with proper opacity, blur, borders, and sizing.
+  </div>
+  
+  <div>
+    <button class="btn-test" onclick="showBeforeCard()">Show OLD Style (Before Fix)</button>
+    <button class="btn-test" onclick="showAfterCard()">Show NEW Style (After Fix)</button>
+    <button class="btn-test" onclick="showF3Reference()">Show F3 Part 1 Reference Card</button>
+    <button class="btn-test" onclick="clearCards()">Clear All Cards</button>
+  </div>
+  
+  <div id="testArea">
+    <!-- TV Container for testing -->
+    <div id="tv" class="tv">
+      <div class="tvViewport">
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Mock global.getP for player data
+    window.getP = function(id) {
+      const players = {
+        1: { id: 1, name: 'Jax', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=jax' },
+        2: { id: 2, name: 'Dex', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=dex' },
+        3: { id: 3, name: 'Echo', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=echo' }
+      };
+      return players[id] || null;
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    
+    window.resolveAvatar = function(player) {
+      return player ? player.avatar : null;
+    };
+    
+    function getDicebearUrl(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    }
+    
+    function clearCards() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.innerHTML = '';
+      }
+      const tv = document.getElementById('tv');
+      if (tv) {
+        tv.classList.remove('tvTall');
+      }
+    }
+    
+    // OLD STYLE (Before Fix) - With inline styles
+    function showBeforeCard() {
+      clearCards();
+      
+      const voterId = 1; // Jax
+      const targetId = 2; // Dex
+      const message = 'Jax: I vote to evict Dex.';
+      
+      const voter = window.getP(voterId);
+      const target = window.getP(targetId);
+      
+      const voterAvatar = voter.avatar;
+      const targetAvatar = target.avatar;
+      
+      const tvOverlay = document.getElementById('tvOverlay');
+      const tv = document.getElementById('tv');
+      if (tv) tv.classList.add('tvTall');
+      
+      // OLD STYLE: Inline styles that override CSS
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+        border: 2px solid rgba(120,180,240,0.5);
+        border-radius: 20px;
+        padding: 24px 28px;
+        box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95), 0 8px 24px -8px rgba(0,0,0,0.7);
+        max-width: min(480px, 92%);
+        width: 100%;
+        text-align: center;
+        pointer-events: auto;
+        margin: auto;
+      `;
+      
+      const title = document.createElement('div');
+      title.textContent = 'Diary Room (OLD STYLE)';
+      title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
+      card.appendChild(title);
+      
+      const avatarRow = document.createElement('div');
+      avatarRow.style.cssText = 'display: flex; justify-content: center; align-items: center; margin-bottom: 18px; gap: 16px;';
+      
+      const voterContainer = document.createElement('div');
+      voterContainer.style.cssText = `
+        width: clamp(64px, 16vw, 88px); 
+        height: clamp(64px, 16vw, 88px); 
+        border-radius: 50%; 
+        border: 3px solid #7cffad; 
+        overflow: hidden;
+        box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
+        flex-shrink: 0;
+      `;
+      const voterImg = document.createElement('img');
+      voterImg.src = voterAvatar;
+      voterImg.alt = voter.name;
+      voterImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
+      voterContainer.appendChild(voterImg);
+      
+      const arrow = document.createElement('div');
+      arrow.textContent = '→';
+      arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
+      
+      const targetContainer = document.createElement('div');
+      targetContainer.style.cssText = `
+        width: clamp(64px, 16vw, 88px); 
+        height: clamp(64px, 16vw, 88px); 
+        border-radius: 50%; 
+        border: 3px solid #ff6b6b; 
+        overflow: hidden;
+        box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
+        flex-shrink: 0;
+      `;
+      const targetImg = document.createElement('img');
+      targetImg.src = targetAvatar;
+      targetImg.alt = target.name;
+      targetImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
+      targetContainer.appendChild(targetImg);
+      
+      avatarRow.appendChild(voterContainer);
+      avatarRow.appendChild(arrow);
+      avatarRow.appendChild(targetContainer);
+      card.appendChild(avatarRow);
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = message;
+      messageDiv.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
+      card.appendChild(messageDiv);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      tvOverlay.style.visibility = '';
+    }
+    
+    // NEW STYLE (After Fix) - CSS-controlled styling
+    function showAfterCard() {
+      clearCards();
+      
+      const voterId = 1; // Jax
+      const targetId = 2; // Dex
+      const message = 'Jax: I vote to evict Dex.';
+      
+      const voter = window.getP(voterId);
+      const target = window.getP(targetId);
+      
+      const voterAvatar = voter.avatar;
+      const targetAvatar = target.avatar;
+      
+      const tvOverlay = document.getElementById('tvOverlay');
+      const tv = document.getElementById('tv');
+      if (tv) tv.classList.add('tvTall');
+      
+      // NEW STYLE: Minimal inline styles, let CSS handle everything
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        text-align: center;
+        pointer-events: auto;
+        margin: auto;
+      `;
+      
+      const title = document.createElement('div');
+      title.textContent = 'Diary Room (NEW STYLE)';
+      title.style.cssText = 'font-size: clamp(0.95rem, 2.5vw, 1.2rem); font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
+      card.appendChild(title);
+      
+      const avatarRow = document.createElement('div');
+      avatarRow.style.cssText = 'display: flex; justify-content: center; align-items: center; margin-bottom: 18px; gap: 16px;';
+      
+      const voterContainer = document.createElement('div');
+      voterContainer.style.cssText = `
+        width: clamp(64px, 16vw, 88px); 
+        height: clamp(64px, 16vw, 88px); 
+        border-radius: 50%; 
+        border: 3px solid #7cffad; 
+        overflow: hidden;
+        box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
+        flex-shrink: 0;
+      `;
+      const voterImg = document.createElement('img');
+      voterImg.src = voterAvatar;
+      voterImg.alt = voter.name;
+      voterImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
+      voterContainer.appendChild(voterImg);
+      
+      const arrow = document.createElement('div');
+      arrow.textContent = '→';
+      arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
+      
+      const targetContainer = document.createElement('div');
+      targetContainer.style.cssText = `
+        width: clamp(64px, 16vw, 88px); 
+        height: clamp(64px, 16vw, 88px); 
+        border-radius: 50%; 
+        border: 3px solid #ff6b6b; 
+        overflow: hidden;
+        box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
+        flex-shrink: 0;
+      `;
+      const targetImg = document.createElement('img');
+      targetImg.src = targetAvatar;
+      targetImg.alt = target.name;
+      targetImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
+      targetContainer.appendChild(targetImg);
+      
+      avatarRow.appendChild(voterContainer);
+      avatarRow.appendChild(arrow);
+      avatarRow.appendChild(targetContainer);
+      card.appendChild(avatarRow);
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = message;
+      messageDiv.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
+      card.appendChild(messageDiv);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      tvOverlay.style.visibility = '';
+    }
+    
+    // F3 Part 1 Reference Card (shows what we're matching)
+    function showF3Reference() {
+      clearCards();
+      
+      const tvOverlay = document.getElementById('tvOverlay');
+      const tv = document.getElementById('tv');
+      if (tv) tv.classList.add('tvTall');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        text-align: center;
+        pointer-events: auto;
+        margin: auto;
+      `;
+      
+      const title = document.createElement('div');
+      title.textContent = '🏆 F3 Part 1 Winner';
+      title.style.cssText = 'font-size: clamp(0.95rem, 2.5vw, 1.2rem); font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
+      card.appendChild(title);
+      
+      const content = document.createElement('div');
+      content.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
+      content.innerHTML = `
+        <p style="margin: 0 0 12px 0;">Echo</p>
+        <p style="margin: 0;">Advances directly to Part 3!</p>
+      `;
+      card.appendChild(content);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      tvOverlay.style.visibility = '';
+    }
+  </script>
+</body>
+</html>

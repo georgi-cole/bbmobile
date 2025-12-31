@@ -593,16 +593,11 @@
     if(tv) tv.classList.add('tvTall');
 
     // Create custom card with avatars - positioned within tvOverlay
+    // Use unified card styling (no inline styles) for consistency with F3 Part 1 cards
     const card = document.createElement('div');
     card.className = 'revealCard diaryRoomCard';
+    // Remove all inline styles - let CSS handle styling via #tvOverlay rules
     card.style.cssText = `
-      background: linear-gradient(135deg, #1c2b3e, #0e1a28);
-      border: 2px solid rgba(120,180,240,0.5);
-      border-radius: 20px;
-      padding: 24px 28px;
-      box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95), 0 8px 24px -8px rgba(0,0,0,0.7);
-      max-width: min(480px, 92%);
-      width: 100%;
       text-align: center;
       pointer-events: auto;
       margin: auto;
@@ -610,7 +605,8 @@
 
     const title = document.createElement('div');
     title.textContent = 'Diary Room';
-    title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
+    // Use CSS tokens for consistent styling
+    title.style.cssText = 'font-size: clamp(0.95rem, 2.5vw, 1.2rem); font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
     card.appendChild(title);
 
     const avatarRow = document.createElement('div');
@@ -619,8 +615,8 @@
     // Voter avatar with container div for proper aspect ratio handling
     const voterContainer = document.createElement('div');
     voterContainer.style.cssText = `
-      width: clamp(64px, 16vw, 88px); 
-      height: clamp(64px, 16vw, 88px); 
+      width: clamp(80px, 18vw, 110px); 
+      height: clamp(80px, 18vw, 110px); 
       border-radius: 50%; 
       border: 3px solid #7cffad; 
       overflow: hidden;
@@ -646,13 +642,13 @@
 
     const arrow = document.createElement('div');
     arrow.textContent = '→';
-    arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
+    arrow.style.cssText = 'font-size: clamp(2rem, 5vw, 2.6rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
 
     // Target avatar with container div for proper aspect ratio handling
     const targetContainer = document.createElement('div');
     targetContainer.style.cssText = `
-      width: clamp(64px, 16vw, 88px); 
-      height: clamp(64px, 16vw, 88px); 
+      width: clamp(80px, 18vw, 110px); 
+      height: clamp(80px, 18vw, 110px); 
       border-radius: 50%; 
       border: 3px solid #ff6b6b; 
       overflow: hidden;
@@ -683,7 +679,7 @@
 
     const messageDiv = document.createElement('div');
     messageDiv.textContent = message;
-    messageDiv.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
+    messageDiv.style.cssText = 'font-size: clamp(1rem, 2.5vw, 1.15rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
     card.appendChild(messageDiv);
 
     // Clear any existing content and append new card
