@@ -27,7 +27,6 @@
     }
     
     let humanWins = 0;
-    let humanWins = 0;
     let aiWins = 0;
     const alive = global.alivePlayers?.() || g.players.filter(p => !p.evicted);
     const eligible = alive.filter(p => p.id !== g.lastHOHId || alive.length === 4);
