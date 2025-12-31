@@ -168,10 +168,21 @@
       avatarEl.classList.add('fade-out');
       await sleep(600);
 
+      // Cleanup: Clear all animation properties to prevent layout side effects
+      avatarEl.style.cssText = '';
+      avatarEl.className = '';
+      
       // Remove element
       avatarEl.remove();
+      
+      // Force browser reflow to ensure layout recalculation
+      // This prevents lingering layout effects from CSS transitions
+      void tvContainer.offsetHeight;
     }catch(e){
       console.error('[eviction-visuals] animation error:', e);
+      // Cleanup even on error
+      avatarEl.style.cssText = '';
+      avatarEl.className = '';
       avatarEl.remove();
     }
   }
@@ -259,12 +270,22 @@
       avatarEl.style.transform = 'translate(-50%, -50%) scale(1.0)';
       await sleep(200);
 
+      // Cleanup: Clear all inline styles to prevent layout side effects
+      avatarEl.style.cssText = '';
+      avatarEl.className = '';
+      
       // Remove element
       avatarEl.remove();
+      
+      // Force browser reflow to ensure layout recalculation
+      void tvContainer.offsetHeight;
       
       console.info('[eviction-visuals] Revival animation complete');
     }catch(e){
       console.error('[eviction-visuals] revival animation error:', e);
+      // Cleanup even on error
+      avatarEl.style.cssText = '';
+      avatarEl.className = '';
       avatarEl.remove();
     }
   }
