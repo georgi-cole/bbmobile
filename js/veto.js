@@ -1426,7 +1426,8 @@
           }
           
           // Immediately finalize the eviction with human's choice
-          finalizeFinal4Eviction(selectedId);
+          // Ensure ID is numeric for consistent handling
+          finalizeFinal4Eviction(+selectedId);
         }
       });
     } else {
@@ -1673,13 +1674,21 @@
     var holder = getP(g.vetoHolder);
     var target = targetId;
     
-    // AI decision if not provided
-    if(typeof target !== 'number'){
+    // AI decision if not provided or invalid
+    // Check if targetId is null, undefined, or invalid (not a valid player ID)
+    if(target == null || isNaN(target)){
+      console.info('[Final4] No valid target provided, using AI decision');
       target = aiFinal4EvictionChoice();
+    } else {
+      // Normalize to number for consistent handling
+      target = +target;
     }
     
     var evictee = getP(target);
-    if(!evictee) return;
+    if(!evictee) {
+      console.error('[Final4] Invalid evictee ID:', target);
+      return;
+    }
     
     g.__f4EvictionResolved = true;
     evictee.evicted = true;
