@@ -953,8 +953,8 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Ensure TV container variants have positioning context for eviction animations
-   CSS fallback for runtime safeguards in js/eviction-visuals.js
-   Provides baseline positioning even if JS hasn't run yet */
+   Required for absolute positioning of animated avatar elements
+   NOTE: js/eviction-visuals.js relies on these CSS properties being set */
 .tv-screen, .faux-tv, [data-faux-tv], [data-sm-faux-tv]{
   position:relative;
   overflow:hidden;
