@@ -1668,6 +1668,7 @@
     var g = global.game;
     if(g.__f4EvictionResolved) return;
     if(g.__f4EvictionInProgress) return;
+    if(g.__f4ToF3TransitionStarted) return;
     
     g.__f4EvictionInProgress = true;
     
@@ -1784,12 +1785,21 @@
   
   function proceedAfterFinal4Eviction(){
     var g = global.game;
+    
+    // Guard to prevent duplicate transitions
+    if(g.__f4ToF3TransitionStarted) {
+      console.warn('[Final4] Transition to Final 3 already started, ignoring duplicate call');
+      return;
+    }
+    g.__f4ToF3TransitionStarted = true;
+    
     var remain = global.alivePlayers();
     
     // Clean up Final 4 state to prevent memory leaks
     delete g.__f4PleaInfluence;
     delete g.__f4EvictionResolved;
     delete g.__f4EvictionInProgress;
+    delete g.__f4ToF3TransitionStarted;
     console.debug('[Final4] Cleaned up Final 4 state');
     
     if(remain.length === 3){

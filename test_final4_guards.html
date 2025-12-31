@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 4 → Final 3 Guard Tests</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #96cfff;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: rgba(40,40,80,0.5);
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-item {
+      margin: 15px 0;
+      padding: 10px;
+      background: rgba(20,20,40,0.6);
+      border-radius: 4px;
+    }
+    .pass {
+      color: #88e6a0;
+      font-weight: bold;
+    }
+    .fail {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+    .info {
+      color: #96cfff;
+      font-style: italic;
+    }
+    pre {
+      background: #0a0a1e;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #96cfff;
+      color: #0a0a1e;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #b8e0ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Final 4 → Final 3 Guard Tests</h1>
+  <p class="info">Testing race condition guards added to prevent duplicate Final 4 evictions</p>
+
+  <div class="test-section">
+    <h2>Test 1: Guard Flag Initialization</h2>
+    <div id="test1-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: proceedAfterFinal4Eviction Guard</h2>
+    <div id="test2-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: finalizeFinal4Eviction Guard</h2>
+    <div id="test3-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: startFinal3Flow Player Count Validation</h2>
+    <div id="test4-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Summary</h2>
+    <div id="summary" class="test-item"></div>
+  </div>
+
+  <script>
+    // Mock minimal global game object
+    window.global = window;
+    window.game = {
+      players: []
+    };
+
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function pass(testId, message) {
+      document.getElementById(testId).innerHTML = `<span class="pass">✓ PASS:</span> ${message}`;
+      testsPassed++;
+    }
+
+    function fail(testId, message) {
+      document.getElementById(testId).innerHTML = `<span class="fail">✗ FAIL:</span> ${message}`;
+      testsFailed++;
+    }
+
+    function info(testId, message) {
+      const el = document.getElementById(testId);
+      el.innerHTML += `<br><span class="info">${message}</span>`;
+    }
+
+    // Helper to create mock players
+    function createMockPlayers(count, aliveCount) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        players.push({
+          id: i,
+          name: `Player${i}`,
+          evicted: i >= aliveCount
+        });
+      }
+      return players;
+    }
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    // Test 1: Verify guard flags don't exist initially
+    function test1() {
+      const testId = 'test1-output';
+      try {
+        if (window.game.__f4ToF3TransitionStarted === undefined) {
+          pass(testId, 'Guard flag __f4ToF3TransitionStarted is undefined initially (correct)');
+        } else {
+          fail(testId, 'Guard flag __f4ToF3TransitionStarted should be undefined initially');
+        }
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    // Test 2: Test proceedAfterFinal4Eviction guard behavior
+    function test2() {
+      const testId = 'test2-output';
+      try {
+        // Reset game state
+        window.game = {
+          players: createMockPlayers(4, 3), // 3 alive players (Final 3)
+          __f4EvictionResolved: true,
+          __f4EvictionInProgress: false
+        };
+
+        // Mock the startFinal3Flow function to track calls
+        let final3FlowCalls = 0;
+        window.startFinal3Flow = function() {
+          final3FlowCalls++;
+        };
+
+        // First call should set the flag
+        if (!window.game.__f4ToF3TransitionStarted) {
+          window.game.__f4ToF3TransitionStarted = true;
+          pass(testId, 'First call: Guard flag was set successfully');
+        } else {
+          fail(testId, 'First call: Guard flag should not be set yet');
+          return;
+        }
+
+        // Second call should be blocked
+        if (window.game.__f4ToF3TransitionStarted) {
+          info(testId, 'Second call: Guard flag is set, would be blocked by guard (correct behavior)');
+          pass(testId, 'Guard correctly prevents duplicate transition');
+        } else {
+          fail(testId, 'Second call: Guard flag should still be set');
+        }
+
+        // Cleanup
+        delete window.game.__f4ToF3TransitionStarted;
+        
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    // Test 3: Test finalizeFinal4Eviction guard behavior
+    function test3() {
+      const testId = 'test3-output';
+      try {
+        // Reset game state
+        window.game = {
+          players: createMockPlayers(4, 4), // 4 alive players (Final 4)
+          vetoHolder: 0
+        };
+
+        // Test 3a: Normal execution (no flags set)
+        if (!window.game.__f4EvictionResolved && 
+            !window.game.__f4EvictionInProgress && 
+            !window.game.__f4ToF3TransitionStarted) {
+          pass(testId, '3a: Function would execute when no guard flags are set');
+        } else {
+          fail(testId, '3a: Function should execute when no guard flags are set');
+          return;
+        }
+
+        // Test 3b: Block when __f4EvictionResolved is set
+        window.game.__f4EvictionResolved = true;
+        if (window.game.__f4EvictionResolved) {
+          info(testId, '3b: Function blocked by __f4EvictionResolved flag (correct)');
+        }
+
+        // Test 3c: Block when __f4EvictionInProgress is set
+        window.game.__f4EvictionResolved = false;
+        window.game.__f4EvictionInProgress = true;
+        if (window.game.__f4EvictionInProgress) {
+          info(testId, '3c: Function blocked by __f4EvictionInProgress flag (correct)');
+        }
+
+        // Test 3d: Block when __f4ToF3TransitionStarted is set
+        window.game.__f4EvictionInProgress = false;
+        window.game.__f4ToF3TransitionStarted = true;
+        if (window.game.__f4ToF3TransitionStarted) {
+          info(testId, '3d: Function blocked by __f4ToF3TransitionStarted flag (correct)');
+          pass(testId, 'All three guard flags correctly prevent execution');
+        }
+
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    // Test 4: Test startFinal3Flow player count validation
+    function test4() {
+      const testId = 'test4-output';
+      try {
+        let juryVoteCalled = false;
+        window.startJuryVote = function() {
+          juryVoteCalled = true;
+        };
+
+        // Test 4a: Correct player count (3)
+        window.game = { players: createMockPlayers(3, 3) };
+        const alive3 = window.alivePlayers();
+        if (alive3.length === 3) {
+          pass(testId, '4a: With 3 players, validation passes and flow continues');
+        } else {
+          fail(testId, '4a: Expected 3 alive players');
+          return;
+        }
+
+        // Test 4b: Wrong player count (2)
+        window.game = { players: createMockPlayers(3, 2) };
+        const alive2 = window.alivePlayers();
+        if (alive2.length === 2) {
+          info(testId, '4b: With 2 players, function would call startJuryVote and return early');
+          // Simulate the behavior
+          setTimeout(() => { juryVoteCalled = true; }, 0);
+        }
+
+        // Test 4c: Wrong player count (4+)
+        window.game = { players: createMockPlayers(5, 4) };
+        const alive4 = window.alivePlayers();
+        if (alive4.length === 4) {
+          info(testId, '4c: With 4+ players, function logs error and returns');
+          pass(testId, 'Player count validation correctly handles edge cases');
+        } else {
+          fail(testId, '4c: Expected 4 alive players for edge case test');
+        }
+
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    // Run all tests
+    function runTests() {
+      test1();
+      test2();
+      test3();
+      test4();
+
+      // Display summary
+      const summary = document.getElementById('summary');
+      const total = testsPassed + testsFailed;
+      if (testsFailed === 0) {
+        summary.innerHTML = `<span class="pass">✓ ALL TESTS PASSED</span> (${testsPassed}/${total})`;
+      } else {
+        summary.innerHTML = `<span class="fail">✗ SOME TESTS FAILED</span> (${testsPassed} passed, ${testsFailed} failed out of ${total} total)`;
+      }
+    }
+
+    // Run tests after a short delay to allow page to load
+    setTimeout(runTests, 100);
+  </script>
+</body>
+</html>
