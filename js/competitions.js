@@ -1553,6 +1553,25 @@
 
   // Final 3 flow with enhanced modals and pacing
   function startFinal3Flow() {
+    const g = global.game;
+    const alive = global.alivePlayers();
+    
+    // VALIDATION: Ensure we have exactly 3 players
+    if(alive.length !== 3) {
+      console.error('[F3] startFinal3Flow called with wrong player count:', alive.length);
+      // If only 2 players, go directly to jury vote
+      if(alive.length === 2) {
+        console.info('[F3] Only 2 players remaining, skipping to jury vote');
+        setTimeout(() => global.startJuryVote?.(), 300);
+        return;
+      }
+      // If more than 3, something is very wrong - log error but continue
+      if(alive.length > 3) {
+        console.error('[F3] More than 3 players remaining, flow should not have been triggered');
+      }
+      return;
+    }
+    
     showFinalWeekAnnouncement();
   }
   global.startFinal3Flow = startFinal3Flow;
