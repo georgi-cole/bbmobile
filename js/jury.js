@@ -1505,8 +1505,10 @@
       // Generate dynamic reason based on ballot logic
       const dynamicReason = generateVoteReason(jid, pick, A, B, usedReasons);
       
-      g.addJuryLog?.(`${safeName(jid)}: ${dynamicReason}`, 'muted');
-      g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
+      // Note: Removed duplicate addJuryLog calls here to prevent side messages during finale vote reveal
+      // The reasoning and vote are already shown in the centered vote card (addFaceoffVoteCard below)
+      // g.addJuryLog?.(`${safeName(jid)}: ${dynamicReason}`, 'muted');
+      // g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
       
       // Enhanced logging with scores
       const scoreA = votes.get(A) || 0;
