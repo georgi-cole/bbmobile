@@ -109,18 +109,11 @@
       return null;
     }
     
-    // Ensure container has positioning context
-    const computedStyle = window.getComputedStyle(container);
-    if(computedStyle.position === 'static'){
-      console.info('[eviction-visuals] Setting position:relative on TV container');
-      container.style.position = 'relative';
-    }
-    
-    // Ensure container clips overflow
-    if(computedStyle.overflow === 'visible'){
-      console.info('[eviction-visuals] Setting overflow:hidden on TV container');
-      container.style.overflow = 'hidden';
-    }
+    // NOTE: Removed inline style modifications to prevent layout side effects.
+    // CSS already provides position:relative and overflow:hidden on .tvViewport
+    // and related containers (see styles.css lines 944-953 for .tvViewport,
+    // and lines 958-961 for other TV container variants).
+    // Setting inline styles was causing flex layout issues after animation completed.
     
     return container;
   }

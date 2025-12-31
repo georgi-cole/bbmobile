@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Layout Fix Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d151f;
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(20, 30, 45, 0.9);
+      border-radius: 12px;
+      padding: 30px;
+    }
+    h1 {
+      color: #83bfff;
+      text-align: center;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.5);
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .btn {
+      background: linear-gradient(135deg, #4a6fa5 0%, #2d5aa0 100%);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+      font-size: 14px;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #5a7fb5 0%, #3d6ab0 100%);
+    }
+    .status {
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 5px;
+    }
+    .status.pass {
+      background: #22c55e;
+      color: #fff;
+    }
+    .status.fail {
+      background: #dc2626;
+      color: #fff;
+    }
+    .status.pending {
+      background: #f2ce7b;
+      color: #000;
+    }
+    .measurement {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 10px;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .measurement-label {
+      font-weight: 600;
+      color: #83bfff;
+    }
+    .measurement-value {
+      font-family: 'Courier New', monospace;
+      color: #f2ce7b;
+    }
+    .comparison {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(20, 30, 45, 0.5);
+      border-radius: 6px;
+    }
+    .comparison.pass {
+      border-left: 4px solid #22c55e;
+    }
+    .comparison.fail {
+      border-left: 4px solid #dc2626;
+    }
+  </style>
+  
+  <!-- Load required CSS from main app -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Eviction Animation Layout Fix Test</h1>
+    <p style="color: #f2ce7b; text-align: center; margin-bottom: 20px;">
+      Verifies that faux TV container layout remains stable after eviction animation
+    </p>
+    
+    <div class="test-section">
+      <h2>Test Objective</h2>
+      <p>This test verifies that the eviction animation does NOT cause layout changes by:</p>
+      <ul>
+        <li>Measuring container dimensions and styles BEFORE animation</li>
+        <li>Running the eviction animation</li>
+        <li>Measuring container dimensions and styles AFTER animation</li>
+        <li>Comparing the measurements to ensure they're identical</li>
+      </ul>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <button class="btn" onclick="runTest()">▶ Run Test</button>
+      <button class="btn" onclick="location.reload()">🔄 Reset</button>
+      <div id="status" style="margin-top: 15px;">
+        <span class="status pending">Ready to test</span>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Faux TV Container</h2>
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div style="flex: 1;">
+          <!-- Simplified roster -->
+          <div id="topRoster" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px;">
+            <div class="roster-tile" style="width: 80px; height: 100px; background: #132132; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #95a9c0;">P1</div>
+            <div class="roster-tile" style="width: 80px; height: 100px; background: #132132; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #95a9c0;">P2</div>
+            <div class="roster-tile" style="width: 80px; height: 100px; background: #132132; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #95a9c0;">P3</div>
+            <div class="roster-tile" style="width: 80px; height: 100px; background: #132132; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #95a9c0;">P4</div>
+          </div>
+          
+          <!-- TV Container with proper classes -->
+          <div class="tvViewport" data-sm-faux-tv id="testTvContainer" style="background: #1a1a1a; border-radius: 8px; min-height: 300px;">
+            <div style="padding: 40px; text-align: center; color: #95a9c0;">
+              🎬 Animation Container
+              <div style="margin-top: 10px; font-size: 12px;">
+                Container will maintain size during and after animation
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Measurements</h2>
+      
+      <h3 style="color: #83bfff; margin-top: 0;">Before Animation</h3>
+      <div id="measurementsBefore"></div>
+      
+      <h3 style="color: #83bfff;">After Animation</h3>
+      <div id="measurementsAfter"></div>
+      
+      <div id="comparison"></div>
+    </div>
+  </div>
+
+  <!-- Load eviction-visuals module -->
+  <script src="js/eviction-visuals.js"></script>
+  
+  <script>
+    // Mock minimal game state
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice', status: 'active' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob', status: 'active' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=charlie', status: 'active' },
+      ]
+    };
+    
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.resolveAvatar = (player) => player.avatar;
+    window.updateHud = () => {
+      console.log('[Test] updateHud called (no-op in test)');
+    };
+    
+    function measureContainer() {
+      const container = document.getElementById('testTvContainer');
+      const computedStyle = window.getComputedStyle(container);
+      const rect = container.getBoundingClientRect();
+      
+      return {
+        // Dimensions
+        width: rect.width,
+        height: rect.height,
+        
+        // Styles
+        position: computedStyle.position,
+        overflow: computedStyle.overflow,
+        flex: computedStyle.flex,
+        flexGrow: computedStyle.flexGrow,
+        flexShrink: computedStyle.flexShrink,
+        flexBasis: computedStyle.flexBasis,
+        display: computedStyle.display,
+        minHeight: computedStyle.minHeight,
+        
+        // Inline styles (should be empty after fix)
+        inlineStyles: container.getAttribute('style') || '(none)'
+      };
+    }
+    
+    function displayMeasurements(measurements, targetId) {
+      const target = document.getElementById(targetId);
+      target.innerHTML = `
+        <div class="measurement">
+          <div class="measurement-label">Width:</div>
+          <div class="measurement-value">${measurements.width.toFixed(2)}px</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Height:</div>
+          <div class="measurement-value">${measurements.height.toFixed(2)}px</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Position:</div>
+          <div class="measurement-value">${measurements.position}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Overflow:</div>
+          <div class="measurement-value">${measurements.overflow}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Flex:</div>
+          <div class="measurement-value">${measurements.flex}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Flex Grow:</div>
+          <div class="measurement-value">${measurements.flexGrow}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Flex Shrink:</div>
+          <div class="measurement-value">${measurements.flexShrink}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Flex Basis:</div>
+          <div class="measurement-value">${measurements.flexBasis}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Display:</div>
+          <div class="measurement-value">${measurements.display}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Min Height:</div>
+          <div class="measurement-value">${measurements.minHeight}</div>
+        </div>
+        <div class="measurement">
+          <div class="measurement-label">Inline Styles:</div>
+          <div class="measurement-value">${measurements.inlineStyles}</div>
+        </div>
+      `;
+    }
+    
+    function compareMeasurements(before, after) {
+      const issues = [];
+      
+      // Check dimensions (allow 1px tolerance for rounding)
+      if (Math.abs(before.width - after.width) > 1) {
+        issues.push(`Width changed: ${before.width.toFixed(2)}px → ${after.width.toFixed(2)}px`);
+      }
+      if (Math.abs(before.height - after.height) > 1) {
+        issues.push(`Height changed: ${before.height.toFixed(2)}px → ${after.height.toFixed(2)}px`);
+      }
+      
+      // Check styles
+      if (before.position !== after.position) {
+        issues.push(`Position changed: ${before.position} → ${after.position}`);
+      }
+      if (before.overflow !== after.overflow) {
+        issues.push(`Overflow changed: ${before.overflow} → ${after.overflow}`);
+      }
+      if (before.flex !== after.flex) {
+        issues.push(`Flex changed: ${before.flex} → ${after.flex}`);
+      }
+      
+      // Check inline styles (critical check)
+      const beforeInline = before.inlineStyles;
+      const afterInline = after.inlineStyles;
+      if (beforeInline !== afterInline) {
+        issues.push(`Inline styles changed: "${beforeInline}" → "${afterInline}"`);
+      }
+      
+      // Display comparison
+      const comparisonEl = document.getElementById('comparison');
+      if (issues.length === 0) {
+        comparisonEl.innerHTML = `
+          <div class="comparison pass">
+            <h3 style="color: #22c55e; margin-top: 0;">✓ Test Passed</h3>
+            <p>All measurements are identical before and after animation.</p>
+            <p><strong>No layout side effects detected.</strong></p>
+          </div>
+        `;
+      } else {
+        comparisonEl.innerHTML = `
+          <div class="comparison fail">
+            <h3 style="color: #dc2626; margin-top: 0;">✗ Test Failed</h3>
+            <p><strong>Layout changes detected:</strong></p>
+            <ul>
+              ${issues.map(issue => `<li>${issue}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+      
+      return issues.length === 0;
+    }
+    
+    async function runTest() {
+      const statusEl = document.getElementById('status');
+      statusEl.innerHTML = '<span class="status pending">Running test...</span>';
+      
+      // Clear previous measurements
+      document.getElementById('measurementsBefore').innerHTML = '';
+      document.getElementById('measurementsAfter').innerHTML = '';
+      document.getElementById('comparison').innerHTML = '';
+      
+      try {
+        // Step 1: Measure BEFORE
+        console.log('[Test] Measuring container BEFORE animation');
+        const before = measureContainer();
+        displayMeasurements(before, 'measurementsBefore');
+        
+        await new Promise(r => setTimeout(r, 500)); // Small delay
+        
+        // Step 2: Run animation
+        console.log('[Test] Running eviction animation');
+        statusEl.innerHTML = '<span class="status pending">Animation in progress...</span>';
+        
+        if (typeof window.runEvictionVisual === 'function') {
+          await window.runEvictionVisual(1, { reason: 'test' });
+        } else {
+          throw new Error('runEvictionVisual function not found');
+        }
+        
+        await new Promise(r => setTimeout(r, 500)); // Wait for any post-animation effects
+        
+        // Step 3: Measure AFTER
+        console.log('[Test] Measuring container AFTER animation');
+        const after = measureContainer();
+        displayMeasurements(after, 'measurementsAfter');
+        
+        // Step 4: Compare
+        const passed = compareMeasurements(before, after);
+        
+        if (passed) {
+          statusEl.innerHTML = '<span class="status pass">✓ Test Passed</span>';
+          console.log('[Test] ✓ PASSED - No layout side effects');
+        } else {
+          statusEl.innerHTML = '<span class="status fail">✗ Test Failed</span>';
+          console.error('[Test] ✗ FAILED - Layout side effects detected');
+        }
+        
+      } catch (error) {
+        console.error('[Test] Error:', error);
+        statusEl.innerHTML = '<span class="status fail">✗ Test Error</span>';
+        document.getElementById('comparison').innerHTML = `
+          <div class="comparison fail">
+            <h3 style="color: #dc2626; margin-top: 0;">✗ Test Error</h3>
+            <p>${error.message}</p>
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
