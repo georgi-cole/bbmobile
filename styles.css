@@ -4069,11 +4069,38 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 }
 @media (max-width:900px){
   /* Mobile stacking: single column */
-  .wrap{ grid-template-columns:1fr; align-items:stretch; justify-items:stretch; }
+  .wrap{ 
+    grid-template-columns:1fr; 
+    align-items:stretch; 
+    justify-items:stretch;
+    /* Remove padding on mobile for full-screen experience */
+    padding: 0;
+    gap: 0;
+  }
   #dashboardCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
   #sideCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
-  #actionCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
+  #actionCard{ 
+    grid-column:1; 
+    grid-row:auto; 
+    width:100%; 
+    max-width:none; 
+    margin-left:0; 
+    margin-right:0; 
+    justify-self:stretch;
+    /* Remove padding from action card on mobile for full-screen avatars and TV */
+    padding: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
   .wrap > .card{ width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
+  
+  /* Add minimal padding to houseguests header so it doesn't touch screen edges */
+  .houseguests-header {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+  }
   /* Fixed height for mobile to prevent flashing when popups appear/disappear */
   .tv{ height:360px; }
   .tv.tvTall{ height:360px; }
