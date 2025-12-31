@@ -1,8 +1,8 @@
 /* mobileRoster.css
  * Mobile-optimized roster view with active grid and evicted drawer
  * Features:
- * - Dynamic grid layout (max 4 columns portrait, 5 landscape)
- * - Centered, auto-reflowing tiles as players are evicted
+ * - Dynamic auto-fill grid layout (automatically adapts column count based on available width)
+ * - Auto-reflowing tiles that expand to fill available space
  * - Collapsible evicted players panel
  * - Responsive breakpoints and orientation support
  * - Accessibility-friendly (keyboard nav, ARIA labels)
@@ -12,7 +12,7 @@
   --evicted-color: #e74c3c;
   --evicted-color-dark: #c0392b;
   --evicted-color-rgb: 231, 76, 60;
-  --mobile-roster-gap: 2px; /* Reduced from 4px for tighter layout */
+  --mobile-roster-gap: 1px; /* Minimal gap for edge-to-edge layout */
   --mobile-roster-tile-scale: 1; /* For future fine-tuning */
   --mobile-roster-tile-padding: 2px; /* Tile internal padding */
   --mobile-roster-tile-gap: 2px; /* Minimal gap between avatar and name */
@@ -29,7 +29,7 @@
   /* TV overlay spacing variables - used for dynamic spacer calculation */
   /* These are updated by JS overlaySpacing module */
   --tv-overlay-height: 200px; /* Default, updated dynamically */
-  --avatar-row-gap: 2px; /* Matches --mobile-roster-gap, reduced from 4px */
+  --avatar-row-gap: 1px; /* Matches --mobile-roster-gap for tight layout */
 }
 
 /* ============================
@@ -67,7 +67,7 @@
 .mobile-roster-container {
   display: none; /* Hidden by default, shown when mobile mode active */
   flex-direction: column;
-  gap: var(--mobile-roster-gap, 2px); /* Reduced from 4px for tighter layout */
+  gap: var(--mobile-roster-gap, 1px); /* Minimal gap for tighter layout */
   padding: 8px 0; /* Removed horizontal padding to eliminate left/right unused space */
   /* Account for safe-area on mobile devices (notches, home indicators) */
   /* Increased bottom padding to 12px for better clearance with 16 players */
@@ -94,17 +94,20 @@ body[data-mobile-roster-active="true"] #rosterBar {
 
 .mobile-roster-active-grid {
   display: grid;
-  grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
-  gap: var(--mobile-roster-gap, 2px); /* Reduced from 4px for tighter avatar layout */
-  justify-content: center;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: var(--mobile-roster-gap, 1px); /* Minimal gap for edge-to-edge layout */
+  justify-items: stretch; /* Make tiles fill their cell */
   align-items: start;
   max-width: 100%; /* Changed from min(100%, 520px) to fill available width */
   margin: 0 auto;
   width: 100%;
   /* Minimal bottom padding - actual spacing is handled by the spacer element */
-  padding-bottom: var(--mobile-roster-gap, 2px); /* Match reduced gap */
+  padding-bottom: var(--mobile-roster-gap, 1px); /* Match reduced gap */
   /* Prevent overflow issues on mobile that could cause scrolling or clipping */
   overflow: visible;
+  /* Ensure no side padding for edge-to-edge layout */
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* ============================
@@ -118,11 +121,13 @@ body[data-mobile-roster-active="true"] #rosterBar {
   flex: 0 0 auto;
   width: 100%;
   /* Height = TV overlay height + extra buffer to prevent any overlap
-   * Increased to 3x row gap + 16px for extra safety margin to handle 16 players
+   * Buffer formula: (1px gap * 5 multiplier) + 24px base = 29px buffer
+   * Multiplier of 5 accounts for 4 rows (16 players) + extra spacing
+   * Base 24px (up from 16px) provides adequate clearance with reduced 1px gaps
    * The JS overlaySpacing module updates --tv-overlay-height dynamically.
    */
-  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 2px) * 3) + 16px);
-  min-height: calc((var(--avatar-row-gap, 2px) * 3) + 16px + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--tv-overlay-height, 200px) + (var(--avatar-row-gap, 1px) * 5) + 24px);
+  min-height: calc((var(--avatar-row-gap, 1px) * 5) + 24px + env(safe-area-inset-bottom, 0px));
   /* Invisible spacer */
   pointer-events: none;
   /* Debug: uncomment to visualize spacer */
@@ -139,8 +144,9 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
   position: relative;
   isolation: isolate;
   aspect-ratio: unset; /* Remove fixed aspect ratio to allow name footer space */
+  width: 100%; /* Fill the grid cell */
   min-width: 56px; /* Minimum tap target size */
-  max-width: 110px; /* Increased to allow larger photos */
+  max-width: none; /* Remove max-width constraint to allow tiles to expand */
   
   /* Theme-aware gradient background */
   background: linear-gradient(145deg, var(--roster-gradient-1, #182636), var(--roster-gradient-2, #101a28));
@@ -937,11 +943,12 @@ body[data-mobile-roster-active="true"] #tvNow {
 
 /* When mobile roster is active, adjust faux TV positioning.
  * IMPORTANT: Use positive top margin (never negative) to prevent overlap with roster grid.
- * The margin must equal the grid gap to maintain visual consistency.
+ * Increased margin from variable (with 2px fallback) to fixed 8px for adequate separation.
+ * With reduced 1px grid gaps, larger margin needed to prevent overlap with 4-row grids (16 players).
  * This ensures the TV overlay never covers the last roster row avatars or player names.
  */
 body[data-mobile-roster-active="true"] .tv {
-  margin-top: var(--mobile-roster-gap, 2px); /* Match grid gap for consistent spacing */
+  margin-top: 8px; /* Fixed 8px (previously var with 2px fallback) for better separation with tight grid gaps */
   position: relative;
   overflow: hidden;
   /* Prevent the TV from intruding into the roster area */
@@ -1007,10 +1014,14 @@ body[data-mobile-roster-active="true"] .tv {
 /* Portrait mobile (primary breakpoint) */
 @media (max-width: 520px) {
   .mobile-roster-active-grid {
-    grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
-    gap: 2px; /* Consistent with main grid gap */
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 1px; /* Minimal gap for tighter layout on small screens */
+    justify-items: stretch; /* Make tiles fill their cell */
     /* Remove bottom padding since spacer handles it */
     padding-bottom: 0;
+    /* Ensure edge-to-edge layout */
+    padding-left: 0;
+    padding-right: 0;
   }
   
   .mobile-roster-container {
@@ -1018,6 +1029,7 @@ body[data-mobile-roster-active="true"] .tv {
   }
   
   .mobile-roster-tile {
+    width: 100%; /* Fill the grid cell */
     min-width: 60px;
     padding: 2px;
   }
@@ -1057,16 +1069,13 @@ body[data-mobile-roster-active="true"] .tv {
   
   .mobile-roster-active-grid {
     max-width: 100%; /* Allow grid to use full available width */
+    /* Auto-fill will naturally create more columns in landscape */
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   }
   
   .mobile-roster-evicted-section {
     flex: 1;
     max-width: 35%;
-  }
-  
-  /* Allow 5 columns in landscape if space permits */
-  .mobile-roster-active-grid[data-landscape-cols="5"] {
-    grid-template-columns: repeat(5, 1fr);
   }
   
   .mobile-roster-evicted-toggle {
