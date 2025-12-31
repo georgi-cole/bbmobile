@@ -12,7 +12,7 @@
   --evicted-color: #e74c3c;
   --evicted-color-dark: #c0392b;
   --evicted-color-rgb: 231, 76, 60;
-  --mobile-roster-gap: 4px; /* Reduced for tighter layout */
+  --mobile-roster-gap: 2px; /* Reduced from 4px for tighter layout */
   --mobile-roster-tile-scale: 1; /* For future fine-tuning */
   --mobile-roster-tile-padding: 2px; /* Tile internal padding */
   --mobile-roster-tile-gap: 2px; /* Minimal gap between avatar and name */
@@ -29,7 +29,7 @@
   /* TV overlay spacing variables - used for dynamic spacer calculation */
   /* These are updated by JS overlaySpacing module */
   --tv-overlay-height: 200px; /* Default, updated dynamically */
-  --avatar-row-gap: 4px; /* Matches --mobile-roster-gap */
+  --avatar-row-gap: 2px; /* Matches --mobile-roster-gap, reduced from 4px */
 }
 
 /* ============================
@@ -67,8 +67,8 @@
 .mobile-roster-container {
   display: none; /* Hidden by default, shown when mobile mode active */
   flex-direction: column;
-  gap: var(--mobile-roster-gap, 4px); /* Use consistent gap matching grid */
-  padding: 12px; /* Horizontal and top padding */
+  gap: var(--mobile-roster-gap, 2px); /* Reduced from 4px for tighter layout */
+  padding: 8px 0; /* Removed horizontal padding to eliminate left/right unused space */
   /* Account for safe-area on mobile devices (notches, home indicators) */
   /* Increased bottom padding to 12px for better clearance with 16 players */
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
@@ -95,14 +95,14 @@ body[data-mobile-roster-active="true"] #rosterBar {
 .mobile-roster-active-grid {
   display: grid;
   grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
-  gap: var(--mobile-roster-gap, 4px);
+  gap: var(--mobile-roster-gap, 2px); /* Reduced from 4px for tighter avatar layout */
   justify-content: center;
   align-items: start;
-  max-width: min(100%, 520px);
+  max-width: 100%; /* Changed from min(100%, 520px) to fill available width */
   margin: 0 auto;
   width: 100%;
   /* Minimal bottom padding - actual spacing is handled by the spacer element */
-  padding-bottom: var(--mobile-roster-gap, 4px);
+  padding-bottom: var(--mobile-roster-gap, 2px); /* Match reduced gap */
   /* Prevent overflow issues on mobile that could cause scrolling or clipping */
   overflow: visible;
 }
@@ -664,8 +664,8 @@ body:not([data-mobile-roster-active="true"]) .mobile-roster-grid-spacer {
 .mobile-roster-evicted-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-width: min(100%, 520px);
+  gap: 8px; /* Reduced from 10px for tighter layout */
+  max-width: 100%; /* Changed from min(100%, 520px) to fill available width */
   margin: 0 auto;
   width: 100%;
 }
@@ -941,7 +941,7 @@ body[data-mobile-roster-active="true"] #tvNow {
  * This ensures the TV overlay never covers the last roster row avatars or player names.
  */
 body[data-mobile-roster-active="true"] .tv {
-  margin-top: var(--mobile-roster-gap, 4px); /* Match grid gap for consistent spacing */
+  margin-top: var(--mobile-roster-gap, 2px); /* Match grid gap for consistent spacing */
   position: relative;
   overflow: hidden;
   /* Prevent the TV from intruding into the roster area */
@@ -1008,13 +1008,13 @@ body[data-mobile-roster-active="true"] .tv {
 @media (max-width: 520px) {
   .mobile-roster-active-grid {
     grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
-    gap: 4px;
+    gap: 2px; /* Consistent with main grid gap */
     /* Remove bottom padding since spacer handles it */
     padding-bottom: 0;
   }
   
   .mobile-roster-container {
-    padding: 8px 12px 4px; /* Further reduced top padding */
+    padding: 6px 0 4px; /* Removed horizontal padding for edge-to-edge layout */
   }
   
   .mobile-roster-tile {
@@ -1051,12 +1051,12 @@ body[data-mobile-roster-active="true"] .tv {
 @media (max-width: 896px) and (orientation: landscape) {
   .mobile-roster-container {
     flex-direction: row;
-    gap: 20px;
-    padding: 8px 16px;
+    gap: 12px; /* Reduced from 20px for tighter layout */
+    padding: 8px 0; /* Removed horizontal padding */
   }
   
   .mobile-roster-active-grid {
-    max-width: 60%;
+    max-width: 100%; /* Allow grid to use full available width */
   }
   
   .mobile-roster-evicted-section {
