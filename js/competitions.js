@@ -1568,7 +1568,6 @@
       // If more than 3, something is very wrong - log error but continue
       if(alive.length > 3) {
         console.error('[F3] More than 3 players remaining, flow should not have been triggered');
-        return;
       }
       return;
     }
