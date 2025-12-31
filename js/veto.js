@@ -1676,12 +1676,12 @@
     
     // AI decision if not provided or invalid
     // Check if targetId is null, undefined, or not a valid number
-    if(target == null || isNaN(+target)){
+    if(target == null || isNaN(Number(target))){
       console.info('[Final4] No valid target provided, using AI decision');
       target = aiFinal4EvictionChoice();
     } else {
       // Normalize to number for consistent handling
-      target = +target;
+      target = Number(target);
     }
     
     var evictee = getP(target);
@@ -1763,9 +1763,12 @@
       var threat = cand.threat || 0.5;
       
       // Factor in plea influence (if player made a plea)
-      // Plea influence ranges from 0 to 0.2 (up to 20% swing)
+      // Plea influence is expected to range from 0 to 0.2 (up to 20% swing)
+      // Note: Validation of influence range happens in handleFinal4NomineePlea()
       // Positive influence makes them LESS likely to be evicted
       var pleaBonus = pleaInfluence[id] || 0;
+      // Clamp to expected range as safety measure
+      pleaBonus = Math.max(0, Math.min(0.2, pleaBonus));
       
       // Evict lower affinity OR higher threat, adjusted by plea
       // Plea bonus reduces the eviction score (makes them less likely to be evicted)
