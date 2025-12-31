@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triple Eviction Veto Ceremony Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a1628, #1a2d4a);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    #testContainer {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #ffd96b;
+      text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
+    }
+    
+    #controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .control-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #19314f, #0e223b);
+      border: 1px solid rgba(143, 211, 255, 0.3);
+      border-radius: 8px;
+      color: #e9f4ff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: linear-gradient(135deg, #1f3d5f, #14304d);
+      border-color: rgba(143, 211, 255, 0.5);
+      transform: translateY(-1px);
+    }
+    
+    #output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .log-info { background: rgba(59, 130, 246, 0.1); }
+    .log-warn { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+    .log-error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .log-success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    
+    #gameState {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    
+    .state-section {
+      margin-bottom: 12px;
+    }
+    
+    .state-label {
+      font-weight: 600;
+      color: #8fd3ff;
+      margin-bottom: 4px;
+    }
+    
+    .state-value {
+      color: #e9f4ff;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div id="testContainer">
+    <h1>🎯 Triple Eviction Veto Test</h1>
+    
+    <div id="controls">
+      <div class="control-row">
+        <button onclick="setupTripleEvictionScenario()">1. Setup Triple Eviction</button>
+        <button onclick="testReplacementPool()">2. Test Replacement Pool</button>
+        <button onclick="testValidation()">3. Test Validation Logic</button>
+        <button onclick="clearOutput()">Clear Log</button>
+      </div>
+    </div>
+    
+    <div id="gameState">
+      <div class="state-section">
+        <div class="state-label">Game State:</div>
+        <div class="state-value" id="stateDisplay">Not initialized</div>
+      </div>
+    </div>
+    
+    <div id="output"></div>
+  </div>
+
+  <script>
+    // Minimal game state mock
+    window.game = {
+      players: [],
+      nominees: [],
+      hohId: null,
+      vetoHolder: null,
+      vetoSavedId: null,
+      tripleEvictionWeek: false,
+      __twistMode: null,
+      __twistNomSlots: 2,
+      phase: 'veto-ceremony'
+    };
+
+    // Helper to add log entry
+    function log(message, type = 'info') {
+      const output = document.getElementById('output');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      output.appendChild(entry);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function clearOutput() {
+      document.getElementById('output').innerHTML = '';
+    }
+
+    function updateStateDisplay() {
+      const g = window.game;
+      const display = document.getElementById('stateDisplay');
+      display.textContent = JSON.stringify({
+        hohId: g.hohId,
+        vetoHolder: g.vetoHolder,
+        vetoSavedId: g.vetoSavedId,
+        nominees: g.nominees,
+        tripleEviction: g.tripleEvictionWeek,
+        nomSlots: g.__twistNomSlots,
+        alivePlayers: g.players.filter(p => !p.evicted).length
+      }, null, 2);
+    }
+
+    function setupTripleEvictionScenario() {
+      log('Setting up triple eviction scenario...', 'info');
+      
+      const g = window.game;
+      
+      // Create 8 players (small cast to trigger pool exhaustion)
+      g.players = [];
+      for (let i = 1; i <= 8; i++) {
+        g.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          human: i === 1, // Player 1 is human
+          nominated: false,
+          nominationState: 'none'
+        });
+      }
+      
+      // Setup triple eviction
+      g.tripleEvictionWeek = true;
+      g.__twistMode = 'triple';
+      g.__twistNomSlots = 4; // 4 nominees for triple eviction
+      g.__twistPlannedEvictions = 3;
+      
+      // Setup roles
+      g.hohId = 1;          // Player 1 is HOH
+      g.vetoHolder = 2;     // Player 2 won veto
+      g.nominees = [2, 3, 4, 5]; // 4 nominees (one is veto holder - self-save scenario)
+      
+      // Mark nominated players
+      [2, 3, 4, 5].forEach(id => {
+        const p = g.players.find(p => p.id === id);
+        if (p) {
+          p.nominated = true;
+          p.nominationState = 'nominated';
+        }
+      });
+      
+      log(`✓ Created 8 players`, 'success');
+      log(`✓ HOH: Player ${g.hohId}`, 'success');
+      log(`✓ Veto Holder: Player ${g.vetoHolder}`, 'success');
+      log(`✓ Nominees: [${g.nominees.join(', ')}]`, 'success');
+      log(`✓ Triple eviction mode active (4 nom slots)`, 'success');
+      log(`✓ Self-save scenario: Veto holder is nominated`, 'warn');
+      
+      updateStateDisplay();
+    }
+
+    function testReplacementPool() {
+      log('Testing replacement pool building...', 'info');
+      
+      const g = window.game;
+      if (!g.nominees || g.nominees.length === 0) {
+        log('Please setup scenario first!', 'error');
+        return;
+      }
+      
+      // Simulate veto being used (player 2 saves themselves)
+      g.vetoSavedId = 2;
+      
+      log(`Veto used to save Player ${g.vetoSavedId}`, 'info');
+      
+      // Remove saved nominee from nominees
+      const beforeRemoval = [...g.nominees];
+      g.nominees = g.nominees.filter(id => id !== g.vetoSavedId);
+      
+      log(`Nominees before removal: [${beforeRemoval.join(', ')}]`, 'info');
+      log(`Nominees after removal: [${g.nominees.join(', ')}]`, 'info');
+      
+      // Build replacement pool
+      const alivePlayers = g.players.filter(p => !p.evicted);
+      log(`Total alive players: ${alivePlayers.length}`, 'info');
+      
+      const exclude = new Set();
+      exclude.add(g.hohId);           // HOH
+      exclude.add(g.vetoHolder);      // Veto holder
+      exclude.add(g.vetoSavedId);     // Saved nominee
+      g.nominees.forEach(id => exclude.add(id)); // Current nominees
+      
+      log(`Excluded from pool: [${Array.from(exclude).join(', ')}]`, 'warn');
+      
+      const pool = alivePlayers
+        .map(p => p.id)
+        .filter(id => !exclude.has(id));
+      
+      log(`Replacement pool: [${pool.join(', ')}]`, pool.length > 0 ? 'success' : 'error');
+      log(`Pool size: ${pool.length}`, pool.length > 0 ? 'success' : 'error');
+      
+      if (pool.length === 0) {
+        log('⚠️ POOL EXHAUSTED! This is the bug!', 'error');
+        log('Analysis:', 'warn');
+        log(`  - Total players: ${alivePlayers.length}`, 'info');
+        log(`  - Excluded: ${exclude.size}`, 'info');
+        log(`  - Available: ${alivePlayers.length - exclude.size}`, 'info');
+      }
+      
+      updateStateDisplay();
+    }
+
+    function testValidation() {
+      log('Testing nominee change validation...', 'info');
+      
+      const g = window.game;
+      if (!g.vetoSavedId) {
+        log('Please run test 2 first!', 'error');
+        return;
+      }
+      
+      // Original nominees before veto
+      const originalNominees = [2, 3, 4, 5];
+      const savedId = 2;
+      
+      log(`Original nominees: [${originalNominees.join(', ')}]`, 'info');
+      log(`Saved nominee: ${savedId}`, 'info');
+      
+      // Test different replacement scenarios
+      const testCases = [
+        { replacementId: 6, expected: true, description: 'Valid new nominee' },
+        { replacementId: 7, expected: true, description: 'Another valid nominee' },
+        { replacementId: 8, expected: true, description: 'Last valid nominee' },
+        { replacementId: 2, expected: false, description: 'Same as saved (should fail)' },
+        { replacementId: 3, expected: false, description: 'Already a nominee (edge case)' }
+      ];
+      
+      testCases.forEach(test => {
+        // Build final nominees
+        let finalNominees = originalNominees.filter(id => id !== savedId);
+        if (finalNominees.indexOf(test.replacementId) === -1) {
+          finalNominees.push(test.replacementId);
+        }
+        
+        // Check if arrays have same elements
+        const arraysMatch = arraysHaveSameElements(finalNominees, originalNominees);
+        const isValid = !arraysMatch;
+        
+        const status = isValid === test.expected ? '✓' : '✗';
+        const logType = isValid === test.expected ? 'success' : 'error';
+        
+        log(`${status} Test: ${test.description}`, logType);
+        log(`  Replacement: ${test.replacementId}`, 'info');
+        log(`  Final nominees: [${finalNominees.join(', ')}]`, 'info');
+        log(`  Arrays match: ${arraysMatch}, Is valid: ${isValid}, Expected: ${test.expected}`, 'info');
+      });
+    }
+
+    function arraysHaveSameElements(arr1, arr2) {
+      if (!arr1 || !arr2 || arr1.length !== arr2.length) return false;
+      
+      const set1 = new Set(arr1);
+      const set2 = new Set(arr2);
+      
+      if (set1.size !== set2.size) return false;
+      
+      for (const id of set1) {
+        if (!set2.has(id)) return false;
+      }
+      
+      return true;
+    }
+
+    // Initial setup
+    log('Triple Eviction Veto Ceremony Test Ready', 'info');
+    log('Click buttons in order: 1 → 2 → 3', 'info');
+  </script>
+</body>
+</html>

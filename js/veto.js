@@ -3124,6 +3124,8 @@
     g.__replacementCommitted = false;
     g.__replacementApplied = false;
     g.__useTVCeremonyUI = false;
+    g.__originalNomineesBeforeVeto = null;  // Clear stale original nominees from previous ceremony
+    g.__replacementAttempts = 0;  // Reset replacement attempt counter
     
     // Clear all veto timers on ceremony start to prevent stale callbacks
     clearAllVetoTimers();
