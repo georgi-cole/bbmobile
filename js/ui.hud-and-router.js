@@ -340,6 +340,7 @@
       'return_twist': 'Return Challenge',
       'final3_comp1': 'Final 3 – Part 1',
       'final3_comp2': 'Final 3 – Part 2',
+      'final3_comp3': 'Final 3 – Part 3',
       'final3_decision': 'Final 3 – Decision',
       'social': 'Social Time'
     };
@@ -2136,7 +2137,7 @@ header.innerHTML = `
     // Toggle copy disabling for competitions
     try{
       const body=document.body;
-      const compPhases=['hoh','veto_comp','final3_comp1','final3_comp2'];
+      const compPhases=['hoh','veto_comp','final3_comp1','final3_comp2','final3_comp3'];
       if(compPhases.includes(phase)) body.classList.add('no-copy');
       else body.classList.remove('no-copy');
     }catch{}
@@ -2181,6 +2182,7 @@ header.innerHTML = `
         return_twist: 14,
         final3_comp1: game.cfg.tFinal3Comp1,
         final3_comp2: game.cfg.tFinal3Comp2,
+        final3_comp3: game.cfg.tFinal3Comp3,
         final3_decision: game.cfg.tFinal3Decision,
         social: game.cfg.tSocial
       };
@@ -2442,7 +2444,7 @@ header.innerHTML = `
     if(game.phase==='jury'){ g.renderJuryVotePanel?.(); return; }
     if(game.phase==='livevote'){ g.renderLiveVotePanel?.(); return; }
 
-    const compPhases=['hoh','veto_comp','veto','final3_comp1','final3_comp2'];
+    const compPhases=['hoh','veto_comp','veto','final3_comp1','final3_comp2','final3_comp3'];
     if(compPhases.includes(game.phase)){
       // Check if idle panel should be shown (feature flag gated)
       if(typeof g.renderIdlePanel === 'function' && g.renderIdlePanel(panel)){
