@@ -5,8 +5,9 @@
 (function() {
   'use strict';
 
-  // CRITICAL: Bind window.game immediately
-  const g = window.game = window.game || {};
+  // CRITICAL: Initialize window.game if it doesn't exist, otherwise reference existing
+  if (!window.game) window.game = {};
+  const g = window.game;
 
   // Generate a unique session ID for this page load
   const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);

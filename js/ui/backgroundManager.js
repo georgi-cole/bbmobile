@@ -197,7 +197,7 @@
 
   async function loadAssetsFromManifest() {
     try {
-      const response = await fetch('/assets/skins/skins.json');
+      const response = await fetch('assets/skins/skins.json');
       if (!response.ok) {
         throw new Error(`Failed to fetch manifest: ${response.status} ${response.statusText}`);
       }

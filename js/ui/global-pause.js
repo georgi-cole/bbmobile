@@ -5,7 +5,7 @@
 (function () {
   // Avoid duplicating if already present
   try {
-    window.game = window.game || {};
+    if (!window.game) window.game = {};
     if (window.game.pauseManager && typeof window.game.pauseManager.isPaused === 'function') {
       // already installed
       return;
@@ -83,7 +83,7 @@
   })();
 
   try {
-    window.game = window.game || {};
+    if (!window.game) window.game = {};
     window.game.pauseManager = window.game.pauseManager || PauseManager;
     // Alias for compatibility - pauseController is the same as pauseManager
     window.game.pauseController = window.game.pauseController || window.game.pauseManager;
