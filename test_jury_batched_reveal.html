@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jury Batched Reveal Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #0a0e14;
+            color: #e0e6f0;
+        }
+        h1 {
+            color: #ffdc8b;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+        .controls {
+            background: #141b26;
+            border: 1px solid #2d3f56;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 8px;
+            min-width: 180px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .info-panel {
+            background: #1a2332;
+            border: 1px solid #2d3f56;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .info-title {
+            font-weight: 700;
+            color: #4dd0e1;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+        .info-item {
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            color: #90caf9;
+        }
+        .status {
+            background: rgba(33, 150, 243, 0.2);
+            border-left: 4px solid #2196f3;
+            color: #90caf9;
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+            color: #a5d6a7;
+        }
+        .warning {
+            background: rgba(255, 152, 0, 0.2);
+            border-left: 4px solid #ff9800;
+            color: #ffcc80;
+        }
+        #tv {
+            width: 100%;
+            height: 500px;
+            background: #1a2332;
+            border: 2px solid #2d3f56;
+            border-radius: 12px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 Jury Batched Reveal Test</h1>
+    <div class="subtitle">Testing the new batched jury vote reveal system</div>
+    
+    <div class="controls">
+        <button onclick="testSevenJurors()">Test 7 Jurors (3+3+1)</button>
+        <button onclick="testNineJurors()">Test 9 Jurors (3+3+3)</button>
+        <button onclick="testEightJurors()">Test 8 Jurors (3+3+2)</button>
+        <button onclick="testBatchedVotesOnly()">Test Batched Votes Only</button>
+        <button onclick="testTallyScreenOnly()">Test Tally Screen Only</button>
+        <button onclick="clearAll()">Clear/Reset</button>
+    </div>
+    
+    <div id="tv"></div>
+    
+    <div class="info-panel">
+        <div class="info-title">Test Information</div>
+        <div class="info-item">• Batched display shows 3 vote cards at once, stacked vertically</div>
+        <div class="info-item">• After each batch, a tally screen shows updated counts + status message</div>
+        <div class="info-item">• Vote reasons are spicy, dramatic, and entertaining</div>
+        <div class="info-item">• Handles 7, 8, and 9 jurors with appropriate batching</div>
+    </div>
+    
+    <div id="status"></div>
+
+    <!-- Load required scripts -->
+    <script src="js/jury-viz.js"></script>
+    
+    <script>
+        // Mock game environment
+        window.game = window.game || {};
+        window.global = window.global || window;
+        
+        // Mock RNG for consistent testing
+        window.rng = () => Math.random();
+        
+        // Mock safe name function
+        window.safeName = (id) => {
+            const names = {
+                1: 'Alex', 2: 'Blake', 3: 'Casey', 4: 'Drew', 5: 'Eli',
+                6: 'Finn', 7: 'Gray', 8: 'Harper', 9: 'Iris',
+                'finalistA': 'Jordan', 'finalistB': 'Morgan'
+            };
+            return names[id] || `Player ${id}`;
+        };
+        
+        // Mock avatar resolver
+        window.getDicebearUrl = (seed) => {
+            return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+        };
+        
+        window.resolveAvatar = (playerId) => {
+            return window.getDicebearUrl(window.safeName(playerId));
+        };
+        
+        function log(message, type = 'status') {
+            const statusDiv = document.getElementById('status');
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            statusDiv.appendChild(div);
+            console.log(message);
+        }
+        
+        function clearAll() {
+            document.getElementById('status').innerHTML = '';
+            if (window.FinalFaceoff) {
+                window.FinalFaceoff.destroy();
+            }
+            log('✓ Cleared all displays', 'success');
+        }
+        
+        async function testSevenJurors() {
+            clearAll();
+            log('Testing 7 jurors (expected batches: 3+3+1)...', 'status');
+            
+            // Setup faceoff
+            const leftPlayer = { id: 'finalistA', name: 'Jordan', avatar: window.getDicebearUrl('Jordan') };
+            const rightPlayer = { id: 'finalistB', name: 'Morgan', avatar: window.getDicebearUrl('Morgan') };
+            
+            window.FinalFaceoff.mount({
+                left: leftPlayer,
+                right: rightPlayer,
+                majority: 4,
+                fullscreen: true
+            });
+            
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Simulate batched reveal
+            const jurors = [1, 2, 3, 4, 5, 6, 7];
+            await simulateBatchedReveal(jurors, 'finalistA', 'finalistB', 4);
+            
+            log('✓ 7 juror test complete', 'success');
+        }
+        
+        async function testNineJurors() {
+            clearAll();
+            log('Testing 9 jurors (expected batches: 3+3+3)...', 'status');
+            
+            // Setup faceoff
+            const leftPlayer = { id: 'finalistA', name: 'Jordan', avatar: window.getDicebearUrl('Jordan') };
+            const rightPlayer = { id: 'finalistB', name: 'Morgan', avatar: window.getDicebearUrl('Morgan') };
+            
+            window.FinalFaceoff.mount({
+                left: leftPlayer,
+                right: rightPlayer,
+                majority: 5,
+                fullscreen: true
+            });
+            
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Simulate batched reveal
+            const jurors = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            await simulateBatchedReveal(jurors, 'finalistA', 'finalistB', 5);
+            
+            log('✓ 9 juror test complete', 'success');
+        }
+        
+        async function testEightJurors() {
+            clearAll();
+            log('Testing 8 jurors (expected batches: 3+3+2)...', 'status');
+            
+            // Setup faceoff
+            const leftPlayer = { id: 'finalistA', name: 'Jordan', avatar: window.getDicebearUrl('Jordan') };
+            const rightPlayer = { id: 'finalistB', name: 'Morgan', avatar: window.getDicebearUrl('Morgan') };
+            
+            window.FinalFaceoff.mount({
+                left: leftPlayer,
+                right: rightPlayer,
+                majority: 5,
+                fullscreen: true
+            });
+            
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Simulate batched reveal
+            const jurors = [1, 2, 3, 4, 5, 6, 7, 8];
+            await simulateBatchedReveal(jurors, 'finalistA', 'finalistB', 5);
+            
+            log('✓ 8 juror test complete', 'success');
+        }
+        
+        async function simulateBatchedReveal(jurors, finalistA, finalistB, majority) {
+            // Batch jurors into groups of 3
+            const batches = [];
+            for (let i = 0; i < jurors.length; i += 3) {
+                const batchSize = Math.min(3, jurors.length - i);
+                batches.push(jurors.slice(i, i + batchSize));
+            }
+            
+            log(`Batches: ${batches.map(b => b.length).join('+')}`, 'status');
+            
+            let leftCount = 0;
+            let rightCount = 0;
+            
+            for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+                const batch = batches[batchIdx];
+                const batchVotes = [];
+                
+                // Generate votes for batch
+                for (const jurorId of batch) {
+                    const pick = Math.random() < 0.5 ? finalistA : finalistB;
+                    const pickName = window.safeName(pick);
+                    const jurorName = window.safeName(jurorId);
+                    
+                    // Generate spicy reason
+                    const reasons = [
+                        `${pickName} played everyone like a fiddle and I respect that hustle.`,
+                        `${pickName} didn't have to sell their soul to get here. That's rare.`,
+                        `Sorry not sorry, but ${pickName} ate and left no crumbs.`,
+                        `${pickName}'s game was chef's kiss. No notes.`,
+                        `My therapist said to vote with my heart. My heart says ${pickName}.`,
+                        `Both played great games, but ${pickName}'s endgame was flawless.`
+                    ];
+                    const reason = reasons[Math.floor(Math.random() * reasons.length)];
+                    
+                    batchVotes.push({
+                        jurorId: jurorId,
+                        jurorName: jurorName,
+                        finalistName: pickName,
+                        reason: reason,
+                        jurorAvatar: window.getDicebearUrl(jurorName),
+                        pick: pick
+                    });
+                    
+                    if (pick === finalistA) leftCount++;
+                    else rightCount++;
+                }
+                
+                // Show batched votes
+                log(`Showing batch ${batchIdx + 1} of ${batches.length} (${batch.length} votes)`, 'status');
+                await window.FinalFaceoff.showBatchedVotes(batchVotes, 3000);
+                
+                // Update counts
+                window.FinalFaceoff.setCounts({ left: leftCount, right: rightCount });
+                
+                // Generate and show tally
+                const votesRemaining = jurors.length - (leftCount + rightCount);
+                const message = window.FinalFaceoff.generateTallyMessage(leftCount, rightCount, majority, votesRemaining);
+                
+                log(`Tally: ${leftCount}-${rightCount} | ${message}`, 'status');
+                
+                if (batchIdx < batches.length - 1 || votesRemaining > 0) {
+                    await window.FinalFaceoff.showTallyScreen(leftCount, rightCount, message, 2000);
+                }
+            }
+            
+            log(`Final result: ${leftCount}-${rightCount}`, 'success');
+        }
+        
+        async function testBatchedVotesOnly() {
+            clearAll();
+            log('Testing batched votes display only...', 'status');
+            
+            // Setup faceoff
+            const leftPlayer = { id: 'finalistA', name: 'Jordan', avatar: window.getDicebearUrl('Jordan') };
+            const rightPlayer = { id: 'finalistB', name: 'Morgan', avatar: window.getDicebearUrl('Morgan') };
+            
+            window.FinalFaceoff.mount({
+                left: leftPlayer,
+                right: rightPlayer,
+                majority: 4,
+                fullscreen: true
+            });
+            
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Create sample batch
+            const batchVotes = [
+                {
+                    jurorName: 'Alex',
+                    finalistName: 'Jordan',
+                    reason: 'Jordan played everyone like a fiddle and I respect that hustle.',
+                    jurorAvatar: window.getDicebearUrl('Alex')
+                },
+                {
+                    jurorName: 'Blake',
+                    finalistName: 'Morgan',
+                    reason: "Sorry not sorry, but Morgan ate and left no crumbs.",
+                    jurorAvatar: window.getDicebearUrl('Blake')
+                },
+                {
+                    jurorName: 'Casey',
+                    finalistName: 'Jordan',
+                    reason: "My therapist said to vote with my heart. My heart says Jordan.",
+                    jurorAvatar: window.getDicebearUrl('Casey')
+                }
+            ];
+            
+            await window.FinalFaceoff.showBatchedVotes(batchVotes, 5000);
+            log('✓ Batched votes display test complete', 'success');
+        }
+        
+        async function testTallyScreenOnly() {
+            clearAll();
+            log('Testing tally screen display only...', 'status');
+            
+            // Setup faceoff
+            const leftPlayer = { id: 'finalistA', name: 'Jordan', avatar: window.getDicebearUrl('Jordan') };
+            const rightPlayer = { id: 'finalistB', name: 'Morgan', avatar: window.getDicebearUrl('Morgan') };
+            
+            window.FinalFaceoff.mount({
+                left: leftPlayer,
+                right: rightPlayer,
+                majority: 4,
+                fullscreen: true
+            });
+            
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Test different scenarios
+            const scenarios = [
+                { left: 2, right: 1, remaining: 4, desc: 'Early lead' },
+                { left: 2, right: 2, remaining: 3, desc: 'Tied votes' },
+                { left: 3, right: 2, remaining: 2, desc: 'One vote away' },
+                { left: 3, right: 3, remaining: 1, desc: 'Final vote tension' }
+            ];
+            
+            for (const scenario of scenarios) {
+                const message = window.FinalFaceoff.generateTallyMessage(
+                    scenario.left, 
+                    scenario.right, 
+                    4, 
+                    scenario.remaining
+                );
+                log(`Scenario: ${scenario.desc} | ${scenario.left}-${scenario.right} | "${message}"`, 'status');
+                await window.FinalFaceoff.showTallyScreen(scenario.left, scenario.right, message, 3000);
+                await new Promise(r => setTimeout(r, 500));
+            }
+            
+            log('✓ Tally screen test complete', 'success');
+        }
+        
+        // Auto-run test on load
+        window.addEventListener('load', () => {
+            log('Test page loaded. Click buttons to test different scenarios.', 'status');
+        });
+    </script>
+</body>
+</html>

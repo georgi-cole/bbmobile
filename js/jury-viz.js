@@ -783,7 +783,7 @@
   function el(tag, className, html){
     const n = document.createElement(tag);
     if (className) n.className = className;
-    if (html != null) n.innerHTML = html;
+    if (html !== null && html !== undefined) n.innerHTML = html;
     return n;
   }
   function pickAvatar(obj){
@@ -793,7 +793,11 @@
   function mount({ left, right, majority, container, fullscreen = true }){
     destroy();
     // Remove any left-over graph containers
-    try { document.querySelectorAll('.final-graph, .jury-graph, #finalGraph').forEach(x => x.remove()); } catch {}
+    try { 
+      document.querySelectorAll('.final-graph, .jury-graph, #finalGraph').forEach(x => x.remove()); 
+    } catch (e) {
+      console.warn('[jury-viz] cleanup error:', e);
+    }
 
     // Create fullscreen overlay if requested
     let overlay = null;
@@ -1103,7 +1107,9 @@
     try{ 
       if (state?.wrap) state.wrap.querySelectorAll(sel).forEach(x=>x.remove()); 
       if (state?.overlay) state.overlay.querySelectorAll(sel).forEach(x=>x.remove());
-    }catch{} 
+    } catch (e) {
+      console.warn('[jury-viz] remove error:', e);
+    }
   }
   
   // Create confetti burst
@@ -1219,7 +1225,9 @@
     try { 
       if (state.overlay) state.overlay.remove();
       if (state.wrap) state.wrap.remove();
-    } catch {}
+    } catch (e) {
+      console.warn('[jury-viz] cleanup error:', e);
+    }
     state = null;
     console.log('[jury-viz] Final Faceoff UI destroyed');
   }
