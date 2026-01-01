@@ -518,9 +518,9 @@
     view._keyHandler = keyHandler;
 
     // Start progress simulation with phase for context-aware messages
-    // Pass the competition progress fill element for animation
-    const competitionProgressFill = view.querySelector('.competition-progress-fill');
-    startProgressSimulation(competitorIds, competitionProgressFill, updateText, phase);
+    // Get the competition progress fill element for animation
+    const compProgressFill = view.querySelector('.competition-progress-fill');
+    startProgressSimulation(competitorIds, compProgressFill, updateText, phase);
 
     // Emit event
     if (global.game?.bus) {

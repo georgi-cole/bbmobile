@@ -446,7 +446,7 @@
 
     // Race lanes
     const lanes = [];
-    competitorIds.forEach((playerId, index) => {
+    competitorIds.forEach((playerId) => {
       const player = global.getP?.(playerId);
       if (!player) return;
 
@@ -694,7 +694,7 @@
       let maxHeight = 0;
       let lowestEndurance = 100;
       
-      climbers.forEach((climber, index) => {
+      climbers.forEach((climber) => {
         // Simulate climbing progress with slight randomness
         const currentBottom = parseInt(climber.element.style.bottom) || 20;
         const increment = config.climbIncrement.min + Math.random() * (config.climbIncrement.max - config.climbIncrement.min);
@@ -795,7 +795,7 @@
     ];
 
     let currentQuestion = 0;
-    let scores = competitors.map(() => 0);
+    const scores = competitors.map(() => 0);
     const updateText = document.querySelector('.spectator-update-text');
     const config = SIMULATION_CONFIG.trivia;
 
