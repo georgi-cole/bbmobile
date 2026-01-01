@@ -1934,6 +1934,13 @@
   async function finishF3P1() {
     const g = global.game; if (g.phase !== 'final3_comp1') return;
     
+    // Check if skip was requested from spectator view
+    const skipRequested = g.__skipRequested;
+    if (skipRequested) {
+      console.info('[F3P1] Skip requested, showing quick results');
+      g.__skipRequested = false;
+    }
+    
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
       global.SpectatorView.cleanup();
@@ -1978,8 +1985,8 @@
     g.__f3p1Winner = winner;
     global.addLog(`Final 3 Part 1: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
     
-    // Show cinematic transition if available
-    if (global.FinaleCinematics?.showPart1WinnerCinematic) {
+    // Show cinematic transition if available and not skipped
+    if (!skipRequested && global.FinaleCinematics?.showPart1WinnerCinematic) {
       try {
         await global.FinaleCinematics.showPart1WinnerCinematic(winner);
       } catch (e) {
@@ -1989,8 +1996,16 @@
         await new Promise(resolve => setTimeout(resolve, 4600));
       }
     } else {
-      safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', 4500, true);
-      await new Promise(resolve => setTimeout(resolve, 4600));
+      // Show winner card
+      const cardDuration = skipRequested ? 2000 : 4500;
+      safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', cardDuration, true);
+      await new Promise(resolve => setTimeout(resolve, cardDuration + 100));
+      
+      // If skipped, show "Get ready" card and set timer to 1 second
+      if (skipRequested) {
+        safeShowCard('⏭️ Get Ready', ['Advancing to Part 2...'], 'neutral', 1500, true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
     }
     
     startF3P2(losers);
@@ -2145,6 +2160,13 @@
   async function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
     
+    // Check if skip was requested from spectator view
+    const skipRequested = g.__skipRequested;
+    if (skipRequested) {
+      console.info('[F3P2] Skip requested, showing quick results');
+      g.__skipRequested = false;
+    }
+    
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
       global.SpectatorView.cleanup();
@@ -2159,34 +2181,33 @@
     
     const duo = (g.__f3_duo || []).slice();
     
-    // Check if skip was requested from spectator view
-    const skipRequested = g.__skipRequested;
-    if (skipRequested) {
-      console.info('[F3P2] Skip requested, showing quick reveal');
-      g.__skipRequested = false;
-    }
-    
     for (const id of duo) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
     const sorted = [...g.lastCompScores.entries()].filter(([id]) => duo.includes(id)).sort((a, b) => b[1] - a[1]);
     const winner = sorted[0][0];
     g.__f3p2Winner = winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
     
-    // Show cinematic transition if available
-    if (global.FinaleCinematics?.showPart2WinnerCinematic) {
+    // Show cinematic transition if available and not skipped
+    if (!skipRequested && global.FinaleCinematics?.showPart2WinnerCinematic) {
       try {
         await global.FinaleCinematics.showPart2WinnerCinematic(winner);
       } catch (e) {
         console.warn('[F3P2] Cinematic error:', e);
         // Fallback to card
-        const delay = skipRequested ? 1500 : 4500;
-        safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
-        await new Promise(resolve => setTimeout(resolve, delay + 100));
+        const cardDuration = 2000;
+        safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', cardDuration);
+        await new Promise(resolve => setTimeout(resolve, cardDuration + 100));
       }
     } else {
-      const delay = skipRequested ? 1500 : 4500;
-      safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
-      await new Promise(resolve => setTimeout(resolve, delay + 100));
+      const cardDuration = skipRequested ? 2000 : 4500;
+      safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', cardDuration);
+      await new Promise(resolve => setTimeout(resolve, cardDuration + 100));
+      
+      // If skipped, show "Get ready" card
+      if (skipRequested) {
+        safeShowCard('⏭️ Get Ready', ['Advancing to the Final Showdown...'], 'neutral', 1500, true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
     }
     
     startF3P3();
@@ -2401,6 +2422,13 @@
   async function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
     
+    // Check if skip was requested from spectator view
+    const skipRequested = g.__skipRequested;
+    if (skipRequested) {
+      console.info('[F3P3] Skip requested, showing quick results and advancing to decision');
+      g.__skipRequested = false;
+    }
+    
     // Clean up SpectatorView if it exists (legacy/fallback)
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
       global.SpectatorView.cleanup();
@@ -2420,13 +2448,6 @@
     }
     
     const finalists = (g.__f3_finalists || []).slice();
-    
-    // Check if skip was requested from spectator view
-    const skipRequested = g.__skipRequested;
-    if (skipRequested) {
-      console.info('[F3P3] Skip requested, showing quick reveal');
-      g.__skipRequested = false;
-    }
     
     for (const id of finalists) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
     const sorted = [...g.lastCompScores.entries()].filter(([id]) => finalists.includes(id)).sort((a, b) => b[1] - a[1]);
@@ -2450,21 +2471,33 @@
 
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`, 'ok');
     
-    // Show Final HOH cinematic if available
-    if (global.FinaleCinematics?.showFinalHOHCinematic) {
+    // Show Final HOH cinematic if available and not skipped
+    if (!skipRequested && global.FinaleCinematics?.showFinalHOHCinematic) {
       try {
         await global.FinaleCinematics.showFinalHOHCinematic(winner);
       } catch (e) {
         console.warn('[F3P3] Cinematic error:', e);
         // Fallback to card
-        const delay = skipRequested ? 2000 : 5000;
-        safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
-        await new Promise(resolve => setTimeout(resolve, delay + 50));
+        const cardDuration = 2500;
+        safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', cardDuration);
+        await new Promise(resolve => setTimeout(resolve, cardDuration + 50));
       }
     } else {
-      const delay = skipRequested ? 2000 : 5000;
-      safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
-      await new Promise(resolve => setTimeout(resolve, delay + 50));
+      const cardDuration = skipRequested ? 2000 : 5000;
+      safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', cardDuration);
+      await new Promise(resolve => setTimeout(resolve, cardDuration + 50));
+      
+      // If skipped, show "Get ready" card and set phase timer to 1 second
+      if (skipRequested) {
+        safeShowCard('⏭️ Get Ready', ['Proceeding to Final 3 Eviction...'], 'neutral', 1500, true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Set the decision phase with a very short timer (1 second)
+        global.tv.say('Final 3 Eviction Ceremony');
+        global.setPhase('final3_decision', 1, () => global.finalizeFinal3Decision?.());
+        global.renderFinal3DecisionPanel?.();
+        return;
+      }
     }
     
     global.tv.say('Final 3 Eviction Ceremony');

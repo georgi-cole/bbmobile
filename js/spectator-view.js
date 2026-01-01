@@ -12,70 +12,83 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
   };
 
-  // Progress messages for simulated updates (varied by phase)
+  // Progress messages for simulated updates (varied by phase) - enhanced commentary
   const PROGRESS_MESSAGES = {
     common: [
       'Round {round} complete...',
-      'Scores are close!',
-      'Competition heating up...',
-      '{name} takes the lead!',
-      'Neck and neck!',
-      '{name} pulls ahead!',
-      'Final moments...',
-      'Almost finished!',
-      '{name} showing strong performance!',
-      'This could go either way...'
+      'The scores are incredibly close!',
+      'The competition is heating up fast!',
+      '{name} surges into the lead!',
+      'This is turning into a nail-biter!',
+      '{name} pulls ahead with a strong performance!',
+      'We\'re in the final moments of this intense battle!',
+      'Almost at the finish line!',
+      '{name} is showing incredible skill right now!',
+      'This could go either way at this point...',
+      'What an impressive display of determination!',
+      'The tension in the house is palpable!'
     ],
     part1: [
-      'All three competitors pushing hard!',
-      'Who will advance to Part 3?',
-      'The pressure is intense!',
-      'One will move directly to the finale!',
-      'Two will face off in Part 2!'
+      'All three competitors are giving it everything they\'ve got!',
+      'Who will secure that coveted spot in Part 3?',
+      'The pressure is absolutely intense right now!',
+      'One houseguest will move directly to the finale!',
+      'Two competitors will have to battle it out in Part 2!',
+      'This is the most crucial competition of the season!',
+      'Every single point matters in this showdown!'
     ],
     part2: [
-      'Head-to-head battle in progress!',
-      'Only one can advance!',
-      'The loser is out of contention!',
-      'Fighting for that Part 3 spot!',
-      'This determines who faces the Part 1 winner!'
+      'This head-to-head battle is absolutely electric!',
+      'Only one can advance - the stakes couldn\'t be higher!',
+      'The loser\'s game ends here and now!',
+      'Fighting tooth and nail for that Part 3 spot!',
+      'This determines who faces the Part 1 winner in the finale!',
+      'Both competitors know there\'s no second chance!',
+      'The intensity of this duel is off the charts!'
     ],
     part3: [
-      'The final showdown is here!',
-      'Who will become Final HOH?',
-      'This decides who controls the Final 2!',
-      'Winner makes the ultimate eviction decision!',
-      'The finale is on the line!'
+      'The final showdown is here - this is it!',
+      'Who will become the Final Head of Household?',
+      'This competition decides who controls the Final 2!',
+      'The winner makes the ultimate eviction decision!',
+      'The entire finale comes down to this moment!',
+      'Everything they\'ve worked for is on the line!',
+      'History is being made right before our eyes!'
     ]
   };
 
-  // Commentary phrases for dramatic effect (varied by phase)
+  // Commentary phrases for dramatic effect (varied by phase) - enhanced for realism
   const COMMENTARY_PHRASES = {
     common: [
-      'The tension is palpable!',
-      'Both competitors are giving it their all!',
-      'What a showdown!',
-      'This is anyone\'s game!',
-      'The stakes have never been higher!',
-      'Who will come out on top?'
+      'The tension is absolutely palpable!',
+      'Both competitors are leaving everything out there!',
+      'What an incredible showdown we\'re witnessing!',
+      'This is truly anyone\'s game to win!',
+      'The stakes have never been higher than this!',
+      'Who will come out on top? We\'re about to find out!',
+      'The drama is reaching fever pitch!',
+      'This is Big Brother at its absolute finest!'
     ],
     part1: [
-      'Three houseguests, one goal!',
-      'Every point matters right now!',
-      'This will reshape the Final 3!',
-      'The competition is fierce!'
+      'Three houseguests, one ultimate goal!',
+      'Every single point is critical right now!',
+      'This will completely reshape the Final 3 dynamic!',
+      'The competition is absolutely fierce!',
+      'One wrong move could change everything!'
     ],
     part2: [
-      'Winner takes all in this round!',
-      'One mistake could cost everything!',
-      'The intensity is incredible!',
-      'No room for error here!'
+      'Winner takes all in this crucial round!',
+      'One mistake could cost them everything!',
+      'The intensity is absolutely incredible!',
+      'There is absolutely no room for error here!',
+      'This is do or die for both competitors!'
     ],
     part3: [
-      'The ultimate competition!',
-      'Everything comes down to this!',
-      'The power to choose Final 2!',
-      'History in the making!'
+      'This is the ultimate competition!',
+      'Everything comes down to this single moment!',
+      'The power to choose the Final 2 is at stake!',
+      'We are witnessing history in the making!',
+      'The winner controls their own destiny!'
     ]
   };
 
@@ -139,19 +152,21 @@
       text-align: center;
     `;
 
-    // Title
+    // Title - shortened for mobile with reduced font size
     const title = document.createElement('h3');
-    title.textContent = `🎬 ${phase} in Progress`;
+    // Shorten "Final 3 — Part X in Progress" to just "Final 3 - Part X"
+    const shortPhase = phase.replace('—', '-').replace(' in Progress', '');
+    title.textContent = `🎬 ${shortPhase}`;
     title.style.cssText = `
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: #ffdc8b;
-      margin: 0 0 32px 0;
+      margin: 0 0 20px 0;
       text-shadow: 0 2px 12px rgba(255, 220, 139, 0.5);
     `;
     contentWrapper.appendChild(title);
 
-    // Competitors container
+    // Competitors container - reduced margin for tighter spacing
     const competitorsBox = document.createElement('div');
     competitorsBox.className = 'spectator-competitors';
     competitorsBox.style.cssText = `
@@ -160,7 +175,7 @@
       justify-content: center;
       align-items: center;
       gap: clamp(8px, 2vw, 16px);
-      margin-bottom: 32px;
+      margin-bottom: 20px;
       flex-wrap: nowrap;
       width: 100%;
       padding: 0 8px;
@@ -176,7 +191,7 @@
         background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
         border: 3px solid #6b7a99;
         border-radius: 16px;
-        padding: clamp(12px, 3vw, 20px);
+        padding: clamp(10px, 2.5vw, 16px);
         flex: 1 1 0;
         max-width: 48%;
         min-width: 0;
@@ -209,7 +224,7 @@
         height: clamp(60px, 15vw, 80px);
         border-radius: 50%;
         border: 4px solid #ffdc8b;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         animation: pulse 2s ease infinite;
         box-shadow: 0 4px 16px rgba(255,220,139,0.4);
         object-fit: cover;
@@ -219,14 +234,14 @@
       `;
       competitorCard.appendChild(avatar);
 
-      // Name
+      // Name - reduced margin
       const name = document.createElement('div');
       name.textContent = player.name;
       name.style.cssText = `
         font-size: clamp(0.9rem, 3vw, 1.2rem);
         font-weight: 700;
         color: #cedbeb;
-        margin-bottom: 12px;
+        margin-bottom: 6px;
         position: relative;
         z-index: 1;
         text-align: center;
@@ -234,7 +249,7 @@
       `;
       competitorCard.appendChild(name);
 
-      // Status indicator
+      // Status indicator - reduced margin
       const status = document.createElement('div');
       status.className = 'competitor-status';
       status.textContent = 'Competing...';
@@ -245,10 +260,11 @@
         position: relative;
         z-index: 1;
         text-align: center;
+        margin-bottom: 6px;
       `;
       competitorCard.appendChild(status);
 
-      // Score display (simulated)
+      // Score display (simulated) - reduced top margin
       const score = document.createElement('div');
       score.className = 'competitor-score';
       score.textContent = '---';
@@ -256,7 +272,7 @@
         font-size: clamp(1.1rem, 4vw, 1.5rem);
         font-weight: 800;
         color: #83bfff;
-        margin-top: 12px;
+        margin-top: 6px;
         font-family: 'Courier New', monospace;
         position: relative;
         z-index: 1;
@@ -269,16 +285,16 @@
 
     contentWrapper.appendChild(competitorsBox);
 
-    // Game preview box with animated preview
+    // Game preview box with animated preview - tighter spacing
     const gamePreview = document.createElement('div');
     gamePreview.className = 'spectator-game-preview';
     gamePreview.style.cssText = `
       background: linear-gradient(145deg, rgba(30,30,60,0.9) 0%, rgba(20,20,40,0.9) 100%);
       border: 3px solid #4a5a7a;
       border-radius: 16px;
-      padding: 32px;
-      margin-bottom: 32px;
-      min-height: 200px;
+      padding: 20px;
+      margin-bottom: 20px;
+      min-height: 180px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -308,8 +324,8 @@
     const gameIcon = document.createElement('div');
     gameIcon.textContent = getGameIcon(gameType);
     gameIcon.style.cssText = `
-      font-size: 4rem;
-      margin-bottom: 16px;
+      font-size: 3.5rem;
+      margin-bottom: 12px;
       animation: pulse 2s ease infinite;
       filter: drop-shadow(0 4px 16px rgba(255,220,139,0.3));
       position: relative;
@@ -320,22 +336,22 @@
     const gameName = document.createElement('div');
     gameName.textContent = getGameDisplayName(gameType);
     gameName.style.cssText = `
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: #cedbeb;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       text-shadow: 0 2px 8px rgba(0,0,0,0.5);
       position: relative;
       z-index: 1;
     `;
     gamePreview.appendChild(gameName);
     
-    // Add simulated game activity indicator
+    // Add simulated game activity indicator - tighter spacing
     const activityIndicator = document.createElement('div');
     activityIndicator.style.cssText = `
       display: flex;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       position: relative;
       z-index: 1;
     `;
@@ -354,13 +370,13 @@
     }
     gamePreview.appendChild(activityIndicator);
 
-    // Add visual game simulation preview
+    // Add visual game simulation preview - reduced margin
     const gameSimulation = document.createElement('div');
     gameSimulation.className = 'game-simulation';
     gameSimulation.style.cssText = `
       display: flex;
       gap: 12px;
-      margin: 20px 0;
+      margin: 12px 0;
       position: relative;
       z-index: 1;
       justify-content: center;
@@ -438,7 +454,7 @@
       background: rgba(107, 122, 153, 0.3);
       border-radius: 6px;
       overflow: hidden;
-      margin-top: 16px;
+      margin-top: 12px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
       position: relative;
       z-index: 1;
@@ -459,15 +475,44 @@
 
     contentWrapper.appendChild(gamePreview);
     
+    // Add background competition-themed emojis
+    const bgEmojis = document.createElement('div');
+    bgEmojis.className = 'bg-emojis';
+    bgEmojis.style.cssText = `
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+      opacity: 0.15;
+    `;
+    // Create floating emojis
+    const competitionEmojis = ['🏆', '⚡', '🎯', '💪', '🔥', '⭐', '🎪', '🎭', '🎬', '👑'];
+    for (let i = 0; i < 12; i++) {
+      const emoji = document.createElement('div');
+      emoji.textContent = competitionEmojis[Math.floor(Math.random() * competitionEmojis.length)];
+      emoji.style.cssText = `
+        position: absolute;
+        font-size: ${40 + Math.random() * 40}px;
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        animation: floatEmoji ${15 + Math.random() * 10}s ease-in-out infinite;
+        animation-delay: ${Math.random() * 5}s;
+        transform: rotate(${Math.random() * 40 - 20}deg);
+      `;
+      bgEmojis.appendChild(emoji);
+    }
+    view.appendChild(bgEmojis);
+    
     // Inject additional animations if not already present
     injectSpectatorAnimations();
 
-    // Progress updates container
+    // Progress updates container - reduced height and margin
     const updatesBox = document.createElement('div');
     updatesBox.className = 'spectator-updates';
     updatesBox.style.cssText = `
-      min-height: 80px;
-      margin-bottom: 32px;
+      min-height: 60px;
+      margin-bottom: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -622,10 +667,14 @@
       ...(COMMENTARY_PHRASES[phaseKey] || [])
     ];
     
-    // Animate progress bar
+    // Track elapsed updates to calculate progress
+    let elapsedUpdates = 0;
+    const totalExpectedUpdates = 10; // Estimate 10 updates over competition duration
+    
+    // Animate progress bar to fill gradually over time
     setTimeout(() => {
       if (progressFill) {
-        progressFill.style.width = '90%';
+        progressFill.style.width = '15%';
       }
     }, 500);
 
@@ -637,10 +686,17 @@
     // Update messages periodically
     progressInterval = setInterval(() => {
       updateCount++;
+      elapsedUpdates++;
       
       // Increment round number occasionally
       if (updateCount % 4 === 0) {
         roundNumber++;
+      }
+
+      // Update progress bar to reflect actual progress
+      if (progressFill) {
+        const progressPercent = Math.min(95, (elapsedUpdates / totalExpectedUpdates) * 100);
+        progressFill.style.width = `${progressPercent}%`;
       }
 
       // Update scores with random increments
@@ -832,6 +888,25 @@
         50% {
           transform: scaleY(1);
           opacity: 1;
+        }
+      }
+      
+      @keyframes floatEmoji {
+        0%, 100% {
+          transform: translateY(0) translateX(0) rotate(0deg);
+          opacity: 0.15;
+        }
+        25% {
+          transform: translateY(-30px) translateX(20px) rotate(10deg);
+          opacity: 0.25;
+        }
+        50% {
+          transform: translateY(-50px) translateX(-10px) rotate(-5deg);
+          opacity: 0.15;
+        }
+        75% {
+          transform: translateY(-30px) translateX(-20px) rotate(15deg);
+          opacity: 0.25;
         }
       }
     `;

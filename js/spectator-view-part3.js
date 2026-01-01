@@ -115,11 +115,11 @@
   }
 
   /**
-   * Create "Hold the Wall" endurance competition view
+   * Create "Climb the Wall" endurance competition view
    */
   function createHoldWallView(competitorIds) {
-    const view = createBaseView('🧱 Hold the Wall - Final Showdown', 
-      'Who can hold on the longest? The last one standing becomes Final HOH!');
+    const view = createBaseView('🧱 Climb the Wall', 
+      'Who can climb to the top first? The winner becomes Final HOH!');
 
     const contentWrapper = view.querySelector('.content-wrapper');
     
@@ -594,11 +594,11 @@
       text-align: center;
     `;
 
-    // Title
+    // Title - reduced size for mobile
     const titleEl = document.createElement('h3');
     titleEl.textContent = title;
     titleEl.style.cssText = `
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: #ffdc8b;
       margin: 0 0 12px 0;
@@ -611,19 +611,19 @@
     const subtitleEl = document.createElement('div');
     subtitleEl.textContent = subtitle;
     subtitleEl.style.cssText = `
-      font-size: 1.1rem;
+      font-size: 1rem;
       color: #8a9ab8;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
       font-style: italic;
     `;
     contentWrapper.appendChild(subtitleEl);
 
-    // Progress updates container (will be populated by specific variants)
+    // Progress updates container (will be populated by specific variants) - reduced margin
     const updatesBox = document.createElement('div');
     updatesBox.className = 'spectator-updates';
     updatesBox.style.cssText = `
       min-height: 60px;
-      margin: 32px 0 24px 0;
+      margin: 20px 0 20px 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -687,15 +687,22 @@
     const config = SIMULATION_CONFIG.holdWall;
     
     const messages = [
-      'Both competitors gripping the wall tight!',
-      'The pressure is mounting...',
-      'Who will slip first?',
-      'Endurance levels dropping!',
-      'One mistake could cost everything!',
-      'The wall is getting harder to hold!',
-      'Final moments approaching...',
-      'This is incredibly intense!'
+      'Both climbers are pushing upward!',
+      'The wall is getting steeper!',
+      'Who will reach the top first?',
+      'They\'re climbing higher and higher!',
+      'One wrong move could mean the difference!',
+      'The summit is in sight!',
+      'Final push to the top approaching...',
+      'This is an incredible display of endurance!',
+      'The competition is intensifying!',
+      'Both competitors showing amazing determination!'
     ];
+    
+    // Initial message
+    if (updateText) {
+      updateText.textContent = 'The climb begins!';
+    }
 
     progressInterval = setInterval(() => {
       elapsed++;
@@ -721,7 +728,7 @@
         }
       });
 
-      // Update message
+      // Update message dynamically
       if (updateText) {
         const msg = messages[elapsed % messages.length];
         updateText.textContent = msg;
@@ -752,6 +759,11 @@
     let scores = competitors.map(() => 0);
     const updateText = document.querySelector('.spectator-update-text');
     const config = SIMULATION_CONFIG.trivia;
+    
+    // Initial message
+    if (updateText) {
+      updateText.textContent = 'The trivia battle begins!';
+    }
 
     progressInterval = setInterval(() => {
       currentQuestion++;
@@ -792,11 +804,13 @@
             }
           });
 
-          // Update commentary
+          // Update commentary dynamically
           if (updateText) {
             const leader = competitors.reduce((prev, curr, idx) => 
               scores[idx] > scores[prev] ? idx : prev, 0);
-            const msg = `${competitors[leader].player.name} leading with ${scores[leader]} points!`;
+            const msg = scores[leader] > 0 
+              ? `${competitors[leader].player.name} is dominating with ${scores[leader]} points!`
+              : 'The competition is heating up!';
             updateText.textContent = msg;
             updateText.style.animation = 'none';
             void updateText.offsetWidth;
@@ -818,16 +832,23 @@
     
     const messages = [
       'Lightning-fast reflexes on display!',
-      'The pace is relentless!',
-      'Who can maintain this speed?',
-      'Every second counts!',
-      'The pressure is immense!',
-      'One competitor pulls ahead!',
+      'The pace is absolutely relentless!',
+      'Who can maintain this incredible speed?',
+      'Every millisecond counts right now!',
+      'The pressure is absolutely immense!',
+      'One competitor surges ahead!',
       'This is neck and neck!',
-      'Final push to the finish!'
+      'Final push to the finish line!',
+      'The intensity is off the charts!',
+      'Both competitors are in the zone!'
     ];
 
     const scores = lanes.map(() => 0);
+    
+    // Initial message
+    if (updateText) {
+      updateText.textContent = 'The speed challenge is underway!';
+    }
 
     progressInterval = setInterval(() => {
       elapsed++;
@@ -852,11 +873,11 @@
       const leaderIndex = scores.reduce((prev, curr, idx) => 
         curr > scores[prev] ? idx : prev, 0);
 
-      // Update message
+      // Update message dynamically
       if (updateText) {
         const msg = elapsed % 3 === 0 
           ? messages[elapsed % messages.length]
-          : `${lanes[leaderIndex].player.name} in the lead!`;
+          : `${lanes[leaderIndex].player.name} is leading the charge!`;
         updateText.textContent = msg;
         updateText.style.animation = 'none';
         void updateText.offsetWidth;
