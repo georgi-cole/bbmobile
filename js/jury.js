@@ -92,11 +92,12 @@
     return thA>thB ? B : A;
   }
   
-  // Generate dynamic vote reason based on ballot logic
+  // Generate dynamic vote reason based on ballot logic with spicy/entertaining options
   function generateVoteReason(jurorId, pick, A, B, usedReasons = new Set()){
     const j = gp(jurorId);
     const finalist = gp(pick);
     const finalistName = safeName(pick);
+    const otherName = safeName(pick === A ? B : A);
     
     if(!j || !finalist) return `I vote for ${finalistName} to win Big Brother.`;
     
@@ -104,39 +105,56 @@
     const affOther = j.affinity?.[pick === A ? B : A] ?? 0;
     const thPick = finalist.threat ?? 0.5;
     
-    // Reason templates based on ballot logic
+    // Expanded reason pool with spicy, juicy, and entertaining options
     const reasons = [];
     
-    // Affinity-based reasons
-    if(affPick > affOther + 0.15){
+    // Pro-strategic gameplay (use when voting for high-threat player)
+    if(thPick > 0.6){
+      reasons.push(`${finalistName} played everyone like a fiddle and I respect that hustle.`);
+      reasons.push(`Manipulation is an art form, and ${finalistName} is Picasso.`);
+      reasons.push(`${finalistName}'s game was chef's kiss. No notes.`);
+      reasons.push(`The lies? Iconic. The blindsides? Legendary. ${finalistName} earned this.`);
+      reasons.push(`${finalistName} understood the assignment. ${otherName}... had the wrong syllabus.`);
+      reasons.push(`${finalistName}'s chaos was entertaining. ${otherName}'s chaos was just messy.`);
+      reasons.push(`${finalistName} controlled the game masterfully.`);
+      reasons.push(`${finalistName}'s strategic moves were brilliant.`);
+    }
+    
+    // Pro-social gameplay (use when voting for player with high affinity)
+    if(affPick > affOther + 0.1){
+      reasons.push(`${finalistName} didn't have to sell their soul to get here. That's rare.`);
+      reasons.push(`${finalistName} proved you can win without being a snake. Refreshing.`);
+      reasons.push(`${finalistName} actually remembers my name. That's more than ${otherName} ever did.`);
+      reasons.push(`${finalistName} played with integrity.`);
       reasons.push(`${finalistName} and I had great chemistry in the house.`);
       reasons.push(`${finalistName} always had my back when it mattered.`);
-      reasons.push(`I trust ${finalistName}'s loyalty completely.`);
-    } else if(affPick > affOther + 0.05){
-      reasons.push(`${finalistName} played with integrity.`);
-      reasons.push(`${finalistName} was genuine with everyone.`);
     }
     
-    // Threat/strategy-based reasons
-    if(thPick > 0.65){
-      reasons.push(`${finalistName} dominated competitions when needed.`);
-      reasons.push(`${finalistName}'s strategic moves were brilliant.`);
-      reasons.push(`${finalistName} controlled the game masterfully.`);
-    } else if(thPick > 0.45){
-      reasons.push(`${finalistName} played a well-rounded game.`);
-      reasons.push(`${finalistName} adapted to every situation.`);
-    } else {
-      reasons.push(`${finalistName}'s social game was underrated.`);
-      reasons.push(`${finalistName} navigated the house brilliantly.`);
+    // Bitter/shady reasons (use when other finalist has low affinity)
+    if(affOther < 0.3){
+      reasons.push(`I'm voting for ${finalistName} because ${otherName} literally forgot I existed.`);
+      reasons.push(`${finalistName} stabbed me in the back, but at least they looked me in the eye first.`);
+      reasons.push(`${otherName}'s game was about as exciting as watching paint dry.`);
+      reasons.push(`I'm petty and I own it. ${finalistName} gets my vote because ${otherName} annoyed me.`);
     }
     
-    // Underdog reasons
+    // Funny/dramatic reasons
+    reasons.push(`Sorry not sorry, but ${finalistName} ate and left no crumbs.`);
+    reasons.push(`My therapist said to vote with my heart. My heart says ${finalistName}.`);
+    reasons.push(`I came here to play, not make friends. ${finalistName} gets that.`);
+    
+    // Respectful reasons
+    reasons.push(`Both played great games, but ${finalistName}'s endgame was flawless.`);
+    reasons.push(`${finalistName} fought from the bottom and clawed their way here. Respect.`);
+    reasons.push(`${finalistName} never gave up, even when the house turned on them.`);
+    
+    // Underdog reasons (use for low-threat players)
     if(thPick < 0.4){
       reasons.push(`${finalistName} overcame incredible odds.`);
       reasons.push(`${finalistName}'s resilience impressed me.`);
     }
     
-    // Generic high-quality reasons
+    // Generic high-quality reasons (always available)
     reasons.push(`${finalistName} earned my respect throughout the season.`);
     reasons.push(`${finalistName} deserves this win, hands down.`);
     reasons.push(`${finalistName} played the better game overall.`);
@@ -1425,7 +1443,7 @@
     }, durationMs);
   }
 
-  // Phase 3: Jury Reveal with vote tallies
+  // Phase 3: Jury Reveal with batched vote display
   async function startJuryRevealPhase(jurors, A, B){
     const gg = g.game || {};
     const finale = ensureFinaleState();
@@ -1442,57 +1460,8 @@
     
     // Shuffle reveal order
     const order = jurors.slice().sort(()=>rng()-.5);
-    
-    // Timing constants for jury reveal pacing
-    const MAX_JURY_REVEAL_DURATION_MS = 60000; // 60s cap for better pacing
-    const MIN_SLOT_DURATION_MS = 800; // Minimum slot duration when compressed
-    
-    // Calculate pacing with optimized durations for better UX
     const numJurors = order.length;
-    
-    // Optimized baseline durations (for 9 jurors):
-    // Early jurors (1-3): 1.8s each (faster initial pace)
-    // Mid jurors (4-6): 2.4s each (build tension)
-    // Late jurors (7-8): 3.0s each (increase drama)
-    // Final juror (9): 4.0s (maximum drama for final vote)
-    
-    function getBaselineDuration(index, total) {
-      const position = index + 1;
-      if (position <= 3) return 1800; // Early
-      if (position <= 6) return 2400; // Mid
-      if (position < total) return 3000; // Late
-      return 4000; // Final juror
-    }
-    
-    // Calculate baseline total
-    let baselineMs = 0;
-    for (let i = 0; i < numJurors; i++) {
-      baselineMs += getBaselineDuration(i, numJurors);
-    }
-    
-    // Log pacing summary
-    const totalPlannedMs = baselineMs;
-    console.info(`[jury] pacing totalPlannedMs=${totalPlannedMs} cap=${MAX_JURY_REVEAL_DURATION_MS} compressed=${baselineMs > MAX_JURY_REVEAL_DURATION_MS}`);
-    
-    // Determine if compression needed
-    let durations = [];
-    let compressionApplied = false;
-    
-    if (baselineMs > MAX_JURY_REVEAL_DURATION_MS) {
-      // Apply compression: evenly distribute maxTotalMs across all reveals
-      const slotDur = Math.max(MIN_SLOT_DURATION_MS, MAX_JURY_REVEAL_DURATION_MS / numJurors);
-      durations = new Array(numJurors).fill(slotDur);
-      compressionApplied = true;
-      console.info(`[jury] pacing compressed newCap=60s remaining=${numJurors} slotDur=${slotDur.toFixed(1)}ms`);
-    } else {
-      // No compression needed, use baseline durations with jitter
-      for (let i = 0; i < numJurors; i++) {
-        const base = getBaselineDuration(i, numJurors);
-        // Add jitter ±0.4s (±400ms)
-        const jitter = (rng() * 2 - 1) * 400;
-        durations.push(Math.max(MIN_SLOT_DURATION_MS, base + jitter));
-      }
-    }
+    const need = Math.floor(numJurors / 2) + 1;
     
     // Track if fast-forward has been triggered
     finale.fastForwardActive = false;
@@ -1505,61 +1474,112 @@
       }
     });
     
-    // Reveal each juror's vote
-    const need = Math.floor(numJurors / 2) + 1;
-    let majorityReached = false;
-    const usedReasons = new Set(); // Track used reasons to avoid repetition
+    // Batch jurors into groups of 3 (with appropriate handling of remainder)
+    const batches = [];
+    for (let i = 0; i < order.length; i += 3) {
+      const batchSize = Math.min(3, order.length - i);
+      batches.push(order.slice(i, i + batchSize));
+    }
     
-    for (let i = 0; i < order.length; i++) {
-      const jid = order[i];
+    console.info(`[juryReveal] ${numJurors} jurors split into ${batches.length} batches:`, batches.map(b => b.length).join('+'));
+    
+    const usedReasons = new Set(); // Track used reasons to avoid repetition
+    let majorityReached = false;
+    
+    // Reveal each batch
+    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+      const batch = batches[batchIdx];
+      const batchVotes = [];
       
-      // Determine delay for this reveal
-      let delay = durations[i];
-      
-      // If fast-forward is active, reduce to 0.5s
-      if (finale.fastForwardActive) {
-        delay = 500;
+      // Collect votes for this batch
+      for (const jid of batch) {
+        // Find this juror's vote
+        const voteRecord = finale.juryVotesRaw.find(v => v.jurorId === jid);
+        const pick = voteRecord ? voteRecord.pick : ballotPick(jid, A, B);
+        
+        // Generate dynamic reason
+        const dynamicReason = generateVoteReason(jid, pick, A, B, usedReasons);
+        
+        // Get avatar
+        const jurorAvatar = getAvatar(jid);
+        
+        batchVotes.push({
+          jurorId: jid,
+          jurorName: safeName(jid),
+          finalistName: safeName(pick),
+          reason: dynamicReason,
+          jurorAvatar: jurorAvatar,
+          pick: pick
+        });
       }
       
-      // Wait before revealing
-      await sleep(delay);
+      // Display this batch of votes (stacked cards)
+      const votesDisplayTime = finale.fastForwardActive ? 1500 : 4500;
       
-      // Find this juror's vote
-      const voteRecord = finale.juryVotesRaw.find(v => v.jurorId === jid);
-      const pick = voteRecord ? voteRecord.pick : ballotPick(jid, A, B);
-      
-      votes.set(pick, (votes.get(pick)||0)+1);
-      
-      // Hook: Log XP for jury vote
-      if(g.ProgressionEvents?.onJuryVote){
-        g.ProgressionEvents.onJuryVote(pick);
+      if (typeof g.FinalFaceoff?.showBatchedVotes === 'function') {
+        await g.FinalFaceoff.showBatchedVotes(batchVotes, votesDisplayTime);
+      } else {
+        // Fallback: display one-by-one if batched function not available
+        for (const vote of batchVotes) {
+          addFaceoffVoteCard(vote.jurorName, vote.finalistName, vote.reason, vote.jurorId);
+          await sleep(1500);
+        }
       }
       
-      // Generate dynamic reason based on ballot logic
-      const dynamicReason = generateVoteReason(jid, pick, A, B, usedReasons);
+      // Update vote counts after batch
+      for (const vote of batchVotes) {
+        votes.set(vote.pick, (votes.get(vote.pick)||0)+1);
+        
+        // Hook: Log XP for jury vote
+        if(g.ProgressionEvents?.onJuryVote){
+          g.ProgressionEvents.onJuryVote(vote.pick);
+        }
+        
+        console.info(`[jury] voteReveal juror=${vote.jurorId} finalist=${vote.pick}`);
+      }
       
-      // Note: Removed duplicate addJuryLog calls here to prevent side messages during finale vote reveal
-      // The reasoning and vote are already shown in the centered vote card (addFaceoffVoteCard below)
-      // g.addJuryLog?.(`${safeName(jid)}: ${dynamicReason}`, 'muted');
-      // g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
+      const a = votes.get(A) || 0;
+      const b = votes.get(B) || 0;
       
-      // Enhanced logging with scores
-      const scoreA = votes.get(A) || 0;
-      const scoreB = votes.get(B) || 0;
-      const newScoreA = pick === A ? scoreA + 1 : scoreA;
-      const newScoreB = pick === B ? scoreB + 1 : scoreB;
-      console.info(`[jury] voteReveal juror=${jid} finalist=${pick} scoreA=${newScoreA} scoreB=${newScoreB}`);
+      // Update fullscreen overlay UI with new counts
+      updateFinaleGraph(a, b);
       
-      // Update fullscreen overlay UI with vote
-      const a=votes.get(A)||0, b=votes.get(B)||0;
-      updateFinaleGraph(a,b);
-      addFaceoffVoteCard(safeName(jid), safeName(pick), dynamicReason, jid);
-      
-      // Check for majority clinch (but don't fast-track unless would exceed cap)
+      // Check for majority clinch
       if (!majorityReached && (a >= need || b >= need)) {
         majorityReached = true;
         console.info(`[juryReveal] majority clinched votes=${a}-${b}`);
-        // Keep dramatic pacing when under cap (no fast-tracking)
+      }
+      
+      // Show tally screen after each batch (except possibly after the last one)
+      const votesRemaining = numJurors - (a + b);
+      const tallyDisplayTime = finale.fastForwardActive ? 1000 : 3000;
+      
+      // Generate dynamic status message
+      let statusMessage = '';
+      if (typeof g.FinalFaceoff?.generateTallyMessage === 'function') {
+        statusMessage = g.FinalFaceoff.generateTallyMessage(a, b, need, votesRemaining);
+      } else {
+        // Fallback message
+        const leader = a > b ? safeName(A) : safeName(B);
+        const leaderCount = Math.max(a, b);
+        const votesNeeded = need - leaderCount;
+        if (leaderCount >= need) {
+          statusMessage = `The winner is decided, but let's see how the rest vote!`;
+        } else if (a === b) {
+          statusMessage = `Votes are tied! The tension is real!`;
+        } else {
+          statusMessage = `${leader} is ${votesNeeded} votes away from winning!`;
+        }
+      }
+      
+      // Show tally screen (skip if it's the last batch and all votes are in)
+      if (votesRemaining > 0 || batchIdx < batches.length - 1) {
+        if (typeof g.FinalFaceoff?.showTallyScreen === 'function') {
+          await g.FinalFaceoff.showTallyScreen(a, b, statusMessage, tallyDisplayTime);
+        } else {
+          // Fallback: just wait
+          await sleep(tallyDisplayTime);
+        }
       }
     }
     
