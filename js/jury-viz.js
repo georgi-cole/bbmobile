@@ -854,8 +854,12 @@
       left: 50%;
       transform: translate(-50%, -50%);
       z-index: 10002;
-      max-width: min(480px, 90%);
+      max-width: min(480px, 90vw);
+      width: 100%;
+      margin: 0 auto;
       animation: cardFloatIn 0.5s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+      /* Ensure proper centering on all viewports */
+      box-sizing: border-box;
     `;
     
     // Card title with juror name

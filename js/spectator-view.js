@@ -12,29 +12,72 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
   };
 
-  // Progress messages for simulated updates
-  const PROGRESS_MESSAGES = [
-    'Round 1 complete...',
-    'Scores are close!',
-    'Competition heating up...',
-    '{name} takes the lead!',
-    'Neck and neck!',
-    '{name} pulls ahead!',
-    'Final moments...',
-    'Almost finished!',
-    '{name} showing strong performance!',
-    'This could go either way...'
-  ];
+  // Progress messages for simulated updates (varied by phase)
+  const PROGRESS_MESSAGES = {
+    common: [
+      'Round {round} complete...',
+      'Scores are close!',
+      'Competition heating up...',
+      '{name} takes the lead!',
+      'Neck and neck!',
+      '{name} pulls ahead!',
+      'Final moments...',
+      'Almost finished!',
+      '{name} showing strong performance!',
+      'This could go either way...'
+    ],
+    part1: [
+      'All three competitors pushing hard!',
+      'Who will advance to Part 3?',
+      'The pressure is intense!',
+      'One will move directly to the finale!',
+      'Two will face off in Part 2!'
+    ],
+    part2: [
+      'Head-to-head battle in progress!',
+      'Only one can advance!',
+      'The loser is out of contention!',
+      'Fighting for that Part 3 spot!',
+      'This determines who faces the Part 1 winner!'
+    ],
+    part3: [
+      'The final showdown is here!',
+      'Who will become Final HOH?',
+      'This decides who controls the Final 2!',
+      'Winner makes the ultimate eviction decision!',
+      'The finale is on the line!'
+    ]
+  };
 
-  // Commentary phrases for dramatic effect
-  const COMMENTARY_PHRASES = [
-    'The tension is palpable!',
-    'Both competitors are giving it their all!',
-    'What a showdown!',
-    'This is anyone\'s game!',
-    'The stakes have never been higher!',
-    'Who will come out on top?'
-  ];
+  // Commentary phrases for dramatic effect (varied by phase)
+  const COMMENTARY_PHRASES = {
+    common: [
+      'The tension is palpable!',
+      'Both competitors are giving it their all!',
+      'What a showdown!',
+      'This is anyone\'s game!',
+      'The stakes have never been higher!',
+      'Who will come out on top?'
+    ],
+    part1: [
+      'Three houseguests, one goal!',
+      'Every point matters right now!',
+      'This will reshape the Final 3!',
+      'The competition is fierce!'
+    ],
+    part2: [
+      'Winner takes all in this round!',
+      'One mistake could cost everything!',
+      'The intensity is incredible!',
+      'No room for error here!'
+    ],
+    part3: [
+      'The ultimate competition!',
+      'Everything comes down to this!',
+      'The power to choose Final 2!',
+      'History in the making!'
+    ]
+  };
 
   let currentView = null;
   let progressInterval = null;
@@ -226,7 +269,7 @@
 
     contentWrapper.appendChild(competitorsBox);
 
-    // Game preview box
+    // Game preview box with animated preview
     const gamePreview = document.createElement('div');
     gamePreview.className = 'spectator-game-preview';
     gamePreview.style.cssText = `
@@ -235,13 +278,32 @@
       border-radius: 16px;
       padding: 32px;
       margin-bottom: 32px;
-      min-height: 160px;
+      min-height: 200px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
     `;
+
+    // Add animated background effect for game preview
+    const bgEffect = document.createElement('div');
+    bgEffect.style.cssText = `
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, 
+        transparent 0%, 
+        rgba(107,122,153,0.1) 25%, 
+        transparent 50%, 
+        rgba(107,122,153,0.1) 75%, 
+        transparent 100%);
+      background-size: 200% 200%;
+      animation: gamePreviewSweep 8s ease-in-out infinite;
+      pointer-events: none;
+    `;
+    gamePreview.appendChild(bgEffect);
 
     const gameIcon = document.createElement('div');
     gameIcon.textContent = getGameIcon(gameType);
@@ -250,6 +312,8 @@
       margin-bottom: 16px;
       animation: pulse 2s ease infinite;
       filter: drop-shadow(0 4px 16px rgba(255,220,139,0.3));
+      position: relative;
+      z-index: 1;
     `;
     gamePreview.appendChild(gameIcon);
 
@@ -261,8 +325,34 @@
       color: #cedbeb;
       margin-bottom: 12px;
       text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      position: relative;
+      z-index: 1;
     `;
     gamePreview.appendChild(gameName);
+    
+    // Add simulated game activity indicator
+    const activityIndicator = document.createElement('div');
+    activityIndicator.style.cssText = `
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    `;
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement('div');
+      dot.style.cssText = `
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ffdc8b;
+        animation: activityPulse 1.5s ease-in-out infinite;
+        animation-delay: ${i * 0.3}s;
+        box-shadow: 0 0 8px rgba(255,220,139,0.6);
+      `;
+      activityIndicator.appendChild(dot);
+    }
+    gamePreview.appendChild(activityIndicator);
 
     const progressBar = document.createElement('div');
     progressBar.className = 'spectator-progress-bar';
@@ -275,6 +365,8 @@
       overflow: hidden;
       margin-top: 16px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 1;
     `;
 
     const progressFill = document.createElement('div');
@@ -291,6 +383,9 @@
     gamePreview.appendChild(progressBar);
 
     contentWrapper.appendChild(gamePreview);
+    
+    // Inject additional animations if not already present
+    injectSpectatorAnimations();
 
     // Progress updates container
     const updatesBox = document.createElement('div');
@@ -358,8 +453,8 @@
     document.addEventListener('keydown', keyHandler);
     view._keyHandler = keyHandler;
 
-    // Start progress simulation
-    startProgressSimulation(competitorIds, progressFill, updateText);
+    // Start progress simulation with phase for context-aware messages
+    startProgressSimulation(competitorIds, progressFill, updateText, phase);
 
     // Emit event
     if (global.game?.bus) {
@@ -434,7 +529,24 @@
   /**
    * Start progress simulation
    */
-  function startProgressSimulation(competitorIds, progressFill, updateText) {
+  function startProgressSimulation(competitorIds, progressFill, updateText, phase) {
+    // Determine phase-specific messages with precise matching
+    let phaseKey = 'common';
+    if (phase) {
+      if (phase.toLowerCase().indexOf('part 1') !== -1) phaseKey = 'part1';
+      else if (phase.toLowerCase().indexOf('part 2') !== -1) phaseKey = 'part2';
+      else if (phase.toLowerCase().indexOf('part 3') !== -1) phaseKey = 'part3';
+    }
+    
+    const progressMessages = [
+      ...PROGRESS_MESSAGES.common,
+      ...(PROGRESS_MESSAGES[phaseKey] || [])
+    ];
+    const commentaryPhrases = [
+      ...COMMENTARY_PHRASES.common,
+      ...(COMMENTARY_PHRASES[phaseKey] || [])
+    ];
+    
     // Animate progress bar
     setTimeout(() => {
       if (progressFill) {
@@ -445,10 +557,16 @@
     // Simulate score updates
     const scoreElements = document.querySelectorAll('.competitor-score');
     let currentScores = competitorIds.map(() => 0);
+    let roundNumber = 1;
 
     // Update messages periodically
     progressInterval = setInterval(() => {
       updateCount++;
+      
+      // Increment round number occasionally
+      if (updateCount % 4 === 0) {
+        roundNumber++;
+      }
 
       // Update scores with random increments
       scoreElements.forEach((el, idx) => {
@@ -466,12 +584,12 @@
 
       // Select random message
       let message;
-      if (updateCount % 3 === 0 && COMMENTARY_PHRASES.length > 0) {
+      if (updateCount % 3 === 0 && commentaryPhrases.length > 0) {
         // Show commentary occasionally
-        message = COMMENTARY_PHRASES[Math.floor(Math.random() * COMMENTARY_PHRASES.length)];
+        message = commentaryPhrases[Math.floor(Math.random() * commentaryPhrases.length)];
       } else {
         // Show progress message
-        message = PROGRESS_MESSAGES[Math.floor(Math.random() * PROGRESS_MESSAGES.length)];
+        message = progressMessages[Math.floor(Math.random() * progressMessages.length)];
         
         // Replace {name} placeholder with random competitor
         if (message.includes('{name}') && competitorIds.length > 0) {
@@ -480,6 +598,11 @@
           if (player) {
             message = message.replace('{name}', player.name);
           }
+        }
+        
+        // Replace {round} placeholder
+        if (message.includes('{round}')) {
+          message = message.replace('{round}', roundNumber.toString());
         }
       }
 
@@ -496,7 +619,7 @@
 
       // Emit progress event
       if (global.game?.bus) {
-        global.game.bus.emit('spectator:progress', { message, updateCount, scores: currentScores });
+        global.game.bus.emit('spectator:progress', { message, updateCount, scores: currentScores, round: roundNumber });
       }
 
     }, 3000 + Math.random() * 2000); // 3-5 seconds between updates
@@ -568,6 +691,56 @@
     if (g) {
       g.__spectatorMode = false;
     }
+  }
+
+  /**
+   * Inject additional spectator animations if not already present
+   */
+  function injectSpectatorAnimations() {
+    if (document.getElementById('spectator-animations')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'spectator-animations';
+    style.textContent = `
+      @keyframes activityPulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.3);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes gamePreviewSweep {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+      
+      @keyframes scoreFlash {
+        0% {
+          transform: scale(1);
+          color: #83bfff;
+        }
+        50% {
+          transform: scale(1.15);
+          color: #ffdc8b;
+        }
+        100% {
+          transform: scale(1);
+          color: #83bfff;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   /**
