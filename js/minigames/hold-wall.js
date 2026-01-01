@@ -1136,11 +1136,12 @@
       // Get all participants who are still holding (dropTimeMs === null)
       const stillHolding = participants.filter(p => !p.dropTimeMs);
       
-      // Sort still-holding by time still holding (all have same time since we just stopped)
-      // but maintain consistent ordering by using participant name
+      // Still-holding players get credited with the time when the game ended
+      // They outlasted all dropped players, so they get the same time (game ended when player dropped)
+      // Note: All still-holding players effectively tied for first place
       const holdingStandings = stillHolding.map(p => ({
         name: p.name,
-        timeMs: holdDuration // They're still holding at this time
+        timeMs: holdDuration // Game ended at this time; they were still holding
       }));
       
       // Then add eliminated players in reverse chronological order (last to drop = higher placement)

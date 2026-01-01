@@ -266,8 +266,16 @@
           
           // Wait a bit for game to initialize
           setTimeout(function() {
-            // Find the wall element
-            const wallDiv = container.querySelector('div[style*="WALL"]');
+            // Find the wall element - look for element containing "WALL" text
+            const allDivs = container.querySelectorAll('div');
+            let wallDiv = null;
+            for (const div of allDivs) {
+              if (div.textContent.includes('WALL')) {
+                wallDiv = div;
+                break;
+              }
+            }
+            
             if (!wallDiv) {
               logEvent('Wall element not found!', 'error');
               return;
