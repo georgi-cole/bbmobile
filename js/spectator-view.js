@@ -98,8 +98,8 @@
       competitorIds = [],
       gameType = 'competition',
       phase = 'Competition',
-      onSkip = null,
-      container = null // Now optional, defaults to fullscreen
+      onSkip = null
+      // container parameter removed - always use fullscreen
     } = options;
 
     // Clean up any existing view
@@ -631,7 +631,7 @@
 
     // Simulate score updates
     const scoreElements = document.querySelectorAll('.competitor-score');
-    let currentScores = competitorIds.map(() => 0);
+    const currentScores = competitorIds.map(() => 0);
     let roundNumber = 1;
 
     // Update messages periodically
