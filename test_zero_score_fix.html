@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zero Score Fix Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #4ade80;
+    }
+    .test-case {
+      background: #16213e;
+      border: 2px solid #0f3460;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .test-case h3 {
+      margin-top: 0;
+      color: #83bfff;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .pass {
+      background: rgba(34, 197, 94, 0.2);
+      border: 2px solid #22c55e;
+      color: #22c55e;
+    }
+    .fail {
+      background: rgba(220, 38, 38, 0.2);
+      border: 2px solid #dc2626;
+      color: #dc2626;
+    }
+    button {
+      background: #4ade80;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #22c55e;
+    }
+    .score-table {
+      width: 100%;
+      margin-top: 10px;
+      border-collapse: collapse;
+    }
+    .score-table th,
+    .score-table td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    .score-table th {
+      background: #0f3460;
+      color: #83bfff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Zero Score Fix Verification</h1>
+  <p>This test verifies that players with 0 score cannot win HOH or POV competitions.</p>
+  
+  <button onclick="runAllTests()">Run All Tests</button>
+  
+  <div id="test-container"></div>
+  
+  <script>
+    // Mock game object
+    window.game = {
+      players: [
+        { id: 1, name: 'YOU', evicted: false },
+        { id: 2, name: 'Alice', evicted: false },
+        { id: 3, name: 'Bob', evicted: false },
+        { id: 4, name: 'Charlie', evicted: false }
+      ],
+      humanId: 1,
+      week: 2,
+      lastHOHId: null,
+      lastHOHWeek: 1,
+      lastCompScores: new Map(),
+      __humanPlayedHOH: false,
+      __humanPlayedVeto: false,
+      cfg: {}
+    };
+    
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+    window.rng = Math.random;
+    
+    const testCases = [
+      {
+        name: 'Test 1: Human scores 0, all AI score > 0',
+        setup: () => {
+          window.game.lastCompScores = new Map([
+            [1, 0],   // Human
+            [2, 10],  // AI
+            [3, 15],  // AI
+            [4, 8]    // AI
+          ]);
+        },
+        expectedWinner: [2, 3, 4], // Any AI, not human
+        description: 'Human with 0 score should never win'
+      },
+      {
+        name: 'Test 2: All players score 0',
+        setup: () => {
+          window.game.lastCompScores = new Map([
+            [1, 0],
+            [2, 0],
+            [3, 0],
+            [4, 0]
+          ]);
+        },
+        expectedWinner: [1, 2, 3, 4], // Any player (random selection)
+        description: 'When all score 0, random winner should get score > 0'
+      },
+      {
+        name: 'Test 3: Human scores low but > 0',
+        setup: () => {
+          window.game.lastCompScores = new Map([
+            [1, 5],   // Human
+            [2, 10],  // AI
+            [3, 15],  // AI
+            [4, 8]    // AI
+          ]);
+        },
+        expectedWinner: [3], // Highest scorer
+        description: 'Player with highest score wins'
+      },
+      {
+        name: 'Test 4: Human scores highest',
+        setup: () => {
+          window.game.lastCompScores = new Map([
+            [1, 20],  // Human
+            [2, 10],  // AI
+            [3, 15],  // AI
+            [4, 8]    // AI
+          ]);
+        },
+        expectedWinner: [1], // Human
+        description: 'Human with highest score should win'
+      }
+    ];
+    
+    function testHOHWinner(eligible) {
+      const g = window.game;
+      
+      // Filter out players with score of 0 - they cannot win
+      const scoredEntries = [...g.lastCompScores.entries()]
+        .filter(([id]) => eligible.includes(id))
+        .filter(([id, score]) => score > 0);
+      
+      // If all players scored 0, pick a random eligible player as fallback
+      if (scoredEntries.length === 0) {
+        console.log('[Test] All players scored 0, selecting random winner');
+        const randomIndex = Math.floor((window.rng?.() || Math.random()) * eligible.length);
+        const winner = eligible[randomIndex];
+        // Give the random winner a minimal score > 0
+        g.lastCompScores.set(winner, 1);
+        scoredEntries.push([winner, 1]);
+      }
+      
+      const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
+      return sortedEntries[0][0];
+    }
+    
+    function runTest(testCase, index) {
+      const container = document.getElementById('test-container');
+      const testDiv = document.createElement('div');
+      testDiv.className = 'test-case';
+      
+      // Setup
+      testCase.setup();
+      const eligible = [1, 2, 3, 4];
+      
+      // Get initial scores
+      const initialScores = new Map(window.game.lastCompScores);
+      
+      // Run test
+      const winner = testHOHWinner(eligible);
+      const finalScores = window.game.lastCompScores;
+      
+      // Check result
+      const isExpectedWinner = testCase.expectedWinner.includes(winner);
+      const winnerScore = finalScores.get(winner);
+      const scoreValid = winnerScore > 0;
+      const passed = isExpectedWinner && scoreValid;
+      
+      // Build result HTML
+      let html = `<h3>${testCase.name}</h3>`;
+      html += `<p><em>${testCase.description}</em></p>`;
+      
+      // Initial scores table
+      html += '<p><strong>Initial Scores:</strong></p>';
+      html += '<table class="score-table"><tr><th>Player</th><th>Score</th></tr>';
+      eligible.forEach(id => {
+        const score = initialScores.get(id) || 0;
+        const name = window.safeName(id);
+        html += `<tr><td>${name}</td><td>${score}</td></tr>`;
+      });
+      html += '</table>';
+      
+      // Winner info
+      html += `<p><strong>Winner:</strong> ${window.safeName(winner)} (ID: ${winner})</p>`;
+      html += `<p><strong>Winner Score:</strong> ${winnerScore}</p>`;
+      
+      // Result
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.textContent = passed ? '✅ PASS' : '❌ FAIL';
+      
+      if (!passed) {
+        resultDiv.textContent += ` - Expected winner: ${testCase.expectedWinner.map(id => window.safeName(id)).join(' or ')}`;
+        if (!scoreValid) {
+          resultDiv.textContent += `, Winner score must be > 0`;
+        }
+      }
+      
+      testDiv.innerHTML = html;
+      testDiv.appendChild(resultDiv);
+      container.appendChild(testDiv);
+      
+      return passed;
+    }
+    
+    function runAllTests() {
+      const container = document.getElementById('test-container');
+      container.innerHTML = '';
+      
+      let passed = 0;
+      testCases.forEach((testCase, index) => {
+        if (runTest(testCase, index)) {
+          passed++;
+        }
+      });
+      
+      // Summary
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = 'test-case';
+      summaryDiv.innerHTML = `
+        <h3>📊 Test Summary</h3>
+        <p><strong>Total Tests:</strong> ${testCases.length}</p>
+        <p><strong>Passed:</strong> ${passed}</p>
+        <p><strong>Failed:</strong> ${testCases.length - passed}</p>
+        <div class="result ${passed === testCases.length ? 'pass' : 'fail'}">
+          ${passed === testCases.length ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED'}
+        </div>
+      `;
+      container.appendChild(summaryDiv);
+    }
+    
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      setTimeout(runAllTests, 500);
+    });
+  </script>
+</body>
+</html>

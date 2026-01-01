@@ -1449,6 +1449,8 @@
               baseScore *= (0.85 + Math.random() * 0.15); // Slight reduction
             }
           }
+          // Ensure AI scores are always > 0 to prevent 0-score players from winning
+          baseScore = Math.max(1, baseScore);
           g.lastCompScores.set(id, baseScore);
         }
       }
@@ -1481,7 +1483,21 @@
       }
 
       // Determine winner from eligible participants
-      const scoredEntries = [...g.lastCompScores.entries()].filter(([id]) => elig.includes(id));
+      // Filter out any players with score of 0 - they cannot win
+      const scoredEntries = [...g.lastCompScores.entries()]
+        .filter(([id]) => elig.includes(id))
+        .filter(([id, score]) => score > 0);
+      
+      // If all players scored 0, pick a random eligible player as fallback
+      if (scoredEntries.length === 0) {
+        console.warn('[hoh] All players scored 0, selecting random winner from eligible');
+        const randomIndex = Math.floor((global.rng?.() || Math.random()) * elig.length);
+        const winner = elig[randomIndex];
+        // Give the random winner a minimal score > 0
+        g.lastCompScores.set(winner, 1);
+        scoredEntries.push([winner, 1]);
+      }
+      
       const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
       const winner = sortedEntries[0][0];
       
