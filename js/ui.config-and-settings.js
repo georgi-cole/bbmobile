@@ -265,8 +265,8 @@
   // Apply players total from settings and rebuild/reload
   function applyPlayersFromSettings(v){
     try{
-      // Clamp to 6..22 (align with players-total.js injector)
-      const val = Math.max(6, Math.min(22, parseInt(v, 10) || 12));
+      // allow test range 3..16 and default to 16
+      const val = Math.max(3, Math.min(16, parseInt(v, 10) || 16));
       
       // Write to cfg().numPlayers via centralized storage
       const game = g.game = g.game || {};

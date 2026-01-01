@@ -154,7 +154,7 @@
         const testWindow = {
           game: { 
             phase: 'lobby',
-            cfg: { numPlayers: 12 },
+            cfg: { numPlayers: 16 },
             players: []
           },
           rebuildGameCalled: false,
@@ -293,7 +293,7 @@
         };
 
         // Simulate buildCast logic (simplified)
-        const N = +(testGame.game.cfg?.numPlayers) || 12;
+        const N = +(testGame.game.cfg?.numPlayers) || 16;
         
         addLog(`Config has numPlayers: ${testGame.game.cfg.numPlayers}`, 'info');
         addLog(`buildCast will create N=${N} players`, 'info');
@@ -314,14 +314,14 @@
             players: []
           }
         };
-        const N2 = +(testGame2.game.cfg?.numPlayers) || 12;
+        const N2 = +(testGame2.game.cfg?.numPlayers) || 16;
         
         addLog(`Without numPlayers in config, defaults to: ${N2}`, 'info');
         
-        if (N2 === 12) {
-          addLog('buildCast correctly falls back to default 12', 'success');
+        if (N2 === 16) {
+          addLog('buildCast correctly falls back to default 16', 'success');
         } else {
-          addLog(`Fallback failed: expected 12, got ${N2}`, 'error');
+          addLog(`Fallback failed: expected 16, got ${N2}`, 'error');
         }
 
       } catch (e) {
