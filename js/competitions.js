@@ -1716,6 +1716,68 @@
     }, 5000);
   }
 
+  /**
+   * Show a "Waiting for results" UI in the panel
+   * Used when player has submitted and is waiting for competition to finish
+   */
+  function showWaitingUI(panel, message = 'Waiting for results...') {
+    const waitingBox = document.createElement('div');
+    waitingBox.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+      min-height: 200px;
+    `;
+    
+    const spinner = document.createElement('div');
+    spinner.style.cssText = `
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(131, 191, 255, 0.2);
+      border-top-color: #83bfff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    `;
+    
+    const text = document.createElement('div');
+    text.textContent = message;
+    text.style.cssText = `
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #cedbeb;
+      margin-bottom: 12px;
+    `;
+    
+    const subtext = document.createElement('div');
+    subtext.textContent = 'AI players are completing their attempts';
+    subtext.style.cssText = `
+      font-size: 0.9rem;
+      color: #8a9ab8;
+      font-style: italic;
+    `;
+    
+    waitingBox.appendChild(spinner);
+    waitingBox.appendChild(text);
+    waitingBox.appendChild(subtext);
+    panel.appendChild(waitingBox);
+    
+    // Add spinner animation if not already defined
+    if (!document.getElementById('spinner-animation-style')) {
+      const style = document.createElement('style');
+      style.id = 'spinner-animation-style';
+      style.textContent = `
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
   function renderF3P1(panel) {
     const g = global.game; panel.innerHTML = '';
     const host = document.createElement('div'); host.className = 'minigame-host';
@@ -1750,11 +1812,18 @@
         multiplier: (0.8 + (you?.skill || 0.5) * 0.6)
       });
 
-    } else {
-      // Use inline status instead of below-TV message
+    } else if (you && !you.evicted && g.lastCompScores?.has(you.id)) {
+      // Human has submitted - show waiting UI
+      showWaitingUI(panel, '✓ Score Submitted');
       if (window.TvStatus?.set) {
         window.TvStatus.set('Waiting for competition to conclude…');
       }
+    } else {
+      // Human is evicted or not eligible
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Waiting for competition to conclude…');
+      }
+      showWaitingUI(panel, 'Competition in Progress');
     }
     // Only append host if it has content (minigame rendering)
     if(host.childElementCount > 0){
@@ -1883,6 +1952,10 @@
     const human = global.getP?.(humanId);
     const humanInJury = human && human.evicted && g.juryHouse?.includes(humanId);
     
+    // Check if human is in duo and has submitted
+    const humanInDuo = humanId && duo.includes(humanId);
+    const humanSubmitted = humanInDuo && g.lastCompScores?.has(humanId);
+    
     panel.innerHTML = '';
     
     // Show spectator view if human won Part 1 or is in jury
@@ -1906,8 +1979,15 @@
         },
         container: panel
       });
+    } else if (humanSubmitted) {
+      // Human is in duo and has submitted - show waiting UI
+      showWaitingUI(panel, '✓ Score Submitted');
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Waiting for Part 2 results…');
+      }
     } else {
-      // Use inline status instead of below-TV message
+      // Human is in duo and actively playing, or panel not yet ready
+      // The minigame will be set up by beginF3P2Competition
       if (window.TvStatus?.set) {
         window.TvStatus.set('Final 3 — Part 2 (head-to-head) is running…');
       }
@@ -2068,6 +2148,10 @@
     const human = global.getP?.(humanId);
     const humanInJury = human && human.evicted && g.juryHouse?.includes(humanId);
     
+    // Check if human is in finalists and has submitted
+    const humanInFinalists = humanId && finalists.includes(humanId);
+    const humanSubmitted = humanInFinalists && g.lastCompScores?.has(humanId);
+    
     panel.innerHTML = '';
     
     // Show spectator view if human lost both parts or is in jury
@@ -2091,8 +2175,15 @@
         },
         container: panel
       });
+    } else if (humanSubmitted) {
+      // Human is in finalists and has submitted - show waiting UI
+      showWaitingUI(panel, '✓ Score Submitted');
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Waiting for Part 3 results…');
+      }
     } else {
-      // Use inline status instead of below-TV message
+      // Human is in finalists and actively playing, or panel not yet ready
+      // The minigame will be set up by beginF3P3Competition
       if (window.TvStatus?.set) {
         window.TvStatus.set('Final 3 — Part 3 (final showdown) is running…');
       }

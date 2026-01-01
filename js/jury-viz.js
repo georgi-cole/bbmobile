@@ -833,6 +833,9 @@
   function showVoteCard(jurorName, votedName, reason, jurorAvatar){
     if(!state) return;
     
+    // REMOVE ANY EXISTING JURY VOTE CARDS FIRST to prevent duplicates
+    document.querySelectorAll('.jury-vote-card').forEach(el => el.remove());
+    
     // Use card-based system similar to nominee declarations
     // Create card with juror avatar and vote reason
     const card = document.createElement('div');
