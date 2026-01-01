@@ -99,7 +99,7 @@
       gameType = 'competition',
       phase = 'Competition',
       onSkip = null
-      // container parameter removed - always use fullscreen
+      // container parameter intentionally not destructured - always uses fullscreen
     } = options;
 
     // Clean up any existing view
@@ -657,11 +657,13 @@
         }
       });
 
-      // Update action bar heights for visual interest
-      const actionBars = document.querySelectorAll('.action-bar');
-      actionBars.forEach(bar => {
-        const newHeight = 20 + Math.random() * 30;
-        bar.style.height = `${newHeight}px`;
+      // Update action bar heights for visual interest using RAF for better performance
+      requestAnimationFrame(() => {
+        const actionBars = document.querySelectorAll('.action-bar');
+        actionBars.forEach(bar => {
+          const newHeight = 20 + Math.random() * 30;
+          bar.style.height = `${newHeight}px`;
+        });
       });
 
       // Select random message
