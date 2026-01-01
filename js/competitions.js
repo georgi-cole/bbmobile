@@ -2194,17 +2194,12 @@
     
     panel.innerHTML = '';
     
-    // Show spectator view if human lost both parts or is in jury
-    if ((humanLostBoth || humanInJury) && global.SpectatorView) {
-      console.info('[F3P3] Showing spectator view for', humanInJury ? 'jury member' : 'eliminated player');
+    // Show enhanced spectator view if human lost both parts or is in jury
+    if ((humanLostBoth || humanInJury) && global.SpectatorViewPart3) {
+      console.info('[F3P3] Showing enhanced spectator view for', humanInJury ? 'jury member' : 'eliminated player');
       
-      // Determine game type from stored key or pick a generic one
-      const gameType = g.__f3p3GameKey || 'competition';
-      
-      global.SpectatorView.show({
+      global.SpectatorViewPart3.show({
         competitorIds: finalists,
-        gameType: gameType,
-        phase: 'Final 3 — Part 3',
         onSkip: () => {
           // Skip to results - fast forward to end of phase
           if (g.phase === 'final3_comp3') {
@@ -2212,8 +2207,7 @@
             g.__skipRequested = true;
             finishF3P3();
           }
-        },
-        container: panel
+        }
       });
       return;
     } else if (humanSubmitted) {
@@ -2344,10 +2338,16 @@
   async function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
     
-    // Clean up SpectatorView if it exists
+    // Clean up SpectatorView if it exists (legacy/fallback)
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
       global.SpectatorView.cleanup();
       console.info('[F3P3] SpectatorView cleaned up');
+    }
+    
+    // Clean up SpectatorViewPart3 if it exists
+    if (global.SpectatorViewPart3 && typeof global.SpectatorViewPart3.cleanup === 'function') {
+      global.SpectatorViewPart3.cleanup();
+      console.info('[F3P3] SpectatorViewPart3 cleaned up');
     }
     
     // Clear the panel to remove any lingering UI
