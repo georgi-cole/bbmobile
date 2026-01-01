@@ -62,8 +62,8 @@
   /* Smooth transitions */
   transition: opacity 0.3s ease, transform 0.3s ease;
   
-  /* Entrance animation */
-  animation: tvCardFadeIn 0.4s ease-out;
+  /* Entrance animation - override any inherited animations from .revealCard */
+  animation: tvCardFadeIn 0.4s ease-out !important;
 }
 
 /* Ensure headings and paragraphs inherit theme color */
@@ -284,4 +284,12 @@
   outline: none !important;
   background: linear-gradient(145deg, rgba(28, 43, 62, 0.92), rgba(12, 22, 36, 0.90)) !important;
   max-width: min(var(--tv-inline-card-max-width, 780px), 92%);
+}
+
+/* Override .revealCard animation for TV inline cards to prevent position flickering */
+#tvOverlay .tv-inline-card.revealCard,
+#tvOverlay .revealCard.diaryRoomCard.tv-inline-card,
+#tvOverlay .ceremony-card {
+  /* Force simple fade-in animation only, no complex 3D transforms */
+  animation: tvCardFadeIn 0.4s ease-out !important;
 }
