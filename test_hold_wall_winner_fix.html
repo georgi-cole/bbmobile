@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold Wall Winner Fix Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 30px;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+    }
+    
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 3px solid #83bfff;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .success {
+      background: rgba(102, 255, 102, 0.1);
+      border-left: 3px solid #66ff66;
+      color: #66ff66;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .error {
+      background: rgba(255, 107, 107, 0.1);
+      border-left: 3px solid #ff6b6b;
+      color: #ff6b6b;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .log {
+      background: rgba(26, 35, 50, 0.6);
+      border: 1px solid #2c3a4d;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    
+    .log-entry {
+      margin: 5px 0;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(131, 191, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Hold Wall Winner Fix Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Scenario</h2>
+      <div class="info">
+        <strong>Bug Description:</strong><br>
+        In the POV phase, the last 2 standing were the User and Rune. Rune offered a deal, 
+        the user accepted (and dropped), but Ivy was shown as the winner instead of Rune.
+        <br><br>
+        <strong>Expected Behavior:</strong><br>
+        The last player standing (who didn't drop) should win the competition.
+        <br><br>
+        <strong>Test Approach:</strong><br>
+        We'll simulate a scenario where players drop in this order:
+        <ol style="margin: 5px 0; padding-left: 20px;">
+          <li>Ivy drops first (should be last place)</li>
+          <li>Finn drops second</li>
+          <li>Mimi drops third</li>
+          <li>User drops fourth (accepts deal)</li>
+          <li>Rune is still holding (should be the winner)</li>
+        </ol>
+      </div>
+      
+      <button class="btn" onclick="runTest()">▶ Run Test</button>
+      <button class="btn" onclick="clearLog()">🗑️ Clear Log</button>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="results">
+        <p style="text-align: center; color: #95a9c0;">Click "Run Test" to begin</p>
+      </div>
+      
+      <h3 style="color: #83bfff; font-size: 1rem; margin-top: 20px;">Event Log</h3>
+      <div id="eventLog" class="log">
+        <div class="log-entry">Ready to run test...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mock global objects needed by hold-wall.js
+    window.game = {
+      players: [
+        { id: 'p1', name: 'You', human: true, evicted: false },
+        { id: 'p2', name: 'Ivy', human: false, evicted: false },
+        { id: 'p3', name: 'Finn', human: false, evicted: false },
+        { id: 'p4', name: 'Mimi', human: false, evicted: false },
+        { id: 'p5', name: 'Rune', human: false, evicted: false }
+      ],
+      povPlayers: ['p1', 'p2', 'p3', 'p4', 'p5'],
+      phase: 'pov',
+      cfg: {}
+    };
+    
+    // Mock results popup
+    window.showResultsPopup = function(options) {
+      logEvent('Results popup called');
+      const topThree = options.topThree || [];
+      logEvent(`Top 3: ${JSON.stringify(topThree.map(p => p.name || p))}`);
+      
+      if (topThree.length > 0) {
+        const winner = topThree[0];
+        const winnerName = winner.name || winner;
+        logEvent(`Winner: ${winnerName}`, winnerName === 'Rune' ? 'success' : 'error');
+        
+        // Check if winner is correct
+        const resultsDiv = document.getElementById('results');
+        if (winnerName === 'Rune') {
+          resultsDiv.innerHTML = '<div class="success">✓ TEST PASSED: Rune is the winner (correct!)</div>';
+        } else {
+          resultsDiv.innerHTML = `<div class="error">✗ TEST FAILED: ${winnerName} is shown as winner, but Rune should be the winner!</div>`;
+        }
+      }
+      
+      return Promise.resolve();
+    };
+    
+    // Mock avatar resolver
+    window.resolveAvatar = function(player) {
+      const name = typeof player === 'string' ? player : (player?.name || 'Player');
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+    };
+    
+    function logEvent(message, level = 'info') {
+      const logDiv = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      
+      const timestamp = new Date().toLocaleTimeString();
+      let prefix = '•';
+      let color = '#95a9c0';
+      
+      if (level === 'success') {
+        prefix = '✓';
+        color = '#66ff66';
+      } else if (level === 'error') {
+        prefix = '✗';
+        color = '#ff6b6b';
+      } else if (level === 'warning') {
+        prefix = '⚠';
+        color = '#ffcc00';
+      }
+      
+      entry.innerHTML = `<span style="color: ${color}">${prefix}</span> [${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    function clearLog() {
+      document.getElementById('eventLog').innerHTML = '<div class="log-entry">Log cleared...</div>';
+    }
+    
+    function runTest() {
+      logEvent('Starting test...', 'info');
+      document.getElementById('results').innerHTML = '<p style="text-align: center; color: #95a9c0;">Running test...</p>';
+      
+      // Load hold-wall.js dynamically
+      const script = document.createElement('script');
+      script.src = 'js/minigames/hold-wall.js';
+      script.onload = function() {
+        logEvent('hold-wall.js loaded', 'success');
+        
+        // Wait a moment for module to initialize
+        setTimeout(function() {
+          if (!window.MiniGames || !window.MiniGames.holdWall) {
+            logEvent('MiniGames.holdWall not found!', 'error');
+            document.getElementById('results').innerHTML = '<div class="error">✗ TEST FAILED: hold-wall.js did not load properly</div>';
+            return;
+          }
+          
+          logEvent('Starting Hold Wall minigame', 'info');
+          
+          // Create a hidden container for the game
+          const container = document.createElement('div');
+          container.style.display = 'none';
+          document.body.appendChild(container);
+          
+          let gameCompleted = false;
+          
+          const onComplete = function(score) {
+            if (gameCompleted) return;
+            gameCompleted = true;
+            
+            logEvent(`Game completed with score: ${score}`, 'info');
+            
+            // Cleanup
+            setTimeout(function() {
+              container.remove();
+            }, 100);
+          };
+          
+          // Render the game with seed for deterministic behavior
+          window.MiniGames.holdWall.render(container, onComplete, { 
+            seed: 12345,
+            competitionType: 'pov'
+          });
+          
+          logEvent('Game rendered, simulating scenario...', 'info');
+          
+          // Wait a bit for game to initialize
+          setTimeout(function() {
+            // Find the wall element - look for element containing "WALL" text
+            const allDivs = container.querySelectorAll('div');
+            let wallDiv = null;
+            for (const div of allDivs) {
+              if (div.textContent.includes('WALL')) {
+                wallDiv = div;
+                break;
+              }
+            }
+            
+            if (!wallDiv) {
+              logEvent('Wall element not found!', 'error');
+              return;
+            }
+            
+            logEvent('Simulating mouse down on wall...', 'info');
+            
+            // Simulate starting to hold
+            const mouseDownEvent = new MouseEvent('mousedown', {
+              bubbles: true,
+              cancelable: true,
+              clientX: 100,
+              clientY: 100
+            });
+            wallDiv.dispatchEvent(mouseDownEvent);
+            
+            logEvent('Player is now holding the wall', 'success');
+            
+            // Wait a moment, then release (simulating accepting deal)
+            setTimeout(function() {
+              logEvent('Simulating player releasing (accepting deal)...', 'info');
+              
+              // Simulate releasing
+              const mouseUpEvent = new MouseEvent('mouseup', {
+                bubbles: true,
+                cancelable: true
+              });
+              document.dispatchEvent(mouseUpEvent);
+              
+              logEvent('Player released - game should end now', 'success');
+              logEvent('Waiting for results...', 'info');
+            }, 2000);
+          }, 500);
+        }, 100);
+      };
+      
+      script.onerror = function() {
+        logEvent('Failed to load hold-wall.js', 'error');
+        document.getElementById('results').innerHTML = '<div class="error">✗ TEST FAILED: Could not load hold-wall.js</div>';
+      };
+      
+      document.head.appendChild(script);
+    }
+  </script>
+</body>
+</html>
