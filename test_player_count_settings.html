@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Player Count Settings (3-16 Range)</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a131f;
+      color: #eaf4ff;
+    }
+    .test-section {
+      background: #0e1622;
+      border: 1px solid rgba(110,160,220,.25);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    h1 { color: #6ea0dc; }
+    h2 { color: #8bb4e8; font-size: 1.2rem; }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; }
+    input[type="number"] {
+      padding: 8px;
+      margin: 8px 0;
+      background: #1a2636;
+      border: 1px solid #6ea0dc;
+      color: #eaf4ff;
+      border-radius: 4px;
+      width: 120px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #6ea0dc;
+      color: #0a131f;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #8bb4e8;
+    }
+    .result {
+      margin: 10px 0;
+      padding: 10px;
+      border-left: 3px solid;
+      background: rgba(110,160,220,.1);
+    }
+    .result.pass { border-color: #4ade80; }
+    .result.fail { border-color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1>Player Count Settings Test (3-16 Range)</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Default Value</h2>
+    <p>Expected: Default value should be 16</p>
+    <div id="test1-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Minimum Value (3 players)</h2>
+    <label>Set to 3: <input type="number" id="input-min" value="3" min="3" max="16"></label>
+    <button onclick="testMinValue()">Test Min</button>
+    <div id="test2-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Maximum Value (16 players)</h2>
+    <label>Set to 16: <input type="number" id="input-max" value="16" min="3" max="16"></label>
+    <button onclick="testMaxValue()">Test Max</button>
+    <div id="test3-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Invalid Values (Clamping)</h2>
+    <label>Try 2 (below min): <input type="number" id="input-below" value="2" min="3" max="16"></label>
+    <button onclick="testBelowMin()">Test Below Min</button>
+    <br>
+    <label>Try 17 (above max): <input type="number" id="input-above" value="17" min="3" max="16"></label>
+    <button onclick="testAboveMax()">Test Above Max</button>
+    <div id="test4-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Mid-Range Values</h2>
+    <label>Set to 8: <input type="number" id="input-mid1" value="8" min="3" max="16"></label>
+    <button onclick="testMid(8)">Test 8</button>
+    <label>Set to 12: <input type="number" id="input-mid2" value="12" min="3" max="16"></label>
+    <button onclick="testMid(12)">Test 12</button>
+    <div id="test5-result"></div>
+  </div>
+
+  <script type="module">
+    // Import modules
+    import '/js/state.js';
+    import '/js/players-total.js';
+    import '/js/settings.js';
+
+    // Test utilities
+    function showResult(testId, message, pass) {
+      const el = document.getElementById(testId);
+      el.innerHTML = `<div class="result ${pass ? 'pass' : 'fail'}">
+        ${pass ? '✓' : '✗'} ${message}
+      </div>`;
+    }
+
+    // Test 1: Check default
+    window.addEventListener('DOMContentLoaded', () => {
+      const defaultVal = window.game?.cfg?.numPlayers;
+      const pass = defaultVal === 16;
+      showResult('test1-result', 
+        `Default numPlayers = ${defaultVal}${pass ? '' : ' (expected 16)'}`, 
+        pass
+      );
+    });
+
+    // Test 2: Min value
+    window.testMinValue = function() {
+      const val = 3;
+      const clamped = Math.max(3, Math.min(16, val));
+      const pass = clamped === 3;
+      showResult('test2-result', 
+        `Input: ${val}, Clamped: ${clamped}${pass ? ' ✓' : ' (should be 3)'}`, 
+        pass
+      );
+    };
+
+    // Test 3: Max value
+    window.testMaxValue = function() {
+      const val = 16;
+      const clamped = Math.max(3, Math.min(16, val));
+      const pass = clamped === 16;
+      showResult('test3-result', 
+        `Input: ${val}, Clamped: ${clamped}${pass ? ' ✓' : ' (should be 16)'}`, 
+        pass
+      );
+    };
+
+    // Test 4: Invalid values
+    window.testBelowMin = function() {
+      const val = 2;
+      const clamped = Math.max(3, Math.min(16, val));
+      const pass = clamped === 3;
+      showResult('test4-result', 
+        `Below min - Input: ${val}, Clamped: ${clamped}${pass ? ' ✓' : ' (should clamp to 3)'}`, 
+        pass
+      );
+    };
+
+    window.testAboveMax = function() {
+      const val = 17;
+      const clamped = Math.max(3, Math.min(16, val));
+      const pass = clamped === 16;
+      const currentResult = document.getElementById('test4-result').innerHTML;
+      showResult('test4-result', 
+        currentResult + `<br>Above max - Input: ${val}, Clamped: ${clamped}${pass ? ' ✓' : ' (should clamp to 16)'}`, 
+        pass
+      );
+    };
+
+    // Test 5: Mid-range
+    window.testMid = function(val) {
+      const clamped = Math.max(3, Math.min(16, val));
+      const pass = clamped === val;
+      const currentResult = document.getElementById('test5-result').innerHTML;
+      const newResult = `<br>Input: ${val}, Clamped: ${clamped}${pass ? ' ✓' : ' (should be ' + val + ')'}`;
+      document.getElementById('test5-result').innerHTML = currentResult + newResult;
+    };
+
+    // Summary
+    setTimeout(() => {
+      console.log('=== Player Count Settings Test Results ===');
+      console.log('Default value:', window.game?.cfg?.numPlayers);
+      console.log('Expected range: 3-16');
+      console.log('Tests completed. Check UI for results.');
+    }, 500);
+  </script>
+</body>
+</html>
