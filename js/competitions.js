@@ -2179,7 +2179,14 @@
   function renderF3P3(panel) {
     const g = global.game;
     const humanId = g.humanId;
-    const finalists = g.__f3_finalists || [];
+    
+    // Derive finalists with fallback logic
+    // If g.__f3_finalists is not set, derive from Part 1 and Part 2 winners
+    let finalists = g.__f3_finalists || [];
+    if (finalists.length === 0 && g.__f3p1Winner && g.__f3p2Winner) {
+      finalists = [g.__f3p1Winner, g.__f3p2Winner];
+      console.warn('[F3P3] Using fallback: derived finalists from Part 1 & 2 winners', finalists);
+    }
     
     // Check if human lost both Part 1 and Part 2 (not in finalists)
     const humanLostBoth = humanId && !finalists.includes(humanId);
@@ -2188,15 +2195,23 @@
     const human = global.getP?.(humanId);
     const humanInJury = human && human.evicted && g.juryHouse?.includes(humanId);
     
+    // Check if human is evicted (not alive)
+    const humanEvicted = human && human.evicted;
+    
     // Check if human is in finalists and has submitted
     const humanInFinalists = humanId && finalists.includes(humanId);
     const humanSubmitted = humanInFinalists && g.lastCompScores?.has(humanId);
     
     panel.innerHTML = '';
     
-    // Show enhanced spectator view if human lost both parts or is in jury
-    if ((humanLostBoth || humanInJury) && global.SpectatorViewPart3) {
-      console.info('[F3P3] Showing enhanced spectator view for', humanInJury ? 'jury member' : 'eliminated player');
+    // Golden Rule: If human is not eligible to compete, show spectator mode
+    // Spectator conditions: lost both parts OR in jury OR evicted OR not in finalists
+    const isSpectator = (humanLostBoth || humanInJury || humanEvicted) && !humanInFinalists;
+    
+    // Show enhanced spectator view if human is spectator
+    if (isSpectator && global.SpectatorViewPart3 && finalists.length > 0) {
+      const reason = humanInJury ? 'jury member' : humanEvicted ? 'evicted player' : 'eliminated player';
+      console.info('[F3P3] Showing enhanced spectator view for', reason);
       
       global.SpectatorViewPart3.show({
         competitorIds: finalists,
@@ -2267,10 +2282,12 @@
     const g = global.game;
     g.lastCompScores = new Map();
     const finalists = [g.__f3p1Winner, g.__f3p2Winner];
+    // CRITICAL: Set finalists BEFORE setPhase() to ensure renderF3P3() has access to them
     g.__f3_finalists = finalists.slice();
     g.__f3p3GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 3');
     global.phaseMusic?.('hoh');
+    // setPhase() triggers renderPanel() -> renderF3P3(), which needs g.__f3_finalists
     global.setPhase('final3_comp3', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P3);
     const diffMult = getAIDifficultyMultiplier();
     for (const id of finalists) {
