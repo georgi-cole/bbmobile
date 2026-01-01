@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 3 Part 3 Spectator Mode Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1419;
+      color: #cedbeb;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-controls {
+      background: rgba(40, 40, 80, 0.8);
+      border: 2px solid #6b7a99;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .test-controls h2 {
+      margin-top: 0;
+      color: #ffdc8b;
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    
+    .test-card {
+      background: rgba(30, 30, 60, 0.9);
+      border: 2px solid #4a5a7a;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .test-card:hover {
+      border-color: #ffdc8b;
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(255, 220, 139, 0.3);
+    }
+    
+    .test-card h3 {
+      margin: 0 0 12px 0;
+      color: #ffdc8b;
+      font-size: 1.3rem;
+    }
+    
+    .test-card p {
+      margin: 0;
+      color: #8a9ab8;
+      line-height: 1.5;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-right: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(74, 144, 226, 0.4);
+    }
+    
+    .btn.secondary {
+      background: linear-gradient(135deg, #6b7a99 0%, #4a5a7a 100%);
+    }
+    
+    .info-box {
+      background: rgba(74, 144, 226, 0.1);
+      border: 2px solid #4a90e2;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    
+    .info-box h4 {
+      margin: 0 0 8px 0;
+      color: #4a90e2;
+    }
+    
+    .info-box ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    .info-box li {
+      margin: 4px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>🎬 Final 3 Part 3 Spectator Mode Test</h2>
+    <p>Test the enhanced spectator mode for Final 3 Part 3 competition. Each test will show a different competition variant.</p>
+    
+    <div class="info-box">
+      <h4>ℹ️ Test Instructions</h4>
+      <ul>
+        <li>Click any variant button below to launch that specific spectator mode</li>
+        <li>Use "Random Variant" to simulate actual gameplay (random selection)</li>
+        <li>Press Space or Enter, or click "Skip to Results" to fast-forward</li>
+        <li>Each variant has unique animations and progress updates</li>
+        <li>The spectator view will automatically clean up after skipping</li>
+      </ul>
+    </div>
+
+    <h3>Quick Tests</h3>
+    <button class="btn" onclick="testRandomVariant()">🎲 Random Variant (Actual Gameplay)</button>
+    <button class="btn secondary" onclick="cleanupAll()">🧹 Cleanup All Views</button>
+    
+    <h3>Specific Variant Tests</h3>
+    <div class="test-grid">
+      <div class="test-card" onclick="testHoldWall()">
+        <h3>🧱 Hold the Wall</h3>
+        <p>Endurance competition where competitors climb and hold onto a wall. Endurance meters deplete over time.</p>
+      </div>
+      
+      <div class="test-card" onclick="testTrivia()">
+        <h3>🧠 Trivia Quiz</h3>
+        <p>Knowledge-based competition with Big Brother trivia questions. Competitors answer and scores update.</p>
+      </div>
+      
+      <div class="test-card" onclick="testSpeedChallenge()">
+        <h3>⚡ Speed Challenge</h3>
+        <p>Fast-paced timed competition. Competitors race with progress bars and accumulating scores.</p>
+      </div>
+    </div>
+    
+    <div class="info-box" style="border-color: #22c55e; background: rgba(34, 197, 94, 0.1);">
+      <h4>✅ What to Verify</h4>
+      <ul>
+        <li><strong>Visual Variety:</strong> Each variant should look and feel different</li>
+        <li><strong>Animations:</strong> Smooth animations for climbing, answering, racing</li>
+        <li><strong>Progress Updates:</strong> Dynamic messages that update throughout</li>
+        <li><strong>Skip Functionality:</strong> Keyboard and button skip both work</li>
+        <li><strong>Cleanup:</strong> View properly removes itself after skip</li>
+        <li><strong>Random Selection:</strong> Different variant appears each time for random test</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/utils/fn-avatar-resolver.js"></script>
+  <script>
+    // Mock game environment
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', human: false, evicted: false, avatar: 'avatar1' },
+        { id: 2, name: 'Bob', human: false, evicted: false, avatar: 'avatar2' },
+        { id: 3, name: 'Charlie', human: true, evicted: true, avatar: 'avatar3' }
+      ],
+      __spectatorMode: false,
+      bus: {
+        emit: function(event, data) {
+          console.log('[Event]', event, data);
+        },
+        on: function(event, handler) {
+          console.log('[Event Listener]', event);
+        }
+      }
+    };
+    
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+    
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
+    };
+    
+    window.resolveAvatar = function(player) {
+      return window.getDicebearUrl(player.avatar || player.name);
+    };
+    
+    // Mock RNG for predictable testing (can be overridden)
+    window.rng = Math.random;
+  </script>
+  
+  <!-- Load spectator view module -->
+  <script src="js/spectator-view-part3.js"></script>
+  
+  <script>
+    // Test functions
+    function testRandomVariant() {
+      console.log('Testing random variant selection...');
+      const competitorIds = [1, 2]; // Alice and Bob competing
+      
+      window.SpectatorViewPart3.show({
+        competitorIds: competitorIds,
+        onSkip: function() {
+          console.log('Skip callback triggered!');
+          setTimeout(() => {
+            alert('Spectator mode completed! In actual gameplay, this would show the Final HOH results.');
+          }, 500);
+        }
+      });
+    }
+    
+    function testHoldWall() {
+      console.log('Testing Hold the Wall variant...');
+      // Force this variant by temporarily overriding RNG
+      const originalRng = window.rng;
+      window.rng = () => 0.01; // Force first variant (holdWall)
+      
+      const competitorIds = [1, 2];
+      window.SpectatorViewPart3.show({
+        competitorIds: competitorIds,
+        onSkip: function() {
+          console.log('Hold Wall completed!');
+          window.rng = originalRng; // Restore RNG
+        }
+      });
+    }
+    
+    function testTrivia() {
+      console.log('Testing Trivia variant...');
+      const originalRng = window.rng;
+      window.rng = () => 0.4; // Force second variant (trivia)
+      
+      const competitorIds = [1, 2];
+      window.SpectatorViewPart3.show({
+        competitorIds: competitorIds,
+        onSkip: function() {
+          console.log('Trivia completed!');
+          window.rng = originalRng;
+        }
+      });
+    }
+    
+    function testSpeedChallenge() {
+      console.log('Testing Speed Challenge variant...');
+      const originalRng = window.rng;
+      window.rng = () => 0.8; // Force third variant (speedChallenge)
+      
+      const competitorIds = [1, 2];
+      window.SpectatorViewPart3.show({
+        competitorIds: competitorIds,
+        onSkip: function() {
+          console.log('Speed Challenge completed!');
+          window.rng = originalRng;
+        }
+      });
+    }
+    
+    function cleanupAll() {
+      console.log('Cleaning up all views...');
+      if (window.SpectatorViewPart3 && window.SpectatorViewPart3.cleanup) {
+        window.SpectatorViewPart3.cleanup();
+        console.log('✓ SpectatorViewPart3 cleaned up');
+      }
+      alert('All spectator views cleaned up!');
+    }
+    
+    // Log when module loads
+    console.log('Test page loaded. SpectatorViewPart3 available:', !!window.SpectatorViewPart3);
+  </script>
+</body>
+</html>
