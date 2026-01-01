@@ -115,11 +115,11 @@
   }
 
   /**
-   * Create "Hold the Wall" endurance competition view
+   * Create "Climb the Wall" endurance competition view
    */
   function createHoldWallView(competitorIds) {
-    const view = createBaseView('🧱 Hold the Wall - Final Showdown', 
-      'Who can hold on the longest? The last one standing becomes Final HOH!');
+    const view = createBaseView('🧱 Climb the Wall - Final Showdown', 
+      'Race to the top! First to reach the summit becomes Final HOH!');
 
     const contentWrapper = view.querySelector('.content-wrapper');
     
@@ -594,11 +594,11 @@
       text-align: center;
     `;
 
-    // Title
+    // Title - reduced for mobile
     const titleEl = document.createElement('h3');
     titleEl.textContent = title;
     titleEl.style.cssText = `
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: #ffdc8b;
       margin: 0 0 12px 0;
@@ -607,13 +607,13 @@
     `;
     contentWrapper.appendChild(titleEl);
 
-    // Subtitle
+    // Subtitle - adjusted for mobile
     const subtitleEl = document.createElement('div');
     subtitleEl.textContent = subtitle;
     subtitleEl.style.cssText = `
-      font-size: 1.1rem;
+      font-size: 1rem;
       color: #8a9ab8;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
       font-style: italic;
     `;
     contentWrapper.appendChild(subtitleEl);
@@ -686,19 +686,13 @@
     const updateText = document.querySelector('.spectator-update-text');
     const config = SIMULATION_CONFIG.holdWall;
     
-    const messages = [
-      'Both competitors gripping the wall tight!',
-      'The pressure is mounting...',
-      'Who will slip first?',
-      'Endurance levels dropping!',
-      'One mistake could cost everything!',
-      'The wall is getting harder to hold!',
-      'Final moments approaching...',
-      'This is incredibly intense!'
-    ];
-
     progressInterval = setInterval(() => {
       elapsed++;
+      
+      // Track leader and endurance levels for dynamic commentary
+      let leaderId = null;
+      let maxHeight = 0;
+      let lowestEndurance = 100;
       
       climbers.forEach((climber, index) => {
         // Simulate climbing progress with slight randomness
@@ -706,10 +700,21 @@
         const increment = config.climbIncrement.min + Math.random() * (config.climbIncrement.max - config.climbIncrement.min);
         const newBottom = Math.min(config.maxClimbHeight, currentBottom + increment);
         climber.element.style.bottom = `${newBottom}px`;
+        
+        // Track who's in the lead
+        if (newBottom > maxHeight) {
+          maxHeight = newBottom;
+          leaderId = climber.playerId;
+        }
 
         // Deplete endurance meter gradually
         const endurancePercent = Math.max(20, 100 - elapsed * config.enduranceDepletionBase - Math.random() * config.enduranceDepletionRandom);
         climber.meter.style.width = `${endurancePercent}%`;
+        
+        // Track lowest endurance
+        if (endurancePercent < lowestEndurance) {
+          lowestEndurance = endurancePercent;
+        }
         
         // Change color as endurance drops
         if (endurancePercent < 40) {
@@ -721,9 +726,50 @@
         }
       });
 
-      // Update message
+      // Update message dynamically based on competition state
       if (updateText) {
-        const msg = messages[elapsed % messages.length];
+        let msg = '';
+        const leader = climbers.find(c => c.playerId === leaderId);
+        
+        if (lowestEndurance < 40) {
+          // Critical moment - someone's struggling
+          const struggling = climbers.find(c => {
+            const endurancePercent = parseFloat(c.meter.style.width);
+            return endurancePercent < 40;
+          });
+          if (struggling) {
+            msg = `This is the critical moment! ${struggling.player.name}'s grip is weakening!`;
+          } else {
+            msg = 'This is the critical moment!';
+          }
+        } else if (lowestEndurance < 70) {
+          // Endurance dropping
+          const weakening = climbers.find(c => {
+            const endurancePercent = parseFloat(c.meter.style.width);
+            return endurancePercent < 70;
+          });
+          if (weakening) {
+            msg = `${weakening.player.name}'s endurance is dropping!`;
+          } else {
+            msg = 'The competitors are starting to fatigue!';
+          }
+        } else if (maxHeight > 200 && leader) {
+          // Someone pulling ahead
+          msg = `${leader.player.name} is climbing faster! Who will reach the top first?`;
+        } else if (elapsed < 3) {
+          // Early competition
+          msg = 'Both competitors racing up the wall!';
+        } else {
+          // Mid-competition
+          const messages = [
+            'Both competitors holding strong!',
+            'This is an incredible display of endurance!',
+            'Every inch counts in this climb to the top!',
+            'Who will reach the summit first?'
+          ];
+          msg = messages[elapsed % messages.length];
+        }
+        
         updateText.textContent = msg;
         updateText.style.animation = 'none';
         void updateText.offsetWidth;
