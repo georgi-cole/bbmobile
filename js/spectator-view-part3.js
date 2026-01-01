@@ -52,6 +52,14 @@
       onSkip = null
     } = options;
 
+    // Validate competitor IDs
+    if (!Array.isArray(competitorIds) || competitorIds.length === 0) {
+      console.warn('[SpectatorPart3] Invalid or empty competitorIds array:', competitorIds);
+      // Show fallback message
+      showFallbackMessage(onSkip);
+      return null;
+    }
+
     // Clean up any existing view
     cleanup();
 
@@ -911,6 +919,87 @@
         if (callback) callback();
       }, 1500);
     }, 1000);
+  }
+
+  /**
+   * Show fallback message when competitors are not available
+   */
+  function showFallbackMessage(onSkip) {
+    const view = document.createElement('div');
+    view.className = 'spectator-view spectator-part3 spectator-fullscreen';
+    view.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: linear-gradient(135deg, rgba(10,15,25,0.98) 0%, rgba(15,20,35,0.98) 100%);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.4s ease;
+    `;
+
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.cssText = `
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    `;
+
+    // Title
+    const titleEl = document.createElement('h3');
+    titleEl.textContent = '🏆 Final 3 Part 3';
+    titleEl.style.cssText = `
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffdc8b;
+      margin: 0 0 24px 0;
+      text-shadow: 0 2px 12px rgba(255, 220, 139, 0.5);
+    `;
+    contentWrapper.appendChild(titleEl);
+
+    // Message
+    const messageEl = document.createElement('div');
+    messageEl.textContent = 'Competition in progress...';
+    messageEl.style.cssText = `
+      font-size: 1.2rem;
+      color: #cedbeb;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    `;
+    contentWrapper.appendChild(messageEl);
+
+    // Skip button (if callback provided)
+    if (onSkip) {
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'btn primary';
+      skipBtn.textContent = 'Skip to Results ⏭️';
+      skipBtn.style.cssText = `
+        padding: 16px 32px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        box-shadow: 0 4px 16px rgba(131,191,255,0.4);
+        cursor: pointer;
+      `;
+      skipBtn.onclick = () => {
+        if (currentView) {
+          currentView.remove();
+          currentView = null;
+        }
+        if (onSkip) onSkip();
+      };
+      contentWrapper.appendChild(skipBtn);
+    }
+
+    view.appendChild(contentWrapper);
+    document.body.appendChild(view);
+    currentView = view;
+    skipCallback = onSkip;
+
+    // Inject animations
+    injectPart3Animations();
   }
 
   /**
