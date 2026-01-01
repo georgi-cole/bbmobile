@@ -1133,8 +1133,8 @@
       
       // Build final standings with player not as winner
       // Winners are those still holding (haven't dropped yet)
-      // Get all participants who are still holding (dropTimeMs === null)
-      const stillHolding = participants.filter(p => !p.dropTimeMs);
+      // Get all participants who are still holding (dropTimeMs === null or undefined)
+      const stillHolding = participants.filter(p => p.dropTimeMs == null);
       
       // Still-holding players get credited with the time when the game ended
       // They outlasted all dropped players, so they get the same time (game ended when player dropped)
