@@ -1132,8 +1132,22 @@
       }
       
       // Build final standings with player not as winner
-      // Winner will be determined by who dropped last (in elimination log)
-      const finalStandings = [...eliminationLog].reverse(); // Most recent drop = winner
+      // Winners are those still holding (haven't dropped yet)
+      // Get all participants who are still holding (dropTimeMs === null)
+      const stillHolding = participants.filter(p => !p.dropTimeMs);
+      
+      // Sort still-holding by time still holding (all have same time since we just stopped)
+      // but maintain consistent ordering by using participant name
+      const holdingStandings = stillHolding.map(p => ({
+        name: p.name,
+        timeMs: holdDuration // They're still holding at this time
+      }));
+      
+      // Then add eliminated players in reverse chronological order (last to drop = higher placement)
+      const eliminatedStandings = [...eliminationLog].reverse();
+      
+      // Combine: winners first, then eliminated players
+      const finalStandings = [...holdingStandings, ...eliminatedStandings];
       
       // Emit final standings event
       if(g.bbGameBus && typeof g.bbGameBus.emit === 'function'){
