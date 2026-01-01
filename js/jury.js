@@ -21,7 +21,7 @@
     try{
       const el=document.getElementById('tvNow'); if(el) el.textContent=txt;
       g.tv?.say?.(txt);
-    }catch{}
+    }catch(e){ /* ignore */ }
   }
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
   
@@ -191,7 +191,7 @@
     list.forEach((id, idx)=>{
       const p = gp(id);
       const wk = evictWeekOf(p);
-      if(wk != null && wk < earliestWeek){
+      if(wk !== null && wk < earliestWeek){
         earliestWeek = wk;
         earliestIdx = idx;
       }
@@ -218,16 +218,16 @@
 
   // C) Jury banter templates (shown BEFORE casting - anonymous phase)
   const juryBanterTemplates = [
-    "I will vote for the person who never betrayed me.",
-    "I respect the strongest strategist.",
-    "I value loyalty over anything.",
-    "My vote goes to whoever played the best social game.",
-    "I'm voting for the competition beast.",
-    "I'll vote for who was most honest with me.",
-    "I'm choosing the player who made the biggest moves.",
-    "My decision is based on who controlled the house.",
-    "I vote for who deserves it most.",
-    "I'm rewarding the player who outwitted everyone."
+    'I will vote for the person who never betrayed me.',
+    'I respect the strongest strategist.',
+    'I value loyalty over anything.',
+    'My vote goes to whoever played the best social game.',
+    'I\'m voting for the competition beast.',
+    'I\'ll vote for who was most honest with me.',
+    'I\'m choosing the player who made the biggest moves.',
+    'My decision is based on who controlled the house.',
+    'I vote for who deserves it most.',
+    'I\'m rewarding the player who outwitted everyone.'
   ];
 
   function getJuryBanter(){
@@ -236,12 +236,12 @@
 
   // NEW: Locked-in jury phrases (during reveal phase)
   const JURY_LOCKED_LINES = [
-    "I'm voting for the player who steered the game.",
-    "My vote goes to strategic consistency.",
-    "I'm rewarding social influence and resilience.",
-    "I respect bold moves that landed.",
-    "Adaptability mattered most to me.",
-    "I value clean, effective gameplay."
+    'I\'m voting for the player who steered the game.',
+    'My vote goes to strategic consistency.',
+    'I\'m rewarding social influence and resilience.',
+    'I respect bold moves that landed.',
+    'Adaptability mattered most to me.',
+    'I value clean, effective gameplay.'
   ];
   function getLockedJuryPhrase(){ return JURY_LOCKED_LINES[Math.floor(rng()*JURY_LOCKED_LINES.length)]; }
 
@@ -258,7 +258,7 @@
       <div style="font-size:0.9rem;color:#cfe0f5;">Breaking the tie...</div>
     `;
     document.body.appendChild(card);
-    setTimeout(()=>{ try{card.remove();}catch{} }, 2400);
+    setTimeout(()=>{ try{card.remove();}catch(e){ /* ignore */ } }, 2400);
 
     return winner;
   }
@@ -355,7 +355,7 @@
     console.info(`[finale] labels winner=${winnerId} (rank=1) runnerUp=${A === winnerId ? B : A} (rank=2)`);
     
     // Update HUD to reflect changes
-    try{ if(typeof g.updateHud === 'function') g.updateHud(); }catch(e){}
+    try{ if(typeof g.updateHud === 'function') g.updateHud(); }catch(e){ /* ignore */ }
     
     // Emit players:update event for mobile roster and other listeners
     try{
@@ -395,7 +395,7 @@
     await sleep(450);
     
     // Remove from DOM
-    try { box.remove(); } catch(e){}
+    try { box.remove(); } catch(e){ /* ignore */ }
     
     console.info('[publicFav] tallyHidden');
   }
@@ -889,7 +889,7 @@
     // Weight formula: weight = 1 + 0.10 * normalizedSurvival
     // normalizedSurvival = (weekEvicted ? weekEvicted : totalWeeks) / totalWeeks (clamped 0..1)
     const playersWithWeights = allPlayers.map(p => {
-      const survivalWeek = p.weekEvicted != null ? p.weekEvicted : totalWeeks;
+      const survivalWeek = p.weekEvicted !== null && p.weekEvicted !== undefined ? p.weekEvicted : totalWeeks;
       const normalizedSurvival = Math.max(0, Math.min(1, survivalWeek / totalWeeks));
       const weight = 1 + 0.10 * normalizedSurvival;
       return { player: p, weight };
@@ -1069,6 +1069,7 @@
         // Marsaglia and Tsang method for alpha >= 1
         const d = alpha - 1/3;
         const c = 1 / Math.sqrt(9 * d);
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           let x, v;
           do {
@@ -1091,7 +1092,7 @@
     // Generate target distribution (biased by weight formula: 1 + 0.20 * normalizedSurvival)
     const targetAlphas = slots.map(slot => {
       const p = selectedCandidates[slots.indexOf(slot)].player;
-      const survivalWeek = p.weekEvicted != null ? p.weekEvicted : totalWeeks;
+      const survivalWeek = p.weekEvicted !== null && p.weekEvicted !== undefined ? p.weekEvicted : totalWeeks;
       const normalizedSurvival = Math.max(0, Math.min(1, survivalWeek / totalWeeks));
       return 1 + 0.20 * normalizedSurvival;
     });
@@ -1691,7 +1692,8 @@
     await startJuryCastingPhase(jurors, A, B, finaleOverlay);
     
     // Show jury vote modal announcement (similar to twists) BEFORE reveal starts
-    if (g.showEventModal) await g.showEventModal({
+    if (g.showEventModal) {
+await g.showEventModal({
       title: 'Time for the Jury Vote',
       emojis: '⚖️👑',
       subtitle: 'It\'s time for the jurors to vote and crown the winner of Big Brother',
@@ -1699,6 +1701,7 @@
       minDisplayTime: 5000,
       tone: 'special'
     });
+}
     
     // REMOVED: Don't call renderFinaleGraph here as overlay already mounted above
     // REMOVED: Don't call renderJuryBallotsPanel - we're using fullscreen overlay only
@@ -1724,7 +1727,7 @@
     
     // Show winner celebration with confetti and floating emojis
     await sleep(1000);
-    try{ await g.cardQueueWaitIdle?.(); }catch{}
+    try{ await g.cardQueueWaitIdle?.(); }catch(e){ /* ignore */ }
     
     const winnerPlayer = gp(winner);
     const runnerUpId = winner === A ? B : A;
@@ -1739,7 +1742,7 @@
       console.info('[jury] Winner celebration displayed');
     }
     
-    try{ g.setMusic?.('victory', true); }catch(e){}
+    try{ g.setMusic?.('victory', true); }catch(e){ /* ignore */ }
     
     // Wait 8 seconds for celebration
     await sleep(8000);
@@ -1806,7 +1809,7 @@
     
     const totalWeeks = gg.week || 1;
     const playersWithWeights = allPlayers.map(p => {
-      const survivalWeek = p.weekEvicted != null ? p.weekEvicted : totalWeeks;
+      const survivalWeek = p.weekEvicted !== null && p.weekEvicted !== undefined ? p.weekEvicted : totalWeeks;
       const normalizedSurvival = Math.max(0, Math.min(1, survivalWeek / totalWeeks));
       const weight = 1 + 0.10 * normalizedSurvival;
       return { player: p, weight };
@@ -1889,19 +1892,23 @@
         return;
       }
       
-      // Timeout fallback in case animationend doesn't fire
-      const timeout = setTimeout(() => {
-        el.removeEventListener('animationend', handleAnimationEnd);
-        el.classList.remove('revive-avatar');
-        resolve();
-      }, maxWait);
+      // Use let to allow forward reference
+      let timeout; // eslint-disable-line prefer-const
       
+      // Define handler first to avoid use-before-define
       const handleAnimationEnd = () => {
         clearTimeout(timeout);
         el.removeEventListener('animationend', handleAnimationEnd);
         el.classList.remove('revive-avatar');
         resolve();
       };
+      
+      // Timeout fallback in case animationend doesn't fire
+      timeout = setTimeout(() => {
+        el.removeEventListener('animationend', handleAnimationEnd);
+        el.classList.remove('revive-avatar');
+        resolve();
+      }, maxWait);
       
       el.addEventListener('animationend', handleAnimationEnd);
       el.classList.add('revive-avatar');
