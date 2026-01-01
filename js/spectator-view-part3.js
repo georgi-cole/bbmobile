@@ -20,6 +20,26 @@
   // Three different competition variants
   const VARIANTS = ['holdWall', 'trivia', 'speedChallenge'];
 
+  // Configuration constants for simulations
+  const SIMULATION_CONFIG = {
+    holdWall: {
+      maxClimbHeight: 350,
+      climbIncrement: { min: 15, max: 25 },
+      enduranceDepletionBase: 8,
+      enduranceDepletionRandom: 15,
+      updateInterval: 2500
+    },
+    trivia: {
+      pointsPerCorrect: 100,
+      updateInterval: 4000
+    },
+    speedChallenge: {
+      scoreIncrement: { min: 50, max: 100 },
+      maxScore: 3000,
+      updateInterval: 2000
+    }
+  };
+
   /**
    * Show enhanced Part 3 spectator view
    * @param {Object} options
@@ -656,6 +676,7 @@
   function startHoldWallSimulation(climbers) {
     let elapsed = 0;
     const updateText = document.querySelector('.spectator-update-text');
+    const config = SIMULATION_CONFIG.holdWall;
     
     const messages = [
       'Both competitors gripping the wall tight!',
@@ -674,11 +695,12 @@
       climbers.forEach((climber, index) => {
         // Simulate climbing progress with slight randomness
         const currentBottom = parseInt(climber.element.style.bottom) || 20;
-        const newBottom = Math.min(350, currentBottom + 15 + Math.random() * 25);
+        const increment = config.climbIncrement.min + Math.random() * (config.climbIncrement.max - config.climbIncrement.min);
+        const newBottom = Math.min(config.maxClimbHeight, currentBottom + increment);
         climber.element.style.bottom = `${newBottom}px`;
 
         // Deplete endurance meter gradually
-        const endurancePercent = Math.max(20, 100 - elapsed * 8 - Math.random() * 15);
+        const endurancePercent = Math.max(20, 100 - elapsed * config.enduranceDepletionBase - Math.random() * config.enduranceDepletionRandom);
         climber.meter.style.width = `${endurancePercent}%`;
         
         // Change color as endurance drops
@@ -700,7 +722,7 @@
         updateText.style.animation = 'fadeIn 0.5s ease';
       }
 
-    }, 2500);
+    }, config.updateInterval);
   }
 
   /**
@@ -721,6 +743,7 @@
     let currentQuestion = 0;
     let scores = competitors.map(() => 0);
     const updateText = document.querySelector('.spectator-update-text');
+    const config = SIMULATION_CONFIG.trivia;
 
     progressInterval = setInterval(() => {
       currentQuestion++;
@@ -744,7 +767,7 @@
           competitors.forEach((comp, index) => {
             if (index === correctIndex) {
               // Correct answer
-              scores[index] += 100;
+              scores[index] += config.pointsPerCorrect;
               comp.score.textContent = `${scores[index]} pts`;
               comp.answerStatus.textContent = '✓ Correct!';
               comp.answerStatus.style.color = '#4ade80';
@@ -774,7 +797,7 @@
         }, 1800);
       }
 
-    }, 4000);
+    }, config.updateInterval);
   }
 
   /**
@@ -783,6 +806,7 @@
   function startSpeedChallengeSimulation(lanes) {
     let elapsed = 0;
     const updateText = document.querySelector('.spectator-update-text');
+    const config = SIMULATION_CONFIG.speedChallenge;
     
     const messages = [
       'Lightning-fast reflexes on display!',
@@ -802,12 +826,12 @@
       
       lanes.forEach((lane, index) => {
         // Increment score with randomness
-        const increment = 50 + Math.floor(Math.random() * 100);
+        const increment = config.scoreIncrement.min + Math.floor(Math.random() * (config.scoreIncrement.max - config.scoreIncrement.min));
         scores[index] += increment;
         lane.score.textContent = scores[index].toString();
         
-        // Update progress bar (cap at 100%)
-        const progress = Math.min(100, (scores[index] / 100));
+        // Update progress bar (cap at 100%, scale score to percentage)
+        const progress = Math.min(100, (scores[index] / config.maxScore) * 100);
         lane.progressFill.style.width = `${progress}%`;
         
         // Flash effect on update
@@ -831,7 +855,7 @@
         updateText.style.animation = 'fadeIn 0.5s ease';
       }
 
-    }, 2000);
+    }, config.updateInterval);
   }
 
   /**
