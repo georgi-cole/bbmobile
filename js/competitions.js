@@ -29,19 +29,6 @@
     };
   }
 
-  // Inject spinner animation styles once at module load
-  (function injectSpinnerStyles() {
-    if (document.getElementById('spinner-animation-style')) return;
-    const style = document.createElement('style');
-    style.id = 'spinner-animation-style';
-    style.textContent = `
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-  })();
-
   // Legacy game list constants kept for backwards compatibility
   // NOTE: These are no longer used for selection - kept for reference only
   // All selection now happens through MinigameSelector (js/minigames/selector.js)
@@ -1734,8 +1721,21 @@
    * Used when player has submitted and is waiting for competition to finish
    * @param {HTMLElement} panel - The panel element to append the waiting UI to
    * @param {string} message - The main message to display (default: 'Waiting for results...')
+   * @param {string} subtext - The subtext to display (default: 'AI players are completing their attempts')
    */
-  function showWaitingUI(panel, message = 'Waiting for results...') {
+  function showWaitingUI(panel, message = 'Waiting for results...', subtext = 'AI players are completing their attempts') {
+    // Inject spinner animation styles if not already present (safe for DOM-ready timing)
+    if (!document.getElementById('spinner-animation-style')) {
+      const style = document.createElement('style');
+      style.id = 'spinner-animation-style';
+      style.textContent = `
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
     const waitingBox = document.createElement('div');
     waitingBox.style.cssText = `
       display: flex;
@@ -1767,9 +1767,9 @@
       margin-bottom: 12px;
     `;
     
-    const subtext = document.createElement('div');
-    subtext.textContent = 'AI players are completing their attempts';
-    subtext.style.cssText = `
+    const subtextEl = document.createElement('div');
+    subtextEl.textContent = subtext;
+    subtextEl.style.cssText = `
       font-size: 0.9rem;
       color: #8a9ab8;
       font-style: italic;
@@ -1777,7 +1777,7 @@
     
     waitingBox.appendChild(spinner);
     waitingBox.appendChild(text);
-    waitingBox.appendChild(subtext);
+    waitingBox.appendChild(subtextEl);
     panel.appendChild(waitingBox);
   }
 
