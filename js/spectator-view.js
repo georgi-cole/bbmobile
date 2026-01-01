@@ -530,11 +530,13 @@
    * Start progress simulation
    */
   function startProgressSimulation(competitorIds, progressFill, updateText, phase) {
-    // Determine phase-specific messages
+    // Determine phase-specific messages with precise matching
     let phaseKey = 'common';
-    if (phase && phase.includes('Part 1')) phaseKey = 'part1';
-    else if (phase && phase.includes('Part 2')) phaseKey = 'part2';
-    else if (phase && phase.includes('Part 3')) phaseKey = 'part3';
+    if (phase) {
+      if (phase.toLowerCase().indexOf('part 1') !== -1) phaseKey = 'part1';
+      else if (phase.toLowerCase().indexOf('part 2') !== -1) phaseKey = 'part2';
+      else if (phase.toLowerCase().indexOf('part 3') !== -1) phaseKey = 'part3';
+    }
     
     const progressMessages = [
       ...PROGRESS_MESSAGES.common,

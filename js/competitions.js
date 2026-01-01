@@ -1795,7 +1795,7 @@
     panel.innerHTML = '';
     
     // Show spectator view if human is in jury
-    if (humanInJury && global.SpectatorView) {
+    if (humanInJury && global.SpectatorView && typeof global.SpectatorView.show === 'function') {
       console.info('[F3P1] Showing spectator view for jury member');
       
       const alive = global.alivePlayers();
@@ -2484,12 +2484,12 @@
         console.info('[F3Decision] Human is nominee, showing Final Plea inline card in TV');
         
         // Create inline card to show inside TV overlay
-        const createPleaCard = () => {
+        const createPleaCard = (boxElement) => {
           const tvOverlay = document.querySelector('#tvOverlay');
           if (!tvOverlay) {
             console.warn('[F3Decision] #tvOverlay not found, falling back to panel plea');
             // Fallback to panel-based plea
-            showPanelBasedPlea(box, humanId, hoh, g);
+            showPanelBasedPlea(boxElement, humanId, hoh, g);
             return;
           }
           
@@ -2588,8 +2588,8 @@
           console.info('[F3Decision] Plea card added to TV overlay');
         };
         
-        // Create plea card in TV
-        createPleaCard();
+        // Create plea card in TV, passing box element for fallback
+        createPleaCard(box);
         
         // Show status in panel
         const note = document.createElement('div');
