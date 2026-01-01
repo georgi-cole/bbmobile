@@ -29,6 +29,19 @@
     };
   }
 
+  // Inject spinner animation styles once at module load
+  (function injectSpinnerStyles() {
+    if (document.getElementById('spinner-animation-style')) return;
+    const style = document.createElement('style');
+    style.id = 'spinner-animation-style';
+    style.textContent = `
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  })();
+
   // Legacy game list constants kept for backwards compatibility
   // NOTE: These are no longer used for selection - kept for reference only
   // All selection now happens through MinigameSelector (js/minigames/selector.js)
@@ -1719,6 +1732,8 @@
   /**
    * Show a "Waiting for results" UI in the panel
    * Used when player has submitted and is waiting for competition to finish
+   * @param {HTMLElement} panel - The panel element to append the waiting UI to
+   * @param {string} message - The main message to display (default: 'Waiting for results...')
    */
   function showWaitingUI(panel, message = 'Waiting for results...') {
     const waitingBox = document.createElement('div');
@@ -1764,18 +1779,6 @@
     waitingBox.appendChild(text);
     waitingBox.appendChild(subtext);
     panel.appendChild(waitingBox);
-    
-    // Add spinner animation if not already defined
-    if (!document.getElementById('spinner-animation-style')) {
-      const style = document.createElement('style');
-      style.id = 'spinner-animation-style';
-      style.textContent = `
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `;
-      document.head.appendChild(style);
-    }
   }
 
   function renderF3P1(panel) {
