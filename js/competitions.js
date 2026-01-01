@@ -1782,9 +1782,46 @@
   }
 
   function renderF3P1(panel) {
-    const g = global.game; panel.innerHTML = '';
+    const g = global.game;
+    const humanId = g.humanId;
+    const you = global.getP?.(humanId);
+    
+    // Check if human is in jury (evicted and in jury house)
+    const humanInJury = you && you.evicted && g.juryHouse?.includes(humanId);
+    
+    // Check if human has submitted score
+    const humanSubmitted = you && !you.evicted && g.lastCompScores?.has(you.id);
+    
+    panel.innerHTML = '';
+    
+    // Show spectator view if human is in jury
+    if (humanInJury && global.SpectatorView) {
+      console.info('[F3P1] Showing spectator view for jury member');
+      
+      const alive = global.alivePlayers();
+      const competitorIds = alive.map(p => p.id);
+      
+      // Determine game type from stored key or pick a generic one
+      const gameType = g.__f3p1GameKey || 'competition';
+      
+      global.SpectatorView.show({
+        competitorIds: competitorIds,
+        gameType: gameType,
+        phase: 'Final 3 — Part 1',
+        onSkip: () => {
+          // Skip to results - fast forward to end of phase
+          if (g.phase === 'final3_comp1') {
+            console.info('[F3P1] Skip requested, forcing phase completion');
+            g.__skipRequested = true;
+            finishF3P1();
+          }
+        },
+        container: panel
+      });
+      return;
+    }
+    
     const host = document.createElement('div'); host.className = 'minigame-host';
-    const you = global.getP?.(g.humanId);
 
     if (!isMinigameSystemReady()) {
       // Use inline status instead of below-TV message
@@ -1815,7 +1852,7 @@
         multiplier: (0.8 + (you?.skill || 0.5) * 0.6)
       });
 
-    } else if (you && !you.evicted && g.lastCompScores?.has(you.id)) {
+    } else if (humanSubmitted) {
       // Human has submitted - show waiting UI
       showWaitingUI(panel, '✓ Score Submitted');
       if (window.TvStatus?.set) {
@@ -2444,70 +2481,184 @@
       const humanIsNominee = g.nominees.includes(humanId);
       
       if (humanIsNominee && !g.__pleaSubmitted && global.FinalPlea) {
-        console.info('[F3Decision] Human is nominee, showing Final Plea option');
+        console.info('[F3Decision] Human is nominee, showing Final Plea inline card in TV');
         
-        // Show plea option in panel
-        const pleaInfo = document.createElement('div');
-        pleaInfo.style.cssText = `
-          margin-top: 16px;
-          padding: 16px;
-          background: rgba(255,220,139,0.1);
-          border: 2px solid rgba(255,220,139,0.3);
-          border-radius: 12px;
-        `;
-        
-        const pleaText = document.createElement('div');
-        pleaText.style.cssText = `
-          font-size: 1rem;
-          color: #cedbeb;
-          margin-bottom: 12px;
-        `;
-        pleaText.textContent = 'You have a chance to make your case to stay in the game.';
-        pleaInfo.appendChild(pleaText);
-        
-        const pleaBtn = document.createElement('button');
-        pleaBtn.className = 'btn primary';
-        pleaBtn.textContent = 'Make Your Final Plea 🗣️';
-        pleaBtn.style.cssText = 'width: 100%;';
-        pleaBtn.onclick = () => {
-          const humanPlayer = global.getP(humanId);
-          const otherNomineeId = g.nominees.find(id => id !== humanId);
-          
-          // Validate that we have both nominees before showing plea
-          if (!otherNomineeId) {
-            console.warn('[F3Decision] Could not find other nominee, skipping plea');
-            output.innerHTML += '\n✗ Error: Could not determine other nominee';
+        // Create inline card to show inside TV overlay
+        const createPleaCard = () => {
+          const tvOverlay = document.querySelector('#tvOverlay');
+          if (!tvOverlay) {
+            console.warn('[F3Decision] #tvOverlay not found, falling back to panel plea');
+            // Fallback to panel-based plea
+            showPanelBasedPlea(box, humanId, hoh, g);
             return;
           }
           
-          const otherNominee = global.getP(otherNomineeId);
+          // Clear any existing inline cards
+          const existingCards = tvOverlay.querySelectorAll('.plea-inline-card');
+          existingCards.forEach(card => card.remove());
           
-          global.FinalPlea.show({
-            nominee: humanPlayer,
-            hoh: hoh,
-            otherNominee: otherNominee,
-            onSubmit: (pleaData) => {
-              if (pleaData) {
-                // Store plea influence for AI decision
-                g.__pleaInfluence = pleaData.influence;
-                console.info('[F3Decision] Plea submitted with influence:', pleaData.influence);
-              }
-              // Re-render panel to show waiting state
-              renderFinal3DecisionPanel();
+          // Create the inline card
+          const pleaCard = document.createElement('div');
+          pleaCard.className = 'revealCard diaryRoomCard plea-inline-card';
+          pleaCard.style.cssText = `
+            max-width: min(92%, 520px);
+            text-align: center;
+          `;
+          
+          // Icon
+          const icon = document.createElement('div');
+          icon.textContent = '🗣️';
+          icon.style.cssText = `
+            font-size: 48px;
+            margin-bottom: 12px;
+          `;
+          pleaCard.appendChild(icon);
+          
+          // Title
+          const title = document.createElement('h3');
+          title.textContent = 'Make Your Final Plea';
+          title.style.cssText = `
+            margin: 0 0 12px 0;
+            color: #ffdc8b;
+          `;
+          pleaCard.appendChild(title);
+          
+          // Description
+          const desc = document.createElement('p');
+          desc.textContent = 'You have a chance to make your case to stay in the game.';
+          desc.style.cssText = `
+            margin: 0 0 16px 0;
+            line-height: 1.5;
+          `;
+          pleaCard.appendChild(desc);
+          
+          // Button
+          const pleaBtn = document.createElement('button');
+          pleaBtn.className = 'btn primary';
+          pleaBtn.textContent = 'Make Your Final Plea';
+          pleaBtn.style.cssText = `
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 1rem;
+          `;
+          pleaBtn.onclick = () => {
+            const humanPlayer = global.getP(humanId);
+            const otherNomineeId = g.nominees.find(id => id !== humanId);
+            
+            // Validate that we have both nominees before showing plea
+            if (!otherNomineeId) {
+              console.warn('[F3Decision] Could not find other nominee, skipping plea');
+              return;
             }
-          });
+            
+            const otherNominee = global.getP(otherNomineeId);
+            
+            // Remove the inline card before showing the modal
+            pleaCard.remove();
+            
+            global.FinalPlea.show({
+              nominee: humanPlayer,
+              hoh: hoh,
+              otherNominee: otherNominee,
+              onSubmit: (pleaData) => {
+                if (pleaData) {
+                  // Store plea influence for AI decision
+                  g.__pleaInfluence = pleaData.influence;
+                  console.info('[F3Decision] Plea submitted with influence:', pleaData.influence);
+                }
+                // Re-render panel to show waiting state
+                renderFinal3DecisionPanel();
+              }
+            });
+          };
+          pleaCard.appendChild(pleaBtn);
+          
+          // Add to TV overlay content
+          const tvOverlayContent = tvOverlay.querySelector('.tvOverlayContent');
+          if (tvOverlayContent) {
+            tvOverlayContent.appendChild(pleaCard);
+          } else {
+            // Fallback: create tvOverlayContent if it doesn't exist
+            const content = document.createElement('div');
+            content.className = 'tvOverlayContent';
+            content.appendChild(pleaCard);
+            tvOverlay.appendChild(content);
+          }
+          
+          console.info('[F3Decision] Plea card added to TV overlay');
         };
-        pleaInfo.appendChild(pleaBtn);
-        box.appendChild(pleaInfo);
+        
+        // Create plea card in TV
+        createPleaCard();
+        
+        // Show status in panel
+        const note = document.createElement('div');
+        note.className = 'tiny muted';
+        note.textContent = 'Check the TV above to make your plea.';
+        box.appendChild(note);
+      } else {
+        const note = document.createElement('div'); note.className = 'tiny muted'; 
+        note.textContent = g.__pleaSubmitted 
+          ? 'Your plea has been heard. AI will make the decision at end.' 
+          : 'AI will make the decision at end.';
+        box.appendChild(note);
       }
-      
-      const note = document.createElement('div'); note.className = 'tiny muted'; 
-      note.textContent = g.__pleaSubmitted 
-        ? 'Your plea has been heard. AI will make the decision at end.' 
-        : 'AI will make the decision at end.';
-      box.appendChild(note);
     }
     panel.appendChild(box);
+  }
+  
+  /**
+   * Fallback: Show plea option in panel (used if TV overlay not available)
+   */
+  function showPanelBasedPlea(box, humanId, hoh, g) {
+    const pleaInfo = document.createElement('div');
+    pleaInfo.style.cssText = `
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(255,220,139,0.1);
+      border: 2px solid rgba(255,220,139,0.3);
+      border-radius: 12px;
+    `;
+    
+    const pleaText = document.createElement('div');
+    pleaText.style.cssText = `
+      font-size: 1rem;
+      color: #cedbeb;
+      margin-bottom: 12px;
+    `;
+    pleaText.textContent = 'You have a chance to make your case to stay in the game.';
+    pleaInfo.appendChild(pleaText);
+    
+    const pleaBtn = document.createElement('button');
+    pleaBtn.className = 'btn primary';
+    pleaBtn.textContent = 'Make Your Final Plea 🗣️';
+    pleaBtn.style.cssText = 'width: 100%;';
+    pleaBtn.onclick = () => {
+      const humanPlayer = global.getP(humanId);
+      const otherNomineeId = g.nominees.find(id => id !== humanId);
+      
+      if (!otherNomineeId) {
+        console.warn('[F3Decision] Could not find other nominee, skipping plea');
+        return;
+      }
+      
+      const otherNominee = global.getP(otherNomineeId);
+      
+      global.FinalPlea.show({
+        nominee: humanPlayer,
+        hoh: hoh,
+        otherNominee: otherNominee,
+        onSubmit: (pleaData) => {
+          if (pleaData) {
+            g.__pleaInfluence = pleaData.influence;
+            console.info('[F3Decision] Plea submitted with influence:', pleaData.influence);
+          }
+          renderFinal3DecisionPanel();
+        }
+      });
+    };
+    pleaInfo.appendChild(pleaBtn);
+    box.appendChild(pleaInfo);
   }
   global.renderFinal3DecisionPanel = renderFinal3DecisionPanel;
 
