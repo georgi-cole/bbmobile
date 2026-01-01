@@ -144,7 +144,7 @@
       <div class="sep"></div>
       <label style="display:block;max-width:260px">
         Players total
-        <input id="numPlayersCast" type="number" min="4" max="16" value="12" data-key="numPlayers" style="width:100%"/>
+        <input id="numPlayersCast" type="number" min="3" max="16" value="16" data-key="numPlayers" style="width:100%"/>
       </label>
     `;
 
@@ -157,12 +157,12 @@
     }
 
     const cfg = readCfg();
-    const cur = clamp(cfg?.numPlayers ?? (Array.isArray(g.game?.players) ? g.game.players.length : 12), 4, 16);
+    const cur = clamp(cfg?.numPlayers ?? (Array.isArray(g.game?.players) ? g.game.players.length : 16), 3, 16);
     const input = wrap.querySelector('#numPlayersCast');
     input.value = String(cur);
 
     input.addEventListener('input', ()=>{
-      const v = clamp(input.value, 4, 16);
+      const v = clamp(input.value, 3, 16);
       if(String(v)!==input.value) input.value = String(v);
     });
 
@@ -173,7 +173,7 @@
   }
 
   function applyPlayers(v){
-    const val = clamp(v, 4, 16);
+    const val = clamp(v, 3, 16);
     const cfg = readCfg(); cfg.numPlayers = val; writeCfg(cfg);
     log('apply numPlayers =', val, 'phase=', g.game?.phase);
 

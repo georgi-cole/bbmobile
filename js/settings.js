@@ -786,7 +786,7 @@
   function cfg(){ (g.game = g.game || {}).cfg = g.game.cfg || {}; return g.game.cfg; }
 
   function applyPlayersConfig(v){
-    const val = Math.max(6, Math.min(22, Number(v)||12));
+    const val = Math.max(3, Math.min(16, Number(v)||16));
     cfg().numPlayers = val;
     try{ localStorage.setItem('bb_cfg_numPlayers', String(val)); }catch{}
     
@@ -835,16 +835,16 @@
     let input=document.getElementById('numPlayers');
     if(!input){
       const label=document.createElement('label');
-      label.innerHTML='Players total<input id="numPlayers" type="number" min="4" max="16" value="12"/>';
+      label.innerHTML='Players total<input id="numPlayers" type="number" min="3" max="16" value="16"/>';
       (pane.querySelector('.settingsGrid') || pane).prepend(label);
       input=label.querySelector('#numPlayers');
     }
     // prefer cfg value, else current roster length
-    const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 12);
-    input.value = String(Math.max(4, Math.min(16, current || 12)));
+    const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 16);
+    input.value = String(Math.max(3, Math.min(16, current || 16)));
     // Only wire input event for UI clamping (no change event to avoid mid-season reload)
     input.addEventListener('input', ()=>{
-      const v=Math.max(4, Math.min(16, Number(input.value)||12));
+      const v=Math.max(3, Math.min(16, Number(input.value)||16));
       if(String(v) !== input.value) input.value = String(v);
     });
   }
@@ -913,11 +913,11 @@
     // Players total
     const np=document.getElementById('numPlayers');
     if(np){
-      const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 12);
-      np.value = String(Math.max(6, Math.min(22, current || 12)));
+      const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 16);
+      np.value = String(Math.max(3, Math.min(16, current || 16)));
       // Only wire input event for UI clamping (no change event to avoid mid-season reload)
       np.addEventListener('input', ()=>{
-        const v=Math.max(6, Math.min(22, Number(np.value)||12));
+        const v=Math.max(3, Math.min(16, Number(np.value)||16));
         if(String(v) !== np.value) np.value = String(v);
       });
     }

@@ -19,7 +19,7 @@
   /* ===== Game State ===== */
   const game={
     cfg:{
-      numPlayers:12,tHOH:35,tNoms:25,tVeto:30,tVetoDec:20,tComms:30,tVote:25,tJury:42,
+      numPlayers:16,tHOH:35,tNoms:25,tVeto:30,tVetoDec:20,tComms:30,tVote:25,tJury:42,
       fxCards:true,fxSound:true,fxStyle:'fade',fxAnim:true,miniMode:'random',
       manualMode:false,doubleChance:10,tripleChance:3,enableJuryHouse:true,autoMusic:true,
       returnChance:50,selfEvictChance:0,humanName:'You',enablePublicFav:false,

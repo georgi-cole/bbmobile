@@ -37,7 +37,7 @@
   function getDefaultCfg(){
     return {
       humanName: 'You',
-      numPlayers:12,tHOH:35,tNoms:25,tVeto:30,tVetoDec:20,tComms:30,tVote:25,tJury:42,
+      numPlayers:16,tHOH:35,tNoms:25,tVeto:30,tVetoDec:20,tComms:30,tVote:25,tJury:42,
       fxCards:true,fxSound:true,fxAnim:true,fxStyle:'fade',miniMode:'random',
       manualMode:false,doubleChance:10,tripleChance:3,enableJuryHouse:true,autoMusic:true,
       returnChance:50,selfEvictChance:0,enablePublicFav:false,adaptiveBackground:true,
@@ -72,8 +72,8 @@
     const on = (id, dv)=>document.getElementById(id)?.checked ?? dv;
 
     g.cfg.humanName=String(val('humanName','You')).trim() || 'You';
-    // Allow 4..16 players
-    g.cfg.numPlayers=clampNum(val('numPlayers',12),12,4,16);
+    // Allow 3..16 players
+    g.cfg.numPlayers=clampNum(val('numPlayers',16),16,3,16);
     g.cfg.tHOH=clampNum(val('tHOH',35),5,5,999);
     g.cfg.tNoms=clampNum(val('tNoms',25),5,5,999);
     g.cfg.tVeto=clampNum(val('tVeto',30),5,5,999);

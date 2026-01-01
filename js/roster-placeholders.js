@@ -29,8 +29,8 @@
     if (g.game && Array.isArray(g.game.players) && g.game.players.length > 0) {
       return g.game.players.length;
     }
-    // Default: 12 players
-    return 12;
+    // Default: 16 players
+    return 16;
   }
 
   /**

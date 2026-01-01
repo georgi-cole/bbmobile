@@ -54,7 +54,7 @@
     const jurors = Array.isArray(g.juryHouse) ? g.juryHouse.length : 0;
     const evicted = (g.players || []).filter(p => p.evicted && !g.juryHouse?.includes(p.id)).length;
     const total = alive + jurors + evicted;
-    g.__initialPlayers = Math.max(total, 12); // Default to 12 if calculation fails
+    g.__initialPlayers = Math.max(total, 16); // Default to 16 if calculation fails
     return g.__initialPlayers;
   }
 
