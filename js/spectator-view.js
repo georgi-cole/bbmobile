@@ -354,6 +354,81 @@
     }
     gamePreview.appendChild(activityIndicator);
 
+    // Add visual game simulation preview
+    const gameSimulation = document.createElement('div');
+    gameSimulation.className = 'game-simulation';
+    gameSimulation.style.cssText = `
+      display: flex;
+      gap: 12px;
+      margin: 20px 0;
+      position: relative;
+      z-index: 1;
+      justify-content: center;
+      align-items: center;
+    `;
+    
+    // Create player action indicators based on competitor count
+    competitorIds.forEach((playerId, index) => {
+      const player = global.getP?.(playerId);
+      if (!player) return;
+      
+      const playerIndicator = document.createElement('div');
+      playerIndicator.className = 'player-action-indicator';
+      playerIndicator.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      `;
+      
+      // Player mini avatar
+      const miniAvatar = document.createElement('div');
+      miniAvatar.style.cssText = `
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6b7a99 0%, #4a5a7a 100%);
+        border: 2px solid #ffdc8b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #ffdc8b;
+        box-shadow: 0 4px 12px rgba(255, 220, 139, 0.4);
+      `;
+      miniAvatar.textContent = player.name.charAt(0).toUpperCase();
+      playerIndicator.appendChild(miniAvatar);
+      
+      // Action bars (simulating gameplay activity)
+      const actionBars = document.createElement('div');
+      actionBars.style.cssText = `
+        display: flex;
+        gap: 2px;
+        align-items: flex-end;
+      `;
+      
+      for (let i = 0; i < 5; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'action-bar';
+        bar.style.cssText = `
+          width: 6px;
+          height: ${20 + Math.random() * 20}px;
+          background: linear-gradient(to top, #83bfff, #cedbeb);
+          border-radius: 2px;
+          animation: actionBarPulse 1s ease-in-out infinite;
+          animation-delay: ${index * 0.2 + i * 0.1}s;
+          box-shadow: 0 2px 6px rgba(131, 191, 255, 0.4);
+        `;
+        actionBars.appendChild(bar);
+      }
+      
+      playerIndicator.appendChild(actionBars);
+      gameSimulation.appendChild(playerIndicator);
+    });
+    
+    gamePreview.appendChild(gameSimulation);
+
     const progressBar = document.createElement('div');
     progressBar.className = 'spectator-progress-bar';
     progressBar.style.cssText = `
@@ -582,6 +657,13 @@
         }
       });
 
+      // Update action bar heights for visual interest
+      const actionBars = document.querySelectorAll('.action-bar');
+      actionBars.forEach(bar => {
+        const newHeight = 20 + Math.random() * 30;
+        bar.style.height = `${newHeight}px`;
+      });
+
       // Select random message
       let message;
       if (updateCount % 3 === 0 && commentaryPhrases.length > 0) {
@@ -737,6 +819,17 @@
         100% {
           transform: scale(1);
           color: #83bfff;
+        }
+      }
+      
+      @keyframes actionBarPulse {
+        0%, 100% {
+          transform: scaleY(0.6);
+          opacity: 0.6;
+        }
+        50% {
+          transform: scaleY(1);
+          opacity: 1;
         }
       }
     `;

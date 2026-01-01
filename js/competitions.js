@@ -2215,6 +2215,7 @@
         },
         container: panel
       });
+      return;
     } else if (humanSubmitted) {
       // Human is in finalists and has submitted - show waiting UI
       showWaitingUI(panel, '✓ Score Submitted');
