@@ -545,6 +545,15 @@
     // Show quick reveal sequence (2-3 seconds)
     showRevealSequence(() => {
       cleanup();
+      
+      // Auto-advance: Set phase timer to 1 second for quick progression
+      const g = global.game;
+      if (g && g.phaseEndsAt) {
+        const now = Date.now();
+        g.phaseEndsAt = now + 1000; // 1 second from now
+        console.info('[SpectatorView] Phase timer set to 1 second for quick progression');
+      }
+      
       if (skipCallback) skipCallback();
     });
 
@@ -587,8 +596,13 @@
       updateText.style.fontSize = '1.2rem';
 
       setTimeout(() => {
-        if (callback) callback();
-      }, 1500);
+        updateText.textContent = '✨ Get ready for the next part...';
+        updateText.style.fontSize = '1.1rem';
+        
+        setTimeout(() => {
+          if (callback) callback();
+        }, 800);
+      }, 1200);
     }, 1000);
   }
 

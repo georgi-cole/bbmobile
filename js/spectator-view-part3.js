@@ -924,9 +924,18 @@
       skipBtn.textContent = 'Revealing results...';
     }
 
-    // Show quick reveal sequence
-    showRevealSequence(() => {
+    // Show quick reveal sequence with winner announcement
+    showRevealSequenceWithWinner(() => {
       cleanup();
+      
+      // Auto-advance: Set phase timer to 1 second for quick progression
+      const g = global.game;
+      if (g && g.phaseEndsAt) {
+        const now = Date.now();
+        g.phaseEndsAt = now + 1000; // 1 second from now
+        console.info('[SpectatorPart3] Phase timer set to 1 second for quick progression');
+      }
+      
       if (skipCallback) skipCallback();
     });
 
@@ -937,9 +946,9 @@
   }
 
   /**
-   * Show reveal sequence
+   * Show reveal sequence with winner announcement
    */
-  function showRevealSequence(callback) {
+  function showRevealSequenceWithWinner(callback) {
     if (!currentView) {
       if (callback) callback();
       return;
@@ -951,18 +960,46 @@
       return;
     }
 
+    const g = global.game;
+    const finalists = g.__f3_finalists || [];
+    
+    // Determine winner based on current scores (simulate if needed)
+    let winnerId = null;
+    if (g.lastCompScores && g.lastCompScores.size > 0) {
+      const scores = Array.from(g.lastCompScores.entries())
+        .filter(([id]) => finalists.includes(id))
+        .sort((a, b) => b[1] - a[1]);
+      if (scores.length > 0) {
+        winnerId = scores[0][0];
+      }
+    }
+    
+    // If no winner determined yet, pick randomly from finalists
+    if (!winnerId && finalists.length > 0) {
+      winnerId = finalists[Math.floor(Math.random() * finalists.length)];
+    }
+    
+    const winner = winnerId ? global.getP?.(winnerId) : null;
+    const winnerName = winner ? winner.name : 'A competitor';
+
     // Dramatic pause
     updateText.textContent = '...';
     updateText.style.animation = 'pulse 0.5s ease 3';
 
     setTimeout(() => {
-      updateText.textContent = '👑 Final HOH will be revealed!';
+      updateText.textContent = `👑 ${winnerName} wins Part 3!`;
       updateText.style.color = '#ffdc8b';
       updateText.style.fontWeight = '700';
       updateText.style.fontSize = '1.4rem';
 
       setTimeout(() => {
-        if (callback) callback();
+        // Show "Get ready" transitional message
+        updateText.textContent = '✨ Get ready for the next part...';
+        updateText.style.fontSize = '1.2rem';
+        
+        setTimeout(() => {
+          if (callback) callback();
+        }, 1000);
       }, 1500);
     }, 1000);
   }
