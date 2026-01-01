@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 3 Part 3 Spectator Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1419;
+      color: #cedbeb;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-section {
+      background: rgba(40, 40, 80, 0.8);
+      border: 2px solid #6b7a99;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #ffdc8b;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(74, 144, 226, 0.4);
+    }
+    
+    .info-box {
+      background: rgba(74, 144, 226, 0.1);
+      border: 2px solid #4a90e2;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    
+    .log-output {
+      background: #000;
+      color: #0f0;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 16px;
+    }
+    
+    #panel {
+      min-height: 200px;
+      background: rgba(30, 30, 60, 0.9);
+      border: 2px solid #4a5a7a;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-section">
+    <h2>🎬 Final 3 Part 3 Spectator Mode Fix Test</h2>
+    <p>Test the improved spectator mode logic with comprehensive logging.</p>
+    
+    <div class="info-box">
+      <h4>ℹ️ Test Scenarios</h4>
+      <ul>
+        <li><strong>Scenario 1:</strong> Human eliminated (not in finalists) - Should show spectator view</li>
+        <li><strong>Scenario 2:</strong> Human in jury - Should show spectator view</li>
+        <li><strong>Scenario 3:</strong> Human competing (in finalists) - Should show minigame or waiting UI</li>
+        <li><strong>Scenario 4:</strong> Finalists not yet set - Should show fallback UI</li>
+      </ul>
+    </div>
+
+    <h3>Test Controls</h3>
+    <button class="btn" onclick="testScenario1()">Test Scenario 1: Human Eliminated</button>
+    <button class="btn" onclick="testScenario2()">Test Scenario 2: Human in Jury</button>
+    <button class="btn" onclick="testScenario3()">Test Scenario 3: Human Competing</button>
+    <button class="btn" onclick="testScenario4()">Test Scenario 4: No Finalists Yet</button>
+    <button class="btn" onclick="clearLogs()" style="background: #6b7a99;">Clear Logs</button>
+  </div>
+
+  <div class="test-section">
+    <h3>Panel Output</h3>
+    <div id="panel"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Console Logs</h3>
+    <div id="log-output" class="log-output"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/utils/fn-avatar-resolver.js"></script>
+  <script>
+    // Capture console logs
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    function logToOutput(level, ...args) {
+      const logDiv = document.getElementById('log-output');
+      const msg = args.map(arg => {
+        if (typeof arg === 'object') {
+          return JSON.stringify(arg, null, 2);
+        }
+        return String(arg);
+      }).join(' ');
+      
+      const color = {
+        'log': '#0f0',
+        'info': '#4a90e2',
+        'warn': '#f59e0b',
+        'error': '#ef4444'
+      }[level] || '#0f0';
+      
+      const line = document.createElement('div');
+      line.style.color = color;
+      line.textContent = `[${level.toUpperCase()}] ${msg}`;
+      logDiv.appendChild(line);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      logToOutput('log', ...args);
+    };
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      logToOutput('info', ...args);
+    };
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      logToOutput('warn', ...args);
+    };
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      logToOutput('error', ...args);
+    };
+    
+    // Mock game environment
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', human: false, evicted: false, avatar: 'avatar1' },
+        { id: 2, name: 'Bob', human: false, evicted: false, avatar: 'avatar2' },
+        { id: 3, name: 'Charlie', human: true, evicted: false, avatar: 'avatar3' }
+      ],
+      humanId: 3,
+      phase: 'final3_comp3',
+      lastCompScores: new Map(),
+      juryHouse: [],
+      __f3_finalists: null,
+      __f3p1Winner: 1,
+      __f3p2Winner: 2,
+      bus: {
+        emit: function(event, data) {
+          console.log('[Event]', event, data);
+        },
+        on: function(event, handler) {
+          console.log('[Event Listener]', event);
+        }
+      }
+    };
+    
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
+    };
+    
+    window.resolveAvatar = function(player) {
+      return window.getDicebearUrl(player.avatar || player.name);
+    };
+    
+    window.rng = Math.random;
+    
+    window.TvStatus = {
+      set: function(msg) {
+        console.info('[TvStatus]', msg);
+      }
+    };
+    
+    // Mock showWaitingUI function
+    window.showWaitingUI = function(panel, message, subtext) {
+      console.log('[showWaitingUI] Called with message:', message);
+      panel.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+          <div style="font-size: 2rem; margin-bottom: 16px;">⏳</div>
+          <div style="font-size: 1.2rem; font-weight: 700; color: #4ade80; margin-bottom: 8px;">${message}</div>
+          <div style="font-size: 0.9rem; color: #8a9ab8;">${subtext || 'AI players are completing their attempts'}</div>
+        </div>
+      `;
+    };
+  </script>
+  
+  <!-- Load spectator view module -->
+  <script src="js/spectator-view-part3.js"></script>
+  
+  <!-- Load minimal parts of competitions.js that we need for testing -->
+  <script>
+    // Extract just the renderF3P3 function for testing
+    // This is a simplified version that mimics the actual implementation
+    function renderF3P3(panel) {
+      const g = window.game;
+      const humanId = g.humanId;
+      const human = window.getP(humanId);
+      
+      // Derive finalists with strengthened fallback logic
+      let finalists = g.__f3_finalists || [];
+      if (finalists.length < 2) {
+        // Try to derive from Part 1 and Part 2 winners
+        const p1Winner = g.__f3p1Winner;
+        const p2Winner = g.__f3p2Winner;
+        if (p1Winner && p2Winner) {
+          finalists = [p1Winner, p2Winner];
+          g.__f3_finalists = finalists; // Also set it for future calls
+          console.warn('[F3P3] Derived finalists from Part 1 & 2 winners:', finalists);
+        }
+      }
+      
+      // Debug logging - log all relevant state
+      console.log('[F3P3] Debug state:', {
+        humanId,
+        finalists,
+        finalistsLength: finalists.length,
+        humanEvicted: human?.evicted,
+        humanInJury: human && human.evicted && g.juryHouse?.includes(humanId),
+        humanInFinalists: humanId && finalists.includes(humanId),
+        SpectatorViewPart3Available: !!window.SpectatorViewPart3,
+        phase: g.phase
+      });
+      
+      // Check if human is in jury (evicted and in jury house)
+      const humanInJury = human && human.evicted && g.juryHouse?.includes(humanId);
+      
+      // Check if human is in finalists
+      const humanInFinalists = humanId && finalists.length >= 2 && finalists.includes(humanId);
+      const humanSubmitted = humanInFinalists && g.lastCompScores?.has(humanId);
+      
+      // Simpler spectator logic: If human is alive but not in finalists, they are spectator
+      const humanIsAlive = human && !human.evicted;
+      const humanNotInFinalists = humanId && finalists.length >= 2 && !finalists.includes(humanId);
+      const isSpectator = humanNotInFinalists || humanInJury;
+      
+      console.log('[F3P3] Spectator check:', {
+        humanIsAlive,
+        humanNotInFinalists,
+        humanInJury,
+        isSpectator,
+        willShowSpectator: isSpectator && !!window.SpectatorViewPart3 && finalists.length >= 2
+      });
+      
+      panel.innerHTML = '';
+      
+      // Golden Rule: If human is not in the finalists array, they must see spectator mode
+      if (isSpectator) {
+        if (window.SpectatorViewPart3 && finalists.length >= 2) {
+          const reason = humanInJury ? 'jury member' : 'eliminated player';
+          console.info('[F3P3] Showing enhanced spectator view for', reason, 'with finalists:', finalists);
+          
+          window.SpectatorViewPart3.show({
+            competitorIds: finalists,
+            onSkip: () => {
+              console.info('[F3P3] Skip callback triggered');
+            }
+          });
+          return;
+        } else {
+          // Fallback: Show waiting message even if spectator view can't load
+          console.warn('[F3P3] Cannot show spectator view (SpectatorViewPart3:', !!window.SpectatorViewPart3, 'finalists.length:', finalists.length, '), showing fallback UI');
+          window.showWaitingUI(panel, '⏳ Competition in Progress');
+          if (window.TvStatus?.set) {
+            window.TvStatus.set('Final 3 Part 3 competition is running...');
+          }
+          return;
+        }
+      } else if (humanSubmitted) {
+        // Human is in finalists and has submitted - show waiting UI
+        console.log('[F3P3] Human has submitted, showing waiting UI');
+        window.showWaitingUI(panel, '✓ Score Submitted');
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('Waiting for Part 3 results…');
+        }
+      } else {
+        // Human is in finalists and actively playing, or panel not yet ready
+        // The minigame will be set up by beginF3P3Competition
+        console.log('[F3P3] Human should be playing or waiting for minigame setup');
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('Final 3 — Part 3 (final showdown) is running…');
+        }
+      }
+    }
+    
+    // Make it global for testing
+    window.renderF3P3 = renderF3P3;
+  </script>
+  
+  <script>
+    // Test scenarios
+    function testScenario1() {
+      console.log('\n=== TEST SCENARIO 1: Human Eliminated (Not in Finalists) ===');
+      window.game.humanId = 3; // Charlie
+      window.game.players[2].evicted = false; // Charlie is alive
+      window.game.__f3_finalists = [1, 2]; // Alice and Bob are finalists
+      window.game.__f3p1Winner = 1;
+      window.game.__f3p2Winner = 2;
+      window.game.juryHouse = [];
+      window.game.lastCompScores = new Map();
+      
+      const panel = document.getElementById('panel');
+      renderF3P3(panel);
+    }
+    
+    function testScenario2() {
+      console.log('\n=== TEST SCENARIO 2: Human in Jury ===');
+      window.game.humanId = 3; // Charlie
+      window.game.players[2].evicted = true; // Charlie is evicted
+      window.game.__f3_finalists = [1, 2]; // Alice and Bob are finalists
+      window.game.__f3p1Winner = 1;
+      window.game.__f3p2Winner = 2;
+      window.game.juryHouse = [3]; // Charlie is in jury
+      window.game.lastCompScores = new Map();
+      
+      const panel = document.getElementById('panel');
+      renderF3P3(panel);
+    }
+    
+    function testScenario3() {
+      console.log('\n=== TEST SCENARIO 3: Human Competing (In Finalists) ===');
+      window.game.humanId = 2; // Bob (human is a finalist)
+      window.game.players[1].human = true;
+      window.game.players[1].evicted = false;
+      window.game.__f3_finalists = [1, 2]; // Alice and Bob are finalists
+      window.game.__f3p1Winner = 1;
+      window.game.__f3p2Winner = 2;
+      window.game.juryHouse = [];
+      window.game.lastCompScores = new Map();
+      
+      const panel = document.getElementById('panel');
+      renderF3P3(panel);
+    }
+    
+    function testScenario4() {
+      console.log('\n=== TEST SCENARIO 4: Finalists Not Yet Set ===');
+      window.game.humanId = 3; // Charlie
+      window.game.players[2].evicted = false; // Charlie is alive
+      window.game.__f3_finalists = null; // Finalists not set yet
+      window.game.__f3p1Winner = 1;
+      window.game.__f3p2Winner = 2;
+      window.game.juryHouse = [];
+      window.game.lastCompScores = new Map();
+      
+      const panel = document.getElementById('panel');
+      renderF3P3(panel);
+    }
+    
+    function clearLogs() {
+      document.getElementById('log-output').innerHTML = '';
+    }
+    
+    // Auto-run first test on load
+    console.log('Test page loaded. Ready for testing!');
+    console.log('SpectatorViewPart3 available:', !!window.SpectatorViewPart3);
+  </script>
+</body>
+</html>

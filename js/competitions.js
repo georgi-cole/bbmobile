@@ -2195,54 +2195,85 @@
   function renderF3P3(panel) {
     const g = global.game;
     const humanId = g.humanId;
+    const human = global.getP?.(humanId);
     
-    // Derive finalists with fallback logic
-    // If g.__f3_finalists is not set, derive from Part 1 and Part 2 winners
+    // Derive finalists with strengthened fallback logic
     let finalists = g.__f3_finalists || [];
-    if (finalists.length === 0 && g.__f3p1Winner && g.__f3p2Winner) {
-      finalists = [g.__f3p1Winner, g.__f3p2Winner];
-      console.warn('[F3P3] Using fallback: derived finalists from Part 1 & 2 winners', finalists);
+    if (finalists.length < 2) {
+      // Try to derive from Part 1 and Part 2 winners
+      const p1Winner = g.__f3p1Winner;
+      const p2Winner = g.__f3p2Winner;
+      if (p1Winner && p2Winner) {
+        finalists = [p1Winner, p2Winner];
+        g.__f3_finalists = finalists; // Also set it for future calls
+        console.warn('[F3P3] Derived finalists from Part 1 & 2 winners:', finalists);
+      }
     }
     
-    // Check if human lost both Part 1 and Part 2 (not in finalists)
-    const humanLostBoth = humanId && !finalists.includes(humanId);
+    // Debug logging - log all relevant state
+    console.log('[F3P3] Debug state:', {
+      humanId,
+      finalists,
+      finalistsLength: finalists.length,
+      humanEvicted: human?.evicted,
+      humanInJury: human && human.evicted && g.juryHouse?.includes(humanId),
+      humanInFinalists: humanId && finalists.includes(humanId),
+      SpectatorViewPart3Available: !!global.SpectatorViewPart3,
+      phase: g.phase
+    });
     
     // Check if human is in jury (evicted and in jury house)
-    const human = global.getP?.(humanId);
     const humanInJury = human && human.evicted && g.juryHouse?.includes(humanId);
     
-    // Check if human is evicted (not alive)
-    const humanEvicted = human && human.evicted;
-    
-    // Check if human is in finalists and has submitted
-    const humanInFinalists = humanId && finalists.includes(humanId);
+    // Check if human is in finalists
+    const humanInFinalists = humanId && finalists.length >= 2 && finalists.includes(humanId);
     const humanSubmitted = humanInFinalists && g.lastCompScores?.has(humanId);
+    
+    // Simpler spectator logic: If human is alive but not in finalists, they are spectator
+    const humanIsAlive = human && !human.evicted;
+    const humanNotInFinalists = humanId && finalists.length >= 2 && !finalists.includes(humanId);
+    const isSpectator = humanNotInFinalists || humanInJury;
+    
+    console.log('[F3P3] Spectator check:', {
+      humanIsAlive,
+      humanNotInFinalists,
+      humanInJury,
+      isSpectator,
+      willShowSpectator: isSpectator && !!global.SpectatorViewPart3 && finalists.length >= 2
+    });
     
     panel.innerHTML = '';
     
-    // Golden Rule: If human is not eligible to compete, show spectator mode
-    // Spectator conditions: lost both parts OR in jury OR evicted OR not in finalists
-    const isSpectator = (humanLostBoth || humanInJury || humanEvicted) && !humanInFinalists;
-    
-    // Show enhanced spectator view if human is spectator
-    if (isSpectator && global.SpectatorViewPart3 && finalists.length > 0) {
-      const reason = humanInJury ? 'jury member' : humanEvicted ? 'evicted player' : 'eliminated player';
-      console.info('[F3P3] Showing enhanced spectator view for', reason);
-      
-      global.SpectatorViewPart3.show({
-        competitorIds: finalists,
-        onSkip: () => {
-          // Skip to results - fast forward to end of phase
-          if (g.phase === 'final3_comp3') {
-            console.info('[F3P3] Skip requested, forcing phase completion');
-            g.__skipRequested = true;
-            finishF3P3();
+    // Golden Rule: If human is not in the finalists array, they must see spectator mode
+    if (isSpectator) {
+      if (global.SpectatorViewPart3 && finalists.length >= 2) {
+        const reason = humanInJury ? 'jury member' : 'eliminated player';
+        console.info('[F3P3] Showing enhanced spectator view for', reason, 'with finalists:', finalists);
+        
+        global.SpectatorViewPart3.show({
+          competitorIds: finalists,
+          onSkip: () => {
+            // Skip to results - fast forward to end of phase
+            if (g.phase === 'final3_comp3') {
+              console.info('[F3P3] Skip requested, forcing phase completion');
+              g.__skipRequested = true;
+              finishF3P3();
+            }
           }
+        });
+        return;
+      } else {
+        // Fallback: Show waiting message even if spectator view can't load
+        console.warn('[F3P3] Cannot show spectator view (SpectatorViewPart3:', !!global.SpectatorViewPart3, 'finalists.length:', finalists.length, '), showing fallback UI');
+        showWaitingUI(panel, '⏳ Competition in Progress');
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('Final 3 Part 3 competition is running...');
         }
-      });
-      return;
+        return;
+      }
     } else if (humanSubmitted) {
       // Human is in finalists and has submitted - show waiting UI
+      console.log('[F3P3] Human has submitted, showing waiting UI');
       showWaitingUI(panel, '✓ Score Submitted');
       if (window.TvStatus?.set) {
         window.TvStatus.set('Waiting for Part 3 results…');
@@ -2250,6 +2281,7 @@
     } else {
       // Human is in finalists and actively playing, or panel not yet ready
       // The minigame will be set up by beginF3P3Competition
+      console.log('[F3P3] Human should be playing or waiting for minigame setup');
       if (window.TvStatus?.set) {
         window.TvStatus.set('Final 3 — Part 3 (final showdown) is running…');
       }
