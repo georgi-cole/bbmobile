@@ -848,7 +848,19 @@
     // Create card with juror avatar and vote reason
     const card = document.createElement('div');
     card.className = 'revealCard diaryRoomCard jury-vote-card';
-    // Positioning is handled by css/jury-vote-card.css for proper centering
+    card.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10002;
+      max-width: min(480px, 90vw);
+      width: 100%;
+      margin: 0 auto;
+      animation: cardFloatIn 0.5s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+      /* Ensure proper centering on all viewports */
+      box-sizing: border-box;
+    `;
     
     // Card title with juror name
     const title = el('h3');
