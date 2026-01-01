@@ -1449,7 +1449,7 @@
               baseScore *= (0.85 + Math.random() * 0.15); // Slight reduction
             }
           }
-          // Ensure AI scores are always > 0 to prevent 0-score ties
+          // Ensure AI scores are always > 0 to prevent 0-score players from winning
           baseScore = Math.max(1, baseScore);
           g.lastCompScores.set(id, baseScore);
         }

@@ -1101,7 +1101,7 @@
             console.info('[veto] Human skipped - no auto-score');
             continue;
           }
-          // Ensure AI scores are always > 0 to prevent 0-score ties
+          // Ensure AI scores are always > 0 to prevent 0-score players from winning
           var aiScore = Math.max(1, 5 + rng()*5);
           g.lastCompScores.set(id, aiScore);
         }
@@ -1117,7 +1117,7 @@
     if(arr.length === 0 && eligible.length){
       for(var j=0;j<eligible.length;j++){
         var eid = +eligible[j];
-        // Ensure AI scores are always > 0 to prevent 0-score ties
+        // Ensure AI scores are always > 0 to prevent 0-score players from winning
         var s = g.lastCompScores.has(eid) ? +g.lastCompScores.get(eid) : Math.max(1, 5 + rng()*5);
         g.lastCompScores.set(eid, s);
         arr.push([eid, s]);
