@@ -1965,7 +1965,7 @@
     const winner = arr[0][0];
 
     const wanted = arr.slice(1, 3).map(e => e && e[0]).filter(Boolean);
-    const losers = wanted.slice();
+    let losers = wanted.slice();
 
     if (losers.length < 2) {
       const remaining = ids.filter(id => id !== winner && !losers.includes(id));
