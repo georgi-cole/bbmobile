@@ -286,7 +286,7 @@
     const alive = (global.alivePlayers?.() || []).length;
     const players = game.players || [];
     const evicted = players.filter(p => p.evicted).length;
-    const total = Math.max(alive + evicted, players.length, 12);
+    const total = Math.max(alive + evicted, players.length, 16);
     
     game.__initialPlayers = total;
     return total;

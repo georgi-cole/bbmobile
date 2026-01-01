@@ -76,7 +76,7 @@
       const aliveCount=alive.length;
       const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
       const jurorCount=jurors.length;
-      const initialPlayers=Number(g.cfg?.numPlayers||12);
+      const initialPlayers=Number(g.cfg?.numPlayers||16);
       if(aliveCount<5) return;
       const requiredJurors=(initialPlayers>10)?5:4;
       if(jurorCount<requiredJurors) return;
