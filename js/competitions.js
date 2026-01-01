@@ -2229,13 +2229,11 @@
     const humanInFinalists = humanId && finalists.length >= 2 && finalists.includes(humanId);
     const humanSubmitted = humanInFinalists && g.lastCompScores?.has(humanId);
     
-    // Simpler spectator logic: If human is alive but not in finalists, they are spectator
-    const humanIsAlive = human && !human.evicted;
+    // Simpler spectator logic: If human is not in finalists, they are spectator
     const humanNotInFinalists = humanId && finalists.length >= 2 && !finalists.includes(humanId);
     const isSpectator = humanNotInFinalists || humanInJury;
     
     console.log('[F3P3] Spectator check:', {
-      humanIsAlive,
       humanNotInFinalists,
       humanInJury,
       isSpectator,
