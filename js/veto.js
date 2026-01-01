@@ -1101,7 +1101,9 @@
             console.info('[veto] Human skipped - no auto-score');
             continue;
           }
-          g.lastCompScores.set(id, 5 + rng()*5);
+          // Ensure AI scores are always > 0 to prevent 0-score ties
+          var aiScore = Math.max(1, 5 + rng()*5);
+          g.lastCompScores.set(id, aiScore);
         }
       }
     })();
@@ -1115,17 +1117,36 @@
     if(arr.length === 0 && eligible.length){
       for(var j=0;j<eligible.length;j++){
         var eid = +eligible[j];
-        var s = g.lastCompScores.has(eid) ? +g.lastCompScores.get(eid) : (5 + rng()*5);
+        // Ensure AI scores are always > 0 to prevent 0-score ties
+        var s = g.lastCompScores.has(eid) ? +g.lastCompScores.get(eid) : Math.max(1, 5 + rng()*5);
         g.lastCompScores.set(eid, s);
         arr.push([eid, s]);
       }
     }
+    
+    // Filter out any players with score of 0 - they cannot win
+    var nonZeroArr = arr.filter(function(entry){ return entry[1] > 0; });
+    
+    // If all players scored 0, pick a random eligible player as fallback
+    if(nonZeroArr.length === 0 && eligible.length){
+      console.warn('[veto] All players scored 0, selecting random winner from eligible');
+      var pick = eligible[Math.floor(rng()*eligible.length)];
+      // Give the random winner a minimal score > 0
+      g.lastCompScores.set(pick, 1);
+      nonZeroArr = [[pick, 1]];
+      // Update original array for reveal display
+      arr = nonZeroArr.slice();
+    } else if(nonZeroArr.length > 0) {
+      // Use non-zero scores for winner determination
+      arr = nonZeroArr;
+    }
+    
     arr.sort(function(a,b){ return b[1]-a[1]; });
 
     // Final guard: if still no scores, pick a random eligible to avoid deadlock
     if(!arr.length && eligible.length){
       var pick = eligible[Math.floor(rng()*eligible.length)];
-      arr = [[pick, 0]];
+      arr = [[pick, 1]]; // Give minimal score instead of 0
     }
 
     global.game.vetoHolder = arr[0] && arr[0][0];
