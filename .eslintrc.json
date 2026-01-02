@@ -79,7 +79,7 @@
       }
     },
     {
-      "files": ["js/utils/houseguestLookup.js", "js/ui/houseguestSheet.js", "js/ui/rosterHover.js"],
+      "files": ["js/utils/houseguestLookup.js", "js/ui/houseguestSheet.js", "js/ui/rosterHover.js", "js/winner-announcement.js"],
       "parserOptions": {
         "sourceType": "module"
       }

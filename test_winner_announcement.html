@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Winner Announcement UI Test</title>
+  
+  <!-- Load the winner announcement CSS -->
+  <link rel="stylesheet" href="./css/winner-announcement.css">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0d151f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px;
+      background: rgba(19, 33, 50, 0.8);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      color: #83bfff;
+      text-shadow: 0 0 20px rgba(131, 191, 255, 0.4);
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(22, 36, 53, 0.6);
+      border-radius: 12px;
+      border: 1px solid rgba(131, 191, 255, 0.2);
+    }
+    
+    h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      color: #83bfff;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #3563a7, #284866);
+      color: white;
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    button:hover {
+      background: linear-gradient(135deg, #4575c7, #3a5a86);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6d6d, #d64545);
+      border-color: rgba(255, 109, 109, 0.3);
+    }
+    
+    button.danger:hover {
+      background: linear-gradient(135deg, #ff8585, #e65555);
+    }
+    
+    .info-box {
+      padding: 15px;
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 4px solid #83bfff;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .checklist li {
+      padding: 8px 0;
+      padding-left: 28px;
+      position: relative;
+    }
+    
+    .checklist li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #77d58d;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    .timeline {
+      background: rgba(22, 36, 53, 0.8);
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      margin: 15px 0;
+    }
+    
+    .timeline-item {
+      padding: 4px 0;
+    }
+    
+    .timeline-time {
+      color: #ffd700;
+      font-weight: 700;
+      display: inline-block;
+      width: 80px;
+    }
+    
+    .timeline-event {
+      color: #83bfff;
+    }
+    
+    code {
+      background: rgba(131, 191, 255, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      color: #83bfff;
+    }
+    
+    .log {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+    
+    .log-entry {
+      padding: 2px 0;
+      color: #95a9c0;
+    }
+    
+    .log-entry.info {
+      color: #83bfff;
+    }
+    
+    .log-entry.success {
+      color: #77d58d;
+    }
+    
+    .log-entry.warning {
+      color: #f2ce7b;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Winner Announcement UI Test</h1>
+    <p style="color: #95a9c0; margin-bottom: 30px;">
+      Test the enhanced winner announcement with animated rainbow border and timed runner-up display.
+    </p>
+    
+    <div class="test-section">
+      <h2>Quick Test Actions</h2>
+      <div class="button-group">
+        <button onclick="testBasic()">▶️ Test Basic (Alice wins, Bob runner-up)</button>
+        <button onclick="testCustom()">▶️ Test Custom Names</button>
+        <button onclick="testRunnerUpOnly()">▶️ Test Runner-up Timing</button>
+        <button class="danger" onclick="cancelAnnouncement()">⏹️ Cancel Current</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Expected Timing Sequence</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-time">t = 0.0s</span>
+          <span class="timeline-event">Winner appears with animated rainbow border</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">t = 2.0s</span>
+          <span class="timeline-event">Runner-up miniature appears (bottom-right)</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">t = 4.5s</span>
+          <span class="timeline-event">Runner-up fades out</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">t = 7.0s</span>
+          <span class="timeline-event">Winner screen closes</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>QA Checklist</h2>
+      <ul class="checklist">
+        <li>Cyan border is pulled inward from viewport edges (not glued to sides)</li>
+        <li>Rainbow border animates smoothly with rotating gradient</li>
+        <li>Inner cyan glow is visible around winner card</li>
+        <li>Runner-up miniature is fully visible (not clipped)</li>
+        <li>Runner-up respects safe-area insets on iOS devices</li>
+        <li>Timing matches: 0s → 2s → 4.5s → 7s</li>
+        <li>Animation respects <code>prefers-reduced-motion</code></li>
+        <li>Responsive design works on mobile and desktop viewports</li>
+      </ul>
+    </div>
+    
+    <div class="test-section">
+      <h2>Integration Notes</h2>
+      <div class="info-box">
+        <strong>DOM Structure Expected:</strong>
+        <pre style="margin: 10px 0; overflow-x: auto; font-size: 0.8rem;">
+&lt;div class="winner-screen"&gt;
+  &lt;div class="winner-card"&gt;
+    &lt;img class="winner-avatar" src="..." alt="Winner"&gt;
+    &lt;div class="winner-name"&gt;Player Name&lt;/div&gt;
+    &lt;div class="winner-title"&gt;🏆 WINNER 🏆&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="runner-up"&gt;
+    &lt;img class="runner-up-avatar" src="..." alt="Runner-up"&gt;
+    &lt;div class="runner-up-name"&gt;Player Name&lt;/div&gt;
+    &lt;div class="runner-up-label"&gt;Runner-up&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+      </div>
+      
+      <div class="info-box" style="border-left-color: #77d58d;">
+        <strong>JavaScript Usage:</strong>
+        <pre style="margin: 10px 0; overflow-x: auto; font-size: 0.8rem;">
+import { WinnerAnnouncement } from './js/winner-announcement.js';
+
+const winnerData = {
+  name: 'Alice Johnson',
+  avatar: '/path/to/avatar.jpg'
+};
+
+const runnerData = {
+  name: 'Bob Smith',
+  avatar: '/path/to/avatar.jpg'
+};
+
+// Show announcement
+WinnerAnnouncement.show(winnerData, runnerData);
+
+// Cancel if needed
+WinnerAnnouncement.cancel();</pre>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+  
+  <!-- Load the winner announcement module -->
+  <script type="module">
+    import { WinnerAnnouncement } from './js/winner-announcement.js';
+    
+    // Make it globally accessible for testing
+    window.WinnerAnnouncement = WinnerAnnouncement;
+    
+    // Logging helper
+    function addLog(message, type = 'info') {
+      const log = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+      console.log(message);
+    }
+    
+    // Expose for inline handlers
+    window.addLog = addLog;
+    
+    // Test functions
+    window.testBasic = () => {
+      addLog('Starting basic test...', 'info');
+      
+      const winner = {
+        name: 'Alice Johnson',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice'
+      };
+      
+      const runner = {
+        name: 'Bob Smith',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob'
+      };
+      
+      WinnerAnnouncement.show(winner, runner);
+      addLog('Winner announcement started (7s total duration)', 'success');
+    };
+    
+    window.testCustom = () => {
+      const winnerName = prompt('Enter winner name:', 'Champion Player');
+      const runnerName = prompt('Enter runner-up name:', 'Second Place');
+      
+      if (winnerName) {
+        addLog(`Starting custom test (Winner: ${winnerName}, Runner-up: ${runnerName})...`, 'info');
+        
+        const winner = {
+          name: winnerName,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${winnerName}`
+        };
+        
+        const runner = {
+          name: runnerName,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${runnerName}`
+        };
+        
+        WinnerAnnouncement.show(winner, runner);
+        addLog('Custom winner announcement started', 'success');
+      }
+    };
+    
+    window.testRunnerUpOnly = () => {
+      addLog('Testing runner-up timing with visible timestamps...', 'info');
+      
+      const winner = {
+        name: 'WATCH TIMER',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Timer'
+      };
+      
+      const runner = {
+        name: 'Runner-up Test',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=RunnerTest'
+      };
+      
+      WinnerAnnouncement.show(winner, runner);
+      addLog('t=0.0s: Winner visible', 'success');
+      
+      setTimeout(() => addLog('t=2.0s: Runner-up should appear now!', 'warning'), 2000);
+      setTimeout(() => addLog('t=4.5s: Runner-up should fade now!', 'warning'), 4500);
+      setTimeout(() => addLog('t=7.0s: Screen should close now!', 'warning'), 7000);
+    };
+    
+    window.cancelAnnouncement = () => {
+      WinnerAnnouncement.cancel();
+      addLog('Winner announcement cancelled', 'warning');
+    };
+    
+    // Initial log
+    addLog('Winner Announcement Test Page Ready', 'success');
+    addLog('Click a test button to begin...', 'info');
+  </script>
+</body>
+</html>
