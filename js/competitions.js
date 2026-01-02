@@ -2697,6 +2697,8 @@
       }
       
       global.tv.say('Final 3 Eviction Ceremony');
+      // Cleanup FinalPlea modal before advancing (defensive, in case it was shown)
+      try { global.FinalPlea?.cleanup?.(); } catch (e) { /* non-critical cleanup error */ }
       global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
       global.renderFinal3DecisionPanel?.();
     }
@@ -2833,6 +2835,8 @@
       // Auto-proceed to decision after brief delay
       setTimeout(() => {
         if (g.phase === 'final3_plea') {
+          // Cleanup FinalPlea modal before advancing
+          try { global.FinalPlea?.cleanup?.(); } catch (e) { /* non-critical cleanup error */ }
           global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
           global.renderFinal3DecisionPanel?.();
         }
@@ -2852,6 +2856,8 @@
       // All AI scenario
       setTimeout(() => {
         if (g.phase === 'final3_plea') {
+          // Cleanup FinalPlea modal before advancing
+          try { global.FinalPlea?.cleanup?.(); } catch (e) { /* non-critical cleanup error */ }
           global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
           global.renderFinal3DecisionPanel?.();
         }
