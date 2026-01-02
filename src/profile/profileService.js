@@ -69,7 +69,7 @@
   }
 
   // Set current profile
-  function setCurrentProfile(profile) {
+  async function setCurrentProfile(profile, options = {}) {
     currentProfile = profile;
     isGuest = false;
     
@@ -85,7 +85,74 @@
       
       global.ProfileStorage.setLastProfileId(profile.id);
       
-      // Apply profile to game
+      // Check for saved game unless explicitly skipped
+      if (!options.skipSavedGameCheck && typeof global.hasSavedGame === 'function') {
+        const hasSaved = global.hasSavedGame(profile.id);
+        
+        if (hasSaved && typeof global.showConfirm === 'function') {
+          // Get save metadata for display
+          const metadata = global.getSaveMetadata?.(profile.id);
+          let message = 'Would you like to continue your saved game?';
+          
+          if (metadata) {
+            const weekText = metadata.week ? `Week ${metadata.week}` : 'Unknown Week';
+            const phaseText = metadata.phase ? metadata.phase.replace(/_/g, ' ') : 'Unknown Phase';
+            message = `Welcome back! Would you like to continue your saved game?\n\nSaved at: ${weekText}, ${phaseText}`;
+          }
+          
+          const continueGame = await global.showConfirm(
+            message,
+            {
+              title: 'Continue Saved Game?',
+              confirmText: 'Continue',
+              cancelText: 'Start New',
+              tone: 'neutral'
+            }
+          );
+          
+          if (continueGame) {
+            // Load saved game
+            if (typeof global.loadGame === 'function') {
+              const savedState = global.loadGame(profile.id);
+              
+              if (savedState && global.game) {
+                // Restore game state
+                Object.assign(global.game, savedState);
+                
+                // Show success message
+                if (typeof global.addLog === 'function') {
+                  const weekText = savedState.week ? `Week ${savedState.week}` : 'Unknown Week';
+                  const phaseText = savedState.phase ? savedState.phase.replace(/_/g, ' ') : 'Unknown Phase';
+                  global.addLog(`🎮 Game restored! Resuming from ${weekText}, ${phaseText}`, 'game');
+                }
+                
+                console.info('[profileService] Loaded saved game for profile:', profile.id);
+                
+                // Apply profile to ensure player data is synced
+                applyProfileToGame(profile);
+                
+                // Update UI if needed
+                if (typeof global.updateHud === 'function') {
+                  global.updateHud();
+                }
+                if (typeof global.renderPanel === 'function') {
+                  global.renderPanel();
+                }
+                
+                return; // Don't apply fresh profile, game is restored
+              }
+            }
+          } else {
+            // Start new game - clear saved game
+            if (typeof global.clearSavedGame === 'function') {
+              global.clearSavedGame(profile.id);
+              console.info('[profileService] Cleared saved game, starting fresh');
+            }
+          }
+        }
+      }
+      
+      // Apply profile to game (fresh start or no saved game)
       applyProfileToGame(profile);
     }
   }
