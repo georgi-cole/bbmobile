@@ -229,6 +229,56 @@
   }
   global.isHumanEligible = isHumanEligible;
 
+  /**
+   * Shorten the phase timer to finish immediately (1 second)
+   * Called when competition scores are all collected to avoid idle waiting
+   * Tries multiple timer APIs in order of preference
+   * @returns {boolean} True if timer was successfully shortened
+   */
+  function shortenPhaseTimerToFinish() {
+    try {
+      const g = global.game;
+      // Only shorten during competition phases
+      const compPhases = ['hoh', 'veto', 'veto_comp', 'final3_comp1', 'final3_comp2', 'final3_comp3'];
+      if (!compPhases.includes(g.phase)) {
+        console.info('[Competition] Not a competition phase, skipping timer shortening');
+        return false;
+      }
+      
+      console.info('[Competition] Shortening phase timer to finish');
+      
+      // Try API 1: schedulePhaseAdvanceIn (most direct)
+      if (typeof global.schedulePhaseAdvanceIn === 'function') {
+        global.schedulePhaseAdvanceIn(1000);
+        console.info('[Competition] ✓ Timer shortened via schedulePhaseAdvanceIn');
+        return true;
+      }
+      
+      // Try API 2: GameTimer.shortenCurrentByMs
+      if (typeof global.GameTimer?.shortenCurrentByMs === 'function') {
+        const remaining = global.GameTimer.getRemaining?.() || 5000;
+        if (remaining > 1500) {
+          global.GameTimer.shortenCurrentByMs(remaining - 1000);
+          console.info('[Competition] ✓ Timer shortened via GameTimer.shortenCurrentByMs');
+          return true;
+        }
+      }
+      
+      // Try API 3: setPhaseDurationMs
+      if (typeof global.setPhaseDurationMs === 'function') {
+        global.setPhaseDurationMs(1000);
+        console.info('[Competition] ✓ Timer shortened via setPhaseDurationMs');
+        return true;
+      }
+      
+      console.warn('[Competition] No timer shortening API available');
+      return false;
+    } catch (e) {
+      console.warn('[Competition] Timer shortening failed:', e);
+      return false;
+    }
+  }
+
   function submitScore(id, base, mult, label) {
     const g = global.game; g.lastCompScores = g.lastCompScores || new Map();
     if (g.lastCompScores.has(id)) return false;
@@ -369,19 +419,48 @@
       }
     }
 
+    // Shorten phase timer now that all scores are in
+    shortenPhaseTimerToFinish();
+
     // Trigger finish check
     maybeFinishComp();
   }
 
   function maybeFinishComp() {
     const g = global.game; const alive = global.alivePlayers();
-    let eligible = alive.map(p => p.id);
-    // Week-based eligibility: only filter out player if they were HOH in previous week
-    if (g.phase === 'hoh' && alive.length > 3 && g.week > 1 && g.lastHOHId && g.lastHOHWeek === (g.week - 1)) {
-      eligible = eligible.filter(id => id !== g.lastHOHId);
+    
+    // Handle different phase types
+    if (g.phase === 'hoh') {
+      let eligible = alive.map(p => p.id);
+      // Week-based eligibility: only filter out player if they were HOH in previous week
+      if (alive.length > 3 && g.week > 1 && g.lastHOHId && g.lastHOHWeek === (g.week - 1)) {
+        eligible = eligible.filter(id => id !== g.lastHOHId);
+      }
+      const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
+      if (done === eligible.length) {
+        // All scores collected - shorten timer before finishing
+        shortenPhaseTimerToFinish();
+        finishCompPhase();
+      }
+    } else if (g.phase === 'veto_comp' || g.phase === 'veto') {
+      // For veto competitions, just shorten the timer
+      // The finish logic is handled by veto.js module
+      const eligible = alive.map(p => p.id);
+      const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
+      if (done === eligible.length) {
+        console.info(`[${g.phase}] All scores collected, shortening timer`);
+        shortenPhaseTimerToFinish();
+      }
+    } else if (g.phase === 'final3_comp1' || g.phase === 'final3_comp2' || g.phase === 'final3_comp3') {
+      // For Final 3 competitions, just shorten the timer
+      // The finish functions (finishF3P1/2/3) are already set as phase callbacks
+      const eligible = alive.map(p => p.id);
+      const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
+      if (done === eligible.length) {
+        console.info(`[${g.phase}] All scores collected, shortening timer`);
+        shortenPhaseTimerToFinish();
+      }
     }
-    const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
-    if (done === eligible.length) { finishCompPhase(); }
   }
 
   function logScoreboard(title, scoresMap, ids) {
