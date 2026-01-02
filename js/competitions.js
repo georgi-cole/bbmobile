@@ -229,8 +229,10 @@
   }
   global.isHumanEligible = isHumanEligible;
 
-  function submitScore(id, base, mult, label) {
-    const g = global.game; g.lastCompScores = g.lastCompScores || new Map();
+  function submitScore(id, base, mult, label, rawScoreDisplay = null, isNewPersonalBest = false) {
+    const g = global.game; 
+    g.lastCompScores = g.lastCompScores || new Map();
+    g.lastCompScoresMeta = g.lastCompScoresMeta || new Map();
     if (g.lastCompScores.has(id)) return false;
 
     // Use new scoring system if enabled and available
@@ -259,6 +261,14 @@
     }
 
     g.lastCompScores.set(id, final);
+    
+    // Store metadata for display purposes (raw score display, personal best flag)
+    if (rawScoreDisplay || isNewPersonalBest) {
+      g.lastCompScoresMeta.set(id, {
+        rawScoreDisplay: rawScoreDisplay,
+        isNewPersonalBest: isNewPersonalBest
+      });
+    }
     
     // Track game key for opponent synthesis
     if (label && label.includes('/')) {
@@ -680,8 +690,27 @@
       }
 
       // Render game inline & validate
-      global.renderMinigame?.(mg, host, (base) => {
-        console.info(`[Competition] ← Legacy competition completed with score: ${base}`);
+      global.renderMinigame?.(mg, host, (result) => {
+        // Handle both legacy number scores and new scoreData objects
+        let base = result;
+        let rawScoreDisplay = null;
+        let isNewPersonalBest = false;
+        
+        if (typeof result === 'object' && result !== null && typeof result.score === 'number') {
+          // New scoreData object format: {score, rawScore, rawScoreDisplay, isNewPersonalBest}
+          base = result.score;
+          rawScoreDisplay = result.rawScoreDisplay || null;
+          isNewPersonalBest = result.isNewPersonalBest || false;
+          console.info(`[Competition] ← Competition completed with scoreData: score=${base}, raw="${rawScoreDisplay}"`);
+        } else if (typeof result === 'number') {
+          // Legacy number format
+          base = result;
+          console.info(`[Competition] ← Legacy competition completed with score: ${base}`);
+        } else {
+          // Invalid result type
+          console.error(`[Competition] ⚠ Invalid result type: ${typeof result}`, result);
+          base = 0;
+        }
         
         if (antiCheatSessionId && global.AntiCheat) {
           const v = global.AntiCheat.validate(antiCheatSessionId);
@@ -696,7 +725,7 @@
         }
 
         console.info(`[Competition] → Submitting score (legacy): player=${player.name}, base=${base}`);
-        if (submitScore(player.id, base, multiplier, label)) {
+        if (submitScore(player.id, base, multiplier, label, rawScoreDisplay, isNewPersonalBest)) {
           console.info('[Competition] ✓ Score submitted successfully (legacy)');
           // Use inline status instead of below-TV message
           if (window.TvStatus?.set) {
@@ -1077,9 +1106,23 @@
 
   // New: Show top-3 reveal card with crown animation
   async function showCompetitionReveal(title, scoresMap, ids) {
+    const g = global.game;
     const arr = [...scoresMap.entries()]
       .filter(([id]) => ids.includes(id))
-      .map(([id, sc]) => ({ id, sc, name: global.safeName(id) }))
+      .map(([id, sc]) => {
+        const entry = { id, sc, name: global.safeName(id) };
+        
+        // Add raw score display if available
+        const meta = g.lastCompScoresMeta?.get(id);
+        if (meta?.rawScoreDisplay) {
+          entry.rawScoreDisplay = meta.rawScoreDisplay;
+        }
+        if (meta?.isNewPersonalBest) {
+          entry.isNewPersonalBest = meta.isNewPersonalBest;
+        }
+        
+        return entry;
+      })
       .sort((a, b) => b.sc - a.sc);
 
     if (arr.length === 0) return;
@@ -1401,7 +1444,9 @@
       console.info('[competitions] startHOH blocked: game is paused');
       return;
     }
-    g.lastCompScores = new Map(); g.hohOrder = [];
+    g.lastCompScores = new Map(); 
+    g.lastCompScoresMeta = new Map();
+    g.hohOrder = [];
     g.__hohResolved = false;
     g.__hohResolving = false;
     g.__humanPlayedHOH = false;
@@ -2018,6 +2063,7 @@
   function beginF3P1Competition() {
     const g = global.game;
     g.lastCompScores = new Map();
+    g.lastCompScoresMeta = new Map();
     g.__f3p1GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 1');
     global.phaseMusic?.('hoh');
@@ -2226,6 +2272,7 @@
     const g = global.game;
     g.__f3_duo = duo.slice();
     g.lastCompScores = new Map();
+    g.lastCompScoresMeta = new Map();
     g.__f3p2GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 2');
     global.phaseMusic?.('hoh');
@@ -2520,6 +2567,7 @@
   function beginF3P3Competition() {
     const g = global.game;
     g.lastCompScores = new Map();
+    g.lastCompScoresMeta = new Map();
     const finalists = [g.__f3p1Winner, g.__f3p2Winner];
     // CRITICAL: Set finalists BEFORE setPhase() to ensure renderF3P3() has access to them
     g.__f3_finalists = finalists.slice();
