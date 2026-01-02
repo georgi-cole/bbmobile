@@ -99,6 +99,9 @@
     // Intermission Games (feature-flagged, on by default)
     enableIntermissionGames: true,  // When true, offer Tic Tac Toe game when player is ineligible for HOH/Veto competitions
     
+    // Idle Timer Exhaust (feature-flagged, on by default)
+    enableIdleTimerExhaust: true,  // When true, automatically exhaust phase timer to 1s when main screen is idle
+    
     // Avatar Preloading Configuration
     avatarPreloadConcurrency: 8,    // Max concurrent avatar requests (mobile stability)
     avatarPreloadTimeoutMs: 7000,   // Timeout before forcing ready (ms)

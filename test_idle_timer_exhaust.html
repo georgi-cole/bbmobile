@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle Timer Exhaust Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0d151f;
+      color: #e0e0e0;
+    }
+    h1 { color: #4fc3f7; }
+    h2 { color: #81c784; margin-top: 30px; }
+    .test-section {
+      background: #1a2332;
+      border: 1px solid #2d3e50;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .status.pass { background: #1b5e20; border: 1px solid #2e7d32; }
+    .status.fail { background: #b71c1c; border: 1px solid #c62828; }
+    .status.info { background: #01579b; border: 1px solid #0277bd; }
+    button {
+      background: #1976d2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #1565c0; }
+    button:disabled { background: #424242; cursor: not-allowed; }
+    .control-panel {
+      background: #263238;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .timer-display {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffc107;
+      text-align: center;
+      padding: 20px;
+      background: #1a2332;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .debug-info {
+      background: #000;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin: 10px 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal-content {
+      background: #1a2332;
+      padding: 30px;
+      border-radius: 8px;
+      max-width: 500px;
+    }
+    #tvOverlay {
+      position: relative;
+      width: 100%;
+      min-height: 200px;
+      background: #263238;
+      border: 2px dashed #546e7a;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .decision-card {
+      background: #37474f;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Idle Timer Exhaust Feature Test</h1>
+  
+  <div class="control-panel">
+    <h3>Feature Control</h3>
+    <button id="btnStart">Start Monitoring</button>
+    <button id="btnStop">Stop Monitoring</button>
+    <button id="btnEnable">Enable Feature</button>
+    <button id="btnDisable">Disable Feature</button>
+    <button id="btnRefresh">Refresh Status</button>
+  </div>
+
+  <div class="timer-display" id="timerDisplay">
+    No active timer
+  </div>
+
+  <div class="test-section">
+    <h2>📊 Current Status</h2>
+    <div id="statusDisplay" class="debug-info"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>🧩 State Tests</h2>
+    <button onclick="testMainScreenBuilt()">Test: Main Screen Built</button>
+    <button onclick="testModalOpen()">Test: Modal Detection</button>
+    <button onclick="testPopupCard()">Test: Popup Card Detection</button>
+    <button onclick="testGameRunning()">Test: Game Running</button>
+    <button onclick="testUserInput()">Test: User Input Expected</button>
+    <button onclick="testPaused()">Test: Game Paused</button>
+    <button onclick="testActiveTimer()">Test: Active Timer</button>
+    <button onclick="testIdleComposite()">Test: Is Idle (Composite)</button>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>🎮 Interactive Tests</h2>
+    
+    <h3>Main Screen State</h3>
+    <button onclick="setMainScreenBuilt(true)">Mark Main Screen Built</button>
+    <button onclick="setMainScreenBuilt(false)">Unmark Main Screen</button>
+    
+    <h3>Modal State</h3>
+    <button onclick="openTestModal()">Open Modal</button>
+    <button onclick="closeTestModal()">Close Modal</button>
+    
+    <h3>Popup Card State</h3>
+    <button onclick="showPopupCard()">Show Popup Card</button>
+    <button onclick="hidePopupCard()">Hide Popup Card</button>
+    
+    <h3>Game State</h3>
+    <button onclick="setGameRunning(true)">Set Game Running</button>
+    <button onclick="setGameRunning(false)">Clear Game Running</button>
+    
+    <h3>Timer State</h3>
+    <button onclick="setTimer(30000)">Set 30s Timer</button>
+    <button onclick="setTimer(5000)">Set 5s Timer</button>
+    <button onclick="setTimer(500)">Set 0.5s Timer (should not exhaust)</button>
+    <button onclick="clearTimer()">Clear Timer</button>
+    
+    <h3>Pause State</h3>
+    <button onclick="setPaused(true)">Pause Game</button>
+    <button onclick="setPaused(false)">Unpause Game</button>
+    
+    <h3>User Input State</h3>
+    <button onclick="setUserInput(true)">Add Decision Button</button>
+    <button onclick="setUserInput(false)">Remove Decision Button</button>
+  </div>
+
+  <div class="test-section">
+    <h2>🔄 Auto-Exhaust Scenario Test</h2>
+    <button onclick="runFullScenario()">Run Full Scenario Test</button>
+    <div id="scenarioLog" class="debug-info"></div>
+  </div>
+
+  <!-- Mock DOM elements -->
+  <div class="modal-backdrop" id="testModal">
+    <div class="modal-content">
+      <h2>Test Modal</h2>
+      <p>This is a test modal for idle detection.</p>
+      <button onclick="closeTestModal()">Close</button>
+    </div>
+  </div>
+
+  <div id="tvOverlay">
+    <div id="tvOverlayContent"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Initialize minimal game object
+    window.game = window.game || {
+      cfg: {
+        enableIdleTimerExhaust: true
+      },
+      phase: 'idle',
+      players: [],
+      humanId: 'player_1',
+      endAt: null,
+      phaseEndsAt: null,
+      __compRunning: false,
+      __minigameActive: false,
+      __intermissionActive: false,
+      isGloballyPaused: false
+    };
+
+    // Mock PauseController
+    window.PauseController = {
+      isPaused() {
+        return window.game.isGloballyPaused;
+      }
+    };
+
+    // Mock Telemetry
+    window.Telemetry = {
+      log(event, data) {
+        console.log('[Telemetry]', event, data);
+      }
+    };
+  </script>
+  
+  <!-- Load the idle timer exhaust module -->
+  <script src="js/utils/idle-timer-exhaust.js"></script>
+
+  <script>
+    // Status refresh
+    function refreshStatus() {
+      const debug = window.IdleTimerExhaust._debug;
+      const now = Date.now();
+      
+      let html = '<div style="font-size: 14px; line-height: 1.6;">';
+      html += `<strong>Feature Enabled:</strong> ${window.IdleTimerExhaust.isEnabled()}<br>`;
+      html += `<strong>Main Screen Built:</strong> ${debug.isMainScreenBuilt()}<br>`;
+      html += `<strong>Modal Open:</strong> ${debug.isModalOpen()}<br>`;
+      html += `<strong>Popup Card Visible:</strong> ${debug.isPopupCardVisible()}<br>`;
+      html += `<strong>Game Running:</strong> ${debug.isGameRunning()}<br>`;
+      html += `<strong>User Input Expected:</strong> ${debug.isUserInputExpected()}<br>`;
+      html += `<strong>Game Paused:</strong> ${debug.isGamePaused()}<br>`;
+      html += `<strong>Has Active Timer:</strong> ${debug.hasActiveTimer()}<br>`;
+      html += `<strong>IS IDLE:</strong> <span style="color: ${window.IdleTimerExhaust.isMainScreenIdle() ? '#4caf50' : '#f44336'}; font-weight: bold;">${window.IdleTimerExhaust.isMainScreenIdle()}</span><br><br>`;
+      
+      html += `<strong>game.endAt:</strong> ${window.game.endAt ? `${window.game.endAt} (in ${Math.max(0, window.game.endAt - now)}ms)` : 'null'}<br>`;
+      html += `<strong>game.phaseEndsAt:</strong> ${window.game.phaseEndsAt ? `${window.game.phaseEndsAt} (in ${Math.max(0, window.game.phaseEndsAt - now)}ms)` : 'null'}<br>`;
+      html += `<strong>game.phase:</strong> ${window.game.phase}<br>`;
+      html += '</div>';
+      
+      document.getElementById('statusDisplay').innerHTML = html;
+      
+      // Update timer display
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const now = Date.now();
+      let remaining = 0;
+      
+      if (window.game.endAt && window.game.endAt > now) {
+        remaining = Math.max(0, window.game.endAt - now);
+      } else if (window.game.phaseEndsAt && window.game.phaseEndsAt > now) {
+        remaining = Math.max(0, window.game.phaseEndsAt - now);
+      }
+      
+      if (remaining > 0) {
+        document.getElementById('timerDisplay').textContent = 
+          `Timer: ${(remaining / 1000).toFixed(1)}s remaining`;
+      } else {
+        document.getElementById('timerDisplay').textContent = 'No active timer';
+      }
+    }
+
+    // Control buttons
+    document.getElementById('btnStart').onclick = () => {
+      window.IdleTimerExhaust.start();
+      showStatus('Monitoring started', 'pass');
+      refreshStatus();
+    };
+
+    document.getElementById('btnStop').onclick = () => {
+      window.IdleTimerExhaust.stop();
+      showStatus('Monitoring stopped', 'info');
+      refreshStatus();
+    };
+
+    document.getElementById('btnEnable').onclick = () => {
+      window.IdleTimerExhaust.setEnabled(true);
+      showStatus('Feature enabled', 'pass');
+      refreshStatus();
+    };
+
+    document.getElementById('btnDisable').onclick = () => {
+      window.IdleTimerExhaust.setEnabled(false);
+      showStatus('Feature disabled', 'info');
+      refreshStatus();
+    };
+
+    document.getElementById('btnRefresh').onclick = refreshStatus;
+
+    // Interactive test functions
+    function setMainScreenBuilt(value) {
+      if (value) {
+        document.body.classList.add('main-screen-built');
+      } else {
+        document.body.classList.remove('main-screen-built');
+      }
+      showStatus(`Main screen built: ${value}`, 'info');
+      refreshStatus();
+    }
+
+    function openTestModal() {
+      document.getElementById('testModal').classList.add('open');
+      document.getElementById('testModal').style.display = 'flex';
+      showStatus('Modal opened', 'info');
+      refreshStatus();
+    }
+
+    function closeTestModal() {
+      document.getElementById('testModal').classList.remove('open');
+      document.getElementById('testModal').style.display = 'none';
+      showStatus('Modal closed', 'info');
+      refreshStatus();
+    }
+
+    function showPopupCard() {
+      const card = document.createElement('div');
+      card.className = 'decision-card';
+      card.id = 'testDecisionCard';
+      card.innerHTML = '<h3>Test Decision</h3><button>Make Choice</button>';
+      document.getElementById('tvOverlayContent').appendChild(card);
+      showStatus('Popup card shown', 'info');
+      refreshStatus();
+    }
+
+    function hidePopupCard() {
+      const card = document.getElementById('testDecisionCard');
+      if (card) card.remove();
+      showStatus('Popup card hidden', 'info');
+      refreshStatus();
+    }
+
+    function setGameRunning(value) {
+      window.game.__compRunning = value;
+      showStatus(`Game running: ${value}`, 'info');
+      refreshStatus();
+    }
+
+    function setTimer(ms) {
+      const now = Date.now();
+      window.game.endAt = now + ms;
+      window.game.phaseEndsAt = now + ms;
+      showStatus(`Timer set to ${ms}ms`, 'info');
+      refreshStatus();
+    }
+
+    function clearTimer() {
+      window.game.endAt = null;
+      window.game.phaseEndsAt = null;
+      showStatus('Timer cleared', 'info');
+      refreshStatus();
+    }
+
+    function setPaused(value) {
+      window.game.isGloballyPaused = value;
+      showStatus(`Paused: ${value}`, 'info');
+      refreshStatus();
+    }
+
+    function setUserInput(value) {
+      if (value) {
+        const btn = document.createElement('button');
+        btn.id = 'testDecisionBtn';
+        btn.className = 'decision-card';
+        btn.textContent = 'Test Decision';
+        document.body.appendChild(btn);
+      } else {
+        const btn = document.getElementById('testDecisionBtn');
+        if (btn) btn.remove();
+      }
+      showStatus(`User input expected: ${value}`, 'info');
+      refreshStatus();
+    }
+
+    // Test functions
+    function testMainScreenBuilt() {
+      const result = window.IdleTimerExhaust._debug.isMainScreenBuilt();
+      showTestResult('Main Screen Built', result, document.body.classList.contains('main-screen-built'));
+    }
+
+    function testModalOpen() {
+      const result = window.IdleTimerExhaust._debug.isModalOpen();
+      showTestResult('Modal Open', result, 'Should detect visible modals');
+    }
+
+    function testPopupCard() {
+      const result = window.IdleTimerExhaust._debug.isPopupCardVisible();
+      showTestResult('Popup Card Visible', result, 'Should detect cards in #tvOverlay');
+    }
+
+    function testGameRunning() {
+      const result = window.IdleTimerExhaust._debug.isGameRunning();
+      showTestResult('Game Running', result, window.game.__compRunning || window.game.__minigameActive || window.game.__intermissionActive);
+    }
+
+    function testUserInput() {
+      const result = window.IdleTimerExhaust._debug.isUserInputExpected();
+      showTestResult('User Input Expected', result, 'Check phase-specific requirements');
+    }
+
+    function testPaused() {
+      const result = window.IdleTimerExhaust._debug.isGamePaused();
+      showTestResult('Game Paused', result, window.game.isGloballyPaused);
+    }
+
+    function testActiveTimer() {
+      const result = window.IdleTimerExhaust._debug.hasActiveTimer();
+      const hasTimer = (window.game.endAt && window.game.endAt > Date.now()) || 
+                      (window.game.phaseEndsAt && window.game.phaseEndsAt > Date.now());
+      showTestResult('Active Timer', result, hasTimer);
+    }
+
+    function testIdleComposite() {
+      const result = window.IdleTimerExhaust.isMainScreenIdle();
+      showTestResult('Is Idle (Composite)', result, 'Should be true only when all conditions met');
+    }
+
+    function showTestResult(name, value, expected) {
+      const div = document.createElement('div');
+      div.className = 'status info';
+      div.innerHTML = `<strong>${name}:</strong> ${value}<br><small>Expected: ${expected}</small>`;
+      const container = document.getElementById('testResults');
+      container.appendChild(div);
+      setTimeout(() => div.remove(), 5000);
+    }
+
+    function showStatus(message, type) {
+      const div = document.createElement('div');
+      div.className = `status ${type}`;
+      div.textContent = message;
+      const container = document.getElementById('testResults');
+      container.appendChild(div);
+      setTimeout(() => div.remove(), 3000);
+    }
+
+    // Full scenario test
+    async function runFullScenario() {
+      const log = document.getElementById('scenarioLog');
+      log.innerHTML = '';
+      
+      function logStep(msg) {
+        log.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
+        log.scrollTop = log.scrollHeight;
+      }
+
+      logStep('🚀 Starting full scenario test...');
+      
+      // Step 1: Setup idle conditions
+      logStep('Step 1: Setting up idle conditions...');
+      document.body.classList.add('main-screen-built');
+      closeTestModal();
+      hidePopupCard();
+      window.game.__compRunning = false;
+      window.game.isGloballyPaused = false;
+      setUserInput(false);
+      refreshStatus();
+      await sleep(500);
+      
+      // Step 2: Set a long timer
+      logStep('Step 2: Setting 10s timer...');
+      const startTime = Date.now();
+      window.game.endAt = startTime + 10000;
+      window.game.phaseEndsAt = startTime + 10000;
+      refreshStatus();
+      await sleep(500);
+      
+      // Step 3: Start monitoring
+      logStep('Step 3: Starting idle monitoring...');
+      window.IdleTimerExhaust.setEnabled(true);
+      window.IdleTimerExhaust.start();
+      await sleep(500);
+      
+      // Step 4: Wait for exhaustion
+      logStep('Step 4: Waiting for timer exhaustion (should happen within 1s)...');
+      await sleep(1500);
+      
+      // Step 5: Check if timer was exhausted
+      const remaining = window.game.endAt - Date.now();
+      logStep(`Step 5: Timer remaining: ${remaining}ms`);
+      
+      if (remaining <= 1500 && remaining > 0) {
+        logStep('✅ SUCCESS: Timer was exhausted to ~1s');
+      } else {
+        logStep(`❌ FAIL: Timer was not exhausted correctly (${remaining}ms remaining)`);
+      }
+      
+      // Cleanup
+      logStep('Cleanup: Stopping monitoring and clearing timer...');
+      window.IdleTimerExhaust.stop();
+      clearTimer();
+      refreshStatus();
+      
+      logStep('✅ Scenario test complete!');
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Auto-refresh timer display
+    setInterval(() => {
+      updateTimerDisplay();
+    }, 100);
+
+    // Initial setup
+    window.addEventListener('load', () => {
+      refreshStatus();
+      showStatus('Test page loaded. Module ready.', 'pass');
+    });
+  </script>
+</body>
+</html>
