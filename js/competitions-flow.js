@@ -1754,6 +1754,13 @@
     }
     const phase = g.phase;
     
+    // Skip showing redundant results popup for Final 3 Parts 1 & 2
+    // These phases already show results via showF3ResultsModal in finishF3P1/finishF3P2
+    if (phase === 'final3_comp1' || phase === 'final3_comp2') {
+      console.info('[ImmediateResults] Skipping redundant results popup for', phase, '– results already shown via F3 modal');
+      return;
+    }
+    
     // Mark that results have been shown for POV competitions to prevent redundant display
     // This flag is checked in veto.js finishVetoComp to skip duplicate reveal
     if(phase === 'pov' || phase === 'veto_comp' || phase === 'veto'){

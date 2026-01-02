@@ -50,6 +50,7 @@
     idleGapMs: 0,                    // No idle gap between results and reveal
     postRevealGapMs: 100,            // Minimal buffer after reveal (0.1s)
     postHOHIdleMs: 0,                // No idle after Final HOH reveal (proceed to plea)
+    aiDecisionDelayMs: 2000,         // Delay before AI executes eviction decision (2s)
     enableOptimizedPacing: true      // Master toggle (can be overridden by settings)
   };
 
@@ -3104,9 +3105,24 @@
       } else {
         const note = document.createElement('div'); note.className = 'tiny muted'; 
         note.textContent = g.__pleaSubmitted 
-          ? 'Your plea has been heard. AI will make the decision at end.' 
-          : 'AI will make the decision at end.';
+          ? 'Your plea has been heard. AI will decide shortly...' 
+          : 'AI will decide shortly...';
         box.appendChild(note);
+        
+        // Trigger immediate AI decision with short delay
+        // This handles the case where human is not a nominee (spectator/jury)
+        // or has already submitted their plea
+        if (!g.__f3AIDecisionTriggered) {
+          g.__f3AIDecisionTriggered = true;
+          console.info('[F3Decision] Triggering immediate AI decision with short delay');
+          
+          setTimeout(() => {
+            console.info('[F3Decision] Executing AI decision now');
+            if (global.finalizeFinal3Decision && !g.__f3EvictionResolved) {
+              global.finalizeFinal3Decision();
+            }
+          }, F3_UI_TIMING.aiDecisionDelayMs);
+        }
       }
     }
     panel.appendChild(box);
