@@ -84,7 +84,7 @@
     if (tvOverlay && tvOverlay.children.length > 0) {
       const style = window.getComputedStyle(tvOverlay);
       if (style.visibility !== 'hidden' && style.display !== 'none') {
-        // Check if tvOverlay has any visible children
+        // Check if tvOverlay has any visible children with actual content
         const children = Array.from(tvOverlay.children);
         for (const child of children) {
           // Skip canvas and badge elements
@@ -93,7 +93,10 @@
           }
           // Quick check using offsetParent (null means element is not visible)
           if (child.offsetParent !== null) {
-            return true;
+            // Also check if the element has children or non-empty text content
+            if (child.children.length > 0 || (child.textContent && child.textContent.trim().length > 0)) {
+              return true;
+            }
           }
         }
       }
