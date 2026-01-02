@@ -154,7 +154,7 @@
 
     // Check phase-specific user input requirements
     switch (phase) {
-      case 'livevote':
+      case 'livevote': {
         // Check if human hasn't voted yet
         // Look for voting UI elements
         const voteButtons = document.querySelectorAll('.vote-button:not([disabled]), button[data-vote]:not([disabled])');
@@ -171,8 +171,9 @@
           }
         }
         break;
+      }
 
-      case 'jury':
+      case 'jury': {
         // Check if human is a juror who hasn't voted
         if (humanId && Array.isArray(game.jury) && game.jury.includes(humanId)) {
           // Check if jury vote has been recorded
@@ -181,20 +182,23 @@
           }
         }
         break;
+      }
 
-      case 'nominations':
+      case 'nominations': {
         // Check if human is HOH with unlocked nominations
         if (humanId && game.hohId === humanId && !game.nomsLocked) {
           return true;
         }
         break;
+      }
 
-      case 'veto_ceremony':
+      case 'veto_ceremony': {
         // Check if human is POV holder with unresolved ceremony
         if (humanId && game.vetoHolder === humanId && game.vetoSavedId === null) {
           return true;
         }
         break;
+      }
     }
 
     // Check for visible interactive decision buttons
@@ -293,7 +297,7 @@
     // Determine which timer to exhaust
     let exhausted = false;
     let remainingMs = 0;
-    let phase = game.phase || 'unknown';
+    const phase = game.phase || 'unknown';
 
     if (game.endAt && typeof game.endAt === 'number' && game.endAt > now) {
       remainingMs = game.endAt - now;
