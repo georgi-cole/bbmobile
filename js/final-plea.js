@@ -585,6 +585,39 @@
     return currentModal !== null;
   }
 
+  // Auto-cleanup on phase change to prevent modal sticking during fast transitions
+  (function attachPhaseCleanup() {
+    try {
+      // Listen to window CustomEvent (dispatched by setPhase in ui.hud-and-router.js)
+      global.addEventListener('bb:phase:changed', () => {
+        if (currentModal) {
+          console.info('[FinalPlea] Phase changed, auto-cleaning up modal');
+          try {
+            cleanup();
+          } catch (e) {
+            console.warn('[FinalPlea] cleanup on phase change failed', e);
+          }
+        }
+      });
+      
+      // Also listen to game.bus if available (defensive dual-binding)
+      if (global.game?.bus?.on) {
+        global.game.bus.on('bb:phase:changed', () => {
+          if (currentModal) {
+            console.info('[FinalPlea] Phase changed (via bus), auto-cleaning up modal');
+            try {
+              cleanup();
+            } catch (e) {
+              console.warn('[FinalPlea] cleanup on phase change (bus) failed', e);
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[FinalPlea] phase-change listener attach failed', e);
+    }
+  })();
+
   // Public API
   FinalPlea.show = show;
   FinalPlea.cleanup = cleanup;
