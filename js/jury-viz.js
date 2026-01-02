@@ -1001,6 +1001,9 @@
     if(!state || !state.wrap) return;
     state.wrap.classList.remove('hidden-for-voting');
     state.wrap.classList.add('reveal-phase');
+    // Restore visibility (in case it was hidden via inline styles)
+    state.wrap.style.opacity = '1';
+    state.wrap.style.pointerEvents = 'auto';
     console.log('[jury-viz] Faceoff shown for reveal');
   }
 
@@ -1302,6 +1305,19 @@
         return;
       }
       
+      // Hide the faceoff UI (finalists) while showing vote cards
+      if (state.wrap) {
+        state.wrap.style.opacity = '0';
+        state.wrap.style.pointerEvents = 'none';
+      }
+      
+      // Remove any OLD single-vote cards that might be lingering
+      const oldCards = document.querySelectorAll('.jury-vote-card, .revealCard');
+      oldCards.forEach(el => {
+        el.style.animation = 'none';
+        el.remove();
+      });
+      
       // Remove any existing vote displays
       const existing = state.overlay.querySelectorAll('.batched-votes-container');
       existing.forEach(el => el.remove());
@@ -1433,6 +1449,20 @@
         resolve();
         return;
       }
+      
+      // Keep the faceoff UI hidden during tally screen
+      // The tally screen shows its own finalist avatars
+      if (state.wrap) {
+        state.wrap.style.opacity = '0';
+        state.wrap.style.pointerEvents = 'none';
+      }
+      
+      // Remove any OLD single-vote cards that might be lingering
+      const oldCards = document.querySelectorAll('.jury-vote-card, .revealCard');
+      oldCards.forEach(el => {
+        el.style.animation = 'none';
+        el.remove();
+      });
       
       // Remove any existing tally displays
       const existing = state.overlay.querySelectorAll('.tally-screen-container');

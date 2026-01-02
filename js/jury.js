@@ -1584,6 +1584,11 @@
       }
     }
     
+    // After all batches are revealed, restore faceoff visibility for final tally
+    if (typeof g.FinalFaceoff?.showFaceoff === 'function') {
+      g.FinalFaceoff.showFaceoff();
+    }
+    
     // Remove fast-forward button
     if (ffBtn) ffBtn.remove();
     
