@@ -1756,7 +1756,7 @@
     
     // Skip showing redundant results popup for Final 3 Parts 1 & 2
     // These phases already show results via showF3ResultsModal in finishF3P1/finishF3P2
-    if(phase === 'final3_comp1' || phase === 'final3_comp2'){
+    if (phase === 'final3_comp1' || phase === 'final3_comp2') {
       console.info('[ImmediateResults] Skipping redundant results popup for', phase, '– results already shown via F3 modal');
       return;
     }
