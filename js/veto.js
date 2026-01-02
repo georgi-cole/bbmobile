@@ -1719,6 +1719,21 @@
     
     global.addLog('Final 4 eviction: <b>' + holder.name + '</b> has chosen to evict <b>' + evictee.name + '</b>.', 'danger');
     
+    // Show diary room vote card before eviction result (skipping social phase and live vote modal)
+    // This provides the "diary eviction vote" experience without triggering unnecessary phases
+    try{
+      await showTVCardWithAvatars({
+        title: 'Final 4 Vote',
+        lines: [holder.name + ': I vote to evict ' + evictee.name + '.'],
+        tone: 'live',
+        duration: 3500,
+        actorIds: holder ? holder.id : null,
+        subjectIds: target
+      });
+    }catch(e){
+      console.error('[final4] diary vote card failed:', e);
+    }
+    
     // Show eviction card with generous duration
     try{ 
       if(typeof global.showCard === 'function') 
@@ -3922,7 +3937,8 @@
         });
         g.__vetoCeremonyResolved = true;
         g.__vetoDecisionInProgress = false;
-        setTimeout(function(){ if(typeof global.startLiveVote==='function') global.startLiveVote(); }, 300);
+        // At Final 4, skip social and live vote - go directly to Final 4 eviction flow
+        setTimeout(function(){ if(typeof global.startFinal4Eviction==='function') global.startFinal4Eviction(); }, 300);
         return;
       }
       
@@ -4053,6 +4069,14 @@
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
       g.__useTVCeremonyUI = false;
+      
+      // At Final 4, skip social and live vote - go directly to Final 4 eviction flow
+      if(aliveCount === 4){
+        console.info('[veto] Final 4 detected - skipping social/livevote, starting Final 4 eviction');
+        setTimeout(function(){ if(typeof global.startFinal4Eviction==='function') global.startFinal4Eviction(); }, 200);
+        return;
+      }
+      
       setTimeout(function(){
         if(typeof global.startSocial==='function'){
           console.info('[veto] Calling startSocial after ceremony (not used)');
