@@ -113,10 +113,11 @@
       if (child.tagName === 'CANVAS' || child.classList.contains('liveBadge') || child.classList.contains('twistBadge')) {
         continue;
       }
-      const style = window.getComputedStyle(child);
-      if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
-        // Check if it has content
-        if (child.offsetHeight > 0 || child.offsetWidth > 0) {
+      // Quick check using offsetHeight/offsetWidth first (more performant)
+      if (child.offsetHeight > 0 || child.offsetWidth > 0) {
+        // Only use getComputedStyle if element has dimensions
+        const style = window.getComputedStyle(child);
+        if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
           return true;
         }
       }
@@ -164,7 +165,10 @@
         if (humanId && Array.isArray(game.players)) {
           const human = game.players.find(p => p.id === humanId);
           if (human && !human.eliminated && !game.nominees?.includes(humanId)) {
-            // Check if vote has been recorded (various possible flags)
+            // Check if vote has been recorded
+            // Multiple flags exist for different voting implementations:
+            // - game.humanVoted: Legacy live vote system
+            // - game.__humanVotedThisPhase: New live vote v2 system
             if (!game.humanVoted && !game.__humanVotedThisPhase) {
               return true;
             }
@@ -177,7 +181,8 @@
         // Check if human is a juror who hasn't voted
         if (humanId && Array.isArray(game.jury) && game.jury.includes(humanId)) {
           // Check if jury vote has been recorded
-          if (game.juryVotes && !game.juryVotes.has(humanId)) {
+          // Verify juryVotes is a Map before checking
+          if (game.juryVotes && typeof game.juryVotes.has === 'function' && !game.juryVotes.has(humanId)) {
             return true;
           }
         }
@@ -310,6 +315,7 @@
 
     if (game.phaseEndsAt && typeof game.phaseEndsAt === 'number' && game.phaseEndsAt > now) {
       const phaseRemaining = game.phaseEndsAt - now;
+      // Track the larger remaining time for logging
       if (phaseRemaining > remainingMs) {
         remainingMs = phaseRemaining;
       }
