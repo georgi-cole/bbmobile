@@ -12,70 +12,70 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
   };
 
-  // Progress messages for simulated updates (varied by phase)
+  // Progress messages for simulated updates (varied by phase) - improved to sound like sports commentary
   const PROGRESS_MESSAGES = {
     common: [
-      'Round {round} complete...',
-      'Scores are close!',
-      'Competition heating up...',
-      '{name} takes the lead!',
-      'Neck and neck!',
-      '{name} pulls ahead!',
-      'Final moments...',
-      'Almost finished!',
-      '{name} showing strong performance!',
-      'This could go either way...'
+      'And we\'re off! Round {round} is underway!',
+      'The scores are incredibly close!',
+      'This competition is heating up fast!',
+      '{name} takes the lead! The crowd goes wild!',
+      'It\'s neck and neck between these competitors!',
+      'What a move by {name}! Absolutely stunning!',
+      'We\'re entering the final moments...',
+      'Almost at the finish line!',
+      '{name} is showing incredible performance!',
+      'This could go either way... it\'s anyone\'s game!'
     ],
     part1: [
-      'All three competitors pushing hard!',
-      'Who will advance to Part 3?',
-      'The pressure is intense!',
-      'One will move directly to the finale!',
-      'Two will face off in Part 2!'
+      'All three houseguests are giving it their all!',
+      'Who will punch their ticket to Part 3?',
+      'The pressure in the Big Brother house is intense!',
+      'One competitor will move directly to the finale!',
+      'Two will have to battle it out in Part 2!'
     ],
     part2: [
-      'Head-to-head battle in progress!',
-      'Only one can advance!',
-      'The loser is out of contention!',
-      'Fighting for that Part 3 spot!',
-      'This determines who faces the Part 1 winner!'
+      'This head-to-head battle is absolutely riveting!',
+      'Only one can advance to face the Part 1 winner!',
+      'The loser goes home - the stakes couldn\'t be higher!',
+      'They\'re fighting tooth and nail for that Part 3 spot!',
+      'This determines who faces off for the Final HOH!'
     ],
     part3: [
-      'The final showdown is here!',
-      'Who will become Final HOH?',
-      'This decides who controls the Final 2!',
-      'Winner makes the ultimate eviction decision!',
-      'The finale is on the line!'
+      'The final showdown is here, folks!',
+      'Who will become the Final Head of Household?',
+      'This competition decides who controls the Final 2!',
+      'The winner makes the ultimate eviction decision!',
+      'The Big Brother finale is on the line!'
     ]
   };
 
-  // Commentary phrases for dramatic effect (varied by phase)
+  // Commentary phrases for dramatic effect (varied by phase) - enhanced sports-style commentary
   const COMMENTARY_PHRASES = {
     common: [
-      'The tension is palpable!',
-      'Both competitors are giving it their all!',
-      'What a showdown!',
-      'This is anyone\'s game!',
-      'The stakes have never been higher!',
-      'Who will come out on top?'
+      'The tension in the house is palpable!',
+      'And we\'re off! The competitors are giving it their all!',
+      'What an incredible showdown!',
+      'This is absolutely anyone\'s game right now!',
+      'The stakes have never been higher in Big Brother!',
+      'Who will come out on top? We\'re about to find out!'
     ],
     part1: [
-      'Three houseguests, one goal!',
-      'Every point matters right now!',
-      'This will reshape the Final 3!',
-      'The competition is fierce!'
+      'Three houseguests, one goal - advance to the finale!',
+      'Every single point matters in this crucial moment!',
+      'This will completely reshape the Final 3 dynamic!',
+      'The competition level is off the charts!'
     ],
     part2: [
-      'Winner takes all in this round!',
-      'One mistake could cost everything!',
-      'The intensity is incredible!',
-      'No room for error here!'
+      'Winner takes all in this do-or-die round!',
+      'One mistake here could cost everything!',
+      'The intensity is absolutely incredible!',
+      'There\'s no room for error in this battle!'
     ],
     part3: [
-      'The ultimate competition!',
-      'Everything comes down to this!',
-      'The power to choose Final 2!',
-      'History in the making!'
+      'This is it - the ultimate Big Brother competition!',
+      'Everything comes down to this moment!',
+      'The power to choose the Final 2 is up for grabs!',
+      'We are witnessing Big Brother history in the making!'
     ]
   };
 
@@ -131,27 +131,59 @@
       overflow-y: auto;
     `;
 
+    // Add floating background emojis for visual interest
+    const emojiBackground = document.createElement('div');
+    emojiBackground.className = 'emoji-background';
+    emojiBackground.style.cssText = `
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    `;
+    
+    const competitionEmojis = ['🏆', '🎯', '⚡', '🔥', '💪', '🎮', '🏆', '🎯', '⚡', '🔥'];
+    competitionEmojis.forEach((emoji, i) => {
+      const floatingEmoji = document.createElement('div');
+      floatingEmoji.textContent = emoji;
+      floatingEmoji.style.cssText = `
+        position: absolute;
+        font-size: ${30 + Math.random() * 20}px;
+        opacity: 0.08;
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        animation: floatEmoji ${15 + Math.random() * 10}s ease-in-out infinite;
+        animation-delay: ${i * 0.8}s;
+      `;
+      emojiBackground.appendChild(floatingEmoji);
+    });
+    view.appendChild(emojiBackground);
+
     // Content wrapper for scrollable content
     const contentWrapper = document.createElement('div');
     contentWrapper.style.cssText = `
       max-width: 800px;
       width: 100%;
       text-align: center;
+      position: relative;
+      z-index: 2;
     `;
 
-    // Title
+    // Title - optimized for mobile
     const title = document.createElement('h3');
-    title.textContent = `🎬 ${phase} in Progress`;
+    // Simplify title format to fit one line on mobile
+    const simplifiedPhase = phase.replace(/—/g, '-').replace(' in Progress', '');
+    title.textContent = `🎬 ${simplifiedPhase}`;
     title.style.cssText = `
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: #ffdc8b;
-      margin: 0 0 32px 0;
+      margin: 0 0 20px 0;
       text-shadow: 0 2px 12px rgba(255, 220, 139, 0.5);
     `;
     contentWrapper.appendChild(title);
 
-    // Competitors container
+    // Competitors container - reduced margin for mobile
     const competitorsBox = document.createElement('div');
     competitorsBox.className = 'spectator-competitors';
     competitorsBox.style.cssText = `
@@ -160,7 +192,7 @@
       justify-content: center;
       align-items: center;
       gap: clamp(8px, 2vw, 16px);
-      margin-bottom: 32px;
+      margin-bottom: 20px;
       flex-wrap: nowrap;
       width: 100%;
       padding: 0 8px;
@@ -176,7 +208,7 @@
         background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
         border: 3px solid #6b7a99;
         border-radius: 16px;
-        padding: clamp(12px, 3vw, 20px);
+        padding: clamp(10px, 2.5vw, 16px);
         flex: 1 1 0;
         max-width: 48%;
         min-width: 0;
@@ -219,14 +251,14 @@
       `;
       competitorCard.appendChild(avatar);
 
-      // Name
+      // Name - reduced spacing
       const name = document.createElement('div');
       name.textContent = player.name;
       name.style.cssText = `
         font-size: clamp(0.9rem, 3vw, 1.2rem);
         font-weight: 700;
         color: #cedbeb;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         position: relative;
         z-index: 1;
         text-align: center;
@@ -234,7 +266,7 @@
       `;
       competitorCard.appendChild(name);
 
-      // Status indicator
+      // Status indicator - reduced spacing
       const status = document.createElement('div');
       status.className = 'competitor-status';
       status.textContent = 'Competing...';
@@ -245,10 +277,11 @@
         position: relative;
         z-index: 1;
         text-align: center;
+        margin-bottom: 4px;
       `;
       competitorCard.appendChild(status);
 
-      // Score display (simulated)
+      // Score display (simulated) - reduced spacing
       const score = document.createElement('div');
       score.className = 'competitor-score';
       score.textContent = '---';
@@ -256,7 +289,7 @@
         font-size: clamp(1.1rem, 4vw, 1.5rem);
         font-weight: 800;
         color: #83bfff;
-        margin-top: 12px;
+        margin-top: 6px;
         font-family: 'Courier New', monospace;
         position: relative;
         z-index: 1;
@@ -269,16 +302,16 @@
 
     contentWrapper.appendChild(competitorsBox);
 
-    // Game preview box with animated preview
+    // Game preview box with animated preview - reduced padding for mobile
     const gamePreview = document.createElement('div');
     gamePreview.className = 'spectator-game-preview';
     gamePreview.style.cssText = `
       background: linear-gradient(145deg, rgba(30,30,60,0.9) 0%, rgba(20,20,40,0.9) 100%);
       border: 3px solid #4a5a7a;
       border-radius: 16px;
-      padding: 32px;
-      margin-bottom: 32px;
-      min-height: 200px;
+      padding: 20px;
+      margin-bottom: 20px;
+      min-height: 180px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -308,8 +341,8 @@
     const gameIcon = document.createElement('div');
     gameIcon.textContent = getGameIcon(gameType);
     gameIcon.style.cssText = `
-      font-size: 4rem;
-      margin-bottom: 16px;
+      font-size: 3.5rem;
+      margin-bottom: 12px;
       animation: pulse 2s ease infinite;
       filter: drop-shadow(0 4px 16px rgba(255,220,139,0.3));
       position: relative;
@@ -320,10 +353,10 @@
     const gameName = document.createElement('div');
     gameName.textContent = getGameDisplayName(gameType);
     gameName.style.cssText = `
-      font-size: 1.3rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: #cedbeb;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       text-shadow: 0 2px 8px rgba(0,0,0,0.5);
       position: relative;
       z-index: 1;
@@ -335,7 +368,7 @@
     activityIndicator.style.cssText = `
       display: flex;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       position: relative;
       z-index: 1;
     `;
@@ -354,120 +387,76 @@
     }
     gamePreview.appendChild(activityIndicator);
 
-    // Add visual game simulation preview
-    const gameSimulation = document.createElement('div');
-    gameSimulation.className = 'game-simulation';
-    gameSimulation.style.cssText = `
-      display: flex;
-      gap: 12px;
-      margin: 20px 0;
+    // Add horizontal progress bar instead of random action bars
+    const competitionProgress = document.createElement('div');
+    competitionProgress.className = 'competition-progress-container';
+    competitionProgress.style.cssText = `
+      width: 100%;
+      max-width: 450px;
+      margin: 16px 0;
       position: relative;
       z-index: 1;
-      justify-content: center;
-      align-items: center;
     `;
     
-    // Create player action indicators based on competitor count
-    competitorIds.forEach((playerId, index) => {
-      const player = global.getP?.(playerId);
-      if (!player) return;
-      
-      const playerIndicator = document.createElement('div');
-      playerIndicator.className = 'player-action-indicator';
-      playerIndicator.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-      `;
-      
-      // Player mini avatar
-      const miniAvatar = document.createElement('div');
-      miniAvatar.style.cssText = `
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #6b7a99 0%, #4a5a7a 100%);
-        border: 2px solid #ffdc8b;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-        font-weight: 700;
-        color: #ffdc8b;
-        box-shadow: 0 4px 12px rgba(255, 220, 139, 0.4);
-      `;
-      miniAvatar.textContent = player.name.charAt(0).toUpperCase();
-      playerIndicator.appendChild(miniAvatar);
-      
-      // Action bars (simulating gameplay activity)
-      const actionBars = document.createElement('div');
-      actionBars.style.cssText = `
-        display: flex;
-        gap: 2px;
-        align-items: flex-end;
-      `;
-      
-      for (let i = 0; i < 5; i++) {
-        const bar = document.createElement('div');
-        bar.className = 'action-bar';
-        bar.style.cssText = `
-          width: 6px;
-          height: ${20 + Math.random() * 20}px;
-          background: linear-gradient(to top, #83bfff, #cedbeb);
-          border-radius: 2px;
-          animation: actionBarPulse 1s ease-in-out infinite;
-          animation-delay: ${index * 0.2 + i * 0.1}s;
-          box-shadow: 0 2px 6px rgba(131, 191, 255, 0.4);
-        `;
-        actionBars.appendChild(bar);
-      }
-      
-      playerIndicator.appendChild(actionBars);
-      gameSimulation.appendChild(playerIndicator);
-    });
+    const progressLabel = document.createElement('div');
+    progressLabel.textContent = 'Competition Progress';
+    progressLabel.style.cssText = `
+      font-size: 0.85rem;
+      color: #8a9ab8;
+      text-align: center;
+      margin-bottom: 8px;
+      font-weight: 600;
+    `;
+    competitionProgress.appendChild(progressLabel);
     
-    gamePreview.appendChild(gameSimulation);
-
-    const progressBar = document.createElement('div');
-    progressBar.className = 'spectator-progress-bar';
-    progressBar.style.cssText = `
+    const competitionProgressBar = document.createElement('div');
+    competitionProgressBar.className = 'competition-progress-bar';
+    competitionProgressBar.style.cssText = `
       width: 100%;
-      max-width: 400px;
-      height: 12px;
+      height: 24px;
       background: rgba(107, 122, 153, 0.3);
-      border-radius: 6px;
+      border-radius: 12px;
       overflow: hidden;
-      margin-top: 16px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
       position: relative;
-      z-index: 1;
     `;
-
-    const progressFill = document.createElement('div');
-    progressFill.className = 'progress-fill';
-    progressFill.style.cssText = `
+    
+    const competitionProgressFill = document.createElement('div');
+    competitionProgressFill.className = 'competition-progress-fill';
+    competitionProgressFill.style.cssText = `
       height: 100%;
-      background: linear-gradient(90deg, #ffdc8b 0%, #ffa500 100%);
       width: 0%;
-      transition: width 2s ease;
-      animation: shimmer 2s ease infinite;
-      box-shadow: 0 0 16px rgba(255,220,139,0.6);
+      background: linear-gradient(90deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+      transition: width 1.5s ease-out;
+      box-shadow: 0 0 16px rgba(74, 222, 128, 0.8);
+      position: relative;
     `;
-    progressBar.appendChild(progressFill);
-    gamePreview.appendChild(progressBar);
+    
+    // Add shine effect to progress bar
+    const progressShine = document.createElement('div');
+    progressShine.style.cssText = `
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shine 2s ease infinite;
+    `;
+    competitionProgressFill.appendChild(progressShine);
+    
+    competitionProgressBar.appendChild(competitionProgressFill);
+    competitionProgress.appendChild(competitionProgressBar);
+    gamePreview.appendChild(competitionProgress);
 
     contentWrapper.appendChild(gamePreview);
     
     // Inject additional animations if not already present
     injectSpectatorAnimations();
 
-    // Progress updates container
+    // Progress updates container - moved higher for better mobile visibility
     const updatesBox = document.createElement('div');
     updatesBox.className = 'spectator-updates';
     updatesBox.style.cssText = `
-      min-height: 80px;
-      margin-bottom: 32px;
+      min-height: 60px;
+      margin-bottom: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -529,7 +518,9 @@
     view._keyHandler = keyHandler;
 
     // Start progress simulation with phase for context-aware messages
-    startProgressSimulation(competitorIds, progressFill, updateText, phase);
+    // Get the competition progress fill element for animation
+    const compProgressFill = view.querySelector('.competition-progress-fill');
+    startProgressSimulation(competitorIds, compProgressFill, updateText, phase);
 
     // Emit event
     if (global.game?.bus) {
@@ -554,6 +545,15 @@
     // Show quick reveal sequence (2-3 seconds)
     showRevealSequence(() => {
       cleanup();
+      
+      // Auto-advance: Set phase timer to 1 second for quick progression
+      const g = global.game;
+      if (g && g.phaseEndsAt) {
+        const now = Date.now();
+        g.phaseEndsAt = now + 1000; // 1 second from now
+        console.info('[SpectatorView] Phase timer set to 1 second for quick progression');
+      }
+      
       if (skipCallback) skipCallback();
     });
 
@@ -596,8 +596,13 @@
       updateText.style.fontSize = '1.2rem';
 
       setTimeout(() => {
-        if (callback) callback();
-      }, 1500);
+        updateText.textContent = '✨ Get ready for the next part...';
+        updateText.style.fontSize = '1.1rem';
+        
+        setTimeout(() => {
+          if (callback) callback();
+        }, 800);
+      }, 1200);
     }, 1000);
   }
 
@@ -655,15 +660,6 @@
           void el.offsetWidth; // Force reflow
           el.style.animation = 'scoreFlash 0.5s ease';
         }
-      });
-
-      // Update action bar heights for visual interest using RAF for better performance
-      requestAnimationFrame(() => {
-        const actionBars = document.querySelectorAll('.action-bar');
-        actionBars.forEach(bar => {
-          const newHeight = 20 + Math.random() * 30;
-          bar.style.height = `${newHeight}px`;
-        });
       });
 
       // Select random message
@@ -824,14 +820,31 @@
         }
       }
       
-      @keyframes actionBarPulse {
+      @keyframes shine {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+      
+      @keyframes floatEmoji {
         0%, 100% {
-          transform: scaleY(0.6);
-          opacity: 0.6;
+          transform: translate(0, 0) rotate(0deg);
+          opacity: 0.08;
+        }
+        25% {
+          transform: translate(20px, -30px) rotate(5deg);
+          opacity: 0.12;
         }
         50% {
-          transform: scaleY(1);
-          opacity: 1;
+          transform: translate(-10px, -60px) rotate(-5deg);
+          opacity: 0.08;
+        }
+        75% {
+          transform: translate(30px, -40px) rotate(3deg);
+          opacity: 0.1;
         }
       }
     `;

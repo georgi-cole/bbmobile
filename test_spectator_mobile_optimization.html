@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spectator Mobile Optimization Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1419;
+      color: #cedbeb;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-section {
+      background: rgba(40, 40, 80, 0.8);
+      border: 2px solid #6b7a99;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #ffdc8b;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(74, 144, 226, 0.4);
+    }
+    
+    .info-box {
+      background: rgba(74, 144, 226, 0.1);
+      border-left: 4px solid #4a90e2;
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 8px;
+    }
+    
+    .success-box {
+      background: rgba(74, 222, 128, 0.1);
+      border-left: 4px solid #4ade80;
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 8px;
+    }
+    
+    .mobile-frame {
+      width: 375px;
+      height: 667px;
+      border: 8px solid #333;
+      border-radius: 32px;
+      margin: 20px auto;
+      background: white;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+    
+    .mobile-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 Spectator Mobile Optimization Test</h1>
+  
+  <div class="info-box">
+    <strong>Test Purpose:</strong> Verify that the Final 3 spectator views are optimized for mobile devices (375px width) and that all content fits without scrolling.
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Parts 1 & 2 Spectator View</h2>
+    <p>Testing optimizations:</p>
+    <ul>
+      <li>✅ Title font reduced from 1.8rem to 1.5rem</li>
+      <li>✅ Title format simplified (no "in Progress" suffix)</li>
+      <li>✅ Avatar card spacing reduced for mobile</li>
+      <li>✅ Action bars replaced with proper progress bar</li>
+      <li>✅ Competition panel padding tightened</li>
+      <li>✅ Sports-style commentary messages</li>
+      <li>✅ Floating background emojis added</li>
+    </ul>
+    <button class="btn" onclick="testPart1and2()">Test Parts 1 & 2 View</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Part 3 Spectator View</h2>
+    <p>Testing optimizations:</p>
+    <ul>
+      <li>✅ Title font reduced from 2rem to 1.6rem</li>
+      <li>✅ "Hold the Wall" renamed to "Climb the Wall"</li>
+      <li>✅ Dynamic commentary based on actual game state</li>
+      <li>✅ Skip shows winner and auto-advances timer</li>
+    </ul>
+    <button class="btn" onclick="testPart3()">Test Part 3 View</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Skip Functionality</h2>
+    <p>Testing skip enhancements:</p>
+    <ul>
+      <li>✅ Shows winner announcement</li>
+      <li>✅ Shows "Get ready" transitional message</li>
+      <li>✅ Sets phase timer to 1 second for fast progression</li>
+    </ul>
+    <button class="btn" onclick="testSkip()">Test Skip Functionality</button>
+  </div>
+
+  <div class="success-box" id="results" style="display: none;">
+    <strong>Test Results:</strong>
+    <div id="results-content"></div>
+  </div>
+
+  <script>
+    // Mock game environment
+    window.game = {
+      players: [
+        { id: 'p1', name: 'Alice', evicted: false, avatar: 'alice' },
+        { id: 'p2', name: 'Bob', evicted: false, avatar: 'bob' },
+        { id: 'p3', name: 'Charlie', evicted: false, avatar: 'charlie' }
+      ],
+      humanId: 'p1',
+      juryHouse: [],
+      phase: 'final3_comp1',
+      lastCompScores: new Map(),
+      __f3_finalists: ['p1', 'p2'],
+      phaseEndsAt: Date.now() + 20000,
+      bus: {
+        emit: function(event, data) {
+          console.log('[Event]', event, data);
+        }
+      }
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.resolveAvatar = function(player) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+
+    function showResults(message) {
+      const results = document.getElementById('results');
+      const content = document.getElementById('results-content');
+      content.innerHTML = message;
+      results.style.display = 'block';
+      setTimeout(() => {
+        results.style.display = 'none';
+      }, 5000);
+    }
+
+    function testPart1and2() {
+      if (!window.SpectatorView) {
+        alert('Loading SpectatorView module...');
+        const script = document.createElement('script');
+        script.src = 'js/spectator-view.js';
+        script.onload = function() {
+          runPart1and2Test();
+        };
+        document.head.appendChild(script);
+      } else {
+        runPart1and2Test();
+      }
+    }
+
+    function runPart1and2Test() {
+      const competitorIds = ['p1', 'p2', 'p3'];
+      window.SpectatorView.show({
+        competitorIds: competitorIds,
+        gameType: 'memory',
+        phase: 'Final 3 — Part 1',
+        onSkip: () => {
+          console.log('[Test] Skip callback triggered');
+          showResults('✅ Parts 1 & 2 View: Skip callback triggered! Phase timer should advance in 1 second.');
+        }
+      });
+      showResults('✅ Parts 1 & 2 spectator view loaded! Check for:<br>• Compact title<br>• Progress bar (not random bars)<br>• Sports commentary<br>• Floating emojis in background');
+    }
+
+    function testPart3() {
+      if (!window.SpectatorViewPart3) {
+        alert('Loading SpectatorViewPart3 module...');
+        const script = document.createElement('script');
+        script.src = 'js/spectator-view-part3.js';
+        script.onload = function() {
+          runPart3Test();
+        };
+        document.head.appendChild(script);
+      } else {
+        runPart3Test();
+      }
+    }
+
+    function runPart3Test() {
+      const competitorIds = ['p1', 'p2'];
+      window.SpectatorViewPart3.show({
+        competitorIds: competitorIds,
+        onSkip: () => {
+          console.log('[Test] Part 3 skip callback triggered');
+          showResults('✅ Part 3 View: Skip callback triggered! Should show winner and advance timer.');
+        }
+      });
+      showResults('✅ Part 3 spectator view loaded! Check for:<br>• "Climb the Wall" title (not "Hold")<br>• Smaller title (1.6rem)<br>• Dynamic commentary based on game state');
+    }
+
+    function testSkip() {
+      showResults('✅ To test skip:<br>1. Click "Test Parts 1 & 2" or "Test Part 3"<br>2. Click the "Skip to Results" button<br>3. Verify winner message and "Get ready" transition<br>4. Check console for phase timer update (1 second)');
+    }
+
+    // Auto-load modules on page load
+    window.addEventListener('DOMContentLoaded', function() {
+      const script1 = document.createElement('script');
+      script1.src = 'js/spectator-view.js';
+      document.head.appendChild(script1);
+      
+      const script2 = document.createElement('script');
+      script2.src = 'js/spectator-view-part3.js';
+      document.head.appendChild(script2);
+    });
+  </script>
+</body>
+</html>

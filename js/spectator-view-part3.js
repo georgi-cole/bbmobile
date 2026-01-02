@@ -115,11 +115,11 @@
   }
 
   /**
-   * Create "Hold the Wall" endurance competition view
+   * Create "Climb the Wall" endurance competition view
    */
   function createHoldWallView(competitorIds) {
-    const view = createBaseView('🧱 Hold the Wall - Final Showdown', 
-      'Who can hold on the longest? The last one standing becomes Final HOH!');
+    const view = createBaseView('🧱 Climb the Wall - Final Showdown', 
+      'Race to the top! First to reach the summit becomes Final HOH!');
 
     const contentWrapper = view.querySelector('.content-wrapper');
     
@@ -130,14 +130,14 @@
       position: relative;
       width: 100%;
       max-width: 600px;
-      height: 400px;
+      height: 320px;
       background: linear-gradient(to bottom, 
         rgba(60, 80, 100, 0.9) 0%,
         rgba(40, 50, 70, 0.9) 50%,
         rgba(20, 30, 50, 0.9) 100%);
       border: 3px solid #6b7a99;
       border-radius: 16px;
-      margin: 24px auto;
+      margin: 12px auto;
       overflow: hidden;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     `;
@@ -256,11 +256,11 @@
     triviaBoard.style.cssText = `
       width: 100%;
       max-width: 700px;
-      margin: 24px auto;
+      margin: 12px auto;
       background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
       border: 3px solid #6b7a99;
       border-radius: 16px;
-      padding: 24px;
+      padding: 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     `;
 
@@ -414,14 +414,14 @@
     raceTrack.style.cssText = `
       width: 100%;
       max-width: 700px;
-      margin: 24px auto;
+      margin: 12px auto;
       background: linear-gradient(90deg, 
         rgba(40,40,80,0.95) 0%,
         rgba(50,50,90,0.95) 50%,
         rgba(40,40,80,0.95) 100%);
       border: 3px solid #6b7a99;
       border-radius: 16px;
-      padding: 32px 24px;
+      padding: 24px 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       position: relative;
       overflow: hidden;
@@ -446,7 +446,7 @@
 
     // Race lanes
     const lanes = [];
-    competitorIds.forEach((playerId, index) => {
+    competitorIds.forEach((playerId) => {
       const player = global.getP?.(playerId);
       if (!player) return;
 
@@ -581,7 +581,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
       animation: fadeIn 0.4s ease;
       overflow-y: auto;
     `;
@@ -594,26 +594,26 @@
       text-align: center;
     `;
 
-    // Title
+    // Title - reduced for mobile
     const titleEl = document.createElement('h3');
     titleEl.textContent = title;
     titleEl.style.cssText = `
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: #ffdc8b;
-      margin: 0 0 12px 0;
+      margin: 0 0 8px 0;
       text-shadow: 0 2px 12px rgba(255, 220, 139, 0.5);
       animation: pulse 2s ease infinite;
     `;
     contentWrapper.appendChild(titleEl);
 
-    // Subtitle
+    // Subtitle - adjusted for mobile
     const subtitleEl = document.createElement('div');
     subtitleEl.textContent = subtitle;
     subtitleEl.style.cssText = `
-      font-size: 1.1rem;
+      font-size: 1rem;
       color: #8a9ab8;
-      margin-bottom: 32px;
+      margin-bottom: 12px;
       font-style: italic;
     `;
     contentWrapper.appendChild(subtitleEl);
@@ -622,8 +622,8 @@
     const updatesBox = document.createElement('div');
     updatesBox.className = 'spectator-updates';
     updatesBox.style.cssText = `
-      min-height: 60px;
-      margin: 32px 0 24px 0;
+      min-height: 50px;
+      margin: 16px 0 12px 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -650,10 +650,10 @@
     skipBtn.className = 'btn primary spectator-skip-btn';
     skipBtn.textContent = 'Skip to Results ⏭️';
     skipBtn.style.cssText = `
-      padding: 16px 32px;
+      padding: 14px 28px;
       font-size: 1.1rem;
       font-weight: 700;
-      margin-top: 12px;
+      margin-top: 8px;
       box-shadow: 0 4px 16px rgba(131,191,255,0.4);
       cursor: pointer;
     `;
@@ -663,9 +663,9 @@
     // Info text
     const infoText = document.createElement('div');
     infoText.style.cssText = `
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #8a9ab8;
-      margin-top: 20px;
+      margin-top: 8px;
     `;
     infoText.textContent = 'Press Space or Enter to skip';
     contentWrapper.appendChild(infoText);
@@ -686,30 +686,35 @@
     const updateText = document.querySelector('.spectator-update-text');
     const config = SIMULATION_CONFIG.holdWall;
     
-    const messages = [
-      'Both competitors gripping the wall tight!',
-      'The pressure is mounting...',
-      'Who will slip first?',
-      'Endurance levels dropping!',
-      'One mistake could cost everything!',
-      'The wall is getting harder to hold!',
-      'Final moments approaching...',
-      'This is incredibly intense!'
-    ];
-
     progressInterval = setInterval(() => {
       elapsed++;
       
-      climbers.forEach((climber, index) => {
+      // Track leader and endurance levels for dynamic commentary
+      let leaderId = null;
+      let maxHeight = 0;
+      let lowestEndurance = 100;
+      
+      climbers.forEach((climber) => {
         // Simulate climbing progress with slight randomness
         const currentBottom = parseInt(climber.element.style.bottom) || 20;
         const increment = config.climbIncrement.min + Math.random() * (config.climbIncrement.max - config.climbIncrement.min);
         const newBottom = Math.min(config.maxClimbHeight, currentBottom + increment);
         climber.element.style.bottom = `${newBottom}px`;
+        
+        // Track who's in the lead
+        if (newBottom > maxHeight) {
+          maxHeight = newBottom;
+          leaderId = climber.playerId;
+        }
 
         // Deplete endurance meter gradually
         const endurancePercent = Math.max(20, 100 - elapsed * config.enduranceDepletionBase - Math.random() * config.enduranceDepletionRandom);
         climber.meter.style.width = `${endurancePercent}%`;
+        
+        // Track lowest endurance
+        if (endurancePercent < lowestEndurance) {
+          lowestEndurance = endurancePercent;
+        }
         
         // Change color as endurance drops
         if (endurancePercent < 40) {
@@ -721,9 +726,50 @@
         }
       });
 
-      // Update message
+      // Update message dynamically based on competition state
       if (updateText) {
-        const msg = messages[elapsed % messages.length];
+        let msg = '';
+        const leader = climbers.find(c => c.playerId === leaderId);
+        
+        if (lowestEndurance < 40) {
+          // Critical moment - someone's struggling
+          const struggling = climbers.find(c => {
+            const endurancePercent = parseFloat(c.meter.style.width);
+            return endurancePercent < 40;
+          });
+          if (struggling) {
+            msg = `This is the critical moment! ${struggling.player.name}'s grip is weakening!`;
+          } else {
+            msg = 'This is the critical moment!';
+          }
+        } else if (lowestEndurance < 70) {
+          // Endurance dropping
+          const weakening = climbers.find(c => {
+            const endurancePercent = parseFloat(c.meter.style.width);
+            return endurancePercent < 70;
+          });
+          if (weakening) {
+            msg = `${weakening.player.name}'s endurance is dropping!`;
+          } else {
+            msg = 'The competitors are starting to fatigue!';
+          }
+        } else if (maxHeight > 200 && leader) {
+          // Someone pulling ahead
+          msg = `${leader.player.name} is climbing faster! Who will reach the top first?`;
+        } else if (elapsed < 3) {
+          // Early competition
+          msg = 'Both competitors racing up the wall!';
+        } else {
+          // Mid-competition
+          const messages = [
+            'Both competitors holding strong!',
+            'This is an incredible display of endurance!',
+            'Every inch counts in this climb to the top!',
+            'Who will reach the summit first?'
+          ];
+          msg = messages[elapsed % messages.length];
+        }
+        
         updateText.textContent = msg;
         updateText.style.animation = 'none';
         void updateText.offsetWidth;
@@ -749,7 +795,7 @@
     ];
 
     let currentQuestion = 0;
-    let scores = competitors.map(() => 0);
+    const scores = competitors.map(() => 0);
     const updateText = document.querySelector('.spectator-update-text');
     const config = SIMULATION_CONFIG.trivia;
 
@@ -878,9 +924,18 @@
       skipBtn.textContent = 'Revealing results...';
     }
 
-    // Show quick reveal sequence
-    showRevealSequence(() => {
+    // Show quick reveal sequence with winner announcement
+    showRevealSequenceWithWinner(() => {
       cleanup();
+      
+      // Auto-advance: Set phase timer to 1 second for quick progression
+      const g = global.game;
+      if (g && g.phaseEndsAt) {
+        const now = Date.now();
+        g.phaseEndsAt = now + 1000; // 1 second from now
+        console.info('[SpectatorPart3] Phase timer set to 1 second for quick progression');
+      }
+      
       if (skipCallback) skipCallback();
     });
 
@@ -891,9 +946,9 @@
   }
 
   /**
-   * Show reveal sequence
+   * Show reveal sequence with winner announcement
    */
-  function showRevealSequence(callback) {
+  function showRevealSequenceWithWinner(callback) {
     if (!currentView) {
       if (callback) callback();
       return;
@@ -905,18 +960,46 @@
       return;
     }
 
+    const g = global.game;
+    const finalists = g.__f3_finalists || [];
+    
+    // Determine winner based on current scores (simulate if needed)
+    let winnerId = null;
+    if (g.lastCompScores && g.lastCompScores.size > 0) {
+      const scores = Array.from(g.lastCompScores.entries())
+        .filter(([id]) => finalists.includes(id))
+        .sort((a, b) => b[1] - a[1]);
+      if (scores.length > 0) {
+        winnerId = scores[0][0];
+      }
+    }
+    
+    // If no winner determined yet, pick randomly from finalists
+    if (!winnerId && finalists.length > 0) {
+      winnerId = finalists[Math.floor(Math.random() * finalists.length)];
+    }
+    
+    const winner = winnerId ? global.getP?.(winnerId) : null;
+    const winnerName = winner ? winner.name : 'A competitor';
+
     // Dramatic pause
     updateText.textContent = '...';
     updateText.style.animation = 'pulse 0.5s ease 3';
 
     setTimeout(() => {
-      updateText.textContent = '👑 Final HOH will be revealed!';
+      updateText.textContent = `👑 ${winnerName} wins Part 3!`;
       updateText.style.color = '#ffdc8b';
       updateText.style.fontWeight = '700';
       updateText.style.fontSize = '1.4rem';
 
       setTimeout(() => {
-        if (callback) callback();
+        // Show "Get ready" transitional message
+        updateText.textContent = '✨ Get ready for the next part...';
+        updateText.style.fontSize = '1.2rem';
+        
+        setTimeout(() => {
+          if (callback) callback();
+        }, 1000);
       }, 1500);
     }, 1000);
   }
