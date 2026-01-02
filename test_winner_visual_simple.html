@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winner Celebration Visual Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0d151f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px;
+      background: rgba(19, 33, 50, 0.8);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      color: #83bfff;
+      text-shadow: 0 0 20px rgba(131, 191, 255, 0.4);
+    }
+    
+    button {
+      background: linear-gradient(135deg, #3563a7, #284866);
+      color: white;
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      margin: 20px 0;
+    }
+    
+    button:hover {
+      background: linear-gradient(135deg, #4575c7, #3a5a86);
+      transform: translateY(-2px);
+    }
+    
+    .info-box {
+      padding: 15px;
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 4px solid #83bfff;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Winner Celebration Visual Test</h1>
+    <p style="color: #95a9c0; margin-bottom: 20px;">
+      Direct test of the winner celebration UI with rainbow border and timed runner-up.
+    </p>
+    
+    <button onclick="showTest()">▶️ Show Winner Celebration (7s sequence)</button>
+    
+    <div class="info-box">
+      <strong>Expected:</strong>
+      <ul style="margin-left: 20px; margin-top: 10px;">
+        <li>t=0s: Winner "Emma" appears with rainbow animated border</li>
+        <li>Winner card has visible spacing from edges (not glued)</li>
+        <li>t=2s: Runner-up "Nico" appears in bottom-right corner</li>
+        <li>Name "Nico" is fully visible (not cut off at bottom)</li>
+        <li>t=4.5s: Runner-up fades out</li>
+        <li>t=7s: Entire celebration closes</li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Load jury-viz.js which contains FinalFaceoff -->
+  <script src="./js/jury-viz.js"></script>
+  
+  <script>
+    function showTest() {
+      console.log('[Test] Starting winner celebration test');
+      
+      // Create overlay container if it doesn't exist
+      let overlay = document.querySelector('.finale-fullscreen-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'finale-fullscreen-overlay';
+        overlay.style.cssText = 'display: flex; opacity: 1;';
+        document.body.appendChild(overlay);
+      }
+      
+      // Mock winner and runner-up with simple avatar URLs
+      const winner = {
+        name: 'Emma',
+        id: 'player1'
+      };
+      
+      const runnerUp = {
+        name: 'Nico',
+        id: 'player2'
+      };
+      
+      console.log('[Test] Calling FinalFaceoff.showWinnerCelebration');
+      console.log('[Test] Watch timing: t=0s → t=2s (runner-up) → t=4.5s (fade) → t=7s (close)');
+      
+      // Check if FinalFaceoff exists
+      if (typeof window.FinalFaceoff !== 'undefined' && window.FinalFaceoff.showWinnerCelebration) {
+        // Mount the faceoff first to initialize state
+        window.FinalFaceoff.mount({
+          left: winner,
+          right: runnerUp,
+          majority: 5,
+          container: overlay
+        });
+        
+        // Show winner celebration
+        window.FinalFaceoff.showWinnerCelebration(winner, runnerUp, '5-2');
+      } else {
+        console.error('[Test] FinalFaceoff not available!');
+        alert('Error: FinalFaceoff module not loaded. Check browser console.');
+      }
+    }
+  </script>
+</body>
+</html>

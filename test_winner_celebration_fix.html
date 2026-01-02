@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winner Celebration Test - Fixed</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0d151f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px;
+      background: rgba(19, 33, 50, 0.8);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      color: #83bfff;
+      text-shadow: 0 0 20px rgba(131, 191, 255, 0.4);
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(22, 36, 53, 0.6);
+      border-radius: 12px;
+      border: 1px solid rgba(131, 191, 255, 0.2);
+    }
+    
+    h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      color: #83bfff;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #3563a7, #284866);
+      color: white;
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    button:hover {
+      background: linear-gradient(135deg, #4575c7, #3a5a86);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .info-box {
+      padding: 15px;
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 4px solid #83bfff;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .checklist li {
+      padding: 8px 0;
+      padding-left: 28px;
+      position: relative;
+    }
+    
+    .checklist li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #77d58d;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    .timeline {
+      background: rgba(22, 36, 53, 0.8);
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      margin: 15px 0;
+    }
+    
+    .timeline-item {
+      padding: 4px 0;
+    }
+    
+    .timeline-time {
+      color: #ffd700;
+      font-weight: 700;
+      display: inline-block;
+      width: 80px;
+    }
+    
+    .timeline-event {
+      color: #83bfff;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Winner Celebration Test - Fixed</h1>
+    <p style="color: #95a9c0; margin-bottom: 30px;">
+      Test the fixed winner announcement with rainbow border, proper spacing, and timed runner-up display.
+    </p>
+    
+    <div class="test-section">
+      <h2>Quick Test</h2>
+      <div class="button-group">
+        <button onclick="testWinnerCelebration()">▶️ Show Winner Celebration</button>
+      </div>
+      <div class="info-box">
+        <strong>What to verify:</strong>
+        <ul style="margin-left: 20px; margin-top: 10px;">
+          <li>Rainbow border animates around the winner card</li>
+          <li>Winner card has visible spacing from screen edges</li>
+          <li>Runner-up appears after 2 seconds in bottom-right</li>
+          <li>Runner-up name "Nico" is fully visible (not cut off)</li>
+          <li>Runner-up fades out at 4.5s</li>
+          <li>Screen closes at 7.0s</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Expected Timing Sequence</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-time">t = 0.0s</span>
+          <span class="timeline-event">Winner appears with animated rainbow border</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">t = 2.0s</span>
+          <span class="timeline-event">Runner-up "Nico" appears (bottom-right, fully visible)</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">t = 4.5s</span>
+          <span class="timeline-event">Runner-up fades out</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">t = 7.0s</span>
+          <span class="timeline-event">Winner screen closes</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>QA Checklist</h2>
+      <ul class="checklist">
+        <li>Border spacing: Winner card has visible margin from viewport edges (not "glued")</li>
+        <li>Rainbow border: Border animates with rotating gradient colors</li>
+        <li>Cyan glow: Inner cyan glow visible around winner card</li>
+        <li>Runner-up positioning: Card fully visible, name "Nico" not cut off</li>
+        <li>Runner-up timing: Appears at 2s, fades at 4.5s, screen closes at 7s</li>
+        <li>Smooth transitions: Runner-up fades in/out smoothly</li>
+      </ul>
+    </div>
+  </div>
+  
+  <script type="module">
+    import { pickAvatar } from './js/data/avatar.js';
+    
+    // Import jury-viz which has the winner celebration code
+    const script = document.createElement('script');
+    script.src = './js/jury-viz.js';
+    script.type = 'module';
+    document.head.appendChild(script);
+    
+    // Wait for jury-viz to load and test
+    window.testWinnerCelebration = function() {
+      // Wait a bit for the module to load
+      setTimeout(() => {
+        if (typeof window.FinalFaceoff === 'undefined' || !window.FinalFaceoff.showWinnerCelebration) {
+          console.error('FinalFaceoff not loaded yet, trying to mount...');
+          
+          // Try to mount it manually
+          const overlay = document.createElement('div');
+          overlay.className = 'finale-fullscreen-overlay';
+          overlay.style.display = 'flex';
+          document.body.appendChild(overlay);
+          
+          if (window.FinalFaceoff && window.FinalFaceoff.mount) {
+            window.FinalFaceoff.mount({
+              left: { name: 'Emma' },
+              right: { name: 'Nico' },
+              majority: 5,
+              container: overlay
+            });
+          }
+        }
+        
+        // Mock winner and runner-up data
+        const winner = {
+          name: 'Emma',
+          id: 'player1'
+        };
+        
+        const runnerUp = {
+          name: 'Nico',
+          id: 'player2'
+        };
+        
+        console.log('[Test] Showing winner celebration...');
+        console.log('[Test] Winner:', winner.name);
+        console.log('[Test] Runner-up:', runnerUp.name);
+        console.log('[Test] Watch for timing: t=0s (winner) → t=2s (runner-up) → t=4.5s (fade) → t=7s (close)');
+        
+        if (window.FinalFaceoff && window.FinalFaceoff.showWinnerCelebration) {
+          window.FinalFaceoff.showWinnerCelebration(winner, runnerUp, '5-2');
+        } else {
+          alert('FinalFaceoff.showWinnerCelebration not available. Check console for errors.');
+        }
+      }, 100);
+    };
+  </script>
+</body>
+</html>
