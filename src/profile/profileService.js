@@ -69,6 +69,9 @@
   }
 
   // Set current profile
+  // NOTE: This function is now async to support saved game prompts.
+  // It can be called without await - the saved game prompt will still work correctly.
+  // Existing callers that don't await will not be affected.
   async function setCurrentProfile(profile, options = {}) {
     currentProfile = profile;
     isGuest = false;
