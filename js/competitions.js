@@ -51,6 +51,7 @@
     postRevealGapMs: 100,            // Minimal buffer after reveal (0.1s)
     postHOHIdleMs: 0,                // No idle after Final HOH reveal (proceed to plea)
     aiDecisionDelayMs: 2000,         // Delay before AI executes eviction decision (2s)
+    aiDecisionImmediateMs: 1500,     // Shorter delay for immediate AI decision trigger (1.5s)
     enableOptimizedPacing: true      // Master toggle (can be overridden by settings)
   };
 
@@ -3150,7 +3151,7 @@
           if (!g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
             global.finalizeFinal3Decision?.();
           }
-        }, 1500); // Brief delay for UI to render
+        }, F3_UI_TIMING.aiDecisionImmediateMs); // Brief delay for UI to render
       }
     }
     panel.appendChild(box);
