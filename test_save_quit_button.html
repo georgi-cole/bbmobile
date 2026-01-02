@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Save & Quit Button Test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/compact-hud.css">
+<style>
+body {
+  padding: 20px;
+  background: #0e1730;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.test-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.test-section {
+  background: rgba(255,255,255,0.05);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.test-section h2 {
+  margin-top: 0;
+  color: #4a90e2;
+}
+.test-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+.test-controls button {
+  padding: 10px 20px;
+  background: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.test-controls button:hover {
+  background: #5aa0f2;
+}
+.test-controls button.danger {
+  background: #e24a4a;
+}
+.test-controls button.danger:hover {
+  background: #f25a5a;
+}
+.test-controls button.success {
+  background: #4ae24a;
+}
+.test-controls button.success:hover {
+  background: #5af25a;
+}
+.card {
+  background: rgba(13, 27, 42, 0.9);
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.houseguests-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 20px 20px 10px;
+}
+.houseguests-header h1 {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 1.5rem;
+}
+.compact-hud {
+  /* HUD will be inserted here */
+}
+.log-container {
+  background: rgba(0,0,0,0.3);
+  padding: 15px;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.log-entry {
+  padding: 8px;
+  margin-bottom: 5px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  font-size: 14px;
+}
+.info-box {
+  background: rgba(74, 144, 226, 0.1);
+  border-left: 3px solid #4a90e2;
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+.status-indicator {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 10px;
+}
+.status-guest {
+  background: #e2a04a;
+  color: #fff;
+}
+.status-logged-in {
+  background: #4ae24a;
+  color: #000;
+}
+.inline-chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.compact-hud-chip.players-inline,
+.compact-hud-chip.season-week-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: var(--card);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+</style>
+</head>
+<body>
+
+<div class="test-container">
+  <h1>Save & Quit Button Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <div class="info-box">
+      <strong>Current Mode:</strong> <span id="currentMode">Not Set</span>
+      <br>
+      <strong>Profile:</strong> <span id="currentProfile">None</span>
+      <br>
+      <strong>Saved Game:</strong> <span id="savedGameStatus">None</span>
+    </div>
+    
+    <div class="test-controls">
+      <button onclick="setGuestMode()">🎮 Set Guest Mode</button>
+      <button onclick="setLoggedInProfile()">👤 Set Logged-In Profile</button>
+      <button onclick="checkSavedGame()">🔍 Check Saved Game</button>
+      <button class="danger" onclick="clearAllSaves()">🗑️ Clear All Saves</button>
+      <button class="success" onclick="testSaveQuitFlow()">▶️ Test Save/Quit Flow</button>
+    </div>
+    
+    <h3>Test Scenarios:</h3>
+    <div class="test-controls">
+      <button onclick="scenario1()">1. Guest Mode Exit</button>
+      <button onclick="scenario2()">2. Save as Logged-In</button>
+      <button onclick="scenario3()">3. Load Saved Game</button>
+      <button onclick="scenario4()">4. Start New (Clear Save)</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Compact HUD Preview</h2>
+    <div class="card">
+      <div class="houseguests-header">
+        <h1>Houseguests</h1>
+        <div class="inline-chips">
+          <div class="compact-hud-chip season-week-inline" id="seasonWeekChipInline">
+            <span class="compact-hud-chip-label">S1W1</span>
+          </div>
+          <div class="compact-hud-chip players-inline" id="playersChipInline">
+            <span class="compact-hud-chip-label">16/16</span>
+          </div>
+        </div>
+      </div>
+      <div class="compact-hud" id="compactHudContainer"></div>
+      <div style="padding: 20px;">
+        <p>Use the buttons above to test different scenarios.</p>
+        <p>Click the 💾 Save & Quit button in the HUD to test the functionality.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Log</h2>
+    <div class="log-container" id="testLog"></div>
+  </div>
+</div>
+
+<!-- Load required scripts -->
+<script src="js/ui.confirm-modal.js"></script>
+<script src="src/profile/profileStorage.js"></script>
+<script src="src/profile/profileService.js"></script>
+<script src="js/persistence.js"></script>
+<script src="src/ui/compactHud.js"></script>
+
+<script>
+// Initialize mock game state
+window.game = {
+  phase: 'hoh',
+  week: 3,
+  season: 1,
+  humanId: 'player1',
+  hohId: 'player2',
+  nominees: ['player3', 'player4'],
+  vetoHolder: null,
+  vetoUsed: false,
+  jury: [],
+  players: [
+    { id: 'player1', name: 'TestUser', human: true, evicted: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player1' },
+    { id: 'player2', name: 'AI Player 1', evicted: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player2' },
+    { id: 'player3', name: 'AI Player 2', evicted: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player3' },
+    { id: 'player4', name: 'AI Player 3', evicted: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player4' }
+  ],
+  cfg: {
+    humanName: 'TestUser'
+  },
+  twists: {},
+  history: []
+};
+
+// Mock functions
+window.alivePlayers = function() {
+  return window.game.players.filter(p => !p.evicted);
+};
+
+window.addLog = function(msg, category = 'game') {
+  const logContainer = document.getElementById('testLog');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logContainer.insertBefore(entry, logContainer.firstChild);
+  console.log('[addLog]', msg);
+};
+
+// Test helper functions
+function updateStatus() {
+  const isGuest = ProfileService.isGuestMode();
+  const profile = ProfileService.getCurrentProfile();
+  
+  document.getElementById('currentMode').innerHTML = isGuest 
+    ? '<span class="status-indicator status-guest">GUEST MODE</span>'
+    : '<span class="status-indicator status-logged-in">LOGGED IN</span>';
+  
+  document.getElementById('currentProfile').textContent = profile 
+    ? `${profile.displayName} (ID: ${profile.id})`
+    : 'None';
+  
+  if (profile && typeof window.hasSavedGame === 'function') {
+    const hasSaved = window.hasSavedGame(profile.id);
+    const metadata = hasSaved && typeof window.getSaveMetadata === 'function' 
+      ? window.getSaveMetadata(profile.id)
+      : null;
+    
+    document.getElementById('savedGameStatus').textContent = hasSaved
+      ? `Yes - Week ${metadata?.week || '?'}, ${metadata?.phase || 'Unknown'}`
+      : 'No saved game';
+  } else {
+    document.getElementById('savedGameStatus').textContent = 'N/A (no profile)';
+  }
+}
+
+function setGuestMode() {
+  ProfileService.setGuestMode();
+  window.addLog('Set to guest mode', 'game');
+  updateStatus();
+}
+
+function setLoggedInProfile() {
+  // Check if profiles exist, if not create a test profile
+  const profiles = ProfileStorage.getAllProfiles();
+  let profile;
+  
+  if (profiles.length === 0) {
+    profile = ProfileStorage.createProfile({
+      displayName: 'Test Player',
+      avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=testplayer',
+      age: 25,
+      sex: 'M'
+    });
+    window.addLog('Created test profile: Test Player', 'game');
+  } else {
+    profile = profiles[0];
+    window.addLog(`Using existing profile: ${profile.displayName}`, 'game');
+  }
+  
+  ProfileService.setCurrentProfile(profile, { skipSavedGameCheck: true });
+  updateStatus();
+}
+
+function checkSavedGame() {
+  const profile = ProfileService.getCurrentProfile();
+  if (!profile) {
+    window.addLog('No profile selected', 'game');
+    return;
+  }
+  
+  const hasSaved = window.hasSavedGame(profile.id);
+  const metadata = hasSaved ? window.getSaveMetadata(profile.id) : null;
+  
+  if (hasSaved) {
+    window.addLog(`Saved game found: Week ${metadata?.week || '?'}, ${metadata?.phase || 'Unknown'}`, 'game');
+  } else {
+    window.addLog('No saved game found', 'game');
+  }
+  
+  updateStatus();
+}
+
+function clearAllSaves() {
+  const profiles = ProfileStorage.getAllProfiles();
+  profiles.forEach(p => {
+    window.clearSavedGame(p.id);
+  });
+  window.addLog('Cleared all saved games', 'game');
+  updateStatus();
+}
+
+async function testSaveQuitFlow() {
+  window.addLog('=== Starting Save/Quit Flow Test ===', 'game');
+  
+  // First ensure we're in logged-in mode
+  if (ProfileService.isGuestMode()) {
+    setLoggedInProfile();
+  }
+  
+  const profile = ProfileService.getCurrentProfile();
+  if (!profile) {
+    window.addLog('ERROR: No profile set', 'game');
+    return;
+  }
+  
+  // Test save
+  const saveSuccess = window.saveGame();
+  if (saveSuccess) {
+    window.addLog('✅ Save successful', 'game');
+  } else {
+    window.addLog('❌ Save failed', 'game');
+  }
+  
+  // Test load
+  const loadedState = window.loadGame(profile.id);
+  if (loadedState) {
+    window.addLog('✅ Load successful', 'game');
+    window.addLog(`   Week: ${loadedState.week}, Phase: ${loadedState.phase}`, 'game');
+  } else {
+    window.addLog('❌ Load failed', 'game');
+  }
+  
+  updateStatus();
+}
+
+// Test scenarios
+async function scenario1() {
+  window.addLog('=== Scenario 1: Guest Mode Exit ===', 'game');
+  setGuestMode();
+  window.addLog('Click the 💾 button in the HUD to test guest mode exit', 'game');
+}
+
+async function scenario2() {
+  window.addLog('=== Scenario 2: Save as Logged-In ===', 'game');
+  setLoggedInProfile();
+  window.addLog('Click the 💾 button in the HUD to save the game', 'game');
+}
+
+async function scenario3() {
+  window.addLog('=== Scenario 3: Load Saved Game ===', 'game');
+  
+  // First save a game
+  if (ProfileService.isGuestMode()) {
+    setLoggedInProfile();
+  }
+  
+  const profile = ProfileService.getCurrentProfile();
+  if (!profile) {
+    window.addLog('ERROR: No profile set', 'game');
+    return;
+  }
+  
+  window.saveGame();
+  window.addLog('Game saved. Now testing profile selection with saved game...', 'game');
+  
+  // Simulate selecting the same profile again
+  setTimeout(async () => {
+    await ProfileService.setCurrentProfile(profile);
+    window.addLog('Profile selected - should have prompted to continue', 'game');
+    updateStatus();
+  }, 1000);
+}
+
+async function scenario4() {
+  window.addLog('=== Scenario 4: Start New (Clear Save) ===', 'game');
+  
+  // First ensure there's a saved game
+  if (ProfileService.isGuestMode()) {
+    setLoggedInProfile();
+  }
+  
+  const profile = ProfileService.getCurrentProfile();
+  if (!profile) {
+    window.addLog('ERROR: No profile set', 'game');
+    return;
+  }
+  
+  window.saveGame();
+  window.addLog('Game saved. When prompted, choose "Start New"', 'game');
+  
+  // Simulate selecting the same profile again
+  setTimeout(async () => {
+    await ProfileService.setCurrentProfile(profile);
+    updateStatus();
+  }, 1000);
+}
+
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+  // Initialize compact HUD
+  const hudContainer = document.getElementById('compactHudContainer');
+  if (hudContainer && typeof CompactHud !== 'undefined') {
+    CompactHud.init(hudContainer);
+    CompactHud.update();
+  }
+  
+  // Set initial state
+  setLoggedInProfile();
+  
+  window.addLog('Test environment initialized', 'game');
+  window.addLog('Click test scenario buttons to begin', 'game');
+});
+</script>
+
+</body>
+</html>
