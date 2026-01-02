@@ -1687,9 +1687,18 @@
   
   async function finalizeFinal4Eviction(targetId){
     var g = global.game;
-    if(g.__f4EvictionResolved) return;
-    if(g.__f4EvictionInProgress) return;
-    if(g.__f4ToF3TransitionStarted) return;
+    if(g.__f4EvictionResolved) {
+      console.warn('[Final4] finalizeFinal4Eviction blocked: eviction already resolved');
+      return;
+    }
+    if(g.__f4EvictionInProgress) {
+      console.warn('[Final4] finalizeFinal4Eviction blocked: eviction in progress');
+      return;
+    }
+    if(g.__f4ToF3TransitionStarted) {
+      console.warn('[Final4] finalizeFinal4Eviction blocked: transition to Final 3 already started');
+      return;
+    }
     
     g.__f4EvictionInProgress = true;
     
