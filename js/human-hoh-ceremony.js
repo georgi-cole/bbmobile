@@ -294,8 +294,7 @@
     } else if (affinity < -0.1) {
       // Poor relationship - try desperate or strategic angle
       // Use nominee ID hash for deterministic selection
-      const nomineeIdStr = String(nominee.id !== null && nominee.id !== undefined ? nominee.id : '');
-      const useDesperateAngle = (nomineeIdStr.charCodeAt(0) || 0) % 2 === 0;
+      const useDesperateAngle = (nominee.id || '').charCodeAt(0) % 2 === 0;
       pleas = useDesperateAngle ? desperatePleas : weakerCompetitorPleas;
     } else if (otherAffinity > affinity + 0.15) {
       // Other nominee has better relationship - emphasize jury threat
@@ -309,9 +308,7 @@
     }
 
     // Use deterministic selection based on nominee ID and HOH ID
-    const nomineeIdStr = String(nominee.id !== null && nominee.id !== undefined ? nominee.id : '');
-    const hohIdStr = String(hoh.id !== null && hoh.id !== undefined ? hoh.id : '');
-    const seed = (nomineeIdStr.charCodeAt(0) || 0) + (hohIdStr.charCodeAt(0) || 0);
+    const seed = ((nominee.id || '').charCodeAt(0) || 0) + ((hoh.id || '').charCodeAt(0) || 0);
     const index = seed % pleas.length;
     return pleas[index];
   }
