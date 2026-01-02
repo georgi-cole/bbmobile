@@ -3083,6 +3083,18 @@
           ? 'Your plea has been heard. AI will make the decision at end.' 
           : 'AI will make the decision at end.';
         box.appendChild(note);
+        
+        // If optimized pacing is enabled, trigger AI decision immediately after a brief delay
+        // This eliminates the wait timer before seeing the decision
+        const useOptimizedPacing = isF3OptimizedPacingEnabled();
+        if (useOptimizedPacing && !g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
+          console.info('[F3Decision] Optimized pacing enabled, triggering AI decision immediately');
+          setTimeout(() => {
+            if (!g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
+              global.finalizeFinal3Decision?.();
+            }
+          }, 500); // Brief delay to allow panel render to complete
+        }
       }
     }
     panel.appendChild(box);
