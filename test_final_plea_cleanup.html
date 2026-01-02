@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final Plea Modal Cleanup Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .test-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary-3);
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    .test-btn:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+    }
+    .test-output {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      min-height: 100px;
+      font-family: monospace;
+      color: var(--ink);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 3px solid var(--accent);
+    }
+    .log-success {
+      border-left-color: #4caf50;
+      color: #4caf50;
+    }
+    .log-error {
+      border-left-color: #f44336;
+      color: #f44336;
+    }
+    .log-info {
+      border-left-color: #2196f3;
+      color: #2196f3;
+    }
+  </style>
+</head>
+<body>
+  <h1>🗣️ Final Plea Modal Cleanup Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Overview</h2>
+    <p>This test validates that the Final Plea modal correctly cleans up when phase changes occur.</p>
+    <p><strong>Expected Behavior:</strong></p>
+    <ul>
+      <li>Modal should appear when "Show Modal" is clicked</li>
+      <li>Modal should auto-cleanup when phase changes (triggered by "Change Phase" button)</li>
+      <li>Manual cleanup should also work (via "Cleanup Modal" button)</li>
+      <li>No errors should occur when cleanup is called multiple times</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <div class="test-controls">
+      <button class="test-btn" onclick="showModal()">Show Modal</button>
+      <button class="test-btn" onclick="manualCleanup()">Cleanup Modal</button>
+      <button class="test-btn" onclick="changePhase()">Change Phase (Auto-cleanup test)</button>
+      <button class="test-btn" onclick="rapidPhaseChanges()">Rapid Phase Changes (Race test)</button>
+      <button class="test-btn" onclick="clearLog()">Clear Log</button>
+    </div>
+    <div id="test-output" class="test-output">
+      <div class="log-entry log-info">Ready for testing...</div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Modal Status</h2>
+    <div id="modal-status" style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+      <strong>Active:</strong> <span id="status-active">false</span><br>
+      <strong>Current Modal:</strong> <span id="status-modal">null</span>
+    </div>
+  </div>
+
+  <!-- Core scripts -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/final-plea.js"></script>
+
+  <script>
+    // Initialize minimal game environment
+    window.game = window.game || {
+      bus: window.bbGameBus || {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        },
+        emit(event, ...args) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(h => {
+              try { h(...args); } catch(e) { console.error(`[EventBus] Error in ${event} handler:`, e); }
+            });
+          }
+        }
+      },
+      phase: 'test_phase',
+      humanId: 'player1'
+    };
+
+    // Mock players
+    const mockPlayers = {
+      player1: { id: 'player1', name: 'Test Player', human: true },
+      player2: { id: 'player2', name: 'AI Opponent', human: false },
+      player3: { id: 'player3', name: 'HOH Player', human: false, hoh: true }
+    };
+
+    window.getP = (id) => mockPlayers[id];
+
+    // Test functions
+    let phaseCounter = 0;
+
+    function log(message, type = 'info') {
+      const output = document.getElementById('test-output');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      output.appendChild(entry);
+      output.scrollTop = output.scrollHeight;
+      updateStatus();
+    }
+
+    function updateStatus() {
+      document.getElementById('status-active').textContent = window.FinalPlea?.isActive?.() ? 'true' : 'false';
+      document.getElementById('status-modal').textContent = window.FinalPlea?.isActive?.() ? 'Present' : 'null';
+    }
+
+    function showModal() {
+      log('Showing Final Plea modal...', 'info');
+      try {
+        window.FinalPlea.show({
+          nominee: mockPlayers.player1,
+          hoh: mockPlayers.player3,
+          otherNominee: mockPlayers.player2,
+          onSubmit: (data) => {
+            log(`Plea submitted: ${data ? 'Success' : 'Skipped'}`, 'success');
+          }
+        });
+        log('Modal shown successfully', 'success');
+      } catch (e) {
+        log(`Error showing modal: ${e.message}`, 'error');
+        console.error(e);
+      }
+    }
+
+    function manualCleanup() {
+      log('Manually calling cleanup...', 'info');
+      try {
+        window.FinalPlea.cleanup();
+        log('Manual cleanup completed', 'success');
+      } catch (e) {
+        log(`Error during manual cleanup: ${e.message}`, 'error');
+        console.error(e);
+      }
+    }
+
+    function changePhase() {
+      phaseCounter++;
+      const newPhase = `test_phase_${phaseCounter}`;
+      log(`Changing phase to: ${newPhase}`, 'info');
+      
+      try {
+        // Update game phase
+        window.game.phase = newPhase;
+        
+        // Dispatch window CustomEvent (what setPhase does)
+        const event = new CustomEvent('bb:phase:changed', {
+          detail: { phase: newPhase, previousPhase: window.game.phase }
+        });
+        window.dispatchEvent(event);
+        
+        // Also emit via game.bus
+        if (window.game.bus?.emit) {
+          window.game.bus.emit('bb:phase:changed', { phase: newPhase });
+        }
+        
+        log('Phase changed - modal should auto-cleanup if active', 'success');
+        
+        // Check if modal is still active after a brief delay
+        setTimeout(() => {
+          if (window.FinalPlea.isActive()) {
+            log('⚠️ WARNING: Modal still active after phase change!', 'error');
+          } else {
+            log('✓ Modal correctly cleaned up after phase change', 'success');
+          }
+        }, 100);
+      } catch (e) {
+        log(`Error changing phase: ${e.message}`, 'error');
+        console.error(e);
+      }
+    }
+
+    function rapidPhaseChanges() {
+      log('Testing race condition with rapid phase changes...', 'info');
+      showModal();
+      
+      setTimeout(() => {
+        for (let i = 0; i < 5; i++) {
+          changePhase();
+        }
+        
+        setTimeout(() => {
+          if (!window.FinalPlea.isActive()) {
+            log('✓ Race condition test passed - modal cleaned up', 'success');
+          } else {
+            log('⚠️ Race condition test failed - modal still active', 'error');
+          }
+        }, 200);
+      }, 500);
+    }
+
+    function clearLog() {
+      const output = document.getElementById('test-output');
+      output.innerHTML = '<div class="log-entry log-info">Log cleared...</div>';
+      updateStatus();
+    }
+
+    // Monitor for phase change events
+    window.addEventListener('bb:phase:changed', (e) => {
+      console.log('[Test] bb:phase:changed event received:', e.detail);
+    });
+
+    // Initial status update
+    updateStatus();
+    log('Test environment initialized', 'success');
+  </script>
+</body>
+</html>
