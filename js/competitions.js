@@ -50,6 +50,7 @@
     idleGapMs: 0,                    // No idle gap between results and reveal
     postRevealGapMs: 100,            // Minimal buffer after reveal (0.1s)
     postHOHIdleMs: 0,                // No idle after Final HOH reveal (proceed to plea)
+    aiDecisionDelayMs: 500,          // Delay before triggering AI decision (allows UI render)
     enableOptimizedPacing: true      // Master toggle (can be overridden by settings)
   };
 
@@ -3093,7 +3094,7 @@
             if (!g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
               global.finalizeFinal3Decision?.();
             }
-          }, 500); // Brief delay to allow panel render to complete
+          }, F3_UI_TIMING.aiDecisionDelayMs);
         }
       }
     }
