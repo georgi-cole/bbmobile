@@ -135,7 +135,13 @@
     <button onclick="testMainScreenBuilt()">Test: Main Screen Built</button>
     <button onclick="testModalOpen()">Test: Modal Detection</button>
     <button onclick="testPopupCard()">Test: Popup Card Detection</button>
-    <button onclick="testGameRunning()">Test: Game Running</button>
+    <button onclick="testVisibleCards()">Test: Visible Cards</button>
+    <button onclick="testFullscreenOverlay()">Test: Fullscreen Overlay</button>
+    <button onclick="testCompetitionActive()">Test: Competition Active</button>
+    <button onclick="testSocialPhaseActive()">Test: Social Phase Active</button>
+    <button onclick="testCeremonyActive()">Test: Ceremony Active</button>
+    <button onclick="testInteractiveButtons()">Test: Interactive Buttons</button>
+    <button onclick="testGameRunning()">Test: Game Running (legacy)</button>
     <button onclick="testUserInput()">Test: User Input Expected</button>
     <button onclick="testPaused()">Test: Game Paused</button>
     <button onclick="testActiveTimer()">Test: Active Timer</button>
@@ -172,6 +178,19 @@
     <button onclick="setPaused(true)">Pause Game</button>
     <button onclick="setPaused(false)">Unpause Game</button>
     
+    <h3>Phase State (Whitelist Testing)</h3>
+    <button onclick="setPhase('intermission')">Set Phase: intermission (SHOULD EXHAUST)</button>
+    <button onclick="setPhase('opening')">Set Phase: opening (SHOULD EXHAUST)</button>
+    <button onclick="setPhase('hoh')">Set Phase: hoh (BLOCKED)</button>
+    <button onclick="setPhase('veto_comp')">Set Phase: veto_comp (BLOCKED)</button>
+    <button onclick="setPhase('nominations')">Set Phase: nominations (BLOCKED)</button>
+    <button onclick="setPhase('veto_ceremony')">Set Phase: veto_ceremony (BLOCKED)</button>
+    <button onclick="setPhase('livevote')">Set Phase: livevote (BLOCKED)</button>
+    <button onclick="setPhase('jury')">Set Phase: jury (BLOCKED)</button>
+    <button onclick="setPhase('social')">Set Phase: social (BLOCKED)</button>
+    <button onclick="setPhase('social_intermission')">Set Phase: social_intermission (BLOCKED)</button>
+    <button onclick="setPhase('final3_comp1')">Set Phase: final3_comp1 (BLOCKED)</button>
+    
     <h3>User Input State</h3>
     <button onclick="setUserInput(true)">Add Decision Button</button>
     <button onclick="setUserInput(false)">Remove Decision Button</button>
@@ -203,7 +222,7 @@
       cfg: {
         enableIdleTimerExhaust: true
       },
-      phase: 'idle',
+      phase: 'intermission', // Start in intermission phase (idle-eligible)
       players: [],
       humanId: 'player_1',
       endAt: null,
@@ -242,8 +261,12 @@
       html += `<strong>Feature Enabled:</strong> ${window.IdleTimerExhaust.isEnabled()}<br>`;
       html += `<strong>Main Screen Built:</strong> ${debug.isMainScreenBuilt()}<br>`;
       html += `<strong>Modal Open:</strong> ${debug.isModalOpen()}<br>`;
-      html += `<strong>Popup Card Visible:</strong> ${debug.isPopupCardVisible()}<br>`;
-      html += `<strong>Game Running:</strong> ${debug.isGameRunning()}<br>`;
+      html += `<strong>Visible Cards:</strong> ${debug.hasVisibleCards()}<br>`;
+      html += `<strong>Fullscreen Overlay:</strong> ${debug.hasFullscreenOverlay()}<br>`;
+      html += `<strong>Competition Active:</strong> ${debug.isCompetitionActive()}<br>`;
+      html += `<strong>Social Phase Active:</strong> ${debug.isSocialPhaseActive()}<br>`;
+      html += `<strong>Ceremony Active:</strong> ${debug.isCeremonyActive()}<br>`;
+      html += `<strong>Interactive Buttons:</strong> ${debug.hasInteractiveButtons()}<br>`;
       html += `<strong>User Input Expected:</strong> ${debug.isUserInputExpected()}<br>`;
       html += `<strong>Game Paused:</strong> ${debug.isGamePaused()}<br>`;
       html += `<strong>Has Active Timer:</strong> ${debug.hasActiveTimer()}<br>`;
@@ -374,6 +397,12 @@
       refreshStatus();
     }
 
+    function setPhase(phase) {
+      window.game.phase = phase;
+      showStatus(`Phase set to: ${phase}`, 'info');
+      refreshStatus();
+    }
+
     function setUserInput(value) {
       if (value) {
         const btn = document.createElement('button');
@@ -402,12 +431,42 @@
 
     function testPopupCard() {
       const result = window.IdleTimerExhaust._debug.isPopupCardVisible();
-      showTestResult('Popup Card Visible', result, 'Should detect cards in #tvOverlay');
+      showTestResult('Popup Card Visible (legacy)', result, 'Should detect cards in #tvOverlay');
+    }
+
+    function testVisibleCards() {
+      const result = window.IdleTimerExhaust._debug.hasVisibleCards();
+      showTestResult('Visible Cards', result, 'Should detect ANY visible cards');
+    }
+
+    function testFullscreenOverlay() {
+      const result = window.IdleTimerExhaust._debug.hasFullscreenOverlay();
+      showTestResult('Fullscreen Overlay', result, 'Should detect fullscreen overlays');
+    }
+
+    function testCompetitionActive() {
+      const result = window.IdleTimerExhaust._debug.isCompetitionActive();
+      showTestResult('Competition Active', result, 'Should detect comp phases and flags');
+    }
+
+    function testSocialPhaseActive() {
+      const result = window.IdleTimerExhaust._debug.isSocialPhaseActive();
+      showTestResult('Social Phase Active', result, 'Should detect social phases and UI');
+    }
+
+    function testCeremonyActive() {
+      const result = window.IdleTimerExhaust._debug.isCeremonyActive();
+      showTestResult('Ceremony Active', result, 'Should detect ceremony phases');
+    }
+
+    function testInteractiveButtons() {
+      const result = window.IdleTimerExhaust._debug.hasInteractiveButtons();
+      showTestResult('Interactive Buttons', result, 'Should detect visible interactive buttons');
     }
 
     function testGameRunning() {
       const result = window.IdleTimerExhaust._debug.isGameRunning();
-      showTestResult('Game Running', result, window.game.__compRunning || window.game.__minigameActive || window.game.__intermissionActive);
+      showTestResult('Game Running (legacy)', result, window.game.__compRunning || window.game.__minigameActive || window.game.__intermissionActive);
     }
 
     function testUserInput() {
@@ -469,12 +528,13 @@
       hidePopupCard();
       window.game.__compRunning = false;
       window.game.isGloballyPaused = false;
+      window.game.phase = 'intermission'; // IMPORTANT: Set to idle phase
       setUserInput(false);
       refreshStatus();
       await sleep(500);
       
       // Step 2: Set a long timer
-      logStep('Step 2: Setting 10s timer...');
+      logStep('Step 2: Setting 10s timer in intermission phase...');
       const startTime = Date.now();
       window.game.endAt = startTime + 10000;
       window.game.phaseEndsAt = startTime + 10000;

@@ -74,72 +74,191 @@
   }
 
   /**
-   * Check if any popup card is visible in #tvOverlay
+   * Check if any visible cards exist in the TV area
    * @returns {boolean}
    */
-  function isPopupCardVisible() {
+  function hasVisibleCards() {
     const tvOverlay = document.getElementById('tvOverlay');
-    if (!tvOverlay) return false;
-
-    // Check for various card types
-    const cardSelectors = [
-      '.revealCard',
-      '.tv-inline-card',
-      '.decision-card',
-      '.plea-inline-card',
-      '.ceremony-card',
-      '.intermission-card',
-      '.veto-wait-card',
-      '.jury-vote-card',
-      '.social-decision-card',
-      '.nomination-card',
-      '.eviction-card'
-    ];
-
-    for (const selector of cardSelectors) {
-      const cards = tvOverlay.querySelectorAll(selector);
-      for (const card of cards) {
-        const style = window.getComputedStyle(card);
-        if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
-          return true;
+    
+    // Check tvOverlay for any visible children
+    if (tvOverlay && tvOverlay.children.length > 0) {
+      const style = window.getComputedStyle(tvOverlay);
+      if (style.visibility !== 'hidden' && style.display !== 'none') {
+        // Check if tvOverlay has any visible children with actual content
+        const children = Array.from(tvOverlay.children);
+        for (const child of children) {
+          // Skip canvas and badge elements
+          if (child.tagName === 'CANVAS' || child.classList.contains('liveBadge') || child.classList.contains('twistBadge')) {
+            continue;
+          }
+          // Quick check using offsetParent (null means element is not visible)
+          if (child.offsetParent !== null) {
+            // Also check if the element has children or non-empty text content
+            if (child.children.length > 0 || (child.textContent && child.textContent.trim().length > 0)) {
+              return true;
+            }
+          }
         }
       }
     }
-
-    // Check if tvOverlay has any visible children
-    const children = Array.from(tvOverlay.children);
-    for (const child of children) {
-      // Skip canvas and badge elements
-      if (child.tagName === 'CANVAS' || child.classList.contains('liveBadge') || child.classList.contains('twistBadge')) {
-        continue;
-      }
-      // Quick check using offsetHeight/offsetWidth first (more performant)
-      if (child.offsetHeight > 0 || child.offsetWidth > 0) {
-        // Only use getComputedStyle if element has dimensions
-        const style = window.getComputedStyle(child);
-        if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
-          return true;
-        }
-      }
+    
+    // Check for reveal cards anywhere
+    const revealCards = document.querySelectorAll('.revealCard, .diaryRoomCard, .bigAnnounce');
+    for (const card of revealCards) {
+      if (card.offsetParent !== null) return true;
     }
-
+    
+    // Check for decision deck
+    const decisionDeck = document.getElementById('decisionDeck');
+    if (decisionDeck && decisionDeck.children.length > 0) {
+      if (decisionDeck.offsetParent !== null) return true;
+    }
+    
     return false;
   }
 
   /**
-   * Check if game or minigame is currently running
+   * Legacy alias for backwards compatibility
+   * @returns {boolean}
+   * @deprecated Use hasVisibleCards() instead
+   */
+  function isPopupCardVisible() {
+    return hasVisibleCards();
+  }
+
+  /**
+   * Check if any fullscreen overlay is displayed
    * @returns {boolean}
    */
-  function isGameRunning() {
+  function hasFullscreenOverlay() {
+    // Check for any fullscreen overlay
+    const overlays = document.querySelectorAll(
+      '.fullscreen-overlay, ' +
+      '.minigame-fullscreen-overlay, ' +
+      '.competition-fullscreen, ' +
+      '.livevote-fullscreen-overlay, ' +
+      '.fev-overlay, ' +  // Fullscreen eviction vote
+      '.nfs-overlay, ' +  // Nominations fullscreen
+      '.lv2-container, ' + // Live vote v2
+      '[data-fullscreen-modal], ' +
+      '.socialize-modal, ' +
+      '.finale-fullscreen-overlay'
+    );
+    
+    for (const overlay of overlays) {
+      const style = window.getComputedStyle(overlay);
+      if (style.display !== 'none' && style.visibility !== 'hidden') {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if competition is active (including spectator mode)
+   * @returns {boolean}
+   */
+  function isCompetitionActive() {
     const game = global.game;
     if (!game) return false;
-
-    // Check competition/minigame flags
+    
+    // Check phase - competition phases should never exhaust
+    const compPhases = ['hoh', 'veto_comp', 'veto', 'final3_comp1', 'final3_comp2', 'final3_comp3'];
+    if (compPhases.includes(game.phase)) return true;
+    
+    // Check competition flags
     if (game.__compRunning) return true;
     if (game.__minigameActive) return true;
     if (game.__intermissionActive) return true;
-
+    
+    // Check for competition instruction cards
+    const instructionCards = document.querySelectorAll('.competition-instructions, .comp-prompt, [data-comp-card], .competition-instructions-card');
+    for (const card of instructionCards) {
+      if (card.offsetParent !== null) return true;
+    }
+    
     return false;
+  }
+
+  /**
+   * Check if social phase is active
+   * @returns {boolean}
+   */
+  function isSocialPhaseActive() {
+    const game = global.game;
+    if (!game) return false;
+    
+    // Social phases should never exhaust
+    if (game.phase === 'social' || game.phase === 'social_intermission') return true;
+    
+    // Check for social UI
+    const socialUI = document.querySelector('#socializeModal, .socialize-modal, #socializeLauncher.active');
+    if (socialUI && socialUI.offsetParent !== null) return true;
+    
+    return false;
+  }
+
+  /**
+   * Check if ceremony is active
+   * @returns {boolean}
+   */
+  function isCeremonyActive() {
+    const game = global.game;
+    if (!game) return false;
+    
+    // Ceremony phases
+    const ceremonyPhases = ['nominations', 'veto_ceremony', 'livevote', 'jury'];
+    if (ceremonyPhases.includes(game.phase)) {
+      // During these phases, only exhaust if ceremony is complete AND no UI visible
+      if (game.phase === 'nominations' && !game.nomsLocked) return true;
+      if (game.phase === 'veto_ceremony' && !game.__vetoCeremonyResolved) return true;
+      if (game.phase === 'livevote' && game.eviction && !game.eviction.sequenceComplete) return true;
+      if (game.phase === 'jury' && !game.__juryVotingComplete) return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if any interactive buttons are visible that need user action
+   * @returns {boolean}
+   */
+  function hasInteractiveButtons() {
+    // Check for any visible interactive buttons that need user action
+    const buttons = document.querySelectorAll(
+      '.decision-card button, ' +
+      '.intermission-offer-button, ' +
+      '.comp-start-btn, ' +
+      '.btn-play-comp, ' +
+      '[data-action="start-hoh"], ' +
+      '[data-action="start-veto"], ' +
+      '.nominate-btn, ' +
+      '.vote-btn, ' +
+      '.veto-use-btn, ' +
+      '.veto-keep-btn, ' +
+      '.plea-btn, ' +
+      'button[data-nominee], ' +
+      '.fev-player-card, ' +  // Eviction vote cards
+      '.lv2-nominee-card'     // Live vote nominee cards
+    );
+    
+    for (const btn of buttons) {
+      if (btn.offsetParent !== null && !btn.disabled) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Legacy alias for backwards compatibility
+   * @returns {boolean}
+   * @deprecated Use isCompetitionActive() instead
+   */
+  function isGameRunning() {
+    return isCompetitionActive();
   }
 
   /**
@@ -268,17 +387,36 @@
 
   /**
    * Composite check: Is main screen in idle state?
+   * Uses a whitelist approach - only exhaust during specific idle phases
    * @returns {boolean}
    */
   function isMainScreenIdle() {
+    // Must have main screen built
     if (!isMainScreenBuilt()) return false;
+    
+    // Must have active timer
+    const game = global.game;
+    if (!game) return false;
+    const endAt = game.endAt || game.phaseEndsAt || 0;
+    if (endAt <= Date.now()) return false;
+    
+    // NEVER exhaust during these conditions:
     if (isModalOpen()) return false;
-    if (isPopupCardVisible()) return false;
-    if (isGameRunning()) return false;
+    if (hasFullscreenOverlay()) return false;
+    if (hasVisibleCards()) return false;
+    if (isCompetitionActive()) return false;
+    if (isSocialPhaseActive()) return false;
+    if (isCeremonyActive()) return false;
+    if (hasInteractiveButtons()) return false;
     if (isUserInputExpected()) return false;
     if (isGamePaused()) return false;
-    if (!hasActiveTimer()) return false;
-
+    if (game.pauseController && typeof game.pauseController.isPaused === 'function' && game.pauseController.isPaused()) return false;
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) return false;
+    
+    // Only exhaust during truly idle intermission-like states
+    const idlePhases = ['intermission', 'opening'];
+    if (!idlePhases.includes(game.phase)) return false;
+    
     return true;
   }
 
@@ -423,8 +561,14 @@
     _debug: {
       isMainScreenBuilt,
       isModalOpen,
-      isPopupCardVisible,
-      isGameRunning,
+      isPopupCardVisible,  // Legacy alias
+      hasVisibleCards,
+      hasFullscreenOverlay,
+      isGameRunning,  // Legacy alias
+      isCompetitionActive,
+      isSocialPhaseActive,
+      isCeremonyActive,
+      hasInteractiveButtons,
       isUserInputExpected,
       isGamePaused,
       hasActiveTimer
