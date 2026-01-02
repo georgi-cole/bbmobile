@@ -341,6 +341,7 @@
       'final3_comp1': 'Final 3 – Part 1',
       'final3_comp2': 'Final 3 – Part 2',
       'final3_comp3': 'Final 3 – Part 3',
+      'final3_plea': 'Final 3 – Pleas',
       'final3_decision': 'Final 3 – Decision',
       'social': 'Social Time'
     };
@@ -2440,6 +2441,7 @@ header.innerHTML = `
     if(game.phase==='nominations'){ g.renderNominationsPanel?.(); return; }
     if(game.phase==='veto_ceremony'){ g.renderVetoCeremonyPanel?.(); return; }
     if(game.phase==='final4_eviction'){ g.renderFinal4EvictionPanel?.(); return; }
+    if(game.phase==='final3_plea'){ g.renderFinal3PleaPanel?.(); return; }
     if(game.phase==='final3_decision'){ g.renderFinal3DecisionPanel?.(); return; }
     if(game.phase==='jury'){ g.renderJuryVotePanel?.(); return; }
     if(game.phase==='livevote'){ g.renderLiveVotePanel?.(); return; }
