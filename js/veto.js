@@ -1694,6 +1694,10 @@
     g.__f4EvictionInProgress = true;
     
     var holder = getP(g.vetoHolder);
+    if(!holder){
+      console.error('[Final4] Invalid veto holder ID:', g.vetoHolder);
+      return;
+    }
     var target = targetId;
     
     // AI decision if not provided or invalid
@@ -1727,7 +1731,7 @@
         lines: [holder.name + ': I vote to evict ' + evictee.name + '.'],
         tone: 'live',
         duration: 3500,
-        actorIds: holder ? holder.id : null,
+        actorIds: holder.id,
         subjectIds: target
       });
     }catch(e){
