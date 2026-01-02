@@ -2673,9 +2673,11 @@
       
       // Transition to plea phase (no idle wait)
       global.tv.say('Final 3 Pleas');
-      // Set phase with zero duration - plea panel handles its own timing
-      global.setPhase('final3_plea', 0);
-      // Render plea panel immediately - it will auto-proceed to decision when ready
+      global.setPhase('final3_plea', Math.max(10, Math.floor(g.cfg.tVote * 0.5)), () => {
+        // After plea time expires, proceed to decision
+        global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
+        global.renderFinal3DecisionPanel?.();
+      });
       global.renderFinal3PleaPanel?.();
     } else {
       // Legacy flow: show Final HOH cinematic, then go directly to decision
@@ -2819,15 +2821,6 @@
       waitMsg.className = 'tiny ok';
       waitMsg.textContent = '✓ Plea submitted. Waiting for HOH decision...';
       card.appendChild(waitMsg);
-      
-      // Auto-proceed to decision after brief delay (AI HOH will make decision)
-      setTimeout(() => {
-        if (g.phase === 'final3_plea') {
-          console.info('[F3Plea] Human nominee plea submitted, proceeding to decision');
-          global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
-          global.renderFinal3DecisionPanel?.();
-        }
-      }, 1500);
     } else if (humanIsHOH) {
       // Human is HOH - show info that pleas are being received
       const hohMsg = document.createElement('div');
