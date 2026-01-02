@@ -493,20 +493,61 @@
   
   /* Winner display - large centered */
   .winner-display{
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 24px;
     padding: 40px;
+    margin: 32px;
     background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 3px solid rgba(0, 224, 204, 0.5);
     border-radius: 24px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8),
-                0 0 40px rgba(0, 224, 204, 0.4);
+                inset 0 0 40px -8px rgba(0, 224, 204, 0.4),
+                inset 0 0 20px -4px rgba(131, 191, 255, 0.3);
     animation: winnerEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  /* Animated rainbow border using pseudo-element */
+  .winner-display::before{
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 28px;
+    padding: 4px;
+    background: conic-gradient(
+      from 0deg,
+      #ff0080,
+      #ff8c00,
+      #ffd700,
+      #00ff00,
+      #00bfff,
+      #8a2be2,
+      #ff1493,
+      #ff0080
+    );
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    animation: rotateRainbow 4s linear infinite;
+    z-index: -1;
+  }
+  
+  @keyframes rotateRainbow{
+    0%{
+      filter: hue-rotate(0deg);
+    }
+    100%{
+      filter: hue-rotate(360deg);
+    }
   }
   @keyframes winnerEnter{
     0%{
@@ -582,7 +623,7 @@
   
   .runner-up-compact{
     position: fixed;
-    bottom: 40px;
+    bottom: 80px;
     right: 40px;
     display: flex;
     align-items: center;
@@ -595,6 +636,20 @@
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     z-index: 10003;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  .runner-up-compact.visible{
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .runner-up-compact.fading{
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
   }
   .runner-up-avatar{
     width: 60px;
@@ -705,7 +760,7 @@
       height: min(70vw, 300px);
     }
     .runner-up-compact{
-      bottom: 20px;
+      bottom: 60px;
       right: 20px;
       flex-direction: column;
       text-align: center;
@@ -727,6 +782,28 @@
     .finalFaceoff::before {
       animation: none !important;
       opacity: 0.8;
+    }
+    .winner-display::before {
+      animation: none !important;
+      background: linear-gradient(
+        135deg,
+        #ff0080,
+        #ff8c00,
+        #ffd700,
+        #00ff00,
+        #00bfff,
+        #8a2be2
+      );
+    }
+    .runner-up-compact {
+      transition: opacity 0.3s ease !important;
+      transform: none !important;
+    }
+    .runner-up-compact.visible {
+      transform: none !important;
+    }
+    .runner-up-compact.fading {
+      transform: none !important;
     }
     .floating-emoji,
     .confetti {
@@ -1191,8 +1268,9 @@
     celebration.appendChild(display);
     
     // Runner-up compact display
+    let runnerUpCard;
     if (runnerUp) {
-      const runnerUpCard = el('div', 'runner-up-compact');
+      runnerUpCard = el('div', 'runner-up-compact');
       
       const runnerUpAvatar = el('img', 'runner-up-avatar');
       runnerUpAvatar.src = pickAvatar(runnerUp);
@@ -1205,6 +1283,7 @@
       runnerUpInfo.append(runnerUpLabel, runnerUpName);
       runnerUpCard.append(runnerUpAvatar, runnerUpInfo);
       
+      // Add to overlay but initially hidden (opacity: 0 via CSS)
       if (state.overlay) state.overlay.appendChild(runnerUpCard);
     }
     
@@ -1219,7 +1298,33 @@
     createConfetti(150);
     createFloatingEmojis();
     
-    console.log('[jury-viz] Winner celebration displayed');
+    // Timed runner-up sequence
+    if (runnerUpCard) {
+      // t=2.0s: Show runner-up
+      setTimeout(() => {
+        runnerUpCard.classList.add('visible');
+        console.log('[jury-viz] Runner-up now visible (t=2.0s)');
+      }, 2000);
+      
+      // t=4.5s: Fade out runner-up
+      setTimeout(() => {
+        runnerUpCard.classList.remove('visible');
+        runnerUpCard.classList.add('fading');
+        console.log('[jury-viz] Runner-up fading out (t=4.5s)');
+      }, 4500);
+      
+      // t=7.0s: Close celebration screen
+      setTimeout(() => {
+        celebration.classList.remove('visible');
+        setTimeout(() => {
+          celebration.remove();
+          if (runnerUpCard) runnerUpCard.remove();
+        }, 500);
+        console.log('[jury-viz] Winner celebration closed (t=7.0s)');
+      }, 7000);
+    }
+    
+    console.log('[jury-viz] Winner celebration displayed with timed sequence');
     return celebration;
   }
 
