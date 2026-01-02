@@ -732,6 +732,40 @@
     .confetti {
       animation-duration: 1s !important;
     }
+  }
+  
+  /* Batched vote display animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .batched-votes-container {
+    pointer-events: none;
+  }
+  
+  .batched-vote-card {
+    pointer-events: none;
+  }
+  
+  .tally-screen-container {
+    pointer-events: none;
   }`;
   const style = document.createElement('style');
   style.id = 'faceoff-css';
@@ -759,7 +793,11 @@
   function mount({ left, right, majority, container, fullscreen = true }){
     destroy();
     // Remove any left-over graph containers
-    try { document.querySelectorAll('.final-graph, .jury-graph, #finalGraph').forEach(x => x.remove()); } catch {}
+    try { 
+      document.querySelectorAll('.final-graph, .jury-graph, #finalGraph').forEach(x => x.remove()); 
+    } catch (e) {
+      console.warn('[jury-viz] cleanup error:', e);
+    }
 
     // Create fullscreen overlay if requested
     let overlay = null;
@@ -963,6 +1001,9 @@
     if(!state || !state.wrap) return;
     state.wrap.classList.remove('hidden-for-voting');
     state.wrap.classList.add('reveal-phase');
+    // Restore visibility (in case it was hidden via inline styles)
+    state.wrap.style.opacity = '1';
+    state.wrap.style.pointerEvents = 'auto';
     console.log('[jury-viz] Faceoff shown for reveal');
   }
 
@@ -1069,7 +1110,9 @@
     try{ 
       if (state?.wrap) state.wrap.querySelectorAll(sel).forEach(x=>x.remove()); 
       if (state?.overlay) state.overlay.querySelectorAll(sel).forEach(x=>x.remove());
-    }catch{} 
+    } catch (e) {
+      console.warn('[jury-viz] remove error:', e);
+    }
   }
   
   // Create confetti burst
@@ -1185,9 +1228,396 @@
     try { 
       if (state.overlay) state.overlay.remove();
       if (state.wrap) state.wrap.remove();
-    } catch {}
+    } catch (e) {
+      console.warn('[jury-viz] cleanup error:', e);
+    }
     state = null;
     console.log('[jury-viz] Final Faceoff UI destroyed');
+  }
+  
+  // =====================================================================================
+  // Batched Vote Display Functions
+  // =====================================================================================
+  
+  /**
+   * Generate dynamic tally message based on current vote state
+   * @param {number} leftCount - Current votes for left finalist
+   * @param {number} rightCount - Current votes for right finalist  
+   * @param {number} majority - Votes needed to win
+   * @param {number} votesRemaining - Number of votes still to be revealed
+   * @returns {string} Dynamic status message
+   */
+  function generateTallyMessage(leftCount, rightCount, majority, votesRemaining) {
+    if (!state) return '';
+    
+    const leftName = state.left.meta?.name || 'Finalist A';
+    const rightName = state.right.meta?.name || 'Finalist B';
+    const diff = Math.abs(leftCount - rightCount);
+    const leader = leftCount > rightCount ? leftName : rightName;
+    const leaderCount = Math.max(leftCount, rightCount);
+    const votesNeeded = majority - leaderCount;
+    
+    // Already won (mathematically)
+    if (leaderCount >= majority) {
+      return `The winner is decided, but let's see how the rest vote!`;
+    }
+    
+    // One vote away from winning
+    if (votesNeeded === 1) {
+      return `One more vote could crown the winner!`;
+    }
+    
+    // Tied votes
+    if (leftCount === rightCount && leftCount > 0) {
+      return `Votes are tied! The tension is real!`;
+    }
+    
+    // Close race (within 1 vote)
+    if (diff <= 1 && votesRemaining > 2) {
+      return `It's anyone's game now!`;
+    }
+    
+    // Final suspense (last batch)
+    if (votesRemaining <= 3 && diff <= 1) {
+      return `This next vote could change everything!`;
+    }
+    
+    // Clear leader
+    if (votesNeeded > 1) {
+      return `${leader} is ${votesNeeded} votes away from winning!`;
+    }
+    
+    // Default
+    return `The race continues...`;
+  }
+  
+  /**
+   * Display a batch of juror vote cards stacked vertically
+   * @param {Array} votes - Array of vote objects: {jurorId, jurorName, finalistName, reason, jurorAvatar}
+   * @param {number} durationMs - How long to display (default 4500ms)
+   * @returns {Promise} Resolves when display is complete
+   */
+  function showBatchedVotes(votes, durationMs = 4500) {
+    return new Promise((resolve) => {
+      if (!state || !state.overlay) {
+        console.warn('[jury-viz] Cannot show batched votes: no overlay');
+        resolve();
+        return;
+      }
+      
+      // Hide the faceoff UI (finalists) while showing vote cards
+      if (state.wrap) {
+        state.wrap.style.opacity = '0';
+        state.wrap.style.pointerEvents = 'none';
+      }
+      
+      // Remove any OLD single-vote cards that might be lingering
+      const oldCards = document.querySelectorAll('.jury-vote-card, .revealCard');
+      oldCards.forEach(el => {
+        el.style.animation = 'none';
+        el.remove();
+      });
+      
+      // Remove any existing vote displays
+      const existing = state.overlay.querySelectorAll('.batched-votes-container');
+      existing.forEach(el => el.remove());
+      
+      // Create container for stacked cards
+      const container = el('div', 'batched-votes-container');
+      container.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10002;
+        width: min(500px, 90vw);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        animation: fadeIn 0.4s ease;
+      `;
+      
+      // Create each vote card
+      votes.forEach((vote, idx) => {
+        const card = el('div', 'batched-vote-card');
+        card.style.cssText = `
+          background: rgba(15, 25, 40, 0.95);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 2px solid rgba(0, 224, 204, 0.3);
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+          animation: slideInLeft 0.5s ease forwards;
+          animation-delay: ${idx * 0.15}s;
+          opacity: 0;
+        `;
+        
+        // Header with juror info
+        const header = el('div');
+        header.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        `;
+        
+        // Juror avatar
+        const avatar = el('img');
+        avatar.src = vote.jurorAvatar || '';
+        avatar.alt = vote.jurorName;
+        avatar.style.cssText = `
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid rgba(0, 224, 204, 0.4);
+        `;
+        avatar.onerror = function() {
+          const getDicebearUrl = window.getDicebearUrl || window.global?.getDicebearUrl || function(seed) {
+            return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+          };
+          this.src = getDicebearUrl(vote.jurorName || 'juror');
+        };
+        
+        // Juror name
+        const nameLabel = el('div');
+        nameLabel.textContent = vote.jurorName;
+        nameLabel.style.cssText = `
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #00e0cc;
+          flex: 1;
+        `;
+        
+        header.append(avatar, nameLabel);
+        
+        // Vote reason text
+        const reasonText = el('div');
+        reasonText.textContent = vote.reason;
+        reasonText.style.cssText = `
+          font-size: 0.95rem;
+          line-height: 1.5;
+          color: #e8f4ff;
+          font-style: italic;
+          margin-bottom: 12px;
+        `;
+        
+        // Vote badge
+        const badge = el('div');
+        badge.textContent = `Vote for ${vote.finalistName} ✓`;
+        badge.style.cssText = `
+          text-align: center;
+          padding: 8px 16px;
+          background: rgba(0, 224, 204, 0.15);
+          border: 1px solid rgba(0, 224, 204, 0.3);
+          border-radius: 20px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #00e0cc;
+        `;
+        
+        card.append(header, reasonText, badge);
+        container.appendChild(card);
+      });
+      
+      state.overlay.appendChild(container);
+      
+      // Remove after duration
+      setTimeout(() => {
+        container.style.animation = 'fadeOut 0.4s ease forwards';
+        setTimeout(() => {
+          container.remove();
+          resolve();
+        }, 400);
+      }, durationMs);
+    });
+  }
+  
+  /**
+   * Show tally screen with finalists and vote counts
+   * @param {number} leftCount - Votes for left finalist
+   * @param {number} rightCount - Votes for right finalist
+   * @param {string} statusMessage - Dynamic message to display
+   * @param {number} durationMs - How long to display (default 3000ms)
+   * @returns {Promise} Resolves when display is complete
+   */
+  function showTallyScreen(leftCount, rightCount, statusMessage, durationMs = 3000) {
+    return new Promise((resolve) => {
+      if (!state || !state.overlay) {
+        console.warn('[jury-viz] Cannot show tally screen: no overlay');
+        resolve();
+        return;
+      }
+      
+      // Keep the faceoff UI hidden during tally screen
+      // The tally screen shows its own finalist avatars
+      if (state.wrap) {
+        state.wrap.style.opacity = '0';
+        state.wrap.style.pointerEvents = 'none';
+      }
+      
+      // Remove any OLD single-vote cards that might be lingering
+      const oldCards = document.querySelectorAll('.jury-vote-card, .revealCard');
+      oldCards.forEach(el => {
+        el.style.animation = 'none';
+        el.remove();
+      });
+      
+      // Remove any existing tally displays
+      const existing = state.overlay.querySelectorAll('.tally-screen-container');
+      existing.forEach(el => el.remove());
+      
+      const leftName = state.left.meta?.name || 'Finalist A';
+      const rightName = state.right.meta?.name || 'Finalist B';
+      
+      // Create tally screen container
+      const container = el('div', 'tally-screen-container');
+      container.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10002;
+        width: min(600px, 90vw);
+        background: rgba(15, 25, 40, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 2px solid rgba(0, 224, 204, 0.4);
+        border-radius: 20px;
+        padding: 32px 24px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+        animation: fadeIn 0.4s ease;
+      `;
+      
+      // Finalists row
+      const finalistsRow = el('div');
+      finalistsRow.style.cssText = `
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 24px;
+        align-items: center;
+        margin-bottom: 24px;
+      `;
+      
+      // Left finalist
+      const leftCard = el('div');
+      leftCard.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      `;
+      
+      const leftAvatar = el('img');
+      leftAvatar.src = pickAvatar(state.left.meta);
+      leftAvatar.alt = leftName;
+      leftAvatar.style.cssText = `
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 12px;
+        border: 3px solid ${leftCount > rightCount ? 'rgba(0, 224, 204, 0.6)' : 'rgba(255, 255, 255, 0.2)'};
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      `;
+      
+      const leftNameEl = el('div');
+      leftNameEl.textContent = leftName;
+      leftNameEl.style.cssText = `
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ffffff;
+        text-align: center;
+      `;
+      
+      const leftVotes = el('div');
+      leftVotes.textContent = `${leftCount} VOTES`;
+      leftVotes.style.cssText = `
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: ${leftCount > rightCount ? '#00e0cc' : '#aaa'};
+        text-align: center;
+      `;
+      
+      leftCard.append(leftAvatar, leftNameEl, leftVotes);
+      
+      // VS divider
+      const vsDiv = el('div');
+      vsDiv.textContent = 'VS';
+      vsDiv.style.cssText = `
+        font-size: 2rem;
+        font-weight: 900;
+        color: #00e0cc;
+        text-shadow: 0 0 20px rgba(0, 224, 204, 0.6);
+      `;
+      
+      // Right finalist
+      const rightCard = el('div');
+      rightCard.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      `;
+      
+      const rightAvatar = el('img');
+      rightAvatar.src = pickAvatar(state.right.meta);
+      rightAvatar.alt = rightName;
+      rightAvatar.style.cssText = `
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 12px;
+        border: 3px solid ${rightCount > leftCount ? 'rgba(0, 224, 204, 0.6)' : 'rgba(255, 255, 255, 0.2)'};
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      `;
+      
+      const rightNameEl = el('div');
+      rightNameEl.textContent = rightName;
+      rightNameEl.style.cssText = `
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ffffff;
+        text-align: center;
+      `;
+      
+      const rightVotes = el('div');
+      rightVotes.textContent = `${rightCount} VOTES`;
+      rightVotes.style.cssText = `
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: ${rightCount > leftCount ? '#00e0cc' : '#aaa'};
+        text-align: center;
+      `;
+      
+      rightCard.append(rightAvatar, rightNameEl, rightVotes);
+      
+      finalistsRow.append(leftCard, vsDiv, rightCard);
+      
+      // Status message
+      const message = el('div');
+      message.textContent = statusMessage;
+      message.style.cssText = `
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #ffdc8b;
+        text-align: center;
+        line-height: 1.5;
+        font-style: italic;
+      `;
+      
+      container.append(finalistsRow, message);
+      state.overlay.appendChild(container);
+      
+      // Remove after duration
+      setTimeout(() => {
+        container.style.animation = 'fadeOut 0.4s ease forwards';
+        setTimeout(() => {
+          container.remove();
+          resolve();
+        }, 400);
+      }, durationMs);
+    });
   }
 
   // Public API
@@ -1197,6 +1627,7 @@
     showCrown, showCheckCard, 
     showWinnerCelebration, createConfetti, createFloatingEmojis,
     hideFaceoff, showFaceoff,
+    showBatchedVotes, showTallyScreen, generateTallyMessage,
     destroy
   };
 
