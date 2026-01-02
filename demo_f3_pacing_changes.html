@@ -475,10 +475,10 @@
           <strong>Human Nominee Scenario:</strong><br>
           • Interactive FinalPlea modal opens<br>
           • Choose from 5 strategic plea options:<br>
-          &nbsp;&nbsp;1. "I'm a weaker competitor—take me and you'll win"<br>
-          &nbsp;&nbsp;2. "We've been allies all season—honor our bond"<br>
-          &nbsp;&nbsp;3. "The other player has a stronger jury case"<br>
-          &nbsp;&nbsp;4. "I'll vote for you in the finale if you save me"<br>
+          &nbsp;&nbsp;1. "I've crossed a few people, so I don't think jury likes me much"<br>
+          &nbsp;&nbsp;2. "You have been my ride or die this season, I count on you" (backfires if lying)<br>
+          &nbsp;&nbsp;3. "Do you really want to hand the award to [Other Player]?"<br>
+          &nbsp;&nbsp;4. "I really could use the money given my financial state"<br>
           &nbsp;&nbsp;5. Custom message (up to 200 characters)<br>
           • Submit or skip plea
         </div>
@@ -487,7 +487,8 @@
           <strong>AI Consideration:</strong><br>
           • Plea influence stored in <code>g.__f3PleaInfluence</code><br>
           • Calculated based on affinity, HOH personality, and argument strength<br>
-          • Up to 20% swing in AI eviction decision
+          • Up to 20% positive swing OR -20% if lying about alliance<br>
+          • Alliance check via social relations module
         </div>
         <div class="flow-arrow">↓</div>
         <div class="flow-step">
