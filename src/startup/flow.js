@@ -606,6 +606,14 @@
     // Attach zoom lock to main game screen
     attachMainScreenZoomLock();
 
+    // Start idle timer exhaust monitoring if available and enabled
+    if (g.IdleTimerExhaust && typeof g.IdleTimerExhaust.start === 'function') {
+      if (g.IdleTimerExhaust.isEnabled()) {
+        g.IdleTimerExhaust.start();
+        console.info('[StartupFlow] Idle timer exhaust monitoring started');
+      }
+    }
+
     console.info('[StartupFlow] Main screen built');
   }
   
