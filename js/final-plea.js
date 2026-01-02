@@ -10,28 +10,30 @@
   // Strategic argument options
   const PLEA_OPTIONS = [
     {
-      id: 'weaker',
-      text: "I'm a weaker competitor—take me and you'll win",
+      id: 'jury_dislikes',
+      text: "I've crossed a few people, so I don't think jury likes me much",
       weight: 0.7,
-      description: 'Appeal to their competitive advantage'
+      description: 'Admit jury weakness'
     },
     {
       id: 'alliance',
-      text: "We've been allies all season—honor our bond",
+      text: "You have been my ride or die this season, I count on you",
       weight: 1.0,
-      description: 'Remind them of your loyalty'
+      description: 'Claim loyalty (backfires if lying)',
+      requiresAlliance: true
     },
     {
       id: 'other_stronger',
-      text: 'The other player has a stronger jury case',
+      text: 'Do you really want to hand the award to {otherNominee}?',
       weight: 0.8,
-      description: 'Suggest the other is more dangerous'
+      description: 'Question taking the other player',
+      usesOtherName: true
     },
     {
-      id: 'promise',
-      text: "I'll vote for you in the finale if you save me",
+      id: 'financial',
+      text: "I really could use the money given my financial state",
       weight: 0.6,
-      description: 'Make a jury vote promise'
+      description: 'Appeal to sympathy'
     },
     {
       id: 'custom',
@@ -170,7 +172,12 @@
         font-weight: 600;
         margin-bottom: 4px;
       `;
-      optionText.textContent = option.text;
+      // Replace {otherNominee} placeholder with actual name
+      let displayText = option.text;
+      if (option.usesOtherName && otherNominee) {
+        displayText = displayText.replace('{otherNominee}', otherNominee.name);
+      }
+      optionText.textContent = displayText;
       optionBtn.appendChild(optionText);
 
       const optionDesc = document.createElement('div');
@@ -429,11 +436,11 @@
   /**
    * Calculate plea influence on HOH decision
    * Returns swing value (0 to 0.2 range, representing up to 20% influence)
-   * @returns {number} Influence value 0-0.2
+   * Can be negative if lying about alliance
+   * @returns {number} Influence value -0.2 to 0.2
    */
   function calculateInfluence(data) {
-    const { nominee, hoh, selectedOption } = data;
-    // Note: otherNominee available in data but not used in calculation
+    const { nominee, hoh, otherNominee, selectedOption } = data;
 
     // Base swing chance
     let influence = 0;
@@ -447,11 +454,23 @@
     influence += personalityFactor * 0.06; // Up to 0.06 from personality
 
     // Factor 3: Argument strength (30% weight)
-    const argumentStrength = selectedOption.weight;
+    let argumentStrength = selectedOption.weight;
+    
+    // Special handling for alliance plea - check if actually allied
+    if (selectedOption.id === 'alliance' && selectedOption.requiresAlliance) {
+      const actuallyAllied = checkIfAllied(nominee, hoh);
+      if (!actuallyAllied) {
+        // Lying about alliance makes HOH angry - negative influence
+        console.warn('[FinalPlea] Nominee lied about alliance - HOH is angry!');
+        argumentStrength = -0.5; // Negative weight for lying
+        influence = -0.15; // Strong negative influence for betraying trust
+      }
+    }
+    
     influence += (argumentStrength / 1.0) * 0.06; // Up to 0.06 from argument
 
-    // Cap at 20% (0.2)
-    influence = Math.min(influence, 0.2);
+    // Cap at 20% (0.2) or floor at -20% (-0.2) for lying
+    influence = Math.max(-0.2, Math.min(0.2, influence));
 
     console.info('[FinalPlea] Calculated influence:', {
       nominee: nominee.name,
@@ -459,10 +478,38 @@
       affinity,
       personalityFactor,
       argumentStrength,
-      totalInfluence: influence
+      totalInfluence: influence,
+      lying: selectedOption.id === 'alliance' && argumentStrength < 0
     });
 
     return influence;
+  }
+  
+  /**
+   * Check if two players are actually allied in the social system
+   */
+  function checkIfAllied(nominee, hoh) {
+    // Try to use SocialRelations module to check alliance
+    if (global.SocialRelations?.computeAlliesEnemies) {
+      try {
+        const relations = global.SocialRelations.computeAlliesEnemies(nominee.id);
+        const alliesIds = relations.alliesIds || [];
+        const isAllied = alliesIds.includes(hoh.id);
+        console.info('[FinalPlea] Alliance check:', {
+          nominee: nominee.name,
+          hoh: hoh.name,
+          isAllied,
+          alliesIds
+        });
+        return isAllied;
+      } catch (e) {
+        console.warn('[FinalPlea] Error checking alliance:', e);
+      }
+    }
+    
+    // Fallback: check affinity - high affinity (>0.6) counts as allied
+    const affinity = calculateAffinity(nominee, hoh);
+    return affinity > 0.6;
   }
 
   /**
@@ -504,14 +551,14 @@
     if (selectedOption.id === 'alliance') {
       // Loyalty matters for alliance plea
       factor = loyalty;
-    } else if (selectedOption.id === 'weaker') {
-      // Comp beasts might like taking weaker players
+    } else if (selectedOption.id === 'jury_dislikes') {
+      // Strategic/comp beast players might like taking someone jury dislikes
       factor = compBeast;
     } else if (selectedOption.id === 'other_stronger') {
       // Strategic players respond to threat assessment
       factor = 1.0 - aggression; // Less aggressive = more strategic
-    } else if (selectedOption.id === 'promise') {
-      // Varies by loyalty (loyal players value promises)
+    } else if (selectedOption.id === 'financial') {
+      // Varies by loyalty (loyal/empathetic players value sympathy)
       factor = loyalty * 0.8;
     } else {
       // Custom or default

@@ -170,6 +170,13 @@
             number('skipTurboHoldMs', 'Turbo per-card hold (ms)', 100, 2000, 25),
             number('skipTurboGapMs', 'Turbo gap (ms)', 0, 1000, 25)
           ]
+        },
+        {
+          title: 'Final Week pacing',
+          fields: [
+            checkbox('skipIdleTimersF3', 'Skip idle timers in Final Week (optimized UX)'),
+            html('<div class="tiny muted">Removes idle waits between Final 3 competitions, shows full scoreboards, and adds nominee plea panel before final decision. Preserves cinematic reveal durations.</div>')
+          ]
         }
       ]
     },

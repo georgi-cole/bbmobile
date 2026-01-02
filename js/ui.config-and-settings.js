@@ -187,6 +187,7 @@
     debugAlwaysWin: false,  // Debug: Always win minigames/competitions (testing only)
     playerWinChanceHOH: 20,  // HOH win chance (percentage, converted to 0.20 decimal internally)
     playerWinChancePOV: 30,  // POV win chance (percentage, converted to 0.30 decimal internally)
+    skipIdleTimersF3: true,  // Skip idle timers in Final Week (optimized pacing)
   };
 
   function injectUiCssOnce(){
