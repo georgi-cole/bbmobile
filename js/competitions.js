@@ -3104,9 +3104,24 @@
       } else {
         const note = document.createElement('div'); note.className = 'tiny muted'; 
         note.textContent = g.__pleaSubmitted 
-          ? 'Your plea has been heard. AI will make the decision at end.' 
-          : 'AI will make the decision at end.';
+          ? 'Your plea has been heard. AI is making the decision...' 
+          : 'AI is making the decision...';
         box.appendChild(note);
+        
+        // Trigger immediate AI decision with short delay
+        // This handles the case where human is not a nominee (spectator/jury)
+        // or has already submitted their plea
+        if (!g.__f3AIDecisionTriggered) {
+          g.__f3AIDecisionTriggered = true;
+          console.info('[F3Decision] Triggering immediate AI decision with short delay');
+          
+          setTimeout(() => {
+            console.info('[F3Decision] Executing AI decision now');
+            if (global.finalizeFinal3Decision && !g.__f3EvictionResolved) {
+              global.finalizeFinal3Decision();
+            }
+          }, 2000); // 2 second delay to allow UI to update
+        }
       }
     }
     panel.appendChild(box);
