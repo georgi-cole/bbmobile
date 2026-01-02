@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Score Object Handling Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { color: #4a90e2; }
+    h2 { color: #66ff66; }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .result {
+      margin: 10px 0;
+      padding: 10px;
+      background: #2c3a4d;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    .pass { border-left: 4px solid #66ff66; }
+    .fail { border-left: 4px solid #ff6b6b; }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    #gameContainer {
+      min-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Score Object Handling Test</h1>
+  
+  <div class="test-section">
+    <h2>Unit Tests</h2>
+    <button onclick="runUnitTests()">Run Unit Tests</button>
+    <div id="unitTestResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Integration Test: Snake Game</h2>
+    <p>Play snake and verify the score is handled correctly (no NaN or [object Object] errors)</p>
+    <button onclick="testSnakeGame()">Start Snake Game</button>
+    <div id="gameContainer"></div>
+    <div id="gameResults"></div>
+  </div>
+
+  <script>
+    // Mock the competition system for testing
+    window.game = {
+      cfg: {},
+      lastCompScores: new Map(),
+      lastCompScoresMeta: new Map(),
+      humanId: 1,
+      phase: 'hoh',
+      week: 1
+    };
+
+    // Mock functions
+    window.safeName = (id) => `Player ${id}`;
+    window.getP = (id) => ({ id, name: `Player ${id}`, human: id === 1 });
+    window.alivePlayers = () => [
+      { id: 1, name: 'Player 1', human: true },
+      { id: 2, name: 'Player 2', human: false },
+      { id: 3, name: 'Player 3', human: false }
+    ];
+    window.addLog = () => {};
+    window.rng = Math.random;
+
+    // The fixed submitScore function
+    function submitScore(id, base, mult, label, rawScoreDisplay = null, isNewPersonalBest = false) {
+      const g = window.game; 
+      g.lastCompScores = g.lastCompScores || new Map();
+      g.lastCompScoresMeta = g.lastCompScoresMeta || new Map();
+      if (g.lastCompScores.has(id)) return false;
+
+      let normalizedBase = base;
+      if (base > 100) {
+        normalizedBase = Math.min(100, (base / 120) * 100);
+      }
+
+      let final = Math.max(0, Math.min(150, normalizedBase * mult));
+      
+      g.lastCompScores.set(id, final);
+      
+      if (rawScoreDisplay || isNewPersonalBest) {
+        g.lastCompScoresMeta.set(id, {
+          rawScoreDisplay: rawScoreDisplay,
+          isNewPersonalBest: isNewPersonalBest
+        });
+      }
+      
+      return true;
+    }
+
+    // Test the callback handler logic
+    function handleGameResult(result, playerId, multiplier) {
+      let base = result;
+      let rawScoreDisplay = null;
+      let isNewPersonalBest = false;
+      
+      if (typeof result === 'object' && result !== null && typeof result.score === 'number') {
+        base = result.score;
+        rawScoreDisplay = result.rawScoreDisplay || null;
+        isNewPersonalBest = result.isNewPersonalBest || false;
+      } else if (typeof result === 'number') {
+        base = result;
+      } else {
+        console.error('Invalid result type:', typeof result, result);
+        base = 0;
+      }
+      
+      return { base, rawScoreDisplay, isNewPersonalBest };
+    }
+
+    function runUnitTests() {
+      const resultsDiv = document.getElementById('unitTestResults');
+      resultsDiv.innerHTML = '<h3>Running tests...</h3>';
+      
+      const tests = [];
+      
+      // Test 1: Handle numeric score
+      window.game.lastCompScores.clear();
+      window.game.lastCompScoresMeta.clear();
+      
+      const result1 = handleGameResult(75, 1, 1.0);
+      tests.push({
+        name: 'Test 1: Handle numeric score',
+        pass: result1.base === 75 && result1.rawScoreDisplay === null,
+        details: `base=${result1.base}, rawScoreDisplay=${result1.rawScoreDisplay}`
+      });
+
+      // Test 2: Handle scoreData object
+      window.game.lastCompScores.clear();
+      window.game.lastCompScoresMeta.clear();
+      
+      const scoreData = {
+        score: 80,
+        rawScore: 23,
+        rawScoreDisplay: '23 food eaten',
+        isNewPersonalBest: true
+      };
+      const result2 = handleGameResult(scoreData, 1, 1.0);
+      tests.push({
+        name: 'Test 2: Handle scoreData object',
+        pass: result2.base === 80 && result2.rawScoreDisplay === '23 food eaten' && result2.isNewPersonalBest === true,
+        details: `base=${result2.base}, rawScoreDisplay='${result2.rawScoreDisplay}', isNewPersonalBest=${result2.isNewPersonalBest}`
+      });
+
+      // Test 3: Verify no NaN with object
+      window.game.lastCompScores.clear();
+      window.game.lastCompScoresMeta.clear();
+      
+      const result3 = handleGameResult(scoreData, 1, 1.0);
+      const isValidNumber = typeof result3.base === 'number' && !isNaN(result3.base);
+      tests.push({
+        name: 'Test 3: Score is valid number (no NaN)',
+        pass: isValidNumber,
+        details: `base=${result3.base}, isNaN=${isNaN(result3.base)}`
+      });
+
+      // Test 4: submitScore stores metadata
+      window.game.lastCompScores.clear();
+      window.game.lastCompScoresMeta.clear();
+      
+      submitScore(1, 80, 1.0, 'test', '23 food eaten', true);
+      const storedMeta = window.game.lastCompScoresMeta.get(1);
+      tests.push({
+        name: 'Test 4: submitScore stores metadata',
+        pass: storedMeta && storedMeta.rawScoreDisplay === '23 food eaten' && storedMeta.isNewPersonalBest === true,
+        details: `stored meta: ${JSON.stringify(storedMeta)}`
+      });
+
+      // Test 5: submitScore handles missing metadata
+      window.game.lastCompScores.clear();
+      window.game.lastCompScoresMeta.clear();
+      
+      submitScore(2, 65, 1.0, 'test', null, false);
+      const storedScore = window.game.lastCompScores.get(2);
+      const hasMeta = window.game.lastCompScoresMeta.has(2);
+      tests.push({
+        name: 'Test 5: submitScore handles missing metadata',
+        pass: storedScore === 65 && !hasMeta,
+        details: `score=${storedScore}, hasMeta=${hasMeta}`
+      });
+
+      // Test 6: Invalid object type
+      window.game.lastCompScores.clear();
+      window.game.lastCompScoresMeta.clear();
+      
+      const result6 = handleGameResult({invalid: 'object'}, 1, 1.0);
+      tests.push({
+        name: 'Test 6: Handle invalid object (missing score property)',
+        pass: result6.base === 0,
+        details: `base=${result6.base} (should default to 0)`
+      });
+
+      // Display results
+      let html = '<h3>Test Results</h3>';
+      let passed = 0;
+      let failed = 0;
+      
+      tests.forEach(test => {
+        if (test.pass) {
+          passed++;
+          html += `<div class="result pass">✅ ${test.name}<br><small>${test.details}</small></div>`;
+        } else {
+          failed++;
+          html += `<div class="result fail">❌ ${test.name}<br><small>${test.details}</small></div>`;
+        }
+      });
+
+      html += `<div class="result ${failed === 0 ? 'pass' : 'fail'}"><strong>Total: ${passed} passed, ${failed} failed</strong></div>`;
+      resultsDiv.innerHTML = html;
+    }
+
+    function testSnakeGame() {
+      const container = document.getElementById('gameContainer');
+      const resultsDiv = document.getElementById('gameResults');
+      
+      container.innerHTML = '';
+      resultsDiv.innerHTML = '<p>🎮 Game in progress... Try to eat some food and then release to end the game.</p>';
+      
+      // Clear previous scores
+      window.game.lastCompScores.clear();
+      window.game.lastCompScoresMeta.clear();
+      
+      // Load Snake game module if available
+      if (!window.MiniGames?.snake) {
+        resultsDiv.innerHTML = '<p style="color: #ff6b6b;">❌ Snake game module not loaded. Include snake.js in the page.</p>';
+        return;
+      }
+      
+      window.MiniGames.snake.render(container, (result) => {
+        console.log('Snake game completed. Result:', result);
+        
+        // Test the handler
+        const extracted = handleGameResult(result, 1, 1.0);
+        
+        // Submit the score
+        const submitted = submitScore(1, extracted.base, 1.0, 'HOH/snake', extracted.rawScoreDisplay, extracted.isNewPersonalBest);
+        
+        // Verify results
+        const storedScore = window.game.lastCompScores.get(1);
+        const storedMeta = window.game.lastCompScoresMeta.get(1);
+        
+        let html = '<h3>Game Complete! 🎉</h3>';
+        html += `<div class="result pass">Original result type: ${typeof result}</div>`;
+        html += `<div class="result pass">Original result: ${JSON.stringify(result, null, 2)}</div>`;
+        html += `<div class="result ${!isNaN(extracted.base) ? 'pass' : 'fail'}">Extracted score: ${extracted.base} (${isNaN(extracted.base) ? 'NaN ❌' : 'Valid ✅'})</div>`;
+        html += `<div class="result ${extracted.rawScoreDisplay ? 'pass' : ''}">Raw score display: ${extracted.rawScoreDisplay || 'None'}</div>`;
+        html += `<div class="result ${submitted ? 'pass' : 'fail'}">Score submission: ${submitted ? 'Success ✅' : 'Failed ❌'}</div>`;
+        html += `<div class="result ${!isNaN(storedScore) ? 'pass' : 'fail'}">Stored score: ${storedScore} (${isNaN(storedScore) ? 'NaN ❌' : 'Valid ✅'})</div>`;
+        
+        if (storedMeta) {
+          html += `<div class="result pass">Stored metadata: ${JSON.stringify(storedMeta)}</div>`;
+        }
+        
+        resultsDiv.innerHTML = html;
+      }, { 
+        variant: 'normal', 
+        debugMode: true,
+        competitionMode: true 
+      });
+    }
+  </script>
+
+  <script src="js/minigames/snake.js"></script>
+</body>
+</html>
