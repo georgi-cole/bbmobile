@@ -50,6 +50,7 @@
     idleGapMs: 0,                    // No idle gap between results and reveal
     postRevealGapMs: 100,            // Minimal buffer after reveal (0.1s)
     postHOHIdleMs: 0,                // No idle after Final HOH reveal (proceed to plea)
+    aiDecisionDelayMs: 500,          // Delay before triggering AI decision (allows UI render)
     enableOptimizedPacing: true      // Master toggle (can be overridden by settings)
   };
 
@@ -2019,6 +2020,7 @@
     const g = global.game;
     g.lastCompScores = new Map();
     g.__f3p1GameKey = null; // Track game key
+    g.__f3p1Resolved = false; // Initialize resolved flag
     global.tv.say('Final 3 — Part 1');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P1);
@@ -2041,6 +2043,13 @@
 
   async function finishF3P1() {
     const g = global.game; if (g.phase !== 'final3_comp1') return;
+    
+    // Guard: Prevent duplicate execution when timer expires after results already shown
+    if (g.__f3p1Resolved) {
+      console.info('[F3P1] Already resolved, skipping redundant execution');
+      return;
+    }
+    g.__f3p1Resolved = true;
     
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
@@ -2227,6 +2236,7 @@
     g.__f3_duo = duo.slice();
     g.lastCompScores = new Map();
     g.__f3p2GameKey = null; // Track game key
+    g.__f3p2Resolved = false; // Initialize resolved flag
     global.tv.say('Final 3 — Part 2');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P2);
@@ -2296,6 +2306,13 @@
 
   async function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
+    
+    // Guard: Prevent duplicate execution when timer expires after results already shown
+    if (g.__f3p2Resolved) {
+      console.info('[F3P2] Already resolved, skipping redundant execution');
+      return;
+    }
+    g.__f3p2Resolved = true;
     
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
@@ -2524,6 +2541,7 @@
     // CRITICAL: Set finalists BEFORE setPhase() to ensure renderF3P3() has access to them
     g.__f3_finalists = finalists.slice();
     g.__f3p3GameKey = null; // Track game key
+    g.__f3p3Resolved = false; // Initialize resolved flag
     global.tv.say('Final 3 — Part 3');
     global.phaseMusic?.('hoh');
     // setPhase() triggers renderPanel() -> renderF3P3(), which needs g.__f3_finalists
@@ -2593,6 +2611,13 @@
 
   async function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
+    
+    // Guard: Prevent duplicate execution when timer expires after results already shown
+    if (g.__f3p3Resolved) {
+      console.info('[F3P3] Already resolved, skipping redundant execution');
+      return;
+    }
+    g.__f3p3Resolved = true;
     
     // Clean up SpectatorView if it exists (legacy/fallback)
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
@@ -3059,6 +3084,18 @@
           ? 'Your plea has been heard. AI will make the decision at end.' 
           : 'AI will make the decision at end.';
         box.appendChild(note);
+        
+        // If optimized pacing is enabled, trigger AI decision immediately after a brief delay
+        // This eliminates the wait timer before seeing the decision
+        const useOptimizedPacing = isF3OptimizedPacingEnabled();
+        if (useOptimizedPacing && !g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
+          console.info('[F3Decision] Optimized pacing enabled, triggering AI decision immediately');
+          setTimeout(() => {
+            if (!g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
+              global.finalizeFinal3Decision?.();
+            }
+          }, F3_UI_TIMING.aiDecisionDelayMs);
+        }
       }
     }
     panel.appendChild(box);
