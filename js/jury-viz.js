@@ -783,7 +783,7 @@
   function el(tag, className, html){
     const n = document.createElement(tag);
     if (className) n.className = className;
-    if (html !== null && html !== undefined) n.innerHTML = html;
+    if (html != null) n.innerHTML = html;
     return n;
   }
   function pickAvatar(obj){
