@@ -130,14 +130,14 @@
       position: relative;
       width: 100%;
       max-width: 600px;
-      height: 400px;
+      height: 320px;
       background: linear-gradient(to bottom, 
         rgba(60, 80, 100, 0.9) 0%,
         rgba(40, 50, 70, 0.9) 50%,
         rgba(20, 30, 50, 0.9) 100%);
       border: 3px solid #6b7a99;
       border-radius: 16px;
-      margin: 24px auto;
+      margin: 12px auto;
       overflow: hidden;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     `;
@@ -256,11 +256,11 @@
     triviaBoard.style.cssText = `
       width: 100%;
       max-width: 700px;
-      margin: 24px auto;
+      margin: 12px auto;
       background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
       border: 3px solid #6b7a99;
       border-radius: 16px;
-      padding: 24px;
+      padding: 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     `;
 
@@ -414,14 +414,14 @@
     raceTrack.style.cssText = `
       width: 100%;
       max-width: 700px;
-      margin: 24px auto;
+      margin: 12px auto;
       background: linear-gradient(90deg, 
         rgba(40,40,80,0.95) 0%,
         rgba(50,50,90,0.95) 50%,
         rgba(40,40,80,0.95) 100%);
       border: 3px solid #6b7a99;
       border-radius: 16px;
-      padding: 32px 24px;
+      padding: 24px 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       position: relative;
       overflow: hidden;
@@ -581,7 +581,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
       animation: fadeIn 0.4s ease;
       overflow-y: auto;
     `;
@@ -601,7 +601,7 @@
       font-size: 1.6rem;
       font-weight: 700;
       color: #ffdc8b;
-      margin: 0 0 12px 0;
+      margin: 0 0 8px 0;
       text-shadow: 0 2px 12px rgba(255, 220, 139, 0.5);
       animation: pulse 2s ease infinite;
     `;
@@ -613,7 +613,7 @@
     subtitleEl.style.cssText = `
       font-size: 1rem;
       color: #8a9ab8;
-      margin-bottom: 24px;
+      margin-bottom: 12px;
       font-style: italic;
     `;
     contentWrapper.appendChild(subtitleEl);
@@ -622,8 +622,8 @@
     const updatesBox = document.createElement('div');
     updatesBox.className = 'spectator-updates';
     updatesBox.style.cssText = `
-      min-height: 60px;
-      margin: 32px 0 24px 0;
+      min-height: 50px;
+      margin: 16px 0 12px 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -650,10 +650,10 @@
     skipBtn.className = 'btn primary spectator-skip-btn';
     skipBtn.textContent = 'Skip to Results ⏭️';
     skipBtn.style.cssText = `
-      padding: 16px 32px;
+      padding: 14px 28px;
       font-size: 1.1rem;
       font-weight: 700;
-      margin-top: 12px;
+      margin-top: 8px;
       box-shadow: 0 4px 16px rgba(131,191,255,0.4);
       cursor: pointer;
     `;
@@ -663,9 +663,9 @@
     // Info text
     const infoText = document.createElement('div');
     infoText.style.cssText = `
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #8a9ab8;
-      margin-top: 20px;
+      margin-top: 8px;
     `;
     infoText.textContent = 'Press Space or Enter to skip';
     contentWrapper.appendChild(infoText);
