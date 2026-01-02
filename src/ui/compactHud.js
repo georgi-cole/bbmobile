@@ -51,6 +51,8 @@
   let playersChip = null; // Now references the inline chip in header
   let drButton = null;
   let drButtonHandler = null;
+  let saveQuitButton = null;
+  let saveQuitButtonHandler = null;
   let settingsButton = null;
   let settingsButtonHandler = null;
   let soundButton = null;
@@ -81,6 +83,7 @@
         <span class="compact-hud-chip-icon">🚪</span>
         <span class="compact-hud-chip-label">DR</span>
       </button>
+      <button class="compact-hud-chip icon-button save-quit-button" id="btnSaveQuitHud" aria-label="Save and quit" title="Save & Quit">💾</button>
       <button class="compact-hud-chip icon-button settings-button" id="btnSettingsHud" aria-label="Settings" title="Settings">⚙️</button>
       <button class="compact-hud-chip icon-button sound-button" id="btnSoundHud" aria-label="Toggle sound" aria-pressed="false" title="Toggle sound">🔊</button>
       <button class="compact-hud-chip icon-button action-menu-button" id="actionMenuBtn" aria-label="Actions menu" aria-haspopup="true" aria-expanded="false" title="Actions">⋮</button>
@@ -100,6 +103,7 @@
     }
     
     drButton = hudContainer.querySelector('.compact-hud-chip.dr-button');
+    saveQuitButton = hudContainer.querySelector('.compact-hud-chip.save-quit-button');
     settingsButton = hudContainer.querySelector('.compact-hud-chip.settings-button');
     soundButton = hudContainer.querySelector('.compact-hud-chip.sound-button');
 
@@ -114,6 +118,61 @@
         }
       };
       drButton.addEventListener('click', drButtonHandler);
+    }
+
+    // Setup Save & Quit button click handler
+    if (saveQuitButton) {
+      saveQuitButtonHandler = async () => {
+        // Check if guest mode
+        const isGuest = typeof global.ProfileService !== 'undefined' && global.ProfileService.isGuestMode();
+        
+        if (isGuest) {
+          // Guest mode: show confirmation dialog
+          if (typeof global.showConfirm === 'function') {
+            const confirmed = await global.showConfirm(
+              'Progress in Guest mode is not saved.',
+              {
+                title: 'Want to exit?',
+                confirmText: 'YES',
+                cancelText: 'NO',
+                tone: 'warn'
+              }
+            );
+            
+            if (confirmed) {
+              // Redirect to intro/hub
+              window.location.href = window.location.pathname;
+            }
+          } else {
+            console.warn('[CompactHud] showConfirm not available');
+          }
+        } else {
+          // Logged-in profile: save and quit
+          if (typeof global.saveGame === 'function') {
+            const success = global.saveGame();
+            
+            if (success) {
+              // Show success message
+              if (typeof global.addLog === 'function') {
+                global.addLog('💾 Game saved successfully! Your progress will be restored next time.', 'game');
+              }
+              
+              // Wait briefly then redirect
+              setTimeout(() => {
+                window.location.href = window.location.pathname;
+              }, 1500);
+            } else {
+              // Show error message
+              if (typeof global.addLog === 'function') {
+                global.addLog('❌ Failed to save game. Please try again.', 'game');
+              }
+            }
+          } else {
+            console.warn('[CompactHud] saveGame function not available');
+          }
+        }
+      };
+      saveQuitButton.addEventListener('click', saveQuitButtonHandler);
     }
 
     // Setup Settings button click handler
@@ -413,6 +472,12 @@
       drButtonHandler = null;
     }
 
+    // Remove Save & Quit button event listener
+    if (saveQuitButton && saveQuitButtonHandler) {
+      saveQuitButton.removeEventListener('click', saveQuitButtonHandler);
+      saveQuitButtonHandler = null;
+    }
+
     // Remove Settings button event listener
     if (settingsButton && settingsButtonHandler) {
       settingsButton.removeEventListener('click', settingsButtonHandler);
@@ -433,6 +498,7 @@
     seasonWeekChip = null;
     playersChip = null;
     drButton = null;
+    saveQuitButton = null;
     settingsButton = null;
     soundButton = null;
     hudContainer = null;

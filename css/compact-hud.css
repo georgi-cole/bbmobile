@@ -194,6 +194,40 @@
   opacity: 0.6;
 }
 
+/* Save & Quit button - emoji-only, no backdrop */
+.compact-hud-chip.save-quit-button {
+  /* Remove all pill/chip styling */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  min-width: unset;
+  border-radius: 4px;
+  /* Keep emoji size consistent */
+  font-size: 1.25rem;
+  line-height: 1;
+  /* Remove transform effects */
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.compact-hud-chip.save-quit-button:hover {
+  opacity: 0.8;
+  transform: none;
+  box-shadow: none;
+}
+
+.compact-hud-chip.save-quit-button:active {
+  transform: scale(0.95);
+  opacity: 0.7;
+}
+
+.compact-hud-chip.save-quit-button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* Action menu button (three dots) - emoji-only, no backdrop */
 .compact-hud-chip.action-menu-button {
   /* Remove all pill/chip styling */
@@ -279,7 +313,8 @@
   
   /* Adjust emoji-only button size on mobile */
   .compact-hud-chip.icon-button,
-  .compact-hud-chip.action-menu-button {
+  .compact-hud-chip.action-menu-button,
+  .compact-hud-chip.save-quit-button {
     font-size: 1.15rem;
     padding: 5px 6px;
   }
