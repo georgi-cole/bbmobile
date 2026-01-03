@@ -433,6 +433,12 @@
     const g=global.game;
     if(g.__human_vote!=null) return;
     g.__human_vote=targetId;
+    
+    // Play vote cast SFX
+    if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+      global.SoundMap.playSfx('voting', 'cast', 0.7);
+    }
+    
     const idx=(g.eviction.planned||[]).findIndex(p=>p.voter===g.humanId);
     if(idx>=0) g.eviction.planned[idx].evict=targetId;
     global.addLog?.(`You voted to evict ${global.safeName(targetId)}.`,'ok');
@@ -1057,6 +1063,11 @@
 
       const evName=global.safeName(evId);
       
+      // Play result drum roll SFX before reveal
+      if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+        global.SoundMap.playSfx('voting', 'result_drum', 0.7);
+      }
+      
       // Store vote summary for use in handleEvictionLegacy
       const tally = new Map([[a, finalA], [b, finalB]]);
       g.eviction.voteSummary = buildVoteSummary(noms, tally);
@@ -1073,9 +1084,20 @@
             tone: 'evict',
             duration: 3800
           });
+          
+          // Play evicted gong SFX after announcement
+          if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+            global.SoundMap.playSfx('voting', 'evicted_gong', 0.7);
+          }
         } else {
           // Fallback to old card system if modal not loaded
           global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+          
+          // Play evicted gong SFX after announcement
+          if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+            global.SoundMap.playSfx('voting', 'evicted_gong', 0.7);
+          }
+          
           try{ await global.cardQueueWaitIdle?.(); }catch{}
         }
       } else {

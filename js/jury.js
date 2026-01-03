@@ -930,6 +930,11 @@
     
     console.info('[publicFav] start candidates=[' + selectedCandidates.map(c => c.player.id).join(',') + ']');
     
+    // Play fan favorite voting SFX
+    if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+      global.SoundMap.playSfx('fan_favorite', 'voting', 0.6);
+    }
+    
     // Card 1: Show celebratory event modal instead of regular card
     try{
       if(typeof g.showEventModal === 'function'){
@@ -1517,6 +1522,11 @@
       // Display this batch of votes (stacked cards)
       const votesDisplayTime = finale.fastForwardActive ? 1500 : 4500;
       
+      // Play jury vote reveal SFX for each vote in batch
+      if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+        global.SoundMap.playSfx('jury', 'vote_reveal', 0.6);
+      }
+      
       if (typeof g.FinalFaceoff?.showBatchedVotes === 'function') {
         await g.FinalFaceoff.showBatchedVotes(batchVotes, votesDisplayTime);
       } else {
@@ -1745,6 +1755,16 @@ await g.showEventModal({
     if(typeof g.FinalFaceoff?.showWinnerCelebration === 'function'){
       g.FinalFaceoff.showWinnerCelebration(winnerPlayer, runnerUpPlayer, finalVotes);
       console.info('[jury] Winner celebration displayed');
+      
+      // Play winner fanfare and confetti burst SFX
+      if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+        global.SoundMap.playSfx('finale', 'winner_fanfare', 0.8);
+        setTimeout(() => {
+          if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+            global.SoundMap.playSfx('finale', 'confetti_burst', 0.7);
+          }
+        }, 500);
+      }
     }
     
     try{ g.setMusic?.('victory', true); }catch(e){ /* ignore */ }
