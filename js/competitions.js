@@ -44,7 +44,7 @@
    */
   const F3_UI_TIMING = {
     shortInstructionMs: 1400,        // Short instruction display duration (1.4s)
-    revealCardMs: 4500,              // Winner reveal card duration (4.5s, cinematic)
+    revealCardMs: 5000,              // Winner reveal card duration (5s, auto-advance with tap-to-skip)
     revealCardShortMs: 2000,         // Quick reveal for skip mode (2s)
     resultModalAutoadvance: true,    // Auto-advance from results to reveal
     idleGapMs: 0,                    // No idle gap between results and reveal
@@ -2129,29 +2129,42 @@
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
     if (useOptimizedPacing) {
-      // Show results modal with full scoreboard (3 entries)
+      // Get all scores for fullscreen modal (winner + 2nd + 3rd)
       const scoreboard = buildScoreboardArray(g.lastCompScores, ids);
-      
-      await new Promise(resolve => {
-        showF3ResultsModal('Final 3 Results', scoreboard, resolve);
-      });
-      
-      // Auto-advance to reveal card (no idle wait)
       const skipRequested = g.__skipRequested;
       const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
       
-      // Show winner reveal card
-      if (global.FinaleCinematics?.showPart1WinnerCinematic) {
+      // Prepare scores for cinematic display
+      const scoresForDisplay = [];
+      if (scoreboard[0]) {
+        scoresForDisplay.push({
+          name: scoreboard[0].name,
+          score: (g.lastCompScores?.get(scoreboard[0].id) || 0).toFixed(1),
+          medal: '🏆'
+        });
+      }
+      if (scoreboard[1]) {
+        scoresForDisplay.push({
+          name: scoreboard[1].name,
+          score: (g.lastCompScores?.get(scoreboard[1].id) || 0).toFixed(1),
+          medal: '🥈'
+        });
+      }
+      if (scoreboard[2]) {
+        scoresForDisplay.push({
+          name: scoreboard[2].name,
+          score: (g.lastCompScores?.get(scoreboard[2].id) || 0).toFixed(1),
+          medal: '🥉'
+        });
+      }
+      
+      // Show fullscreen results modal with all scores
+      if (global.FinaleCinematics?.showPart1ResultsWithScores) {
         try {
-          await global.FinaleCinematics.showPart1WinnerCinematic(winner);
+          await global.FinaleCinematics.showPart1ResultsWithScores(winner, scoresForDisplay);
         } catch (e) {
           console.warn('[F3P1] Cinematic error:', e);
-          safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', revealDuration, true);
-          await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
         }
-      } else {
-        safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', revealDuration, true);
-        await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
       }
       
       // Auto-advance to Part 2 (no idle wait)
@@ -2368,28 +2381,34 @@
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
     if (useOptimizedPacing) {
-      // Show results modal with full scoreboard (2 entries)
+      // Get both scores for fullscreen modal (winner + 2nd)
       const scoreboard = buildScoreboardArray(g.lastCompScores, duo);
-      
-      await new Promise(resolve => {
-        showF3ResultsModal('Final 3 Results', scoreboard, resolve);
-      });
-      
-      // Auto-advance to reveal card (no idle wait)
       const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
       
-      // Show winner reveal card
-      if (global.FinaleCinematics?.showPart2WinnerCinematic) {
+      // Prepare scores for cinematic display
+      const scoresForDisplay = [];
+      if (scoreboard[0]) {
+        scoresForDisplay.push({
+          name: scoreboard[0].name,
+          score: (g.lastCompScores?.get(scoreboard[0].id) || 0).toFixed(1),
+          medal: '🏆'
+        });
+      }
+      if (scoreboard[1]) {
+        scoresForDisplay.push({
+          name: scoreboard[1].name,
+          score: (g.lastCompScores?.get(scoreboard[1].id) || 0).toFixed(1),
+          medal: '🥈'
+        });
+      }
+      
+      // Show fullscreen results modal with both scores
+      if (global.FinaleCinematics?.showPart2ResultsWithScores) {
         try {
-          await global.FinaleCinematics.showPart2WinnerCinematic(winner);
+          await global.FinaleCinematics.showPart2ResultsWithScores(winner, scoresForDisplay);
         } catch (e) {
           console.warn('[F3P2] Cinematic error:', e);
-          safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', revealDuration);
-          await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
         }
-      } else {
-        safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', revealDuration);
-        await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
       }
       
       // Auto-advance to Part 3 (no idle wait)
@@ -2688,28 +2707,34 @@
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
     if (useOptimizedPacing) {
-      // Show results modal with full scoreboard (2 entries - finalists)
+      // Get both finalist scores for fullscreen modal
       const scoreboard = buildScoreboardArray(g.lastCompScores, finalists);
-      
-      await new Promise(resolve => {
-        showF3ResultsModal('Final 3 Results', scoreboard, resolve);
-      });
-      
-      // Auto-advance to Final HOH reveal card (no idle wait)
       const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
       
-      // Show Final HOH reveal
-      if (global.FinaleCinematics?.showFinalHOHCinematic) {
+      // Prepare scores for cinematic display
+      const scoresForDisplay = [];
+      if (scoreboard[0]) {
+        scoresForDisplay.push({
+          name: scoreboard[0].name,
+          score: (g.lastCompScores?.get(scoreboard[0].id) || 0).toFixed(1),
+          medal: '🏆'
+        });
+      }
+      if (scoreboard[1]) {
+        scoresForDisplay.push({
+          name: scoreboard[1].name,
+          score: (g.lastCompScores?.get(scoreboard[1].id) || 0).toFixed(1),
+          medal: '🥈'
+        });
+      }
+      
+      // Show fullscreen Final HOH results modal with both scores
+      if (global.FinaleCinematics?.showPart3ResultsWithScores) {
         try {
-          await global.FinaleCinematics.showFinalHOHCinematic(winner);
+          await global.FinaleCinematics.showPart3ResultsWithScores(winner, scoresForDisplay);
         } catch (e) {
           console.warn('[F3P3] Cinematic error:', e);
-          safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', revealDuration);
-          await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
         }
-      } else {
-        safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', revealDuration);
-        await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
       }
       
       // Transition to plea phase (no idle wait)

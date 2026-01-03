@@ -1717,6 +1717,12 @@
       }
       // Note: Veto competitions currently advance via defaultAdvance/nextPhase (no dedicated finish function)
       // The phase-specific check is kept for future implementation of finishVetoCompetition if needed
+      if(phase === 'final3_comp1' && typeof global.finishF3P1 === 'function' && !g.__f3p1Resolved){
+        console.info('[ImmediateResults] Calling finishF3P1()');
+        global.finishF3P1();
+        resetFlag();
+        return;
+      }
       if(phase === 'final3_comp2' && typeof global.finishF3P2 === 'function' && !g.__f3p2Resolved){
         console.info('[ImmediateResults] Calling finishF3P2()');
         global.finishF3P2();
@@ -1754,10 +1760,16 @@
     }
     const phase = g.phase;
     
-    // Final Week: NEVER show the inline results popup for any Final 3 phase
-    // Results are handled by the dedicated Final 3 modals/cards instead.
+    // Final Week: skip inline popup but still fast-resolve the phase
+    // This allows the finish functions (finishF3P1/P2/P3) to run and show fullscreen results
     if (typeof phase === 'string' && phase.startsWith('final3')) {
-      console.info('[ImmediateResults] Skipping inline results popup for Final 3 phase:', phase);
+      console.info('[ImmediateResults] Fast-resolving Final 3 phase without inline popup:', phase);
+      try {
+        shortenPhaseToOneSecond();
+        resolveCompetitionPhaseIfNeeded();
+      } catch(e) {
+        console.warn('[ImmediateResults] Final 3 fast-resolve error:', e);
+      }
       return;
     }
     
