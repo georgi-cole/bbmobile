@@ -2154,7 +2154,7 @@
             winnerName,
             `${winnerScore.toFixed(1)} pts`,
             'Advances directly to Part 3!'
-          ], 'ok', revealDuration, true);
+          ], 'hoh', revealDuration, true);
           await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
         }
       } else {
@@ -2162,7 +2162,7 @@
           winnerName,
           `${winnerScore.toFixed(1)} pts`,
           'Advances directly to Part 3!'
-        ], 'ok', revealDuration, true);
+        ], 'hoh', revealDuration, true);
         await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
       }
       
@@ -2404,7 +2404,7 @@
             winnerName,
             `${winnerScore.toFixed(1)} pts`,
             'Advances to Part 3!'
-          ], 'ok', revealDuration);
+          ], 'hoh', revealDuration);
           await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
         }
       } else {
@@ -2412,7 +2412,7 @@
           winnerName,
           `${winnerScore.toFixed(1)} pts`,
           'Advances to Part 3!'
-        ], 'ok', revealDuration);
+        ], 'hoh', revealDuration);
         await new Promise(resolve => setTimeout(resolve, revealDuration + F3_UI_TIMING.postRevealGapMs));
       }
       
