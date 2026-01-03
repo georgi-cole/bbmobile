@@ -1754,10 +1754,10 @@
     }
     const phase = g.phase;
     
-    // Skip showing redundant results popup for Final 3 Parts 1 & 2
-    // These phases already show results via showF3ResultsModal in finishF3P1/finishF3P2
-    if (phase === 'final3_comp1' || phase === 'final3_comp2') {
-      console.info('[ImmediateResults] Skipping redundant results popup for', phase, '– results already shown via F3 modal');
+    // Final Week: NEVER show the inline results popup for any Final 3 phase
+    // Results are handled by the dedicated Final 3 modals/cards instead.
+    if (typeof phase === 'string' && phase.startsWith('final3')) {
+      console.info('[ImmediateResults] Skipping inline results popup for Final 3 phase:', phase);
       return;
     }
     
