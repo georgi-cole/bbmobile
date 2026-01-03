@@ -924,6 +924,37 @@
     // Check if player has depleted all energy and schedule fast-advance if needed
     checkEnergyDepletionAndAdvance(actorId);
     
+    // Play social action SFX
+    if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+      global.SoundMap.playSfx('social', 'action', 0.6);
+      
+      // Play additional SFX based on relationship change
+      if (affinityDelta > 0.05) {
+        // Significant positive change
+        setTimeout(function() {
+          if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+            global.SoundMap.playSfx('social', 'bond_increase', 0.5);
+          }
+        }, 300);
+      } else if (affinityDelta < -0.05) {
+        // Significant negative change
+        setTimeout(function() {
+          if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+            global.SoundMap.playSfx('social', 'bond_decrease', 0.5);
+          }
+        }, 300);
+      }
+      
+      // Play alliance SFX for alliance formation
+      if (action.id === 'form_alliance' && succeeded) {
+        setTimeout(function() {
+          if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+            global.SoundMap.playSfx('social', 'alliance_form', 0.6);
+          }
+        }, 400);
+      }
+    }
+    
     // Record human action for highlights (if actor is human player)
     // Use existing 'g' variable from above
     if(actorId === g?.humanId && typeof global.SocialHighlights?.recordHumanAction === 'function'){
