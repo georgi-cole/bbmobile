@@ -228,7 +228,7 @@
   }
 
   // Export to global namespace
-  const SoundMap = global.SoundMap = {
+  global.SoundMap = {
     MUSIC_MAP,
     SFX_MAP,
     AUDIO_BASE,

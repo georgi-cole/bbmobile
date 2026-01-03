@@ -183,7 +183,7 @@
   function setDefaultVolume(volume) {
     try {
       const vol = Math.max(0, Math.min(1, Number(volume) || DEFAULT_VOLUME));
-      SfxPlayer.DEFAULT_VOLUME = vol;
+      global.SfxPlayer.DEFAULT_VOLUME = vol;
       console.info('[sfx-player] Default volume set to', vol);
     } catch (e) {
       console.warn('[sfx-player] setDefaultVolume error:', e);
