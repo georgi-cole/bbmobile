@@ -149,6 +149,70 @@
         line-height: 1.5;
       }
 
+      .finale-cinematic-scores {
+        margin: 20px auto;
+        max-width: 400px;
+        text-align: left;
+      }
+
+      .finale-cinematic-score-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        margin: 8px 0;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        border-left: 4px solid;
+        animation: scoreRowSlide 0.4s ease-out forwards;
+        opacity: 0;
+      }
+
+      .finale-cinematic-score-row:nth-child(1) {
+        border-left-color: #ffd36b;
+        animation-delay: 0.2s;
+      }
+
+      .finale-cinematic-score-row:nth-child(2) {
+        border-left-color: #c0c0c0;
+        animation-delay: 0.35s;
+      }
+
+      .finale-cinematic-score-row:nth-child(3) {
+        border-left-color: #cd7f32;
+        animation-delay: 0.5s;
+      }
+
+      @keyframes scoreRowSlide {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .finale-cinematic-score-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .finale-cinematic-score-medal {
+        font-size: 1.3rem;
+      }
+
+      .finale-cinematic-score-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ffd36b;
+      }
+
       .finale-cinematic-vs-container {
         display: flex;
         align-items: center;
@@ -249,7 +313,8 @@
       avatarIds = null,
       showCrown = false,
       duration = 5000,
-      music = null
+      music = null,
+      scores = null  // NEW: Array of {name, score, medal} objects
     } = options;
 
     return new Promise((resolve) => {
@@ -370,6 +435,41 @@
         content.appendChild(textEl);
       }
 
+      // Scores display
+      if (scores && scores.length > 0) {
+        const scoresContainer = document.createElement('div');
+        scoresContainer.className = 'finale-cinematic-scores';
+        
+        scores.forEach((scoreEntry) => {
+          const scoreRow = document.createElement('div');
+          scoreRow.className = 'finale-cinematic-score-row';
+          
+          const nameDiv = document.createElement('div');
+          nameDiv.className = 'finale-cinematic-score-name';
+          
+          if (scoreEntry.medal) {
+            const medalSpan = document.createElement('span');
+            medalSpan.className = 'finale-cinematic-score-medal';
+            medalSpan.textContent = scoreEntry.medal;
+            nameDiv.appendChild(medalSpan);
+          }
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = scoreEntry.name;
+          nameDiv.appendChild(nameSpan);
+          
+          const valueDiv = document.createElement('div');
+          valueDiv.className = 'finale-cinematic-score-value';
+          valueDiv.textContent = scoreEntry.score + ' pts';
+          
+          scoreRow.appendChild(nameDiv);
+          scoreRow.appendChild(valueDiv);
+          scoresContainer.appendChild(scoreRow);
+        });
+        
+        content.appendChild(scoresContainer);
+      }
+
       // Skip hint
       const skipHint = document.createElement('div');
       skipHint.className = 'finale-cinematic-skip-hint';
@@ -477,13 +577,80 @@
     });
   }
 
+  /**
+   * Show Part 1 results with all scores
+   * @param {string} winnerId - Winner player ID
+   * @param {Array} scoreboard - Array of {name, score, medal} objects
+   */
+  async function showPart1ResultsWithScores(winnerId, scoreboard) {
+    const player = global.getP?.(winnerId);
+    if (!player) return;
+
+    await showCinematic({
+      emoji: '🏆',
+      title: 'Final 3 Part 1 Results',
+      subtitle: player.name.toUpperCase() + ' ADVANCES DIRECTLY TO PART 3!',
+      text: 'The two remaining houseguests will face off in Part 2...',
+      avatarId: winnerId,
+      scores: scoreboard,
+      duration: 5000,
+      music: 'hoh'
+    });
+  }
+
+  /**
+   * Show Part 2 results with all scores
+   * @param {string} winnerId - Winner player ID
+   * @param {Array} scoreboard - Array of {name, score, medal} objects
+   */
+  async function showPart2ResultsWithScores(winnerId, scoreboard) {
+    const player = global.getP?.(winnerId);
+    if (!player) return;
+
+    await showCinematic({
+      emoji: '🏆',
+      title: 'Final 3 Part 2 Results',
+      subtitle: player.name.toUpperCase() + ' EARNS THEIR SPOT IN THE FINAL SHOWDOWN!',
+      text: 'Part 3 will determine the Final Head of Household...',
+      avatarId: winnerId,
+      scores: scoreboard,
+      duration: 5000,
+      music: 'hoh'
+    });
+  }
+
+  /**
+   * Show Part 3 results with all scores
+   * @param {string} winnerId - Final HOH player ID
+   * @param {Array} scoreboard - Array of {name, score, medal} objects
+   */
+  async function showPart3ResultsWithScores(winnerId, scoreboard) {
+    const player = global.getP?.(winnerId);
+    if (!player) return;
+
+    await showCinematic({
+      emoji: '👑',
+      title: 'Final 3 Part 3 Results',
+      subtitle: player.name.toUpperCase() + ' IS THE FINAL HEAD OF HOUSEHOLD!',
+      text: 'They alone will decide who sits in the Final 2',
+      avatarId: winnerId,
+      showCrown: true,
+      scores: scoreboard,
+      duration: 5000,
+      music: 'hoh'
+    });
+  }
+
   // Export to global
   global.FinaleCinematics = {
     showCinematic,
     showPart1WinnerCinematic,
     showPart2WinnerCinematic,
     showFinalShowdownIntroCinematic,
-    showFinalHOHCinematic
+    showFinalHOHCinematic,
+    showPart1ResultsWithScores,
+    showPart2ResultsWithScores,
+    showPart3ResultsWithScores
   };
 
 })(window);
