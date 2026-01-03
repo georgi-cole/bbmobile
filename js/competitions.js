@@ -2141,7 +2141,7 @@
       const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
       
       // Get winner score for reveal card
-      const winnerScore = g.lastCompScores.get(winner) || 0;
+      const winnerScore = g.lastCompScores?.get(winner) || 0;
       const winnerName = global.safeName(winner);
       
       // Show winner reveal card with score
@@ -2391,7 +2391,7 @@
       const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
       
       // Get winner score for reveal card
-      const winnerScore = g.lastCompScores.get(winner) || 0;
+      const winnerScore = g.lastCompScores?.get(winner) || 0;
       const winnerName = global.safeName(winner);
       
       // Show winner reveal card with score
@@ -2723,7 +2723,7 @@
       const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
       
       // Get winner score for reveal card
-      const winnerScore = g.lastCompScores.get(winner) || 0;
+      const winnerScore = g.lastCompScores?.get(winner) || 0;
       const winnerName = global.safeName(winner);
       
       // Show Final HOH reveal with score

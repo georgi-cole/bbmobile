@@ -1717,6 +1717,12 @@
       }
       // Note: Veto competitions currently advance via defaultAdvance/nextPhase (no dedicated finish function)
       // The phase-specific check is kept for future implementation of finishVetoCompetition if needed
+      if(phase === 'final3_comp1' && typeof global.finishF3P1 === 'function' && !g.__f3p1Resolved){
+        console.info('[ImmediateResults] Calling finishF3P1()');
+        global.finishF3P1();
+        resetFlag();
+        return;
+      }
       if(phase === 'final3_comp2' && typeof global.finishF3P2 === 'function' && !g.__f3p2Resolved){
         console.info('[ImmediateResults] Calling finishF3P2()');
         global.finishF3P2();
