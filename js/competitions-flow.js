@@ -1754,10 +1754,16 @@
     }
     const phase = g.phase;
     
-    // Final Week: NEVER show the inline results popup for any Final 3 phase
-    // Results are handled by the dedicated Final 3 modals/cards instead.
+    // Final Week: skip inline popup but still fast-resolve the phase
+    // This allows the finish functions (finishF3P1/P2/P3) to run and show fullscreen results
     if (typeof phase === 'string' && phase.startsWith('final3')) {
-      console.info('[ImmediateResults] Skipping inline results popup for Final 3 phase:', phase);
+      console.info('[ImmediateResults] Fast-resolving Final 3 phase without inline popup:', phase);
+      try {
+        shortenPhaseToOneSecond();
+        resolveCompetitionPhaseIfNeeded();
+      } catch(e) {
+        console.warn('[ImmediateResults] Final 3 fast-resolve error:', e);
+      }
       return;
     }
     
