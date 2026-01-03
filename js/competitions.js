@@ -2012,21 +2012,13 @@
       return;
     }
     
-    // Fallback: simple alert + card
-    const lines = scoreboard.map((entry, idx) => {
-      const rank = idx + 1;
-      const emoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
-      return `${emoji} ${entry.name}: ${entry.score.toFixed(1)}`;
-    });
-    
-    if (typeof global.showCard === 'function') {
-      global.showCard(title, lines, 'neutral', 3000);
+    // Fallback removal: do NOT show any inline card for Final 3.
+    // Keep flow moving by calling onDismiss immediately.
+    try {
+      if (typeof onDismiss === 'function') onDismiss();
+    } catch (e) {
+      console.warn('[F3Modal] onDismiss error:', e);
     }
-    
-    // Auto-dismiss after short delay
-    setTimeout(() => {
-      if (onDismiss) onDismiss();
-    }, 3500);
   }
 
   function startF3P1() {
