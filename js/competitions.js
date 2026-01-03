@@ -51,6 +51,7 @@
     postRevealGapMs: 100,            // Minimal buffer after reveal (0.1s)
     postHOHIdleMs: 0,                // No idle after Final HOH reveal (proceed to plea)
     aiDecisionDelayMs: 2000,         // Delay before AI executes eviction decision (2s)
+    aiDecisionImmediateMs: 1500,     // Shorter delay for immediate AI decision trigger (1.5s)
     enableOptimizedPacing: true      // Master toggle (can be overridden by settings)
   };
 
@@ -2066,6 +2067,7 @@
     g.lastCompScores = new Map();
     g.lastCompScoresMeta = new Map();
     g.__f3p1GameKey = null; // Track game key
+    g.__f3p1Resolved = false; // Reset guard flag
     global.tv.say('Final 3 — Part 1');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P1);
@@ -2087,7 +2089,15 @@
   }
 
   async function finishF3P1() {
-    const g = global.game; if (g.phase !== 'final3_comp1') return;
+    const g = global.game; 
+    if (g.phase !== 'final3_comp1') return;
+    
+    // Guard against duplicate execution
+    if (g.__f3p1Resolved) {
+      console.info('[F3P1] Already resolved, skipping duplicate execution');
+      return;
+    }
+    g.__f3p1Resolved = true;
     
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
@@ -2275,6 +2285,7 @@
     g.lastCompScores = new Map();
     g.lastCompScoresMeta = new Map();
     g.__f3p2GameKey = null; // Track game key
+    g.__f3p2Resolved = false; // Reset guard flag
     global.tv.say('Final 3 — Part 2');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P2);
@@ -2343,7 +2354,15 @@
   }
 
   async function finishF3P2() {
-    const g = global.game; if (g.phase !== 'final3_comp2') return;
+    const g = global.game; 
+    if (g.phase !== 'final3_comp2') return;
+    
+    // Guard against duplicate execution
+    if (g.__f3p2Resolved) {
+      console.info('[F3P2] Already resolved, skipping duplicate execution');
+      return;
+    }
+    g.__f3p2Resolved = true;
     
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
@@ -3123,6 +3142,16 @@
             }
           }, F3_UI_TIMING.aiDecisionDelayMs);
         }
+      }
+      
+      // Trigger AI decision immediately (don't wait for timer)
+      // This ensures AI makes decision proactively rather than waiting for phase timer
+      if (!g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
+        setTimeout(() => {
+          if (!g.__f3EvictionInProgress && !g.__f3EvictionResolved) {
+            global.finalizeFinal3Decision?.();
+          }
+        }, F3_UI_TIMING.aiDecisionImmediateMs); // Brief delay for UI to render
       }
     }
     panel.appendChild(box);
