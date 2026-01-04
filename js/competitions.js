@@ -2031,17 +2031,8 @@
       // Short instruction: "Get ready for Part 1"
       safeShowCard('🏆 Part 1', ['Get ready for Part 1'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
       
-      // Wait for card to finish before starting competition
-      (function waitCards() {
-        if (typeof global.cardQueueWaitIdle === 'function') {
-          try {
-            global.cardQueueWaitIdle().then(function () { beginF3P1Competition(); });
-            return;
-          } catch (e) { /* Non-fatal error, continue */ }
-        }
-        // Fallback: wait for card duration + small buffer
-        setTimeout(function () { beginF3P1Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
-      })();
+      // Auto-start after short instruction
+      setTimeout(function () { beginF3P1Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
     } else {
       // Legacy verbose instruction
       safeShowCard('🏆 Part 1', [
@@ -2261,17 +2252,8 @@
       // Short instruction: "Get ready for Part 2"
       safeShowCard('🏆 Part 2', ['Get ready for Part 2'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
       
-      // Wait for card to finish before starting competition
-      (function waitCards() {
-        if (typeof global.cardQueueWaitIdle === 'function') {
-          try {
-            global.cardQueueWaitIdle().then(function () { beginF3P2Competition(duo); });
-            return;
-          } catch (e) { /* Non-fatal error, continue */ }
-        }
-        // Fallback: wait for card duration + small buffer
-        setTimeout(function () { beginF3P2Competition(duo); }, F3_UI_TIMING.shortInstructionMs + 100);
-      })();
+      // Auto-start after short instruction
+      setTimeout(function () { beginF3P2Competition(duo); }, F3_UI_TIMING.shortInstructionMs + 100);
     } else {
       // Legacy verbose instruction
       safeShowCard('🏆 Part 2', [
@@ -2556,17 +2538,8 @@
       // Short instruction: "Get ready for Part 3"
       safeShowCard('🏆 Part 3', ['Get ready for Part 3'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
       
-      // Wait for card to finish before starting competition
-      (function waitCards() {
-        if (typeof global.cardQueueWaitIdle === 'function') {
-          try {
-            global.cardQueueWaitIdle().then(function () { beginF3P3Competition(); });
-            return;
-          } catch (e) { /* Non-fatal error, continue */ }
-        }
-        // Fallback: wait for card duration + small buffer
-        setTimeout(function () { beginF3P3Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
-      })();
+      // Auto-start after short instruction
+      setTimeout(function () { beginF3P3Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
     } else {
       // Legacy flow with cinematic or verbose instruction
       const finalists = [g.__f3p1Winner, g.__f3p2Winner].filter(Boolean);

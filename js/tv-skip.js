@@ -28,8 +28,6 @@
     'jury_return',
     'final3_comp1',
     'final3_comp2',
-    'final3_comp3',
-    'final3_plea',
     'final3_decision',
     'social',
     'social_intermission'
