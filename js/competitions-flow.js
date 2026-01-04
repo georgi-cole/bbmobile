@@ -1766,7 +1766,10 @@
     if (typeof phase === 'string' && phase.startsWith('final3')) {
       console.info('[ImmediateResults] Immediately resolving Final 3 phase without timer gap:', phase);
       try {
-        // Skip shortenPhaseToOneSecond() - it would shorten to 1s but user sees remaining phase time (~15s) first
+        // Skip shortenPhaseToOneSecond() - calling it would:
+        // 1. Shorten phase timer to 1 second
+        // 2. But user sees the original remaining phase time (~15s) counting down first
+        // 3. Only after countdown, finish functions would run and show modal
         // Instead, directly call resolveCompetitionPhaseIfNeeded() to trigger finish functions immediately
         resolveCompetitionPhaseIfNeeded();
       } catch(e) {
