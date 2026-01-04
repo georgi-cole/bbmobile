@@ -51,7 +51,10 @@
     postRevealGapMs: 100,            // Minimal buffer after reveal (0.1s)
     postHOHIdleMs: 0,                // No idle after Final HOH reveal (proceed to plea)
     aiDecisionDelayMs: 2000,         // Delay before AI executes eviction decision (2s)
-    enableOptimizedPacing: true      // Master toggle (can be overridden by settings)
+    enableOptimizedPacing: true,     // Master toggle (can be overridden by settings)
+    getReadyPopupMs: 3000,           // "Get ready" popup duration (3 seconds)
+    postPopupGapMs: 500,             // Gap after popup before competition card (0.5 seconds)
+    resultsModalMs: 5000             // Results modal duration (5 seconds)
   };
 
   /**
@@ -1798,13 +1801,23 @@
       document.head.appendChild(style);
     }
 
-    setTimeout(() => {
+    // Tap-to-dismiss functionality
+    let dismissTimer;
+    const dismissModal = () => {
+      if (dismissTimer) clearTimeout(dismissTimer);
       modal.style.animation = 'modalFadeOut 0.4s ease';
       setTimeout(() => {
         modal.remove();
         startF3P1();
       }, 400);
+    };
+
+    // Auto-dismiss after 5 seconds
+    dismissTimer = setTimeout(() => {
+      dismissModal();
     }, 5000);
+
+    modal.addEventListener('click', dismissModal);
   }
 
   /**
@@ -2021,18 +2034,24 @@
     }
   }
 
-  function startF3P1() {
+  async function startF3P1() {
     const g = global.game;
     
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
     if (useOptimizedPacing) {
-      // Short instruction: "Get ready for Part 1"
-      safeShowCard('🏆 Part 1', ['Get ready for Part 1'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
+      // Show "Get ready for Part 1 of the Final 3 competition" popup
+      safeShowCard('🏆 Part 1', ['Get ready for Part 1 of the Final 3 competition'], 'hoh', F3_UI_TIMING.getReadyPopupMs, true);
       
-      // Auto-start after short instruction
-      setTimeout(function () { beginF3P1Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
+      // Wait for popup to complete
+      await waitCardsIdle();
+      
+      // Add 500ms gap after popup before showing competition card
+      await new Promise(resolve => setTimeout(resolve, F3_UI_TIMING.postPopupGapMs));
+      
+      // Start competition (card stays until user interaction)
+      beginF3P1Competition();
     } else {
       // Legacy verbose instruction
       safeShowCard('🏆 Part 1', [
@@ -2060,7 +2079,12 @@
     g.__f3p1GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 1');
     global.phaseMusic?.('hoh');
-    global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P1);
+    
+    // Set phase duration: Use very long duration when optimized pacing is enabled to disable auto-advance
+    const useOptimizedPacing = isF3OptimizedPacingEnabled();
+    const phaseDuration = useOptimizedPacing ? 9999 : Math.max(18, Math.floor(g.cfg.tHOH * 0.7));
+    global.setPhase('final3_comp1', phaseDuration, finishF3P1);
+    
     const diffMult = getAIDifficultyMultiplier();
     
     // Legacy fallback: generate AI scores immediately if OpponentSynth not available
@@ -2242,18 +2266,24 @@
     }
   }
 
-  function startF3P2(duo) {
+  async function startF3P2(duo) {
     const g = global.game;
     
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
     if (useOptimizedPacing) {
-      // Short instruction: "Get ready for Part 2"
-      safeShowCard('🏆 Part 2', ['Get ready for Part 2'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
+      // Show "Get ready for Part 2 of the Final 3 competition" popup
+      safeShowCard('🏆 Part 2', ['Get ready for Part 2 of the Final 3 competition'], 'hoh', F3_UI_TIMING.getReadyPopupMs, true);
       
-      // Auto-start after short instruction
-      setTimeout(function () { beginF3P2Competition(duo); }, F3_UI_TIMING.shortInstructionMs + 100);
+      // Wait for popup to complete
+      await waitCardsIdle();
+      
+      // Add 500ms gap after popup before showing competition card
+      await new Promise(resolve => setTimeout(resolve, F3_UI_TIMING.postPopupGapMs));
+      
+      // Start competition (card stays until user interaction)
+      beginF3P2Competition(duo);
     } else {
       // Legacy verbose instruction
       safeShowCard('🏆 Part 2', [
@@ -2282,7 +2312,12 @@
     g.__f3p2GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 2');
     global.phaseMusic?.('hoh');
-    global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P2);
+    
+    // Set phase duration: Use very long duration when optimized pacing is enabled to disable auto-advance
+    const useOptimizedPacing = isF3OptimizedPacingEnabled();
+    const phaseDuration = useOptimizedPacing ? 9999 : Math.max(18, Math.floor(g.cfg.tHOH * 0.7));
+    global.setPhase('final3_comp2', phaseDuration, finishF3P2);
+    
     const diffMult = getAIDifficultyMultiplier();
 
     for (const id of duo) {
@@ -2535,11 +2570,17 @@
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
     if (useOptimizedPacing) {
-      // Short instruction: "Get ready for Part 3"
-      safeShowCard('🏆 Part 3', ['Get ready for Part 3'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
+      // Show "Get ready for the Final part of the competition where the final HOH will be crowned" popup
+      safeShowCard('🏆 Part 3', ['Get ready for the Final part of the competition where the final HOH will be crowned'], 'hoh', F3_UI_TIMING.getReadyPopupMs, true);
       
-      // Auto-start after short instruction
-      setTimeout(function () { beginF3P3Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
+      // Wait for popup to complete
+      await waitCardsIdle();
+      
+      // Add 500ms gap after popup before showing competition card
+      await new Promise(resolve => setTimeout(resolve, F3_UI_TIMING.postPopupGapMs));
+      
+      // Start competition (card stays until user interaction)
+      beginF3P3Competition();
     } else {
       // Legacy flow with cinematic or verbose instruction
       const finalists = [g.__f3p1Winner, g.__f3p2Winner].filter(Boolean);
@@ -2586,8 +2627,13 @@
     g.__f3p3GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 3');
     global.phaseMusic?.('hoh');
+    
+    // Set phase duration: Use very long duration when optimized pacing is enabled to disable auto-advance
+    const useOptimizedPacing = isF3OptimizedPacingEnabled();
+    const phaseDuration = useOptimizedPacing ? 9999 : Math.max(18, Math.floor(g.cfg.tHOH * 0.7));
     // setPhase() triggers renderPanel() -> renderF3P3(), which needs g.__f3_finalists
-    global.setPhase('final3_comp3', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P3);
+    global.setPhase('final3_comp3', phaseDuration, finishF3P3);
+    
     const diffMult = getAIDifficultyMultiplier();
     for (const id of finalists) {
       const p = global.getP(id);
