@@ -69,7 +69,22 @@
     document.body.appendChild(dim);
 
     // Wire buttons
-    panel.querySelector('#cinExit').onclick=()=>{ try{dim.remove();}catch{} };
+    panel.querySelector('#cinExit').onclick=()=>{ 
+      console.info('[finale] EXIT clicked, navigating to intro hub');
+      try{dim.remove();}catch{} 
+      
+      // Navigate back to intro hub
+      if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
+        console.info('[finale] Showing intro hub after exit');
+        g.IntroScreen.showWithPreload();
+      } else if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
+        console.info('[finale] Showing intro hub after exit (without preload)');
+        g.IntroScreen.show();
+      } else {
+        console.warn('[finale] IntroScreen not available, reloading page');
+        location.reload();
+      }
+    };
     panel.querySelector('#cinStatsBtn').onclick=()=>{
       const s=panel.querySelector('#cinStats'); s.style.display = (s.style.display==='none'||!s.style.display) ? 'block' : 'none';
     };
@@ -167,12 +182,12 @@
     // Try to use modern API for smooth restart
     const API = g.Game || g;
     
-    // Rebuild game
+    // Rebuild game (false = don't preserve players, create new cast)
     if (typeof API.rebuildGame === 'function') {
-      console.info('[new-season] calling rebuildGame(false)');
+      console.info('[new-season] calling rebuildGame(false) to build new cast');
       API.rebuildGame(false);
     } else if (typeof API.buildCast === 'function') {
-      console.info('[new-season] calling buildCast()');
+      console.info('[new-season] calling buildCast() to build new cast');
       API.buildCast();
     } else {
       console.warn('[new-season] neither rebuildGame nor buildCast available, falling back to reset+reload');
@@ -186,15 +201,22 @@
       return;
     }
     
-    // Start opening sequence after a brief delay to let rebuild complete
+    // Show intro hub so user can see new roster and start the game
     setTimeout(() => {
-      if (typeof API.startOpeningSequence === 'function') {
-        console.info('[new-season] calling startOpeningSequence()');
-        API.startOpeningSequence();
+      if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
+        console.info('[new-season] Showing intro hub with new roster');
+        g.IntroScreen.showWithPreload();
+      } else if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
+        console.info('[new-season] Showing intro hub (without preload)');
+        g.IntroScreen.show();
       } else {
-        console.warn('[new-season] startOpeningSequence not available');
+        console.warn('[new-season] IntroScreen not available, starting game directly');
+        // Fallback: start opening sequence directly
+        if (typeof API.startOpeningSequence === 'function') {
+          API.startOpeningSequence();
+        }
       }
-    }, 60);
+    }, 200);
   }
 
   function showFinaleCinematic(winnerId){
