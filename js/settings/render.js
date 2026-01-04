@@ -697,13 +697,14 @@
       global.cfg = cfg;
       
       if(game.phase === 'lobby'){
-        // In lobby: rebuild cast/game and start opening sequence
+        // In lobby: rebuild cast/game BUT only start opening sequence if Play button was pressed
         if(typeof global.rebuildGame === 'function'){
           global.rebuildGame(false);
         } else if(typeof global.buildCast === 'function'){
           global.buildCast();
         }
-        if(typeof global.startOpeningSequence === 'function'){
+        // Only auto-start if Play button was explicitly pressed
+        if(global.__bbPlayInitiated === true && typeof global.startOpeningSequence === 'function'){
           setTimeout(function(){ global.startOpeningSequence(); }, 60);
         }
         notify('New season started with ' + val + ' players.', 'ok');
