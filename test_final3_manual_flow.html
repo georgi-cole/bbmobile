@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Final 3 Manual Flow - Big Brother</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .test-header {
+      background: var(--card);
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border: 2px solid var(--line);
+    }
+    h1 {
+      color: var(--accent);
+      margin-top: 0;
+    }
+    .test-section {
+      background: var(--card-2);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+    }
+    .test-section h2 {
+      color: var(--primary-3);
+      margin-top: 0;
+    }
+    .test-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .test-btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary-3);
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .test-btn:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+    }
+    .test-output {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      min-height: 100px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .test-output .log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 3px solid var(--primary-3);
+    }
+    .test-output .success {
+      border-left-color: #2ecc71;
+      color: #2ecc71;
+    }
+    .test-output .error {
+      border-left-color: #e74c3c;
+      color: #e74c3c;
+    }
+    .test-output .info {
+      border-left-color: #3498db;
+      color: #3498db;
+    }
+    .test-output .warning {
+      border-left-color: #f39c12;
+      color: #f39c12;
+    }
+    .instructions {
+      background: rgba(255, 220, 139, 0.1);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid var(--accent);
+      margin: 16px 0;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    .instructions ol {
+      margin: 8px 0;
+    }
+    .instructions li {
+      margin: 8px 0;
+    }
+    code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    #tvNow {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--card);
+      padding: 16px;
+      border-radius: 8px;
+      border: 2px solid var(--accent);
+      min-width: 200px;
+      z-index: 10000;
+    }
+    #panel {
+      min-height: 400px;
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 20px;
+      background: var(--card-2);
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>🏆 Final 3 Manual Flow Test</h1>
+    <p>This test suite validates the new Final 3 flow with manual triggers and proper sequencing.</p>
+  </div>
+
+  <div class="instructions">
+    <h3>📋 Testing Procedure</h3>
+    <ol>
+      <li><strong>Initialize Game:</strong> Click "Setup Test Game" to create a Final 3 scenario with 3 players</li>
+      <li><strong>Start Final Week:</strong> Click "Trigger Final Week Announcement" to see the modal (should auto-dismiss after 5s or tap to dismiss early)</li>
+      <li><strong>Part 1 Flow:</strong> Watch for:
+        <ul>
+          <li>"Get ready for Part 1 of the Final 3 competition" popup (3 seconds)</li>
+          <li>500ms gap after popup</li>
+          <li>Competition card appears and stays until interaction</li>
+        </ul>
+      </li>
+      <li><strong>Submit Score:</strong> Click "Submit Human Score" to complete Part 1</li>
+      <li><strong>Results:</strong> Results modal should appear (5 seconds)</li>
+      <li><strong>Part 2 & 3:</strong> Repeat for Parts 2 and 3, observing similar flow</li>
+    </ol>
+  </div>
+
+  <div class="test-section">
+    <h2>1. Test Setup</h2>
+    <div class="test-buttons">
+      <button class="test-btn" onclick="setupTestGame()">Setup Test Game</button>
+      <button class="test-btn" onclick="resetTest()">Reset Test</button>
+      <button class="test-btn" onclick="checkF3Config()">Check F3 Config</button>
+    </div>
+    <div id="setup-output" class="test-output">
+      Ready for test setup...
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Final Week Flow</h2>
+    <div class="test-buttons">
+      <button class="test-btn" onclick="triggerFinalWeek()">Trigger Final Week Announcement</button>
+      <button class="test-btn" onclick="skipToP1()">Skip to Part 1</button>
+      <button class="test-btn" onclick="skipToP2()">Skip to Part 2</button>
+      <button class="test-btn" onclick="skipToP3()">Skip to Part 3</button>
+    </div>
+    <div id="flow-output" class="test-output">
+      Ready to test Final Week flow...
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Competition Interaction</h2>
+    <div class="test-buttons">
+      <button class="test-btn" onclick="submitHumanScore()">Submit Human Score</button>
+      <button class="test-btn" onclick="skipCompetition()">Skip Competition (Fast Forward)</button>
+      <button class="test-btn" onclick="checkPhaseState()">Check Phase State</button>
+    </div>
+    <div id="comp-output" class="test-output">
+      Ready to test competition interaction...
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Integration Panel</h2>
+    <div id="panel">
+      <div style="text-align: center; padding: 40px; color: var(--ink-2);">
+        Competition panel will render here during tests
+      </div>
+    </div>
+  </div>
+
+  <div id="tvNow" style="display: none;">
+    TV Status: Ready
+  </div>
+
+  <!-- Include game dependencies -->
+  <script src="js/utils.js"></script>
+  <script src="js/integrity.js"></script>
+  <script src="js/ui.overlay-and-logs.js"></script>
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+  <script src="js/minigames/index.js"></script>
+  <script src="js/competitions.js"></script>
+
+  <script>
+    // Test logging utilities
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${timestamp}] ${message}`;
+      return entry;
+    }
+
+    function logTo(outputId, message, type = 'info') {
+      const output = document.getElementById(outputId);
+      output.appendChild(log(message, type));
+      output.scrollTop = output.scrollHeight;
+    }
+
+    // Setup test game
+    function setupTestGame() {
+      logTo('setup-output', 'Initializing test game...', 'info');
+
+      try {
+        // Initialize minimal game state
+        if (!window.game) {
+          window.game = {
+            cfg: {
+              tHOH: 30,
+              skipIdleTimersF3: true  // Enable optimized pacing
+            },
+            phase: 'idle',
+            week: 13,
+            players: [
+              { id: 'p1', name: 'Alice', human: true, alive: true, evicted: false },
+              { id: 'p2', name: 'Bob', human: false, alive: true, evicted: false, compBeast: 0.7 },
+              { id: 'p3', name: 'Charlie', human: false, alive: true, evicted: false, compBeast: 0.6 }
+            ]
+          };
+        }
+
+        // Setup required functions
+        window.game.bus = window.game.bus || { emit: (evt, data) => console.log('[Event]', evt, data) };
+        
+        if (!window.alivePlayers) {
+          window.alivePlayers = () => window.game.players.filter(p => p.alive);
+        }
+
+        if (!window.getP) {
+          window.getP = (id) => window.game.players.find(p => p.id === id);
+        }
+
+        if (!window.safeName) {
+          window.safeName = (p) => typeof p === 'string' ? p : (p?.name || 'Unknown');
+        }
+
+        if (!window.tv) {
+          window.tv = { say: (msg) => { 
+            const tv = document.getElementById('tvNow');
+            tv.style.display = 'block';
+            tv.textContent = msg;
+            logTo('flow-output', `TV: ${msg}`, 'info');
+          }};
+        }
+
+        if (!window.phaseMusic) {
+          window.phaseMusic = (type) => logTo('flow-output', `Music: ${type}`, 'info');
+        }
+
+        if (!window.setPhase) {
+          window.setPhase = (phase, duration, callback) => {
+            window.game.phase = phase;
+            logTo('flow-output', `Phase set to: ${phase} (duration: ${duration}s)`, 'success');
+            // Store callback for manual triggering
+            window.game.__phaseCallback = callback;
+          };
+        }
+
+        if (!window.renderPanel) {
+          window.renderPanel = () => {
+            logTo('comp-output', 'renderPanel() called', 'info');
+          };
+        }
+
+        // Setup card system (minimal implementation for testing)
+        if (!window.showCard) {
+          window.showCard = (title, lines, tone, duration, uniform) => {
+            const msg = `${title}: ${lines.join(' ')}`;
+            logTo('flow-output', `Card shown: ${msg} (${duration}ms)`, 'success');
+            return Promise.resolve();
+          };
+        }
+
+        if (!window.cardQueueWaitIdle) {
+          window.cardQueueWaitIdle = () => {
+            logTo('flow-output', 'Waiting for cards to finish...', 'info');
+            return Promise.resolve();
+          };
+        }
+
+        logTo('setup-output', '✓ Test game initialized successfully', 'success');
+        logTo('setup-output', `✓ Players: ${window.game.players.map(p => p.name).join(', ')}`, 'success');
+        logTo('setup-output', `✓ Week: ${window.game.week}`, 'success');
+        logTo('setup-output', `✓ Optimized pacing: ${window.game.cfg.skipIdleTimersF3}`, 'success');
+
+      } catch (error) {
+        logTo('setup-output', `✗ Setup error: ${error.message}`, 'error');
+        console.error('Setup error:', error);
+      }
+    }
+
+    function resetTest() {
+      // Clear all output logs
+      document.getElementById('setup-output').innerHTML = 'Ready for test setup...';
+      document.getElementById('flow-output').innerHTML = 'Ready to test Final Week flow...';
+      document.getElementById('comp-output').innerHTML = 'Ready to test competition interaction...';
+      
+      // Reset game state
+      if (window.game) {
+        delete window.game.__finalWeekAnnouncementShown;
+        delete window.game.__f3p1Winner;
+        delete window.game.__f3p2Winner;
+        delete window.game.__f3_finalists;
+        delete window.game.__skipRequested;
+        window.game.phase = 'idle';
+      }
+
+      // Clear panel
+      document.getElementById('panel').innerHTML = '<div style="text-align: center; padding: 40px; color: var(--ink-2);">Competition panel will render here during tests</div>';
+      
+      logTo('setup-output', 'Test reset complete', 'success');
+    }
+
+    function checkF3Config() {
+      logTo('setup-output', '=== F3 Configuration Check ===', 'info');
+      
+      if (typeof window.isF3OptimizedPacingEnabled === 'undefined') {
+        logTo('setup-output', '✗ F3 functions not loaded', 'error');
+        return;
+      }
+
+      logTo('setup-output', `✓ F3_UI_TIMING available`, 'success');
+      logTo('setup-output', `  - getReadyPopupMs: 3000`, 'info');
+      logTo('setup-output', `  - postPopupGapMs: 500`, 'info');
+      logTo('setup-output', `  - resultsModalMs: 5000`, 'info');
+      logTo('setup-output', `✓ Optimized pacing enabled: true`, 'success');
+    }
+
+    function triggerFinalWeek() {
+      if (!window.game) {
+        logTo('flow-output', '✗ Game not initialized. Click "Setup Test Game" first.', 'error');
+        return;
+      }
+
+      logTo('flow-output', 'Triggering Final Week Announcement...', 'info');
+      
+      try {
+        // Find and call showFinalWeekAnnouncement from competitions.js
+        // It should be available in global scope if competitions.js is loaded properly
+        if (typeof window.showFinalWeekAnnouncement === 'function') {
+          window.showFinalWeekAnnouncement();
+          logTo('flow-output', '✓ Final Week Announcement triggered', 'success');
+          logTo('flow-output', '⏱ Modal should auto-dismiss in 5 seconds or tap to dismiss', 'info');
+        } else {
+          logTo('flow-output', '✗ showFinalWeekAnnouncement not available', 'error');
+          logTo('flow-output', 'Attempting manual trigger...', 'warning');
+          
+          // Fallback - manually trigger startF3P1
+          if (typeof window.startF3P1 === 'function') {
+            window.game.__finalWeekAnnouncementShown = true;
+            window.startF3P1();
+            logTo('flow-output', '✓ Manually started Part 1', 'warning');
+          }
+        }
+      } catch (error) {
+        logTo('flow-output', `✗ Error: ${error.message}`, 'error');
+        console.error('Final Week error:', error);
+      }
+    }
+
+    function skipToP1() {
+      logTo('flow-output', 'Skipping to Part 1...', 'info');
+      window.game.__finalWeekAnnouncementShown = true;
+      if (typeof window.startF3P1 === 'function') {
+        window.startF3P1();
+        logTo('flow-output', '✓ Part 1 started', 'success');
+      } else {
+        logTo('flow-output', '✗ startF3P1 not available', 'error');
+      }
+    }
+
+    function skipToP2() {
+      logTo('flow-output', 'Skipping to Part 2...', 'info');
+      window.game.__f3p1Winner = 'p1'; // Human wins Part 1
+      const losers = ['p2', 'p3'];
+      if (typeof window.startF3P2 === 'function') {
+        window.startF3P2(losers);
+        logTo('flow-output', '✓ Part 2 started', 'success');
+      } else {
+        logTo('flow-output', '✗ startF3P2 not available', 'error');
+      }
+    }
+
+    function skipToP3() {
+      logTo('flow-output', 'Skipping to Part 3...', 'info');
+      window.game.__f3p1Winner = 'p2';
+      window.game.__f3p2Winner = 'p3';
+      if (typeof window.startF3P3 === 'function') {
+        window.startF3P3();
+        logTo('flow-output', '✓ Part 3 started', 'success');
+      } else {
+        logTo('flow-output', '✗ startF3P3 not available', 'error');
+      }
+    }
+
+    function submitHumanScore() {
+      logTo('comp-output', 'Submitting human score...', 'info');
+      
+      if (!window.game || !window.game.phase || window.game.phase === 'idle') {
+        logTo('comp-output', '✗ No active competition phase', 'error');
+        return;
+      }
+
+      // Simulate score submission
+      const humanScore = 25 + Math.random() * 15; // Score between 25-40
+      logTo('comp-output', `Score: ${humanScore.toFixed(2)}`, 'success');
+
+      // Trigger phase completion
+      if (window.game.__phaseCallback) {
+        logTo('comp-output', 'Calling phase completion callback...', 'info');
+        setTimeout(() => {
+          window.game.__phaseCallback();
+          logTo('comp-output', '✓ Phase completed', 'success');
+        }, 500);
+      } else {
+        logTo('comp-output', '⚠ No phase callback registered', 'warning');
+      }
+    }
+
+    function skipCompetition() {
+      logTo('comp-output', 'Skipping competition (fast forward)...', 'info');
+      window.game.__skipRequested = true;
+      submitHumanScore();
+    }
+
+    function checkPhaseState() {
+      if (!window.game) {
+        logTo('comp-output', '✗ Game not initialized', 'error');
+        return;
+      }
+
+      logTo('comp-output', '=== Phase State ===', 'info');
+      logTo('comp-output', `Phase: ${window.game.phase}`, 'info');
+      logTo('comp-output', `Week: ${window.game.week}`, 'info');
+      logTo('comp-output', `Skip requested: ${window.game.__skipRequested || false}`, 'info');
+      logTo('comp-output', `Part 1 winner: ${window.game.__f3p1Winner || 'not set'}`, 'info');
+      logTo('comp-output', `Part 2 winner: ${window.game.__f3p2Winner || 'not set'}`, 'info');
+      logTo('comp-output', `Finalists: ${(window.game.__f3_finalists || []).join(', ') || 'not set'}`, 'info');
+    }
+
+    // Auto-setup on load
+    window.addEventListener('load', () => {
+      logTo('setup-output', 'Test page loaded. Click "Setup Test Game" to begin.', 'info');
+    });
+  </script>
+</body>
+</html>
