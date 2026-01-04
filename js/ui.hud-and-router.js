@@ -12,6 +12,9 @@
     return g.game.cfg;
   };
   
+  // Constants
+  const FINAL_WEEK_PHASES = ['final3_comp1', 'final3_comp2', 'final3_comp3', 'final3_plea', 'final3_decision'];
+  
   // Import centralized avatar constants
   const getDicebearUrl = g.getDicebearUrl || function(seed) {
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Guest')}`;
@@ -1630,7 +1633,7 @@ header.innerHTML = `
     
     // Special: Final Week phases without timer (optimized pacing mode)
     // When skipIdleTimersF3 is enabled, these phases have no timer and should advance immediately on skip
-    const isFinalWeekPhase = ['final3_comp1', 'final3_comp2', 'final3_comp3', 'final3_plea', 'final3_decision'].includes(phase);
+    const isFinalWeekPhase = FINAL_WEEK_PHASES.includes(phase);
     const skipIdleTimers = game.cfg?.skipIdleTimersF3 !== undefined ? game.cfg.skipIdleTimersF3 : true;
     
     if(isFinalWeekPhase && skipIdleTimers && !game.phaseEndsAt){
@@ -2238,7 +2241,7 @@ header.innerHTML = `
     }
 
     // Check if we should skip the timer for Final Week phases with optimized pacing
-    const isFinalWeekPhase = ['final3_comp1', 'final3_comp2', 'final3_comp3', 'final3_plea', 'final3_decision'].includes(phase);
+    const isFinalWeekPhase = FINAL_WEEK_PHASES.includes(phase);
     const skipIdleTimers = game.cfg?.skipIdleTimersF3 !== undefined ? game.cfg.skipIdleTimersF3 : true;
     
     if(isFinalWeekPhase && skipIdleTimers && seconds > 0){
