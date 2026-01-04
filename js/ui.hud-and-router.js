@@ -1613,6 +1613,44 @@ header.innerHTML = `
       }
     }
     
+    // Special: Competition phase immediate skip
+    // When user presses skip during a competition, immediately end the competition
+    // with 0 score for human and show results modal, don't just accelerate timer
+    if (isCompPhase) {
+      const humanId = game.humanId;
+      const hasHumanSubmitted = game.lastCompScores?.has(humanId);
+      
+      if (!hasHumanSubmitted) {
+        console.info('[ff] Competition phase detected - immediately ending competition with skip');
+        
+        // Call fast-forward logic to immediately show results and move to next phase
+        if(global.CompetitionFlow?.showCompetitionResultsAndFastForward && 
+           typeof global.CompetitionFlow.showCompetitionResultsAndFastForward === 'function'){
+          // Use score of 0 for skip (human gets 0, AI players will get synthetic scores)
+          console.info('[ff] Triggering immediate competition results for skip');
+          global.CompetitionFlow.showCompetitionResultsAndFastForward(0);
+          
+          // Complete skip mode
+          if(g.SkipController){
+            g.SkipController.complete();
+          }
+          
+          // Deactivate fast-forward
+          if(typeof g.deactivateFastForward === 'function'){
+            g.deactivateFastForward();
+          }
+          
+          return; // Early return - don't run normal acceleration flow
+        } else {
+          console.warn('[ff] Competition fast-forward not available, using fallback acceleration');
+          // Fall through to normal acceleration flow
+        }
+      } else {
+        console.info('[ff] Human has already submitted score, using normal acceleration');
+        // Fall through to normal acceleration flow
+      }
+    }
+    
     // Activate fast-forward mode (preserves callbacks, compresses durations)
     if(typeof g.activateFastForward === 'function'){
       g.activateFastForward({ multiplier: game.cfg?.fastForwardMultiplier || 0.1, reason: 'user' });
