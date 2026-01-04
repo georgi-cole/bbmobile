@@ -201,20 +201,13 @@
       return;
     }
     
-    // Show intro hub so user can see new roster and start the game
+    // Start the game immediately with the new roster
     setTimeout(() => {
-      if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
-        console.info('[new-season] Showing intro hub with new roster');
-        g.IntroScreen.showWithPreload();
-      } else if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
-        console.info('[new-season] Showing intro hub (without preload)');
-        g.IntroScreen.show();
+      console.info('[new-season] Starting new season directly');
+      if (typeof API.startOpeningSequence === 'function') {
+        API.startOpeningSequence();
       } else {
-        console.warn('[new-season] IntroScreen not available, starting game directly');
-        // Fallback: start opening sequence directly
-        if (typeof API.startOpeningSequence === 'function') {
-          API.startOpeningSequence();
-        }
+        console.warn('[new-season] startOpeningSequence not available');
       }
     }, 200);
   }

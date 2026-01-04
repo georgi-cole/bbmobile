@@ -70,29 +70,21 @@ setTimeout(() => {
 
 **After:**
 ```javascript
-// Show intro hub so user can see new roster and start the game
+// Start the game immediately with the new roster
 setTimeout(() => {
-  if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
-    console.info('[new-season] Showing intro hub with new roster');
-    g.IntroScreen.showWithPreload();
-  } else if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
-    console.info('[new-season] Showing intro hub (without preload)');
-    g.IntroScreen.show();
+  console.info('[new-season] Starting new season directly');
+  if (typeof API.startOpeningSequence === 'function') {
+    API.startOpeningSequence();
   } else {
-    console.warn('[new-season] IntroScreen not available, starting game directly');
-    // Fallback: start opening sequence directly
-    if (typeof API.startOpeningSequence === 'function') {
-      API.startOpeningSequence();
-    }
+    console.warn('[new-season] startOpeningSequence not available');
   }
 }, 200);
 ```
 
 **Changes:**
-- After rebuilding game with `rebuildGame(false)`, shows intro hub instead of immediately starting game
-- User can now see the new roster that was generated
-- User must press "Play" button on intro hub to start the new season
-- This matches user expectations and allows reviewing the cast before starting
+- After rebuilding game with `rebuildGame(false)`, starts the game directly
+- Calls `startOpeningSequence()` to immediately begin gameplay
+- User does not need to press Play - the game starts automatically
 - Increased timeout from 60ms to 200ms to ensure rebuild completes
 - Added comprehensive logging for debugging
 
@@ -112,9 +104,8 @@ setTimeout(() => {
 5. Game rebuilds with new random cast (`rebuildGame(false)`)
 6. Competition locks cleared
 7. Logs cleared
-8. Intro hub appears showing the new roster
-9. User reviews the new houseguests
-10. User clicks "Play" to start the new season
+8. **Game starts immediately** via `startOpeningSequence()`
+9. User begins playing the new season right away
 
 ## Technical Details
 
@@ -175,8 +166,8 @@ If `IntroScreen` is not available:
 
 ## Benefits
 
-1. **Consistent UX**: Both Exit and New Season buttons now have predictable behavior
-2. **Roster Visibility**: Users can see the new cast before starting the season
+1. **Consistent UX**: Exit button navigates to intro hub; New Season starts game immediately
+2. **Seamless Flow**: Users can immediately play after clicking New Season
 3. **Season Tracking**: Season numbers properly increment
 4. **State Reset**: All game state properly reset between seasons
 5. **Debugging**: Comprehensive logging for troubleshooting
@@ -203,7 +194,7 @@ Potential improvements (not included in this fix):
 
 Both end-of-game modals now properly handle Exit and New Season button clicks:
 - Exit navigates back to intro hub
-- New Season rebuilds game with new roster and shows intro hub
-- Users have full visibility and control over game flow
+- New Season rebuilds game with new roster and starts immediately
+- Users can immediately play the new season
 - Season tracking works correctly
 - All existing tests pass
