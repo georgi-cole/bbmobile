@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 3 Sequencing Updates Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e8e8e8;
+    }
+    h1 {
+      color: #ffdc8b;
+      text-align: center;
+    }
+    .section {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,220,139,0.2);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .section h2 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    .test-case {
+      background: rgba(255,255,255,0.03);
+      border-left: 3px solid #83bfff;
+      padding: 15px;
+      margin: 10px 0;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .status.pass { background: #28a745; color: white; }
+    .status.fail { background: #dc3545; color: white; }
+    .status.pending { background: #ffc107; color: #333; }
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #ffdc8b;
+    }
+    button {
+      background: #83bfff;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #96cfff;
+    }
+    .log {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      margin-top: 10px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 2px solid #83bfff;
+      padding-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏆 Final 3 Sequencing Updates Test</h1>
+  
+  <div class="section">
+    <h2>Test Overview</h2>
+    <p>This test validates the Final 3 sequencing improvements:</p>
+    <ul>
+      <li>✅ Timer reduction to 2 seconds after human completion</li>
+      <li>✅ Context-appropriate "Get ready" card text for all player statuses</li>
+      <li>✅ No card overlap (cards appear sequentially)</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Test Cases</h2>
+    
+    <div class="test-case">
+      <h3>1. Card Text - Active Participant <span class="status pending">MANUAL</span></h3>
+      <p><strong>Part 1:</strong> "Get ready for Part 1 of the Final 3 competition!"</p>
+      <p><strong>Part 2:</strong> "Get ready for Part 2 of the Final 3 competition!"</p>
+      <p><strong>Part 3:</strong> "Get ready for the final part of the competition where the Final HOH will be crowned!"</p>
+      <p><em>✓ Implemented in startF3P1(), startF3P2(), startF3P3()</em></p>
+    </div>
+
+    <div class="test-case">
+      <h3>2. Card Text - Non-Participant (Spectator) <span class="status pending">MANUAL</span></h3>
+      <p><strong>Part 1:</strong> N/A (all three compete)</p>
+      <p><strong>Part 2:</strong> "[Name] and [Name] will now battle their way to the final competition."</p>
+      <p><strong>Part 3:</strong> "It's time for the final part of the competition."</p>
+      <p><em>✓ Implemented with dynamic name insertion in startF3P2(), startF3P3()</em></p>
+    </div>
+
+    <div class="test-case">
+      <h3>3. Card Text - Jury Member <span class="status pending">MANUAL</span></h3>
+      <p><strong>Part 1:</strong> "Jurors, you will now watch Part 1 of the Final 3 competition!"</p>
+      <p><strong>Part 2:</strong> "Jurors, you will now watch Part 2 of the Final 3 competition!"</p>
+      <p><strong>Part 3:</strong> "Jurors, you are about to find out who will be the Final HOH."</p>
+      <p><em>✓ Implemented with jury detection logic</em></p>
+    </div>
+
+    <div class="test-case">
+      <h3>4. Timer Reduction <span class="status pending">MANUAL</span></h3>
+      <p>After human player completes their competition:</p>
+      <ol>
+        <li>User sees their score for 1.5 seconds</li>
+        <li>Timer automatically reduces to 2 seconds remaining</li>
+        <li>Phase completes quickly without long wait</li>
+      </ol>
+      <p><em>✓ Implemented in submitScore() for final3_comp1, final3_comp2, final3_comp3</em></p>
+    </div>
+
+    <div class="test-case">
+      <h3>5. Card Sequencing <span class="status pending">MANUAL</span></h3>
+      <p>Cards should appear in sequence without overlap:</p>
+      <ol>
+        <li>"Get ready" card appears (1.4s duration)</li>
+        <li>Small delay (100ms)</li>
+        <li>Competition begins</li>
+      </ol>
+      <p><em>✓ Already functioning with existing setTimeout logic</em></p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Code Changes Summary</h2>
+    <div class="log">
+      <div class="log-entry"><strong>File:</strong> js/competitions.js</div>
+      <div class="log-entry"><strong>Functions Modified:</strong> startF3P1(), startF3P2(), startF3P3(), submitScore()</div>
+      <div class="log-entry"><strong>Lines Changed:</strong> ~67 additions/modifications</div>
+      <div class="log-entry">
+        <strong>Key Changes:</strong>
+        <ul style="margin: 5px 0; padding-left: 20px;">
+          <li>Added player status detection (active, spectator, jury)</li>
+          <li>Dynamic card text based on player status</li>
+          <li>Timer reduction logic with 1.5s delay after score submission</li>
+          <li>Proper name insertion for spectator cards in Part 2</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Manual Testing Instructions</h2>
+    <ol>
+      <li>Start a new game and play through to Final 3</li>
+      <li>Verify card text is appropriate for your player status</li>
+      <li>Complete a competition and watch the timer</li>
+      <li>Ensure timer drops to 2 seconds after seeing your score</li>
+      <li>If evicted to jury, verify jury-specific card text</li>
+      <li>If Part 1 winner (spectating Part 2), verify spectator card text</li>
+    </ol>
+    <p><strong>Note:</strong> These changes only apply when optimized pacing is enabled (default setting).</p>
+  </div>
+
+  <div class="section">
+    <h2>Testing Notes</h2>
+    <p><strong>⚠️ Important:</strong> This is a manual verification test. The changes affect:</p>
+    <ul>
+      <li>Card text content based on runtime player status</li>
+      <li>Timer manipulation during live gameplay</li>
+      <li>User experience during Final 3 competitions</li>
+    </ul>
+    <p>Automated testing would require full game simulation which is beyond the scope of this issue.</p>
+    
+    <p><strong>✅ Code Review:</strong> All changes follow existing patterns and conventions:</p>
+    <ul>
+      <li>Used existing <code>safeShowCard()</code> function for card display</li>
+      <li>Used existing <code>global.getP()</code> and status checks for player detection</li>
+      <li>Used existing <code>g.endAt</code> and <code>g.phaseEndsAt</code> for timer manipulation</li>
+      <li>Added appropriate logging for debugging</li>
+    </ul>
+  </div>
+
+</body>
+</html>
