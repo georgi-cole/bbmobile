@@ -681,53 +681,63 @@
   /**
    * Start Hold Wall simulation
    */
+  /**
+   * Start Hold Wall simulation
+   */
   function startHoldWallSimulation(climbers) {
     let elapsed = 0;
-    const updateText = document.querySelector('.spectator-update-text');
-    const config = SIMULATION_CONFIG.holdWall;
     
-    progressInterval = setInterval(() => {
-      elapsed++;
+    // Find update text element after a small delay to ensure DOM is ready
+    setTimeout(() => {
+      const updateText = document.querySelector('.spectator-update-text');
+      if (!updateText) {
+        console.warn('[SpectatorPart3] Update text element not found for Hold Wall simulation');
+        return;
+      }
       
-      // Track leader and endurance levels for dynamic commentary
-      let leaderId = null;
-      let maxHeight = 0;
-      let lowestEndurance = 100;
+      const config = SIMULATION_CONFIG.holdWall;
       
-      climbers.forEach((climber) => {
-        // Simulate climbing progress with slight randomness
-        const currentBottom = parseInt(climber.element.style.bottom) || 20;
-        const increment = config.climbIncrement.min + Math.random() * (config.climbIncrement.max - config.climbIncrement.min);
-        const newBottom = Math.min(config.maxClimbHeight, currentBottom + increment);
-        climber.element.style.bottom = `${newBottom}px`;
+      progressInterval = setInterval(() => {
+        elapsed++;
         
-        // Track who's in the lead
-        if (newBottom > maxHeight) {
-          maxHeight = newBottom;
-          leaderId = climber.playerId;
-        }
+        // Track leader and endurance levels for dynamic commentary
+        let leaderId = null;
+        let maxHeight = 0;
+        let lowestEndurance = 100;
+        
+        climbers.forEach((climber) => {
+          // Simulate climbing progress with slight randomness
+          const currentBottom = parseInt(climber.element.style.bottom) || 20;
+          const increment = config.climbIncrement.min + Math.random() * (config.climbIncrement.max - config.climbIncrement.min);
+          const newBottom = Math.min(config.maxClimbHeight, currentBottom + increment);
+          climber.element.style.bottom = `${newBottom}px`;
+          
+          // Track who's in the lead
+          if (newBottom > maxHeight) {
+            maxHeight = newBottom;
+            leaderId = climber.playerId;
+          }
 
-        // Deplete endurance meter gradually
-        const endurancePercent = Math.max(20, 100 - elapsed * config.enduranceDepletionBase - Math.random() * config.enduranceDepletionRandom);
-        climber.meter.style.width = `${endurancePercent}%`;
-        
-        // Track lowest endurance
-        if (endurancePercent < lowestEndurance) {
-          lowestEndurance = endurancePercent;
-        }
-        
-        // Change color as endurance drops
-        if (endurancePercent < 40) {
-          climber.meter.style.background = 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)';
-          climber.meter.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
-        } else if (endurancePercent < 70) {
-          climber.meter.style.background = 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
-          climber.meter.style.boxShadow = '0 0 8px rgba(245, 158, 11, 0.6)';
-        }
-      });
+          // Deplete endurance meter gradually
+          const endurancePercent = Math.max(20, 100 - elapsed * config.enduranceDepletionBase - Math.random() * config.enduranceDepletionRandom);
+          climber.meter.style.width = `${endurancePercent}%`;
+          
+          // Track lowest endurance
+          if (endurancePercent < lowestEndurance) {
+            lowestEndurance = endurancePercent;
+          }
+          
+          // Change color as endurance drops
+          if (endurancePercent < 40) {
+            climber.meter.style.background = 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)';
+            climber.meter.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
+          } else if (endurancePercent < 70) {
+            climber.meter.style.background = 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
+            climber.meter.style.boxShadow = '0 0 8px rgba(245, 158, 11, 0.6)';
+          }
+        });
 
-      // Update message dynamically based on competition state
-      if (updateText) {
+        // Update message dynamically based on competition state
         let msg = '';
         const leader = climbers.find(c => c.playerId === leaderId);
         
@@ -774,9 +784,9 @@
         updateText.style.animation = 'none';
         void updateText.offsetWidth;
         updateText.style.animation = 'fadeIn 0.5s ease';
-      }
 
-    }, config.updateInterval);
+      }, config.updateInterval);
+    }, 100); // Small delay to ensure DOM is ready
   }
 
   /**
@@ -796,50 +806,56 @@
 
     let currentQuestion = 0;
     const scores = competitors.map(() => 0);
-    const updateText = document.querySelector('.spectator-update-text');
     const config = SIMULATION_CONFIG.trivia;
 
-    progressInterval = setInterval(() => {
-      currentQuestion++;
+    // Find update text element after a small delay to ensure DOM is ready
+    setTimeout(() => {
+      const updateText = document.querySelector('.spectator-update-text');
+      if (!updateText) {
+        console.warn('[SpectatorPart3] Update text element not found for Trivia simulation');
+        return;
+      }
       
-      if (currentQuestion <= questions.length) {
-        // Show new question
-        questionNumber.textContent = `Question ${currentQuestion}`;
-        questionText.textContent = questions[(currentQuestion - 1) % questions.length];
+      progressInterval = setInterval(() => {
+        currentQuestion++;
         
-        // Simulate thinking
-        competitors.forEach(comp => {
-          comp.answerStatus.textContent = 'Thinking...';
-          comp.answerStatus.style.color = '#8a9ab8';
-          comp.element.style.transform = 'scale(1)';
-        });
-
-        setTimeout(() => {
-          // Randomly determine who answers correctly
-          const correctIndex = Math.floor(Math.random() * competitors.length);
+        if (currentQuestion <= questions.length) {
+          // Show new question
+          questionNumber.textContent = `Question ${currentQuestion}`;
+          questionText.textContent = questions[(currentQuestion - 1) % questions.length];
           
-          competitors.forEach((comp, index) => {
-            if (index === correctIndex) {
-              // Correct answer
-              scores[index] += config.pointsPerCorrect;
-              comp.score.textContent = `${scores[index]} pts`;
-              comp.answerStatus.textContent = '✓ Correct!';
-              comp.answerStatus.style.color = '#4ade80';
-              comp.element.style.transform = 'scale(1.05)';
-              comp.element.style.borderColor = '#4ade80';
-              
-              // Flash animation
-              comp.score.style.animation = 'scoreFlash 0.5s ease';
-            } else {
-              // Wrong answer
-              comp.answerStatus.textContent = '✗ Incorrect';
-              comp.answerStatus.style.color = '#ef4444';
-              comp.element.style.borderColor = '#6b7a99';
-            }
+          // Simulate thinking
+          competitors.forEach(comp => {
+            comp.answerStatus.textContent = 'Thinking...';
+            comp.answerStatus.style.color = '#8a9ab8';
+            comp.element.style.transform = 'scale(1)';
           });
 
-          // Update commentary
-          if (updateText) {
+          setTimeout(() => {
+            // Randomly determine who answers correctly
+            const correctIndex = Math.floor(Math.random() * competitors.length);
+            
+            competitors.forEach((comp, index) => {
+              if (index === correctIndex) {
+                // Correct answer
+                scores[index] += config.pointsPerCorrect;
+                comp.score.textContent = `${scores[index]} pts`;
+                comp.answerStatus.textContent = '✓ Correct!';
+                comp.answerStatus.style.color = '#4ade80';
+                comp.element.style.transform = 'scale(1.05)';
+                comp.element.style.borderColor = '#4ade80';
+                
+                // Flash animation
+                comp.score.style.animation = 'scoreFlash 0.5s ease';
+              } else {
+                // Wrong answer
+                comp.answerStatus.textContent = '✗ Incorrect';
+                comp.answerStatus.style.color = '#ef4444';
+                comp.element.style.borderColor = '#6b7a99';
+              }
+            });
+
+            // Update commentary
             const leader = competitors.reduce((prev, curr, idx) => 
               scores[idx] > scores[prev] ? idx : prev, 0);
             const msg = `${competitors[leader].player.name} leading with ${scores[leader]} points!`;
@@ -847,11 +863,11 @@
             updateText.style.animation = 'none';
             void updateText.offsetWidth;
             updateText.style.animation = 'fadeIn 0.5s ease';
-          }
-        }, 1800);
-      }
+          }, 1800);
+        }
 
-    }, config.updateInterval);
+      }, config.updateInterval);
+    }, 100); // Small delay to ensure DOM is ready
   }
 
   /**
@@ -859,7 +875,6 @@
    */
   function startSpeedChallengeSimulation(lanes) {
     let elapsed = 0;
-    const updateText = document.querySelector('.spectator-update-text');
     const config = SIMULATION_CONFIG.speedChallenge;
     
     const messages = [
@@ -875,31 +890,38 @@
 
     const scores = lanes.map(() => 0);
 
-    progressInterval = setInterval(() => {
-      elapsed++;
+    // Find update text element after a small delay to ensure DOM is ready
+    setTimeout(() => {
+      const updateText = document.querySelector('.spectator-update-text');
+      if (!updateText) {
+        console.warn('[SpectatorPart3] Update text element not found for Speed Challenge simulation');
+        return;
+      }
       
-      lanes.forEach((lane, index) => {
-        // Increment score with randomness
-        const increment = config.scoreIncrement.min + Math.floor(Math.random() * (config.scoreIncrement.max - config.scoreIncrement.min));
-        scores[index] += increment;
-        lane.score.textContent = scores[index].toString();
+      progressInterval = setInterval(() => {
+        elapsed++;
         
-        // Update progress bar (cap at 100%, scale score to percentage)
-        const progress = Math.min(100, (scores[index] / config.maxScore) * 100);
-        lane.progressFill.style.width = `${progress}%`;
-        
-        // Flash effect on update
-        lane.score.style.animation = 'none';
-        void lane.score.offsetWidth;
-        lane.score.style.animation = 'scoreFlash 0.5s ease';
-      });
+        lanes.forEach((lane, index) => {
+          // Increment score with randomness
+          const increment = config.scoreIncrement.min + Math.floor(Math.random() * (config.scoreIncrement.max - config.scoreIncrement.min));
+          scores[index] += increment;
+          lane.score.textContent = scores[index].toString();
+          
+          // Update progress bar (cap at 100%, scale score to percentage)
+          const progress = Math.min(100, (scores[index] / config.maxScore) * 100);
+          lane.progressFill.style.width = `${progress}%`;
+          
+          // Flash effect on update
+          lane.score.style.animation = 'none';
+          void lane.score.offsetWidth;
+          lane.score.style.animation = 'scoreFlash 0.5s ease';
+        });
 
-      // Determine leader
-      const leaderIndex = scores.reduce((prev, curr, idx) => 
-        curr > scores[prev] ? idx : prev, 0);
+        // Determine leader
+        const leaderIndex = scores.reduce((prev, curr, idx) => 
+          curr > scores[prev] ? idx : prev, 0);
 
-      // Update message
-      if (updateText) {
+        // Update message
         const msg = elapsed % 3 === 0 
           ? messages[elapsed % messages.length]
           : `${lanes[leaderIndex].player.name} in the lead!`;
@@ -907,9 +929,9 @@
         updateText.style.animation = 'none';
         void updateText.offsetWidth;
         updateText.style.animation = 'fadeIn 0.5s ease';
-      }
 
-    }, config.updateInterval);
+      }, config.updateInterval);
+    }, 100); // Small delay to ensure DOM is ready
   }
 
   /**

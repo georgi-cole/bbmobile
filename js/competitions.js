@@ -312,6 +312,19 @@
       generateSyntheticOpponents(id, final);
     }
     
+    // NEW: Auto-reduce timer to 2 seconds for Final 3 competitions after human completes
+    if (player && player.human && (g.phase === 'final3_comp1' || g.phase === 'final3_comp2' || g.phase === 'final3_comp3')) {
+      // Set timer to 2 seconds after a short delay to allow user to see their score
+      setTimeout(() => {
+        if (g.endAt) {
+          const twoSecondsFromNow = Date.now() + 2000;
+          g.endAt = twoSecondsFromNow;
+          if (g.phaseEndsAt) g.phaseEndsAt = twoSecondsFromNow;
+          console.info(`[F3] Timer reduced to 2 seconds after human completion in ${g.phase}`);
+        }
+      }, 1500); // Wait 1.5 seconds for user to see their score
+    }
+    
     return true;
   }
 
@@ -327,6 +340,7 @@
     // Determine which phase we're in and get eligible opponents
     let eligibleOpponents = [];
     let gameKey = 'unknown';
+    let isFinal3Phase = false;
     
     if (g.phase === 'hoh') {
       const alive = global.alivePlayers();
@@ -342,14 +356,17 @@
     } else if (g.phase === 'final3_comp1') {
       eligibleOpponents = global.alivePlayers().filter(p => !p.human);
       gameKey = g.__f3p1GameKey || 'unknown';
+      isFinal3Phase = true;
     } else if (g.phase === 'final3_comp2') {
       const duo = g.__f3_duo || [];
       eligibleOpponents = duo.map(id => global.getP(id)).filter(p => p && !p.human);
       gameKey = g.__f3p2GameKey || 'unknown';
+      isFinal3Phase = true;
     } else if (g.phase === 'final3_comp3') {
       const finalists = g.__f3_finalists || [];
       eligibleOpponents = finalists.map(id => global.getP(id)).filter(p => p && !p.human);
       gameKey = g.__f3p3GameKey || 'unknown';
+      isFinal3Phase = true;
     }
 
     if (eligibleOpponents.length === 0) {
@@ -378,6 +395,20 @@
       if (!g.lastCompScores.has(opponentId)) {
         g.lastCompScores.set(opponentId, score);
       }
+    }
+
+    // NEW: Auto-reduce timer for Final 3 competitions when in spectator mode
+    // This applies when human is watching (not competing) and AI scores are generated
+    if (isFinal3Phase) {
+      // Delay to simulate AI completion time, then reduce timer
+      setTimeout(() => {
+        if (g.endAt && (g.phase === 'final3_comp1' || g.phase === 'final3_comp2' || g.phase === 'final3_comp3')) {
+          const twoSecondsFromNow = Date.now() + 2000;
+          g.endAt = twoSecondsFromNow;
+          if (g.phaseEndsAt) g.phaseEndsAt = twoSecondsFromNow;
+          console.info(`[F3] Timer reduced to 2 seconds after AI completion in ${g.phase} (spectator mode)`);
+        }
+      }, 8000); // Wait 8 seconds to simulate AI competition time in spectator view
     }
 
     // Trigger finish check
@@ -2027,11 +2058,23 @@
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
+    // Determine appropriate card text based on player status
+    const humanId = g.humanId;
+    const you = global.getP?.(humanId);
+    const humanInJury = you && you.evicted && g.juryHouse?.includes(humanId);
+    
+    let cardText;
+    if (humanInJury) {
+      cardText = 'Jurors, you will now watch Part 1 of the Final 3 competition!';
+    } else {
+      cardText = 'Get ready for Part 1 of the Final 3 competition!';
+    }
+    
     if (useOptimizedPacing) {
-      // Short instruction: "Get ready for Part 1"
-      safeShowCard('🏆 Part 1', ['Get ready for Part 1'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
+      // Short instruction with appropriate text
+      safeShowCard('🏆 Part 1', [cardText], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
       
-      // Auto-start after short instruction
+      // Auto-start after short instruction (wait for card to finish)
       setTimeout(function () { beginF3P1Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
     } else {
       // Legacy verbose instruction
@@ -2248,11 +2291,28 @@
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
+    // Determine appropriate card text based on player status
+    const humanId = g.humanId;
+    const you = global.getP?.(humanId);
+    const humanInJury = you && you.evicted && g.juryHouse?.includes(humanId);
+    const humanInDuo = humanId && duo.includes(humanId);
+    
+    let cardText;
+    if (humanInJury) {
+      cardText = 'Jurors, you will now watch Part 2 of the Final 3 competition!';
+    } else if (humanInDuo) {
+      cardText = 'Get ready for Part 2 of the Final 3 competition!';
+    } else {
+      // Human won Part 1 and is not competing
+      const names = duo.map(id => global.safeName(id)).join(' and ');
+      cardText = `${names} will now battle their way to the final competition.`;
+    }
+    
     if (useOptimizedPacing) {
-      // Short instruction: "Get ready for Part 2"
-      safeShowCard('🏆 Part 2', ['Get ready for Part 2'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
+      // Short instruction with appropriate text
+      safeShowCard('🏆 Part 2', [cardText], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
       
-      // Auto-start after short instruction
+      // Auto-start after short instruction (wait for card to finish)
       setTimeout(function () { beginF3P2Competition(duo); }, F3_UI_TIMING.shortInstructionMs + 100);
     } else {
       // Legacy verbose instruction
@@ -2534,15 +2594,30 @@
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
+    // Determine appropriate card text based on player status
+    const humanId = g.humanId;
+    const you = global.getP?.(humanId);
+    const humanInJury = you && you.evicted && g.juryHouse?.includes(humanId);
+    const finalists = [g.__f3p1Winner, g.__f3p2Winner].filter(Boolean);
+    const humanInFinalists = humanId && finalists.includes(humanId);
+    
+    let cardText;
+    if (humanInJury) {
+      cardText = 'Jurors, you are about to find out who will be the Final HOH.';
+    } else if (humanInFinalists) {
+      cardText = 'Get ready for the final part of the competition where the Final HOH will be crowned!';
+    } else {
+      cardText = "It's time for the final part of the competition.";
+    }
+    
     if (useOptimizedPacing) {
-      // Short instruction: "Get ready for Part 3"
-      safeShowCard('🏆 Part 3', ['Get ready for Part 3'], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
+      // Short instruction with appropriate text
+      safeShowCard('🏆 Part 3', [cardText], 'hoh', F3_UI_TIMING.shortInstructionMs, true);
       
-      // Auto-start after short instruction
+      // Auto-start after short instruction (wait for card to finish)
       setTimeout(function () { beginF3P3Competition(); }, F3_UI_TIMING.shortInstructionMs + 100);
     } else {
       // Legacy flow with cinematic or verbose instruction
-      const finalists = [g.__f3p1Winner, g.__f3p2Winner].filter(Boolean);
       if (finalists.length === 2 && global.FinaleCinematics?.showFinalShowdownIntroCinematic) {
         try {
           await global.FinaleCinematics.showFinalShowdownIntroCinematic(finalists[0], finalists[1]);
