@@ -1760,12 +1760,17 @@
     }
     const phase = g.phase;
     
-    // Final Week: skip inline popup but still fast-resolve the phase
-    // This allows the finish functions (finishF3P1/P2/P3) to run and show fullscreen results
+    // Final Week: skip inline popup AND phase timer shortening
+    // Immediately trigger finish functions (finishF3P1/P2/P3) which show fullscreen results
+    // This eliminates the visible timer gap between competition end and results modal
     if (typeof phase === 'string' && phase.startsWith('final3')) {
-      console.info('[ImmediateResults] Fast-resolving Final 3 phase without inline popup:', phase);
+      console.info('[ImmediateResults] Immediately resolving Final 3 phase without timer gap:', phase);
       try {
-        shortenPhaseToOneSecond();
+        // Skip shortenPhaseToOneSecond() - calling it would:
+        // 1. Shorten phase timer to 1 second
+        // 2. But user sees the original remaining phase time (~15s) counting down first
+        // 3. Only after countdown, finish functions would run and show modal
+        // Instead, directly call resolveCompetitionPhaseIfNeeded() to trigger finish functions immediately
         resolveCompetitionPhaseIfNeeded();
       } catch(e) {
         console.warn('[ImmediateResults] Final 3 fast-resolve error:', e);
