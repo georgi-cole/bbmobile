@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: End Game Modal Fixes</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0d151f;
+      color: #e0e8f0;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+    }
+    .test-panel {
+      max-width: 900px;
+      margin: 0 auto;
+      background: linear-gradient(145deg, #1a2533, #0f1925);
+      border: 1px solid rgba(110, 160, 220, 0.18);
+      border-radius: 16px;
+      padding: 30px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #6fd3ff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #9bbdff;
+    }
+    button {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background: #4574b8;
+    }
+    button.danger {
+      background: #993636;
+    }
+    button.danger:hover {
+      background: #aa4747;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .pass {
+      color: #4ade80;
+    }
+    .fail {
+      color: #f87171;
+    }
+    .info {
+      color: #9bbdff;
+    }
+    .instructions {
+      background: rgba(255, 212, 120, 0.1);
+      border: 1px solid rgba(255, 212, 120, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #ffdc8b;
+    }
+    .intro-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a0e14;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .intro-screen--visible {
+      display: flex;
+    }
+    .intro-screen h1 {
+      font-size: 3rem;
+      color: #6fd3ff;
+      text-shadow: 0 0 20px rgba(111, 211, 255, 0.5);
+    }
+    .intro-screen p {
+      font-size: 1.2rem;
+      color: #9bbdff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="test-panel">
+  <h1>🎮 End Game Modal Fixes - Test Suite</h1>
+  
+  <div class="instructions">
+    <h3>📋 Test Instructions</h3>
+    <ol>
+      <li>Test the <strong>Winner Modal</strong> (finale.js):
+        <ul>
+          <li>Click "Show Winner Modal" to display the modal</li>
+          <li>Click "EXIT" button → Should navigate to intro hub</li>
+          <li>Click "NEW SEASON" button → Should rebuild game and show intro hub with new roster</li>
+        </ul>
+      </li>
+      <li>Test the <strong>Game Over Modal</strong> (game-over-modal.js):
+        <ul>
+          <li>Click "Show Game Over Modal" to display the modal</li>
+          <li>Click "EXIT" button → Should navigate to intro hub</li>
+          <li>Click "NEW SEASON" button → Should rebuild game and show intro hub with new roster</li>
+        </ul>
+      </li>
+      <li>Verify that the intro hub appears after clicking buttons</li>
+      <li>Check the console for detailed logging</li>
+    </ol>
+  </div>
+
+  <div class="test-section">
+    <h2>1. Winner Modal Tests (finale.js)</h2>
+    <p>Test the modal that appears when a player wins the game</p>
+    <button onclick="showFinaleModal()">Show Winner Modal</button>
+    <div id="finale-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Game Over Modal Tests (game-over-modal.js)</h2>
+    <p>Test the modal that appears when human player is evicted pre-jury</p>
+    <button onclick="showGameOverModal()">Show Game Over Modal</button>
+    <div id="gameover-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Intro Hub State</h2>
+    <p>Verify the intro hub can be shown/hidden correctly</p>
+    <button onclick="checkIntroHubState()">Check Intro Hub State</button>
+    <button onclick="showIntroHubManually()">Show Intro Hub Manually</button>
+    <button onclick="hideIntroHubManually()">Hide Intro Hub Manually</button>
+    <div id="hub-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Console Log</h2>
+    <div id="console-log" class="result">Console messages will appear here...</div>
+  </div>
+</div>
+
+<!-- Mock Intro Hub -->
+<div id="introScreen" class="intro-screen">
+  <h1>Big Brother</h1>
+  <p>Intro Hub - Season Start</p>
+  <button onclick="hideIntroHubManually()">Close Intro Hub</button>
+</div>
+
+<!-- Load required scripts -->
+<script src="js/finale.js"></script>
+<script src="js/game-over-modal.js"></script>
+
+<script>
+  // Test configuration constants
+  const TEST_CONFIG = {
+    HUMAN_ID: 0,
+    JURY_SIZE: 7,
+    PLAYERS: [
+      { id: 0, name: 'Alice', human: true, stats: { hohWins: 3, vetoWins: 2 }, nominatedCount: 1 },
+      { id: 1, name: 'Bob', stats: { hohWins: 1, vetoWins: 4 }, nominatedCount: 3 },
+      { id: 2, name: 'Charlie', stats: { hohWins: 2, vetoWins: 1 }, nominatedCount: 2 }
+    ]
+  };
+  
+  // Set up minimal game environment
+  window.game = window.game || {};
+  window.game.players = TEST_CONFIG.PLAYERS;
+  window.game.humanId = TEST_CONFIG.HUMAN_ID;
+  window.game.cfg = { jurySize: TEST_CONFIG.JURY_SIZE };
+  
+  window.safeName = (id) => window.game.players.find(p => p.id === id)?.name || 'Unknown';
+  window.getP = (id) => window.game.players.find(p => p.id === id);
+  
+  // Mock IntroScreen
+  window.IntroScreen = {
+    show: function() {
+      log('IntroScreen.show() called', 'pass');
+      const intro = document.getElementById('introScreen');
+      intro.classList.add('intro-screen--visible');
+      log('Intro hub is now visible', 'info');
+    },
+    showWithPreload: function() {
+      log('IntroScreen.showWithPreload() called', 'pass');
+      const intro = document.getElementById('introScreen');
+      intro.classList.add('intro-screen--visible');
+      log('Intro hub is now visible (with preload)', 'info');
+    },
+    hide: function() {
+      log('IntroScreen.hide() called', 'pass');
+      const intro = document.getElementById('introScreen');
+      intro.classList.remove('intro-screen--visible');
+      log('Intro hub is now hidden', 'info');
+    }
+  };
+  
+  // Mock Game API
+  window.Game = {
+    rebuildGame: function(preservePlayers) {
+      log(`Game.rebuildGame(${preservePlayers}) called`, 'pass');
+      log(preservePlayers ? 'Preserving existing players' : 'Building new cast', 'info');
+      
+      if (!preservePlayers) {
+        // Simulate building new cast
+        window.game.players = [
+          { id: 0, name: 'You', human: true, stats: { hohWins: 0, vetoWins: 0 }, nominatedCount: 0 },
+          { id: 1, name: 'Nova', stats: { hohWins: 0, vetoWins: 0 }, nominatedCount: 0 },
+          { id: 2, name: 'Kai', stats: { hohWins: 0, vetoWins: 0 }, nominatedCount: 0 },
+          { id: 3, name: 'Ivy', stats: { hohWins: 0, vetoWins: 0 }, nominatedCount: 0 }
+        ];
+        log('New roster created with ' + window.game.players.length + ' players', 'pass');
+      }
+    },
+    startOpeningSequence: function() {
+      log('Game.startOpeningSequence() called', 'pass');
+    }
+  };
+  
+  // Mock ProfileService
+  window.ProfileService = {
+    setCurrentProfile: (profile) => log('ProfileService.setCurrentProfile: ' + JSON.stringify(profile), 'info'),
+    incrementSeason: () => {
+      log('ProfileService.incrementSeason() called', 'pass');
+      log('Season incremented', 'info');
+    },
+    setGuestMode: () => log('ProfileService.setGuestMode() called', 'info'),
+    getCurrentProfile: () => ({ id: 'test-profile', name: 'Test User', season: 1 }),
+    isGuestMode: () => false
+  };
+  
+  window.ProfileModal = {
+    show: (options) => {
+      log('ProfileModal.show() called', 'info');
+      setTimeout(() => {
+        log('Simulating profile selection...', 'info');
+        if (options.onSelect) {
+          options.onSelect({ id: 'test-profile', name: 'Test User', season: 2 });
+        }
+      }, 500);
+    }
+  };
+  
+  // Mock CompLocks
+  window.CompLocks = {
+    clearAllLocks: () => {
+      log('CompLocks.clearAllLocks() called', 'pass');
+    }
+  };
+
+  let logCount = 0;
+  const MAX_LOG_LINES = 50;
+
+  function log(message, type = 'info') {
+    const consoleLog = document.getElementById('console-log');
+    const entry = document.createElement('div');
+    entry.className = type;
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    consoleLog.appendChild(entry);
+    
+    // Limit log size
+    logCount++;
+    if (logCount > MAX_LOG_LINES) {
+      consoleLog.removeChild(consoleLog.firstChild);
+    }
+    
+    consoleLog.scrollTop = consoleLog.scrollHeight;
+    console.log(`[test] ${message}`);
+  }
+
+  function showFinaleModal() {
+    log('=== Testing Winner Modal (finale.js) ===', 'info');
+    log('Calling showFinaleCinematic(0)...', 'info');
+    
+    if (typeof window.showFinaleCinematic === 'function') {
+      window.showFinaleCinematic(0);
+      log('Winner modal displayed', 'pass');
+      log('Now click EXIT or NEW SEASON button in the modal', 'info');
+      document.getElementById('finale-results').innerHTML = 
+        '<span class="pass">✓ Winner modal shown successfully</span><br>' +
+        '<span class="info">Click EXIT to test navigation to intro hub</span><br>' +
+        '<span class="info">Click NEW SEASON to test rebuild + intro hub</span>';
+    } else {
+      log('showFinaleCinematic not found', 'fail');
+      document.getElementById('finale-results').innerHTML = 
+        '<span class="fail">✗ showFinaleCinematic not available</span>';
+    }
+  }
+
+  function showGameOverModal() {
+    log('=== Testing Game Over Modal (game-over-modal.js) ===', 'info');
+    log('Calling GameOverModal.show()...', 'info');
+    
+    if (window.GameOverModal && typeof window.GameOverModal.show === 'function') {
+      window.GameOverModal.show({
+        playerName: 'Test Player',
+        placement: 10,
+        jurySize: 7
+      });
+      log('Game Over modal displayed', 'pass');
+      log('Now click EXIT or NEW SEASON button in the modal', 'info');
+      document.getElementById('gameover-results').innerHTML = 
+        '<span class="pass">✓ Game Over modal shown successfully</span><br>' +
+        '<span class="info">Click EXIT to test navigation to intro hub</span><br>' +
+        '<span class="info">Click NEW SEASON to test rebuild + intro hub</span>';
+    } else {
+      log('GameOverModal not found', 'fail');
+      document.getElementById('gameover-results').innerHTML = 
+        '<span class="fail">✗ GameOverModal not available</span>';
+    }
+  }
+
+  function checkIntroHubState() {
+    log('=== Checking Intro Hub State ===', 'info');
+    
+    const intro = document.getElementById('introScreen');
+    const isVisible = intro.classList.contains('intro-screen--visible');
+    
+    const result = document.getElementById('hub-results');
+    result.innerHTML = 
+      `Intro Hub Visible: <span class="${isVisible ? 'pass' : 'fail'}">${isVisible ? 'YES' : 'NO'}</span><br>` +
+      `IntroScreen API available: <span class="${window.IntroScreen ? 'pass' : 'fail'}">${window.IntroScreen ? 'YES' : 'NO'}</span><br>` +
+      `Game.rebuildGame available: <span class="${window.Game?.rebuildGame ? 'pass' : 'fail'}">${window.Game?.rebuildGame ? 'YES' : 'NO'}</span>`;
+    
+    log(`Intro hub visible: ${isVisible}`, isVisible ? 'pass' : 'info');
+    log(`IntroScreen API: ${window.IntroScreen ? 'available' : 'missing'}`, window.IntroScreen ? 'pass' : 'fail');
+  }
+
+  function showIntroHubManually() {
+    log('Manually showing intro hub...', 'info');
+    if (window.IntroScreen && typeof window.IntroScreen.showWithPreload === 'function') {
+      window.IntroScreen.showWithPreload();
+    } else if (window.IntroScreen && typeof window.IntroScreen.show === 'function') {
+      window.IntroScreen.show();
+    } else {
+      log('IntroScreen not available', 'fail');
+    }
+  }
+
+  function hideIntroHubManually() {
+    log('Manually hiding intro hub...', 'info');
+    if (window.IntroScreen && typeof window.IntroScreen.hide === 'function') {
+      window.IntroScreen.hide();
+    } else {
+      const intro = document.getElementById('introScreen');
+      intro.classList.remove('intro-screen--visible');
+      log('Intro hub hidden (direct DOM manipulation)', 'info');
+    }
+  }
+
+  // Helper to check if console message should be logged
+  function shouldLogConsoleMessage(message) {
+    if (!message || typeof message !== 'string') return false;
+    return message.includes('[finale]') || 
+           message.includes('[game-over]') || 
+           message.includes('[new-season]');
+  }
+
+  // Intercept console methods to capture logs
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  const originalInfo = console.info;
+  const originalError = console.error;
+  
+  console.log = function(...args) {
+    originalLog.apply(console, args);
+    if (shouldLogConsoleMessage(args[0])) {
+      log(args.join(' '), 'info');
+    }
+  };
+  
+  console.info = function(...args) {
+    originalInfo.apply(console, args);
+    if (shouldLogConsoleMessage(args[0])) {
+      log(args.join(' '), 'info');
+    }
+  };
+  
+  console.warn = function(...args) {
+    originalWarn.apply(console, args);
+    if (shouldLogConsoleMessage(args[0])) {
+      log(args.join(' '), 'fail');
+    }
+  };
+  
+  console.error = function(...args) {
+    originalError.apply(console, args);
+    if (shouldLogConsoleMessage(args[0])) {
+      log(args.join(' '), 'fail');
+    }
+  };
+
+  // Auto-run initial checks on load
+  window.addEventListener('DOMContentLoaded', () => {
+    log('=== Test Page Loaded ===', 'pass');
+    log('Testing environment initialized', 'info');
+    checkIntroHubState();
+  });
+</script>
+
+</body>
+</html>

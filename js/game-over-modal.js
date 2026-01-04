@@ -258,10 +258,24 @@
         }, 200);
       });
 
-      // Exit button - closes the modal and returns to game state
+      // Exit button - navigates back to intro hub
       exitBtn.addEventListener('click', () => {
-        console.info('[game-over] EXIT clicked');
+        console.info('[game-over] EXIT clicked, navigating to intro hub');
         closeModal();
+        
+        // Navigate back to intro hub after modal is closed
+        setTimeout(() => {
+          if (global.IntroScreen && typeof global.IntroScreen.showWithPreload === 'function') {
+            console.info('[game-over] Showing intro hub after exit');
+            global.IntroScreen.showWithPreload();
+          } else if (global.IntroScreen && typeof global.IntroScreen.show === 'function') {
+            console.info('[game-over] Showing intro hub after exit (without preload)');
+            global.IntroScreen.show();
+          } else {
+            console.warn('[game-over] IntroScreen not available, reloading page');
+            location.reload();
+          }
+        }, 500);
       });
     });
   }
@@ -291,12 +305,12 @@
     // Try to use modern API for smooth restart
     const API = global.Game || global;
     
-    // Rebuild game
+    // Rebuild game (false = don't preserve players, create new cast)
     if (typeof API.rebuildGame === 'function') {
-      console.info('[game-over] calling rebuildGame(false)');
+      console.info('[game-over] calling rebuildGame(false) to build new cast');
       API.rebuildGame(false);
     } else if (typeof API.buildCast === 'function') {
-      console.info('[game-over] calling buildCast()');
+      console.info('[game-over] calling buildCast() to build new cast');
       API.buildCast();
     } else {
       console.warn('[game-over] neither rebuildGame nor buildCast available, falling back to reload');
@@ -304,15 +318,15 @@
       return;
     }
     
-    // Start opening sequence after a brief delay
+    // Start the game immediately with the new roster
     setTimeout(() => {
+      console.info('[game-over] Starting new season directly');
       if (typeof API.startOpeningSequence === 'function') {
-        console.info('[game-over] calling startOpeningSequence()');
         API.startOpeningSequence();
       } else {
         console.warn('[game-over] startOpeningSequence not available');
       }
-    }, 60);
+    }, 200);
   }
 
   /**
