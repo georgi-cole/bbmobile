@@ -12,9 +12,6 @@
     return g.game.cfg;
   };
   
-  // Constants
-  const FINAL_WEEK_PHASES = ['final3_comp1', 'final3_comp2', 'final3_comp3', 'final3_plea', 'final3_decision'];
-  
   // Import centralized avatar constants
   const getDicebearUrl = g.getDicebearUrl || function(seed) {
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Guest')}`;
@@ -1631,38 +1628,6 @@ header.innerHTML = `
     // Stop audio (but don't flush cards - they'll be compressed)
     cancelAllPhaseAudio();
     
-    // Special: Final Week phases without timer (optimized pacing mode)
-    // When skipIdleTimersF3 is enabled, these phases have no timer and should advance immediately on skip
-    const isFinalWeekPhase = FINAL_WEEK_PHASES.includes(phase);
-    const skipIdleTimers = game.cfg?.skipIdleTimersF3 !== undefined ? game.cfg.skipIdleTimersF3 : true;
-    
-    if(isFinalWeekPhase && skipIdleTimers && !game.phaseEndsAt){
-      console.info('[ff] Final Week phase with skipIdleTimersF3 - invoking phase completion callback immediately');
-      
-      // Deactivate fast-forward since we're immediately advancing
-      if(typeof g.deactivateFastForward === 'function'){
-        g.deactivateFastForward();
-      }
-      
-      // Complete skip mode before returning
-      if(g.SkipController){
-        g.SkipController.complete();
-      }
-      
-      // Invoke the phase timeout callback to advance to next phase
-      if(typeof game.phaseTimeoutCallback === 'function'){
-        try{
-          game.phaseTimeoutCallback();
-        }catch(e){
-          console.error('[ff] Error invoking Final Week phase callback:', e);
-        }
-      } else {
-        console.warn('[ff] No phaseTimeoutCallback available for Final Week phase');
-      }
-      
-      return;
-    }
-    
     // Special: return_twist immediate finalize (legacy behavior preserved)
     if(game.phase === 'return_twist'){
       try{ g.finishAmericaReturnVote?.(); }catch{}
@@ -2240,39 +2205,6 @@ header.innerHTML = `
       const tt=document.getElementById('tvTimer'); if(tt) tt.textContent=str;
     }
 
-    // Check if we should skip the timer for Final Week phases with optimized pacing
-    const isFinalWeekPhase = FINAL_WEEK_PHASES.includes(phase);
-    const skipIdleTimers = game.cfg?.skipIdleTimersF3 !== undefined ? game.cfg.skipIdleTimersF3 : true;
-    
-    if(isFinalWeekPhase && skipIdleTimers && seconds > 0){
-      console.info(`[phase] Final Week phase detected (${phase}) with skipIdleTimersF3 enabled - using sequential flow without timer`);
-      
-      // Set timer display to show no countdown
-      setClock('--:--');
-      
-      // Reset both old bar and new hourglass
-      if(bar) bar.style.width='0%';
-      if(hourglassSandTop){ hourglassSandTop.setAttribute('height', '0'); hourglassSandTop.setAttribute('y', '12'); }
-      if(hourglassSandBottom){ hourglassSandBottom.setAttribute('height', '0'); }
-      if(hourglassSandFlow){ hourglassSandFlow.style.opacity='0'; }
-      
-      // Reset skip progress bar
-      if(typeof window.updateSkipProgress === 'function'){
-        window.updateSkipProgress(0, 1);
-      }
-      
-      // For Final Week phases, we don't want to immediately call the timeout
-      // Instead, the phase will complete when the actual game action finishes
-      // (e.g., competition completes, plea is submitted, decision is made)
-      // The onTimeout callback is stored for manual invocation by the phase logic
-      game.phaseTimeoutCallback = onTimeout;
-      game.endAt = null; // No timer deadline
-      game.phaseEndsAt = null; // No timer deadline
-      
-      console.info(`[phase] ✓ Final Week phase ${phase} initialized without timer - will advance when action completes`);
-      return;
-    }
-    
     if(!seconds){
       setClock('00:00'); 
       // Reset both old bar and new hourglass
