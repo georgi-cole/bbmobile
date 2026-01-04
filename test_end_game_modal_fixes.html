@@ -178,15 +178,22 @@
 <script src="js/game-over-modal.js"></script>
 
 <script>
+  // Test configuration constants
+  const TEST_CONFIG = {
+    HUMAN_ID: 0,
+    JURY_SIZE: 7,
+    PLAYERS: [
+      { id: 0, name: 'Alice', human: true, stats: { hohWins: 3, vetoWins: 2 }, nominatedCount: 1 },
+      { id: 1, name: 'Bob', stats: { hohWins: 1, vetoWins: 4 }, nominatedCount: 3 },
+      { id: 2, name: 'Charlie', stats: { hohWins: 2, vetoWins: 1 }, nominatedCount: 2 }
+    ]
+  };
+  
   // Set up minimal game environment
   window.game = window.game || {};
-  window.game.players = [
-    { id: 0, name: 'Alice', human: true, stats: { hohWins: 3, vetoWins: 2 }, nominatedCount: 1 },
-    { id: 1, name: 'Bob', stats: { hohWins: 1, vetoWins: 4 }, nominatedCount: 3 },
-    { id: 2, name: 'Charlie', stats: { hohWins: 2, vetoWins: 1 }, nominatedCount: 2 }
-  ];
-  window.game.humanId = 0;
-  window.game.cfg = { jurySize: 7 };
+  window.game.players = TEST_CONFIG.PLAYERS;
+  window.game.humanId = TEST_CONFIG.HUMAN_ID;
+  window.game.cfg = { jurySize: TEST_CONFIG.JURY_SIZE };
   
   window.safeName = (id) => window.game.players.find(p => p.id === id)?.name || 'Unknown';
   window.getP = (id) => window.game.players.find(p => p.id === id);
@@ -366,6 +373,14 @@
     }
   }
 
+  // Helper to check if console message should be logged
+  function shouldLogConsoleMessage(message) {
+    if (!message || typeof message !== 'string') return false;
+    return message.includes('[finale]') || 
+           message.includes('[game-over]') || 
+           message.includes('[new-season]');
+  }
+
   // Intercept console methods to capture logs
   const originalLog = console.log;
   const originalWarn = console.warn;
@@ -374,36 +389,28 @@
   
   console.log = function(...args) {
     originalLog.apply(console, args);
-    if (args[0] && typeof args[0] === 'string' && 
-        (args[0].includes('[finale]') || args[0].includes('[game-over]') || 
-         args[0].includes('[new-season]'))) {
+    if (shouldLogConsoleMessage(args[0])) {
       log(args.join(' '), 'info');
     }
   };
   
   console.info = function(...args) {
     originalInfo.apply(console, args);
-    if (args[0] && typeof args[0] === 'string' && 
-        (args[0].includes('[finale]') || args[0].includes('[game-over]') || 
-         args[0].includes('[new-season]'))) {
+    if (shouldLogConsoleMessage(args[0])) {
       log(args.join(' '), 'info');
     }
   };
   
   console.warn = function(...args) {
     originalWarn.apply(console, args);
-    if (args[0] && typeof args[0] === 'string' && 
-        (args[0].includes('[finale]') || args[0].includes('[game-over]') || 
-         args[0].includes('[new-season]'))) {
+    if (shouldLogConsoleMessage(args[0])) {
       log(args.join(' '), 'fail');
     }
   };
   
   console.error = function(...args) {
     originalError.apply(console, args);
-    if (args[0] && typeof args[0] === 'string' && 
-        (args[0].includes('[finale]') || args[0].includes('[game-over]') || 
-         args[0].includes('[new-season]'))) {
+    if (shouldLogConsoleMessage(args[0])) {
       log(args.join(' '), 'fail');
     }
   };
