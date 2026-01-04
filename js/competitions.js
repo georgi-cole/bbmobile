@@ -340,6 +340,7 @@
     // Determine which phase we're in and get eligible opponents
     let eligibleOpponents = [];
     let gameKey = 'unknown';
+    let isFinal3Phase = false;
     
     if (g.phase === 'hoh') {
       const alive = global.alivePlayers();
@@ -355,14 +356,17 @@
     } else if (g.phase === 'final3_comp1') {
       eligibleOpponents = global.alivePlayers().filter(p => !p.human);
       gameKey = g.__f3p1GameKey || 'unknown';
+      isFinal3Phase = true;
     } else if (g.phase === 'final3_comp2') {
       const duo = g.__f3_duo || [];
       eligibleOpponents = duo.map(id => global.getP(id)).filter(p => p && !p.human);
       gameKey = g.__f3p2GameKey || 'unknown';
+      isFinal3Phase = true;
     } else if (g.phase === 'final3_comp3') {
       const finalists = g.__f3_finalists || [];
       eligibleOpponents = finalists.map(id => global.getP(id)).filter(p => p && !p.human);
       gameKey = g.__f3p3GameKey || 'unknown';
+      isFinal3Phase = true;
     }
 
     if (eligibleOpponents.length === 0) {
@@ -391,6 +395,20 @@
       if (!g.lastCompScores.has(opponentId)) {
         g.lastCompScores.set(opponentId, score);
       }
+    }
+
+    // NEW: Auto-reduce timer for Final 3 competitions when in spectator mode
+    // This applies when human is watching (not competing) and AI scores are generated
+    if (isFinal3Phase) {
+      // Delay to simulate AI completion time, then reduce timer
+      setTimeout(() => {
+        if (g.endAt && (g.phase === 'final3_comp1' || g.phase === 'final3_comp2' || g.phase === 'final3_comp3')) {
+          const twoSecondsFromNow = Date.now() + 2000;
+          g.endAt = twoSecondsFromNow;
+          if (g.phaseEndsAt) g.phaseEndsAt = twoSecondsFromNow;
+          console.info(`[F3] Timer reduced to 2 seconds after AI completion in ${g.phase} (spectator mode)`);
+        }
+      }, 8000); // Wait 8 seconds to simulate AI competition time in spectator view
     }
 
     // Trigger finish check
