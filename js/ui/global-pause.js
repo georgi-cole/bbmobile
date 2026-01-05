@@ -52,6 +52,10 @@
         openModals.add(id);
         if (!wasPaused && openModals.size > 0) {
           emit('game:pause');
+          // Actually pause the game using PauseController
+          if (window.PauseController && typeof window.PauseController.pause === 'function') {
+            window.PauseController.pause('modal:' + id);
+          }
         }
       } catch (err) {
         if (window.console && typeof window.console.error === 'function') {
@@ -67,6 +71,10 @@
         openModals.delete(id);
         if (openModals.size === 0) {
           emit('game:resume');
+          // Actually resume the game using PauseController
+          if (window.PauseController && typeof window.PauseController.resume === 'function') {
+            window.PauseController.resume();
+          }
         }
       } catch (err) {
         if (window.console && typeof window.console.error === 'function') {

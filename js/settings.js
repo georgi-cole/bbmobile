@@ -794,7 +794,10 @@
       if(g.game?.phase === 'lobby'){
         if(typeof g.rebuildGame === 'function'){ g.rebuildGame(false); }
         else if(typeof g.buildCast === 'function'){ g.buildCast(); }
-        if(typeof g.startOpeningSequence === 'function'){ setTimeout(()=>g.startOpeningSequence(), 60); }
+        // Only auto-start if Play button was explicitly pressed
+        if(g.__bbPlayInitiated === true && typeof g.startOpeningSequence === 'function'){ 
+          setTimeout(()=>g.startOpeningSequence(), 60); 
+        }
         g.addLog?.(`New season started with ${val} players.`,'ok');
       }else{
         // Mid-season: defer application

@@ -281,13 +281,14 @@
       
       // Apply based on phase
       if(g.game?.phase === 'lobby'){
-        // In lobby: rebuild cast/game and start opening sequence
+        // In lobby: rebuild cast/game BUT only start opening sequence if Play button was pressed
         if(typeof g.rebuildGame === 'function'){
           g.rebuildGame(false);
         } else if(typeof g.buildCast === 'function'){
           g.buildCast();
         }
-        if(typeof g.startOpeningSequence === 'function'){
+        // Only auto-start if Play button was explicitly pressed
+        if(g.__bbPlayInitiated === true && typeof g.startOpeningSequence === 'function'){
           setTimeout(()=> g.startOpeningSequence(), 60);
         }
         g.addLog?.(`New season started with ${val} players.`, 'ok');
