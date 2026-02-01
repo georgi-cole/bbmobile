@@ -2292,7 +2292,12 @@ header.innerHTML = `
         return;
       }
       
-      const rem=game.endAt-Date.now();
+      let rem=game.endAt-Date.now();
+      
+      // Guard against negative timer values (can happen if endAt becomes stale)
+      // Display 00:00 instead of negative time
+      if(rem<0) rem = 0;
+      
       if(rem<=0){
         clearInterval(tickHandle); setClock('00:00'); 
         // Reset both old bar and new hourglass
@@ -2365,9 +2370,11 @@ header.innerHTML = `
     if(!game || !game.timerPaused) return;
     game.timerPaused = false;
     if(game.pausedTimeRemaining != null){
-      game.endAt = Date.now() + game.pausedTimeRemaining;
+      // Validate pausedTimeRemaining is not negative (can happen if pause/resume cycles are mismatched)
+      const remaining = Math.max(0, game.pausedTimeRemaining);
+      game.endAt = Date.now() + remaining;
       game.phaseEndsAt = game.endAt;
-      console.info('[phase] timer resumed, new endAt:', game.endAt);
+      console.info('[phase] timer resumed, new endAt:', game.endAt, 'remaining:', remaining);
     }
   }
   

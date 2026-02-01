@@ -3166,9 +3166,9 @@
       g.__socialFastAdvanceTimeout = null;
     }
 
-    // Set default 3-minute timer using available APIs
+    // Set default 2-minute timer using available APIs
     console.info('[social-timer] Setting default phase duration...');
-    const defaultDurationMs = 180000; // 3 minutes = 180 seconds = 180000ms
+    const defaultDurationMs = 120000; // 2 minutes = 120 seconds = 120000ms (per requirements)
     
     // Try multiple timer APIs in order of preference
     let timerSet = false;
@@ -3177,7 +3177,7 @@
     if(typeof global.setPhaseDurationMs === 'function'){
       try{
         global.setPhaseDurationMs(defaultDurationMs);
-        console.info('[social-timer] ✓ Timer set to 180000ms (3 minutes) via setPhaseDurationMs');
+        console.info('[social-timer] ✓ Timer set to 120000ms (2 minutes) via setPhaseDurationMs');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] setPhaseDurationMs failed:', e);
@@ -3188,7 +3188,7 @@
     if(!timerSet && typeof global.GameTimer?.setRemainingMs === 'function'){
       try{
         global.GameTimer.setRemainingMs(defaultDurationMs);
-        console.info('[social-timer] ✓ Timer set to 180000ms (3 minutes) via GameTimer.setRemainingMs');
+        console.info('[social-timer] ✓ Timer set to 120000ms (2 minutes) via GameTimer.setRemainingMs');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] GameTimer.setRemainingMs failed:', e);
@@ -3201,7 +3201,7 @@
         const now = Date.now();
         g.endAt = now + defaultDurationMs;
         g.phaseEndsAt = now + defaultDurationMs;
-        console.info('[social-timer] ✓ Timer set to 180000ms (3 minutes) via game.endAt fallback');
+        console.info('[social-timer] ✓ Timer set to 120000ms (2 minutes) via game.endAt fallback');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] game.endAt fallback failed:', e);
@@ -3540,6 +3540,14 @@
     }
     socialSummaryOpen = true;
 
+    // PAUSE TIMER when summary modal opens
+    try {
+      pausePhaseTimer();
+      console.info('[social-maneuvers] ⏸️ Timer paused (summary modal opened)');
+    } catch(e) {
+      console.error('[social-maneuvers] Failed to pause timer for summary:', e);
+    }
+
     // HIDE SOCIAL LAUNCHER to prevent stacking/overlap on mobile
     const socialLauncher = document.getElementById('socializeLauncher');
     if(socialLauncher){
@@ -3651,6 +3659,35 @@
       // Reset summary guard so it can be shown again next phase
       socialSummaryOpen = false;
       
+      // RESUME TIMER when summary modal closes (or allow phase to advance if timer expired)
+      try {
+        const g = global.game;
+        // Check if timer has already expired
+        const hasTimeRemaining = g?.endAt > Date.now();
+        
+        if (hasTimeRemaining) {
+          // Timer still has time - resume it
+          resumePhaseTimer();
+          console.info('[social-maneuvers] ▶️ Timer resumed (summary modal closed, time remaining)');
+        } else {
+          // Timer expired - allow phase to advance
+          console.info('[social-maneuvers] Timer expired while summary was open - phase will advance');
+          // Trigger phase timeout callback if available
+          // Small delay allows modal animation to complete before phase transition
+          if (typeof g?.phaseTimeoutCallback === 'function') {
+            setTimeout(() => {
+              try {
+                g.phaseTimeoutCallback();
+              } catch(err) {
+                console.error('[social-maneuvers] Error calling phase timeout callback:', err);
+              }
+            }, 500);
+          }
+        }
+      } catch(e) {
+        console.error('[social-maneuvers] Failed to handle timer on summary close:', e);
+      }
+      
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();
@@ -3668,7 +3705,7 @@
         // TASK 1: Restore social launcher if phase is still active and energy/time remain
         const g = global.game;
         const isPhaseStillActive = g?.phase === 'social_intermission';
-        const hasTimeRemaining = g?.endAt && g.endAt > Date.now();
+        const hasTimeRemaining = g?.endAt > Date.now();
         const humanId = g?.humanId;
         const humanEnergy = humanId ? SocialResources.get(humanId, 'energy') : 0;
         
