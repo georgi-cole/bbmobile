@@ -238,6 +238,24 @@
       msg.textContent = won ? 'Cleared!' : 'Game Over';
       container.appendChild(msg);
       try {
+        if (typeof root.MinigameScoring?.calculateFinalScore === 'function') {
+          const filled = grid.reduce((acc, row) => acc + row.filter(Boolean).length, 0);
+          const cleared = config.rows * config.cols - filled;
+          const rawScore = Math.max(0, Math.min(100, cleared));
+          const finalScore = root.MinigameScoring.calculateFinalScore({
+            rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5,
+            rawScoreDisplay: `${cleared} cleared`
+          });
+          root.game && root.game.bus && root.game.bus.emit && root.game.bus.emit('minigame:score', { finalScore, rawScore, game: 'chainReaction' });
+          root.MiniGameLifecycle && root.MiniGameLifecycle.markCompleted && root.MiniGameLifecycle.markCompleted('chainReaction', finalScore);
+        }
+      } catch (_e) {
+        // Non-fatal scoring failure
+      }
+      try {
         root.game && root.game.bus && root.game.bus.emit && root.game.bus.emit('minigame:end', { won });
       } catch (err) {
         // Silently fail if event bus unavailable

@@ -372,7 +372,16 @@
       if(gameOver) return;
       gameOver = true;
       
-      const finalScore = Math.max(0, Math.min(100, score * 5 - crashes * 10));
+      const rawScore = Math.max(0, Math.min(100, score * 5 - crashes * 10));
+      const finalScore = (g.MinigameScoring && typeof g.MinigameScoring.calculateFinalScore === 'function')
+        ? g.MinigameScoring.calculateFinalScore({
+            rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5,
+            rawScoreDisplay: `${score} delivered / ${crashes} crashes`
+          })
+        : rawScore;
       
       const resultDiv = document.createElement('div');
       resultDiv.style.cssText = `

@@ -151,7 +151,12 @@
             normalized = g.MinigameScoring.normalizeAccuracy(rawScore, 100);
             break;
           case 'hybrid':
-            normalized = g.MinigameScoring.normalizeHybrid(rawScore, 100, rawScore * 50, 2000, 10000);
+            normalized = g.MinigameScoring.normalizeHybrid({
+              correct: rawScore,
+              total: 100,
+              timeMs: rawScore * 50,
+              targetTimeMs: 1000
+            });
             break;
           case 'endurance':
             normalized = g.MinigameScoring.normalizeEndurance(rawScore * 1000, 10000, 60000);
