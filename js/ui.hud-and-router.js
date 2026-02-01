@@ -2281,14 +2281,50 @@ header.innerHTML = `
         return;
       }
       
+      // Check PauseController (new unified pause system)
+      if (g.PauseController && typeof g.PauseController.isPaused === 'function' && g.PauseController.isPaused()) {
+        // Display paused time from captured state instead of extending endAt
+        if (typeof game.pausedTimeRemaining === 'number' && game.pausedTimeRemaining >= 0) {
+          const rem = game.pausedTimeRemaining;
+          const s = Math.ceil(rem / 1000);
+          const m = Math.floor(s / 60);
+          const r = s % 60;
+          
+          // Safety guard: if paused time is unreasonably large (>120 min), show PAUSED
+          if (m > 120) {
+            setClock('PAUSED');
+          } else {
+            setClock(`${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`);
+          }
+          return;
+        }
+        // No captured time - freeze the timer
+        freezeTimer();
+        return;
+      }
+      
       // Fallback check for pauseManager (legacy compatibility)
       if(g.game?.pauseManager?.isPaused()){
         freezeTimer();
         return;
       }
       
-      // Skip ticking if timer is paused
+      // Skip ticking if timer is paused (legacy flag)
       if(game.timerPaused){
+        // Display paused time if available
+        if (typeof game.pausedTimeRemaining === 'number' && game.pausedTimeRemaining >= 0) {
+          const rem = game.pausedTimeRemaining;
+          const s = Math.ceil(rem / 1000);
+          const m = Math.floor(s / 60);
+          const r = s % 60;
+          
+          // Safety guard: if paused time is unreasonably large (>120 min), show PAUSED
+          if (m > 120) {
+            setClock('PAUSED');
+          } else {
+            setClock(`${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`);
+          }
+        }
         return;
       }
       
