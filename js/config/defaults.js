@@ -40,7 +40,7 @@
     tNoms: 25,
     tVeto: 40,
     tVetoDec: 25,
-    tSocial: 25,
+    tSocial: 120,  // 2 minutes for social phase as per requirements
     tLiveVote: 30,
     tJury: 35,
     tFinal3Comp1: 35,
