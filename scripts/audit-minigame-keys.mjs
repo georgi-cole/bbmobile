@@ -153,8 +153,9 @@ function audit(){
   console.log(`\n${colors.cyan}=== Check 1: Registry → Bootstrap Coverage ===${colors.reset}`);
   const missingFromBootstrap = registryKeys.filter(key => !bootstrapFallbackKeys.includes(key));
   if(missingFromBootstrap.length > 0){
-    console.log(`${colors.red}✗ ${missingFromBootstrap.length} registry keys missing from bootstrap fallback:${colors.reset}`);
+    console.log(`${colors.yellow}⚠ ${missingFromBootstrap.length} registry keys missing from bootstrap fallback:${colors.reset}`);
     missingFromBootstrap.forEach(key => console.log(`  - ${key}`));
+    console.log(`${colors.yellow}  Note: Retired/placeholder games are intentionally excluded from bootstrap${colors.reset}`);
   } else {
     console.log(`${colors.green}✓ All registry keys are in bootstrap fallback${colors.reset}`);
   }

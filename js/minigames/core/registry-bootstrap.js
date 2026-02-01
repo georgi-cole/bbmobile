@@ -30,7 +30,7 @@
     } else {
       console.warn('[RegistryBootstrap] MinigameRegistry not available, using hardcoded list');
       
-      // Fallback: hardcoded list of canonical keys
+      // Fallback: hardcoded list of canonical keys (implemented && !retired only)
       const fallbackKeys = [
         'countHouse', 'reactionRoyale', 'triviaPulse', 'quickTap',
         'memoryMatch', 'mathBlitz', 'timingBar', 'sequenceMemory',
@@ -38,17 +38,13 @@
         'estimationGame', 'wordTyping', 'reactionTimer', 'sliderPuzzle',
         'pathFinder', 'simonSays', 'holdWall', 'tiltedLedge', 'pressurePlank',
         'rainBarrelBalance', 'memoryZipline', 'swipeMaze',
-        'patternTrace', 'audioMatch', 'balanceBridge', 'colorMix',
-        'wordLadder', 'rhythmTap', 'spotTheDifference', 'logicLocks',
-        'astroJumper', 'bubbleBurst', 'cardClash', 'chainReaction',
+        'logicLocks', 'bubbleBurst', 'cardClash', 'chainReaction',
         'clockStopper', 'comboKeys', 'diceDash', 'echoChamber',
         'flashFlood', 'gearShift', 'gridLock', 'iconMatch',
         'jumpRope', 'keyMaster', 'lightSpeed', 'puzzleDash',
         'colorMatch', 'socialStrings', 'snake',
         'hangman', 'tiltLabyrinth', 'threeDigitsQuiz',
         'tetris', 'travelingDots', 'minesweeps', 'railSwitchSprint',
-        'shadowConeSneak', 'bombDefuseConstraints', 'circuitLoop',
-        'territoryEncircle', 'magnetMaze',
         'laserPantryDash', 'confettiCannon', 'buzzerSprintRelay'
       ];
       
