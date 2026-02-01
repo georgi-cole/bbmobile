@@ -560,13 +560,8 @@
       }
       
       // Score based on food eaten - Each food = 10 points
-      // Capped at 100 for compatibility with existing scoring normalization system
-      // The raw food count (not capped) is tracked separately for high scores
+      // Raw score capped at 100 for normalization
       const rawScore = Math.min(100, foodEaten * 10);
-      const maxScore = 100;
-      
-      // Determine if player succeeded (ate at least 5 food)
-      const playerSucceeded = foodEaten >= 5;
       
       // Check for new personal best
       let isNewBest = false;
@@ -578,33 +573,21 @@
         }
       }
       
-      // Apply new centralized outcome logic in competition mode
-      let finalScore = rawScore;
-      if(g.GameUtils && g.GameUtils.evaluateOutcome && !debugMode && competitionMode){
-        const outcome = g.GameUtils.evaluateOutcome(rawScore, maxScore, {
-          usedSkip: false,
-          failed: !playerSucceeded,
-          cheated: false
-        });
-        
-        finalScore = outcome.finalScore;
-        
-        // If player succeeded but didn't win, coerce to loss band for consistent UX
-        if(playerSucceeded && !outcome.didWin && !g.cfg?.debugAlwaysWin){
-          finalScore = g.GameUtils.coerceSuccessToLossScore(finalScore);
-          console.log('[Snake] Win probability applied: success forced to loss, score:', finalScore);
-        }
-        
-        if(outcome.didWin){
-          console.log('[Snake] Player won! Reasons:', outcome.reasons.join('; '));
-        } else {
-          console.log('[Snake] Player lost. Reasons:', outcome.reasons.join('; '));
-        }
-      }
+      // Use centralized scoring system (SCALE=1000)
+      const finalScore = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        rawScore * 10; // Fallback: scale to 0-1000
+      
+      console.log(`[Snake] Food eaten: ${foodEaten}, Raw score: ${rawScore}, Final score: ${Math.round(finalScore)}`);
       
       // Store metadata about raw score for display purposes
       const scoreData = {
-        score: finalScore,
+        score: Math.round(finalScore),
         rawScore: foodEaten,
         rawScoreDisplay: `${foodEaten} food eaten`,
         isNewPersonalBest: isNewBest

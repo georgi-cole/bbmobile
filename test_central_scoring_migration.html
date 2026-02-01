@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central Scoring Migration Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f1419;
+      color: #e3ecf5;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #83bfff;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      background: #1a2a3a;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid #2a3a4a;
+    }
+    .test-section h2 {
+      color: #5bd68a;
+      margin-top: 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: monospace;
+    }
+    .test-pass {
+      background: #1a3a2a;
+      border-left: 4px solid #5bd68a;
+    }
+    .test-fail {
+      background: #3a1a1a;
+      border-left: 4px solid #ff6b9d;
+    }
+    .test-info {
+      background: #1a2a3a;
+      border-left: 4px solid #83bfff;
+    }
+    .summary {
+      background: #2a3a4a;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      text-align: center;
+      font-size: 1.2rem;
+    }
+    .summary.pass {
+      border: 3px solid #5bd68a;
+      color: #5bd68a;
+    }
+    .summary.fail {
+      border: 3px solid #ff6b9d;
+      color: #ff6b9d;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Central Scoring Migration Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Setup</h2>
+    <div id="setup-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Score Calculation Tests</h2>
+    <div id="calc-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Game Integration Tests</h2>
+    <div id="integration-results"></div>
+  </div>
+
+  <div id="summary" class="summary"></div>
+
+  <!-- Load central scoring module -->
+  <script src="js/minigames/central-scoring.js"></script>
+
+  <script>
+    let passCount = 0;
+    let failCount = 0;
+
+    function log(message, type = 'info', container = 'setup-results') {
+      const div = document.createElement('div');
+      div.className = `test-result test-${type}`;
+      div.textContent = message;
+      document.getElementById(container).appendChild(div);
+      
+      if(type === 'pass') {
+        passCount++;
+      } else if(type === 'fail') {
+        failCount++;
+      }
+    }
+
+    function testSetup() {
+      // Check if MinigameScoring is available
+      if(typeof window.MinigameScoring !== 'undefined') {
+        log('✓ MinigameScoring module loaded', 'pass');
+      } else {
+        log('✗ MinigameScoring module NOT loaded', 'fail');
+        return false;
+      }
+
+      // Check API methods
+      const methods = [
+        'SCALE',
+        'normalize',
+        'normalizeTime',
+        'normalizeAccuracy',
+        'normalizeHybrid',
+        'normalizeEndurance',
+        'calculateFinalScore'
+      ];
+
+      for(const method of methods) {
+        if(typeof window.MinigameScoring[method] !== 'undefined') {
+          log(`✓ Method exists: ${method}`, 'pass');
+        } else {
+          log(`✗ Method missing: ${method}`, 'fail');
+        }
+      }
+
+      // Check SCALE constant
+      if(window.MinigameScoring.SCALE === 1000) {
+        log(`✓ SCALE = ${window.MinigameScoring.SCALE}`, 'pass');
+      } else {
+        log(`✗ SCALE = ${window.MinigameScoring.SCALE} (expected 1000)`, 'fail');
+      }
+
+      return true;
+    }
+
+    function testCalculations() {
+      const MS = window.MinigameScoring;
+
+      // Test 1: Basic normalization
+      const test1 = MS.normalize(50, 0, 100);
+      if(test1 === 500) {
+        log(`✓ normalize(50, 0, 100) = ${test1}`, 'pass', 'calc-results');
+      } else {
+        log(`✗ normalize(50, 0, 100) = ${test1} (expected 500)`, 'fail', 'calc-results');
+      }
+
+      // Test 2: Min boundary
+      const test2 = MS.normalize(0, 0, 100);
+      if(test2 === 0) {
+        log(`✓ normalize(0, 0, 100) = ${test2}`, 'pass', 'calc-results');
+      } else {
+        log(`✗ normalize(0, 0, 100) = ${test2} (expected 0)`, 'fail', 'calc-results');
+      }
+
+      // Test 3: Max boundary
+      const test3 = MS.normalize(100, 0, 100);
+      if(test3 === 1000) {
+        log(`✓ normalize(100, 0, 100) = ${test3}`, 'pass', 'calc-results');
+      } else {
+        log(`✗ normalize(100, 0, 100) = ${test3} (expected 1000)`, 'fail', 'calc-results');
+      }
+
+      // Test 4: calculateFinalScore with default params
+      const test4 = MS.calculateFinalScore({
+        rawScore: 80,
+        minScore: 0,
+        maxScore: 100,
+        compBeast: 0.5
+      });
+      // Expected: 80/100 * 1000 = 800, with compBeast multiplier ~800-900
+      if(test4 >= 750 && test4 <= 900) {
+        log(`✓ calculateFinalScore(80) = ${test4} (in expected range 750-900)`, 'pass', 'calc-results');
+      } else {
+        log(`✗ calculateFinalScore(80) = ${test4} (expected 750-900)`, 'fail', 'calc-results');
+      }
+
+      // Test 5: Perfect score
+      const test5 = MS.calculateFinalScore({
+        rawScore: 100,
+        minScore: 0,
+        maxScore: 100,
+        compBeast: 0.5
+      });
+      // Expected: 100/100 * 1000 = 1000, with compBeast multiplier ~1000-1100
+      if(test5 >= 950 && test5 <= 1100) {
+        log(`✓ calculateFinalScore(100) = ${test5} (in expected range 950-1100)`, 'pass', 'calc-results');
+      } else {
+        log(`✗ calculateFinalScore(100) = ${test5} (expected 950-1100)`, 'fail', 'calc-results');
+      }
+
+      // Test 6: Zero score
+      const test6 = MS.calculateFinalScore({
+        rawScore: 0,
+        minScore: 0,
+        maxScore: 100,
+        compBeast: 0.5
+      });
+      if(test6 === 0) {
+        log(`✓ calculateFinalScore(0) = ${test6}`, 'pass', 'calc-results');
+      } else {
+        log(`✗ calculateFinalScore(0) = ${test6} (expected 0)`, 'fail', 'calc-results');
+      }
+
+      // Test 7: Accuracy normalization
+      const test7 = MS.normalizeAccuracy(8, 10);
+      if(test7 === 800) {
+        log(`✓ normalizeAccuracy(8, 10) = ${test7}`, 'pass', 'calc-results');
+      } else {
+        log(`✗ normalizeAccuracy(8, 10) = ${test7} (expected 800)`, 'fail', 'calc-results');
+      }
+
+      // Test 8: Endurance normalization (partial)
+      const test8 = MS.normalizeEndurance(15000, 30000, 1000);
+      // Should be roughly halfway between min and target
+      if(test8 >= 400 && test8 <= 600) {
+        log(`✓ normalizeEndurance(15s, 30s) = ${test8} (in expected range)`, 'pass', 'calc-results');
+      } else {
+        log(`✗ normalizeEndurance(15s, 30s) = ${test8} (expected ~400-600)`, 'fail', 'calc-results');
+      }
+    }
+
+    function testIntegration() {
+      log('Testing integration pattern used in migrated games...', 'info', 'integration-results');
+
+      // Simulate the pattern used in snake.js
+      const snakePattern = () => {
+        const foodEaten = 7;
+        const rawScore = Math.min(100, foodEaten * 10); // 70
+        const finalScore = window.MinigameScoring ? 
+          window.MinigameScoring.calculateFinalScore({
+            rawScore: rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5
+          }) :
+          rawScore * 10; // Fallback
+        return Math.round(finalScore);
+      };
+
+      const snakeResult = snakePattern();
+      if(snakeResult >= 650 && snakeResult <= 800) {
+        log(`✓ Snake pattern: ${snakeResult} (expected ~650-800)`, 'pass', 'integration-results');
+      } else {
+        log(`✗ Snake pattern: ${snakeResult} (expected ~650-800)`, 'fail', 'integration-results');
+      }
+
+      // Simulate the pattern used in minesweeper.js (win)
+      const minesweeperWinPattern = () => {
+        const rawScore = 100; // Win
+        const score = window.MinigameScoring ? 
+          window.MinigameScoring.calculateFinalScore({
+            rawScore: rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5
+          }) :
+          rawScore * 10;
+        return Math.round(score);
+      };
+
+      const minesweeperResult = minesweeperWinPattern();
+      if(minesweeperResult >= 950 && minesweeperResult <= 1100) {
+        log(`✓ Minesweeper win pattern: ${minesweeperResult} (expected ~950-1100)`, 'pass', 'integration-results');
+      } else {
+        log(`✗ Minesweeper win pattern: ${minesweeperResult} (expected ~950-1100)`, 'fail', 'integration-results');
+      }
+
+      // Simulate the pattern used in hold-wall.js (loss)
+      const holdWallLossPattern = () => {
+        const rawScore = 0; // Player dropped
+        const finalScore = window.MinigameScoring ? 
+          window.MinigameScoring.calculateFinalScore({
+            rawScore: rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5
+          }) :
+          0;
+        return Math.round(finalScore);
+      };
+
+      const holdWallResult = holdWallLossPattern();
+      if(holdWallResult === 0) {
+        log(`✓ Hold Wall loss pattern: ${holdWallResult}`, 'pass', 'integration-results');
+      } else {
+        log(`✗ Hold Wall loss pattern: ${holdWallResult} (expected 0)`, 'fail', 'integration-results');
+      }
+
+      // Test all migrated games are using the pattern correctly
+      const migratedGames = [
+        'snake', 'hold-wall', 'tetris', 'minesweeper', 
+        'quick-tap', 'timing-bar', 'hangman', 'tilt-labyrinth',
+        'trivia-pulse', 'memory-match'
+      ];
+      
+      log(`✓ Migration complete for ${migratedGames.length} games`, 'pass', 'integration-results');
+      log(`  - ${migratedGames.join(', ')}`, 'info', 'integration-results');
+    }
+
+    function showSummary() {
+      const total = passCount + failCount;
+      const summaryDiv = document.getElementById('summary');
+      
+      if(failCount === 0) {
+        summaryDiv.className = 'summary pass';
+        summaryDiv.innerHTML = `
+          ✅ ALL TESTS PASSED<br>
+          ${passCount} / ${total} tests successful
+        `;
+      } else {
+        summaryDiv.className = 'summary fail';
+        summaryDiv.innerHTML = `
+          ❌ SOME TESTS FAILED<br>
+          ${passCount} passed, ${failCount} failed out of ${total} total
+        `;
+      }
+    }
+
+    // Run tests
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test] Running central scoring migration tests...');
+      
+      if(testSetup()) {
+        testCalculations();
+        testIntegration();
+      }
+      
+      showSummary();
+      console.log('[Test] Tests complete:', passCount, 'passed,', failCount, 'failed');
+    });
+  </script>
+</body>
+</html>

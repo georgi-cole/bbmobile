@@ -230,21 +230,33 @@
       
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       
-      let score = 0;
+      let rawScore = 0;
       if(won){
         // Base score for winning
-        score = 100;
+        rawScore = 100;
         
         // Bonus for fewer wrong guesses
         const wrongPenalty = wrongCount * 8;
-        score -= wrongPenalty;
+        rawScore -= wrongPenalty;
         
         // Time bonus (faster is better, cap at 120 seconds)
         const timePenalty = Math.min(elapsed, 120) * 0.5;
-        score -= timePenalty;
+        rawScore -= timePenalty;
         
-        score = Math.max(0, Math.round(score));
+        rawScore = Math.max(0, Math.round(rawScore));
       }
+      
+      // Use centralized scoring system (SCALE=1000)
+      const score = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        rawScore * 10; // Fallback: scale to 0-1000
+      
+      console.log(`[Hangman] Won: ${won}, Wrong guesses: ${wrongCount}, Raw: ${rawScore}, Final: ${Math.round(score)}`);
       
       // Show result
       const resultDiv = document.createElement('div');
@@ -271,7 +283,7 @@
       wordReveal.style.cssText = 'font-size:1.3rem;color:#e3ecf5;margin-bottom:10px;';
       
       const scoreText = document.createElement('div');
-      scoreText.textContent = `Score: ${score}`;
+      scoreText.textContent = `Score: ${Math.round(score)}`;
       scoreText.style.cssText = 'font-size:1.2rem;color:#83bfff;font-weight:600;';
       
       resultDiv.appendChild(resultText);
@@ -289,7 +301,7 @@
       
       setTimeout(() => {
         if(typeof onComplete === 'function'){
-          onComplete(score);
+          onComplete(Math.round(score));
         }
       }, 3000);
     }

@@ -620,10 +620,22 @@
       const elapsed = (Date.now() - startTime) / 1000;
       
       // Score: base 100, time penalty, hazard penalty
-      let score = 100;
-      score -= Math.min(elapsed * 1.5, 60); // Time penalty
-      score -= hazardPenalty * 5; // Hazard penalty
-      score = Math.max(0, Math.round(score));
+      let rawScore = 100;
+      rawScore -= Math.min(elapsed * 1.5, 60); // Time penalty
+      rawScore -= hazardPenalty * 5; // Hazard penalty
+      rawScore = Math.max(0, Math.round(rawScore));
+      
+      // Use centralized scoring system (SCALE=1000)
+      const score = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        rawScore * 10; // Fallback: scale to 0-1000
+      
+      console.log(`[TiltLabyrinth] Time: ${elapsed.toFixed(1)}s, Hazards: ${hazardPenalty}, Raw: ${rawScore}, Final: ${Math.round(score)}`);
       
       // Show result
       const resultDiv = document.createElement('div');
@@ -654,7 +666,7 @@
       penaltyText.style.cssText = 'font-size:1.1rem;color:#ff6b9d;margin-bottom:12px;';
       
       const scoreText = document.createElement('div');
-      scoreText.textContent = `Score: ${score}`;
+      scoreText.textContent = `Score: ${Math.round(score)}`;
       scoreText.style.cssText = 'font-size:1.3rem;color:#f7b955;font-weight:600;';
       
       resultDiv.appendChild(resultText);
@@ -673,7 +685,7 @@
       
       setTimeout(() => {
         if(typeof onComplete === 'function'){
-          onComplete(score);
+          onComplete(Math.round(score));
         }
       }, COMPLETION_DELAY_MS);
     }
