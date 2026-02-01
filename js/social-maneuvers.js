@@ -2060,15 +2060,13 @@
   // PHASE TIMER CONTROL
   // ============================================================================
   
-  // Far-future timestamp offset for pausing timer (24 hours in milliseconds)
-  const FAR_FUTURE_PAUSE_MS = 1000 * 60 * 60 * 24;
-  
+  // Timer state management (lightweight tracking for compatibility)
   let timerPaused = false;
   let pausedTimerState = null;
   
   /**
    * Pause the phase timer. Called when Socialize modal opens.
-   * Prefers GameTimer.pause() if available, otherwise stores remaining ms and sets far future.
+   * Uses PauseController for robust owner-based pause management.
    */
   function pausePhaseTimer() {
     if (timerPaused) {
@@ -2084,7 +2082,19 @@
       global.SocialAIScheduler.pauseAiSocialPhase('modal-open');
     }
     
-    // Prefer GameTimer.pause() if available
+    // Use PauseController if available (preferred method)
+    if (global.PauseController && typeof global.PauseController.pause === 'function') {
+      try {
+        global.PauseController.pause('social-maneuvers');
+        timerPaused = true;
+        console.info('[social-maneuvers] ⏸️ Timer paused via PauseController');
+        return;
+      } catch(e) {
+        console.warn('[social-maneuvers] PauseController.pause() failed, using fallback:', e);
+      }
+    }
+    
+    // Fallback: Use GameTimer if available
     if (global.GameTimer && typeof global.GameTimer.pause === 'function') {
       try {
         global.GameTimer.pause();
@@ -2096,7 +2106,7 @@
       }
     }
     
-    // Fallback: Store remaining ms and set far future
+    // Legacy fallback: Store remaining ms (no FAR_FUTURE)
     if (g.endAt && typeof g.endAt === 'number') {
       const now = Date.now();
       const remaining = Math.max(0, g.endAt - now);
@@ -2108,18 +2118,13 @@
         pausedAt: now
       };
       
-      // Only freeze the timer if it hasn't already expired
-      // If timer expired (remaining = 0), don't set far-future value to prevent display showing incorrect time
+      // Set timer paused flag without modifying endAt
+      g.timerPaused = true;
       if (remaining > 0) {
-        // Freeze the timer by setting endAt to far future
-        g.endAt = now + FAR_FUTURE_PAUSE_MS;
-        if (typeof g.phaseEndsAt === 'number') {
-          g.phaseEndsAt = g.endAt;
-        }
-        console.info('[social-maneuvers] ⏸️ Timer paused (fallback):', remaining, 'ms remaining');
+        g.pausedTimeRemaining = remaining;
+        console.info('[social-maneuvers] ⏸️ Timer paused (legacy fallback):', remaining, 'ms remaining');
       } else {
-        // Timer already expired - keep current endAt to show 0:00 instead of far-future time
-        console.warn('[social-maneuvers] ⏸️ Timer already expired (remaining=0), not setting far-future value. Keeping endAt:', g.endAt);
+        console.warn('[social-maneuvers] ⏸️ Timer already expired (remaining=0)');
       }
       
       timerPaused = true;
@@ -2130,7 +2135,7 @@
   
   /**
    * Resume the phase timer. Called when Socialize modal closes.
-   * Prefers GameTimer.resume() if available, otherwise restores stored time.
+   * Uses PauseController for robust owner-based pause management.
    */
   function resumePhaseTimer() {
     if (!timerPaused) {
@@ -2151,7 +2156,20 @@
       global.SocialActionExecutor.flushQueue();
     }
     
-    // Prefer GameTimer.resume() if available
+    // Use PauseController if available (preferred method)
+    if (global.PauseController && typeof global.PauseController.resume === 'function') {
+      try {
+        global.PauseController.resume('social-maneuvers');
+        timerPaused = false;
+        pausedTimerState = null;
+        console.info('[social-maneuvers] ▶️ Timer resumed via PauseController');
+        return;
+      } catch(e) {
+        console.warn('[social-maneuvers] PauseController.resume() failed, using fallback:', e);
+      }
+    }
+    
+    // Fallback: Use GameTimer if available
     if (global.GameTimer && typeof global.GameTimer.resume === 'function') {
       try {
         global.GameTimer.resume();
@@ -2164,10 +2182,15 @@
       }
     }
     
-    // Fallback: Restore timer with remaining time
+    // Legacy fallback: Restore timer with remaining time
     if (!pausedTimerState) {
       console.warn('[social-maneuvers] Cannot resume timer - no pausedTimerState', new Error().stack);
       timerPaused = false;
+      // Clear timer paused flag
+      if (g.timerPaused) {
+        g.timerPaused = false;
+        g.pausedTimeRemaining = null;
+      }
       return;
     }
     
@@ -2179,8 +2202,12 @@
       g.phaseEndsAt = now + remaining;
     }
     
+    // Clear timer paused flag
+    g.timerPaused = false;
+    g.pausedTimeRemaining = null;
+    
     timerPaused = false;
-    console.info('[social-maneuvers] ▶️ Timer resumed (fallback):', remaining, 'ms remaining');
+    console.info('[social-maneuvers] ▶️ Timer resumed (legacy fallback):', remaining, 'ms remaining');
     pausedTimerState = null;
   }
   
@@ -3552,10 +3579,16 @@
     }
     socialSummaryOpen = true;
 
-    // PAUSE TIMER when summary modal opens
+    // PAUSE TIMER when summary modal opens (use PauseController with owner ID)
     try {
-      pausePhaseTimer();
-      console.info('[social-maneuvers] ⏸️ Timer paused (summary modal opened)');
+      if (global.PauseController && typeof global.PauseController.pause === 'function') {
+        global.PauseController.pause('social-summary');
+        console.info('[social-maneuvers] ⏸️ Timer paused via PauseController (summary modal opened)');
+      } else {
+        // Fallback to legacy pause
+        pausePhaseTimer();
+        console.info('[social-maneuvers] ⏸️ Timer paused (summary modal opened, legacy fallback)');
+      }
     } catch(e) {
       console.error('[social-maneuvers] Failed to pause timer for summary:', e);
     }
@@ -3659,10 +3692,17 @@
     const detailsBtn = document.createElement('button');
     detailsBtn.className = 'btn small';
     detailsBtn.textContent = 'More';
-    detailsBtn.onclick = () => showDetailedSummary(summary);
+    detailsBtn.onclick = () => {
+      // Pause timer again with different owner when More modal opens
+      if (global.PauseController && typeof global.PauseController.pause === 'function') {
+        global.PauseController.pause('social-summary-more');
+        console.info('[social-maneuvers] ⏸️ Timer paused for More details modal (via PauseController)');
+      }
+      showDetailedSummary(summary);
+    };
     buttonBar.appendChild(detailsBtn);
 
-    // OK button (closes summary)
+    // OK button (closes summary and advances phase)
     const continueBtn = document.createElement('button');
     continueBtn.className = 'btn small';
     continueBtn.textContent = 'OK';
@@ -3671,33 +3711,29 @@
       // Reset summary guard so it can be shown again next phase
       socialSummaryOpen = false;
       
-      // RESUME TIMER when summary modal closes (or allow phase to advance if timer expired)
+      // OK button behavior: Set timer to 1 second remaining and resume
       try {
         const g = global.game;
-        // Check if timer has already expired
-        const hasTimeRemaining = g?.endAt > Date.now();
+        const now = Date.now();
         
-        if (hasTimeRemaining) {
-          // Timer still has time - resume it
-          resumePhaseTimer();
-          console.info('[social-maneuvers] ▶️ Timer resumed (summary modal closed, time remaining)');
+        // Set endAt to 1 second from now (fast advance to next phase)
+        g.endAt = now + 1000;
+        if (typeof g.phaseEndsAt === 'number') {
+          g.phaseEndsAt = now + 1000;
+        }
+        console.info('[social-maneuvers] ⏱️ OK pressed - timer set to 1 second remaining (endAt:', g.endAt, ')');
+        
+        // Resume timer with owner ID to allow phase to advance
+        if (global.PauseController && typeof global.PauseController.resume === 'function') {
+          global.PauseController.resume('social-summary');
+          console.info('[social-maneuvers] ▶️ Timer resumed via PauseController (OK pressed)');
         } else {
-          // Timer expired - allow phase to advance
-          console.info('[social-maneuvers] Timer expired while summary was open - phase will advance');
-          // Trigger phase timeout callback if available
-          // Small delay allows modal animation to complete before phase transition
-          if (typeof g?.phaseTimeoutCallback === 'function') {
-            setTimeout(() => {
-              try {
-                g.phaseTimeoutCallback();
-              } catch(err) {
-                console.error('[social-maneuvers] Error calling phase timeout callback:', err);
-              }
-            }, 500);
-          }
+          // Fallback: resume via legacy method
+          resumePhaseTimer();
+          console.info('[social-maneuvers] ▶️ Timer resumed (OK pressed, legacy fallback)');
         }
       } catch(e) {
-        console.error('[social-maneuvers] Failed to handle timer on summary close:', e);
+        console.error('[social-maneuvers] Failed to handle timer on OK:', e);
       }
       
       card.style.animation = 'popOut 0.4s ease forwards';
@@ -3803,9 +3839,9 @@
   }
 
   function showDetailedSummary(summary){
-    // TASK 3: Pause timer when More details modal opens
-    pausePhaseTimer();
-    console.info('[social-maneuvers] ⏸️ Timer paused for More details modal');
+    // Note: Timer is already paused by showSummaryPanel with 'social-summary' owner
+    // We add another owner 'social-summary-more' to keep it paused while More modal is open
+    // This is already handled in the More button onclick handler
     
     // Create detailed modal
     const modal = document.createElement('div');
@@ -3905,9 +3941,15 @@
     closeBtn.style.cssText = 'display:block;margin:1em auto 0;';
     closeBtn.onclick = () => {
       modal.remove();
-      // TASK 3: Resume timer when More details modal closes
-      resumePhaseTimer();
-      console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed');
+      // Resume timer when More details modal closes (with owner ID)
+      if (global.PauseController && typeof global.PauseController.resume === 'function') {
+        global.PauseController.resume('social-summary-more');
+        console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed (via PauseController)');
+      } else {
+        // Fallback to legacy resume
+        resumePhaseTimer();
+        console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed (legacy fallback)');
+      }
       // Note: Don't remove backdrop here - it's owned by the summary card
       // Backdrop will be cleaned up when user clicks OK on the main summary
     };
@@ -3920,9 +3962,15 @@
     modal.onclick = (e) => {
       if(e.target === modal) {
         modal.remove();
-        // TASK 3: Resume timer when More details modal closes via backdrop click
-        resumePhaseTimer();
-        console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed (backdrop click)');
+        // Resume timer when More details modal closes via backdrop click (with owner ID)
+        if (global.PauseController && typeof global.PauseController.resume === 'function') {
+          global.PauseController.resume('social-summary-more');
+          console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed (backdrop click, via PauseController)');
+        } else {
+          // Fallback to legacy resume
+          resumePhaseTimer();
+          console.info('[social-maneuvers] ▶️ Timer resumed after More details modal closed (backdrop click, legacy fallback)');
+        }
         // Note: Don't remove backdrop here - it's owned by the summary card
       }
     };

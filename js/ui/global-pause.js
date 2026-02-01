@@ -56,6 +56,11 @@
           if (window.PauseController && typeof window.PauseController.pause === 'function') {
             window.PauseController.pause('modal:' + id);
           }
+        } else if (openModals.size > 0) {
+          // Already paused, just add another owner
+          if (window.PauseController && typeof window.PauseController.pause === 'function') {
+            window.PauseController.pause('modal:' + id);
+          }
         }
       } catch (err) {
         if (window.console && typeof window.console.error === 'function') {
@@ -69,12 +74,12 @@
         if (!id) throw new Error('PauseManager.close requires an id');
         if (!openModals.has(id)) return;
         openModals.delete(id);
+        // Always resume with owner ID
+        if (window.PauseController && typeof window.PauseController.resume === 'function') {
+          window.PauseController.resume('modal:' + id);
+        }
         if (openModals.size === 0) {
           emit('game:resume');
-          // Actually resume the game using PauseController
-          if (window.PauseController && typeof window.PauseController.resume === 'function') {
-            window.PauseController.resume();
-          }
         }
       } catch (err) {
         if (window.console && typeof window.console.error === 'function') {
