@@ -2861,6 +2861,12 @@
     const humanIsNominee = g.nominees.includes(humanId);
     const humanIsHOH = g.hohId === humanId;
     
+    // Keep plea state in sync across modules to prevent duplicate/stuck modals
+    if (g.__pleaSubmitted && !g.__f3PleaSubmitted) {
+      g.__f3PleaSubmitted = true;
+      try { global.FinalPlea?.cleanup?.(); } catch (e) { /* non-critical cleanup error */ }
+    }
+    
     panel.innerHTML = '';
     
     // Create living-room themed ceremony card
@@ -2903,7 +2909,7 @@
     card.appendChild(nomineesList);
     
     // Handle human nominee - show plea interface
-    if (humanIsNominee && !g.__f3PleaSubmitted) {
+    if (humanIsNominee && !g.__f3PleaSubmitted && !g.__pleaSubmitted) {
       const otherNominee = nominees.find(n => n.id !== humanId);
       
       if (global.FinalPlea && typeof global.FinalPlea.show === 'function') {

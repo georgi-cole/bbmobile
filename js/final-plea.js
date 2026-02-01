@@ -326,6 +326,7 @@
 
     if (g) {
       g.__pleaSubmitted = true;
+      g.__f3PleaSubmitted = true; // keep F3 state in sync to avoid duplicate renders
     }
 
     // Disable buttons
