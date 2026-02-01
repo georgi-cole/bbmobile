@@ -2252,6 +2252,9 @@ header.innerHTML = `
     }
   }
   
+  // Constants for timer rendering
+  const MAX_REASONABLE_PAUSE_MINUTES = 120; // Display "PAUSED" if paused time exceeds this
+  
   function startPhaseTimer(phase, seconds, onTimeout, bar, setClock, hourglassSandTop, hourglassSandBottom, hourglassSandFlow){
     const game = g.game;
     if(!game) return;
@@ -2281,14 +2284,50 @@ header.innerHTML = `
         return;
       }
       
+      // Check PauseController (new unified pause system)
+      if (g.PauseController && typeof g.PauseController.isPaused === 'function' && g.PauseController.isPaused()) {
+        // Display paused time from captured state instead of extending endAt
+        if (typeof game.pausedTimeRemaining === 'number' && game.pausedTimeRemaining >= 0) {
+          const rem = game.pausedTimeRemaining;
+          const s = Math.ceil(rem / 1000);
+          const m = Math.floor(s / 60);
+          const r = s % 60;
+          
+          // Safety guard: if paused time is unreasonably large, show PAUSED
+          if (m > MAX_REASONABLE_PAUSE_MINUTES) {
+            setClock('PAUSED');
+          } else {
+            setClock(`${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`);
+          }
+          return;
+        }
+        // No captured time - freeze the timer
+        freezeTimer();
+        return;
+      }
+      
       // Fallback check for pauseManager (legacy compatibility)
       if(g.game?.pauseManager?.isPaused()){
         freezeTimer();
         return;
       }
       
-      // Skip ticking if timer is paused
+      // Skip ticking if timer is paused (legacy flag)
       if(game.timerPaused){
+        // Display paused time if available
+        if (typeof game.pausedTimeRemaining === 'number' && game.pausedTimeRemaining >= 0) {
+          const rem = game.pausedTimeRemaining;
+          const s = Math.ceil(rem / 1000);
+          const m = Math.floor(s / 60);
+          const r = s % 60;
+          
+          // Safety guard: if paused time is unreasonably large, show PAUSED
+          if (m > MAX_REASONABLE_PAUSE_MINUTES) {
+            setClock('PAUSED');
+          } else {
+            setClock(`${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`);
+          }
+        }
         return;
       }
       
@@ -2318,9 +2357,9 @@ header.innerHTML = `
       }
       const s=Math.ceil(rem/1000), m=Math.floor(s/60), r=s%60;
       
-      // DEFENSIVE GUARD: If timer shows >120 minutes and is paused, display "PAUSED" instead
-      // This prevents displaying far-future values (1439+ minutes) in rare race conditions
-      if (m > 120 && g.timerPaused) {
+      // DEFENSIVE GUARD: If timer shows unreasonably large value and is paused, display "PAUSED" instead
+      // This prevents displaying far-future values in rare race conditions
+      if (m > MAX_REASONABLE_PAUSE_MINUTES && g.timerPaused) {
         setClock('PAUSED');
         console.warn('[hud-timer] Timer paused with far-future value detected (', m, 'min), displaying PAUSED instead');
       } else {

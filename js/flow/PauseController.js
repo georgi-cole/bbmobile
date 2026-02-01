@@ -16,6 +16,7 @@
     reason: null,
     pausedAt: null,
     refCount: 0, // Prevent double-pause from nested calls
+    owners: new Set(), // Track active pause owners for reference counting
     
     // Timer state captured on pause
     timerState: {
@@ -31,28 +32,41 @@
 
   /**
    * Pause all game systems
-   * @param {string} reason - Why the pause was triggered (e.g., "settings", "modal")
+   * @param {string} ownerId - Unique identifier for the pause owner (e.g., "settings", "modal:profile", "social-maneuvers")
    */
-  function pause(reason = 'unknown') {
+  function pause(ownerId = 'unknown') {
     const game = global.game;
     if (!game) {
       console.warn('[PauseController] Cannot pause - game object not available');
       return;
     }
 
-    // Increment ref count to handle nested calls
+    // Add owner to active set
+    const wasEmpty = pauseState.owners.size === 0;
+    pauseState.owners.add(ownerId);
+    
+    // Increment ref count to handle nested calls (backward compatibility)
     pauseState.refCount++;
 
     if (pauseState.isPaused) {
-      console.info(`[PauseController] Already paused (refCount: ${pauseState.refCount})`);
+      console.info(`[PauseController] Pause owner '${ownerId}' added (owners: ${Array.from(pauseState.owners).join(', ')}, refCount: ${pauseState.refCount})`);
       return;
     }
+    
+    // Only capture state on first pause (transition 0 -> 1 owners)
+    if (!wasEmpty) {
+      // This should not happen - clear stale state and continue
+      console.error(`[PauseController] CONSISTENCY ERROR: isPaused=false but had ${pauseState.owners.size} owner(s). Clearing stale owners.`);
+      pauseState.owners.clear();
+      pauseState.owners.add(ownerId);
+      pauseState.refCount = 1;
+    }
 
-    console.info(`[PauseController] ⏸ Pausing game (reason: ${reason})`);
+    console.info(`[PauseController] ⏸ Pausing game (owner: ${ownerId}, owners: ${Array.from(pauseState.owners).join(', ')})`);
 
     // Set pause state
     pauseState.isPaused = true;
-    pauseState.reason = reason;
+    pauseState.reason = ownerId; // Store first owner as reason for backward compatibility
     pauseState.pausedAt = Date.now();
 
     // Set global flag
@@ -72,7 +86,8 @@
     // Broadcast pause event
     if (game.bus && typeof game.bus.emit === 'function') {
       game.bus.emit('game:paused', {
-        reason,
+        reason: ownerId,
+        owners: Array.from(pauseState.owners),
         pausedAt: pauseState.pausedAt,
         phase: game.phase,
         week: game.week,
@@ -82,7 +97,8 @@
 
     // Log telemetry
     logPauseEvent('pause', {
-      reason,
+      reason: ownerId,
+      owners: Array.from(pauseState.owners),
       phase: game.phase,
       week: game.week,
       remainingMs: pauseState.timerState.remainingMs
@@ -91,19 +107,35 @@
 
   /**
    * Resume all game systems
+   * @param {string} ownerId - Unique identifier for the pause owner to remove (optional for backward compatibility)
    */
-  function resume() {
+  function resume(ownerId = null) {
     const game = global.game;
     if (!game) {
       console.warn('[PauseController] Cannot resume - game object not available');
       return;
     }
 
-    // Decrement ref count
+    // If ownerId provided, remove it from owners set
+    if (ownerId && pauseState.owners.has(ownerId)) {
+      pauseState.owners.delete(ownerId);
+      console.info(`[PauseController] Removed pause owner '${ownerId}' (remaining owners: ${Array.from(pauseState.owners).join(', ') || 'none'})`);
+    } else if (ownerId) {
+      console.warn(`[PauseController] Resume called for unknown owner '${ownerId}'`);
+    }
+    
+    // Decrement ref count (backward compatibility)
     pauseState.refCount = Math.max(0, pauseState.refCount - 1);
 
+    // Only resume if no owners remain
+    if (pauseState.owners.size > 0) {
+      console.info(`[PauseController] Still paused by owners: ${Array.from(pauseState.owners).join(', ')} (refCount: ${pauseState.refCount})`);
+      return;
+    }
+    
+    // Backward compatibility: also check refCount
     if (pauseState.refCount > 0) {
-      console.info(`[PauseController] Resume called but still paused (refCount: ${pauseState.refCount})`);
+      console.info(`[PauseController] Still paused (refCount: ${pauseState.refCount})`);
       return;
     }
 
@@ -134,6 +166,7 @@
     if (game.bus && typeof game.bus.emit === 'function') {
       game.bus.emit('game:resumed', {
         reason: pauseState.reason,
+        ownerId: ownerId,
         pauseDuration,
         phase: game.phase,
         week: game.week
@@ -143,6 +176,7 @@
     // Log telemetry
     logPauseEvent('resume', {
       reason: pauseState.reason,
+      ownerId: ownerId,
       pauseDuration,
       phase: game.phase,
       week: game.week
@@ -152,6 +186,7 @@
     pauseState.isPaused = false;
     pauseState.reason = null;
     pauseState.pausedAt = null;
+    pauseState.owners.clear();
     pauseState.timerState = {
       endAt: null,
       remainingMs: null,
@@ -176,8 +211,17 @@
       isPaused: pauseState.isPaused,
       reason: pauseState.reason,
       pausedAt: pauseState.pausedAt,
-      refCount: pauseState.refCount
+      refCount: pauseState.refCount,
+      owners: Array.from(pauseState.owners)
     };
+  }
+  
+  /**
+   * Get list of active pause owners
+   * @returns {string[]}
+   */
+  function getOwners() {
+    return Array.from(pauseState.owners);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -371,6 +415,7 @@
   PauseController.resume = resume;
   PauseController.isPaused = isPaused;
   PauseController.getState = getState;
+  PauseController.getOwners = getOwners;
   PauseController.checkGuard = checkGuard;
   PauseController.guardFunction = guardFunction;
 
