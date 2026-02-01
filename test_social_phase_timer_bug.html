@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Social Phase Timer Bug Test</title>
+  <title>Social Phase Timer Fix Verification</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -88,9 +88,9 @@
   </style>
 </head>
 <body>
-  <h1>🐛 Social Phase Timer Bug Reproduction & Fix Test</h1>
-  <p><strong>Issue:</strong> After socializing and closing the modal, timer shows >1350 minutes instead of correct time.</p>
-  <p><strong>Root Cause:</strong> pausePhaseTimer() sets far-future endAt even when timer has expired.</p>
+  <h1>✅ Social Phase Timer Fix Verification</h1>
+  <p><strong>Issue (Fixed):</strong> After socializing and closing the modal, timer showed >1350 minutes instead of correct time.</p>
+  <p><strong>Root Cause:</strong> pausePhaseTimer() set far-future endAt even when timer had expired.</p>
   <p><strong>Fix:</strong> Only set far-future endAt if remaining time > 0.</p>
 
   <div class="test-section">
@@ -124,6 +124,9 @@
   </div>
 
   <script>
+    // Constants
+    const FAR_FUTURE_PAUSE_MS = FAR_FUTURE_PAUSE_MS; // 24 hours in milliseconds
+    
     // Test logging
     function addLog(logId, message, type = 'info') {
       const log = document.getElementById(logId);
@@ -154,7 +157,7 @@
       };
       
       // BUG: Always set far-future regardless of remaining time
-      mockGame.endAt = now + (1000 * 60 * 60 * 24); // 24 hours
+      mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS); // 24 hours
       mockGame.timerPaused = true;
       
       return remaining;
@@ -173,7 +176,7 @@
       
       // FIX: Only set far-future if timer hasn't expired
       if (remaining > 0) {
-        mockGame.endAt = now + (1000 * 60 * 60 * 24); // 24 hours
+        mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS); // 24 hours
       } else {
         // Keep expired endAt to show 00:00 instead of far-future time
       }
@@ -317,7 +320,7 @@
       const now = Date.now();
       const remaining = Math.max(0, mockGame.endAt - now);
       mockGame.pausedTimerState = { remaining };
-      mockGame.endAt = now + (1000 * 60 * 60 * 24); // Far future
+      mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS); // Far future
       mockGame.timerPaused = true;
       
       document.getElementById('timer-status').textContent = 'paused';
@@ -364,7 +367,7 @@
       
       // FIX: Only set far-future if timer hasn't expired
       if (remaining > 0) {
-        mockGame.endAt = now + (1000 * 60 * 60 * 24);
+        mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS);
         addLog(log, `Timer paused with ${remaining}ms remaining`, 'info');
       } else {
         // Keep expired endAt
