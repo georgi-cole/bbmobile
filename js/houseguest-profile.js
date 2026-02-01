@@ -23,7 +23,13 @@
         return;
       }
 
-      // Pause timer if callback provided
+      // Pause main game timer using PauseController (if available)
+      if (global.PauseController && typeof global.PauseController.pause === 'function') {
+        global.PauseController.pause('info-modal');
+        console.info('[houseguest-profile] Paused main game timer via PauseController');
+      }
+
+      // Pause overlay-specific timer if callback provided
       if (typeof options.pauseTimerCallback === 'function') {
         options.pauseTimerCallback();
       } else if (global.LiveVoteFullscreen?.pauseVoteTimer) {
@@ -146,11 +152,17 @@
       function closeModal() {
         modal.classList.add('closing');
         
-        // Resume timer if callback provided
+        // Resume overlay-specific timer if callback provided
         if (typeof options.resumeTimerCallback === 'function') {
           options.resumeTimerCallback();
         } else if (global.LiveVoteFullscreen?.resumeVoteTimer) {
           global.LiveVoteFullscreen.resumeVoteTimer();
+        }
+
+        // Resume main game timer using PauseController (if available)
+        if (global.PauseController && typeof global.PauseController.resume === 'function') {
+          global.PauseController.resume();
+          console.info('[houseguest-profile] Resumed main game timer via PauseController');
         }
 
         setTimeout(() => {
