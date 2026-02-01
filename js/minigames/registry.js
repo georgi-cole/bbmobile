@@ -132,7 +132,7 @@
     timingBar: {
       key: 'timingBar',
       name: 'Timing Bar',
-      description: 'Stop the bar near center for high score',
+      description: 'Stop the bar near center for high score (supports bar and clock variants)',
       type: 'reaction',
       category: 'logic',
       difficulty: 'easy',
@@ -676,7 +676,8 @@
       module: 'clock-stopper.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
+      replacedBy: 'timingBar',
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
