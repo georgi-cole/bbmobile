@@ -3273,9 +3273,9 @@
             });
             
             if(savedId == null){
-              // User cancelled - return to decision prompt
-              console.info('[veto] User cancelled save selection');
-              g.__vetoCeremonyStarted = false; // Reset guard to allow retry
+              // User cancelled - treat as veto not used
+              console.info('[veto] User cancelled save selection - treating as veto not used');
+              await finalizeCeremony({ used: false });
               return;
             }
             
