@@ -2119,7 +2119,7 @@
         console.info('[social-maneuvers] ⏸️ Timer paused (fallback):', remaining, 'ms remaining');
       } else {
         // Timer already expired - keep current endAt to show 0:00 instead of far-future time
-        console.info('[social-maneuvers] ⏸️ Timer already expired, not setting far-future value');
+        console.warn('[social-maneuvers] ⏸️ Timer already expired (remaining=0), not setting far-future value. Keeping endAt:', g.endAt);
       }
       
       timerPaused = true;
@@ -2166,19 +2166,21 @@
     
     // Fallback: Restore timer with remaining time
     if (!pausedTimerState) {
-      console.warn('[social-maneuvers] Cannot resume timer - no pausedTimerState');
+      console.warn('[social-maneuvers] Cannot resume timer - no pausedTimerState', new Error().stack);
       timerPaused = false;
       return;
     }
     
     const now = Date.now();
-    g.endAt = now + pausedTimerState.remaining;
+    // Clamp negative remaining values to 0 to prevent setting endAt in the past
+    const remaining = Math.max(0, pausedTimerState.remaining);
+    g.endAt = now + remaining;
     if (typeof pausedTimerState.phaseEndsAt === 'number') {
-      g.phaseEndsAt = now + pausedTimerState.remaining;
+      g.phaseEndsAt = now + remaining;
     }
     
     timerPaused = false;
-    console.info('[social-maneuvers] ▶️ Timer resumed (fallback):', pausedTimerState.remaining, 'ms remaining');
+    console.info('[social-maneuvers] ▶️ Timer resumed (fallback):', remaining, 'ms remaining');
     pausedTimerState = null;
   }
   
