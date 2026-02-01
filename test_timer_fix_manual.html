@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Timer Fix Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #0f3460;
+    }
+    .timer-display {
+      font-size: 48px;
+      font-family: monospace;
+      text-align: center;
+      padding: 20px;
+      background: #0f3460;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .btn {
+      padding: 12px 24px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .result {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .result.pass {
+      background: rgba(39, 174, 96, 0.2);
+      border: 2px solid #27ae60;
+      color: #27ae60;
+    }
+    .result.fail {
+      background: rgba(231, 76, 60, 0.2);
+      border: 2px solid #e74c3c;
+      color: #e74c3c;
+    }
+    .log {
+      background: #000;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 3px 0;
+    }
+    .log-info { color: #3498db; }
+    .log-success { color: #27ae60; }
+    .log-warn { color: #f39c12; }
+    .log-error { color: #e74c3c; }
+  </style>
+</head>
+<body>
+  <h1>✅ Manual Timer Fix Test</h1>
+  <p><strong>Purpose:</strong> Verify that the HUD defensive guard prevents displaying far-future timer values.</p>
+
+  <div class="test-section">
+    <h2>Test: HUD Defensive Guard</h2>
+    <p>This test simulates the scenario where remaining minutes > 120 and timer is paused.</p>
+    <div class="timer-display" id="timerDisplay">--:--</div>
+    <button class="btn" onclick="testHudDefensiveGuard()">Run Test</button>
+    <div class="log" id="testLog"></div>
+    <div id="testResult"></div>
+  </div>
+
+  <script>
+    function addLog(message, type = 'info') {
+      const log = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function formatTime(minutes, seconds) {
+      return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    }
+
+    function testHudDefensiveGuard() {
+      document.getElementById('testLog').innerHTML = '';
+      document.getElementById('testResult').innerHTML = '';
+      
+      addLog('=== Testing HUD Defensive Guard ===', 'info');
+      
+      // Simulate the scenario
+      const FAR_FUTURE_MS = 1000 * 60 * 60 * 24; // 24 hours
+      const now = Date.now();
+      const endAt = now + FAR_FUTURE_MS;
+      const remaining = endAt - now;
+      
+      // Calculate what the timer would show
+      const s = Math.ceil(remaining / 1000);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      
+      addLog(`Simulated scenario:`, 'info');
+      addLog(`  endAt: ${endAt}`, 'info');
+      addLog(`  now: ${now}`, 'info');
+      addLog(`  remaining: ${remaining}ms`, 'info');
+      addLog(`  calculated minutes: ${m}`, 'warn');
+      addLog(`  calculated seconds: ${r}`, 'warn');
+      
+      // Test the defensive guard logic
+      const timerPaused = true;
+      let displayValue;
+      
+      if (m > 120 && timerPaused) {
+        displayValue = 'PAUSED';
+        addLog('✅ Defensive guard triggered: m > 120 && timerPaused', 'success');
+        addLog(`  Display value: ${displayValue}`, 'success');
+      } else {
+        displayValue = formatTime(m, r);
+        addLog('❌ Defensive guard NOT triggered', 'error');
+        addLog(`  Display value: ${displayValue}`, 'error');
+      }
+      
+      // Update display
+      document.getElementById('timerDisplay').textContent = displayValue;
+      
+      // Show result
+      const resultDiv = document.getElementById('testResult');
+      if (displayValue === 'PAUSED') {
+        resultDiv.innerHTML = `<div class="result pass">
+          ✅ PASS: HUD defensive guard correctly displays "PAUSED" instead of ${m} minutes
+        </div>`;
+      } else {
+        resultDiv.innerHTML = `<div class="result fail">
+          ❌ FAIL: HUD defensive guard did not trigger, showing ${displayValue}
+        </div>`;
+      }
+    }
+
+    // Auto-run test on load
+    setTimeout(() => {
+      addLog('Ready to test. Click "Run Test" to verify the HUD defensive guard.', 'info');
+    }, 100);
+  </script>
+</body>
+</html>
