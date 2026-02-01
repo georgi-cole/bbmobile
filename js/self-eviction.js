@@ -482,6 +482,35 @@
     }
 
     // Note: Suppression clearing and HUD update now handled by runEvictionVisual
+    
+    // Check if human player self-evicted pre-jury - show Game Over modal
+    // Per requirements: human self-eviction should show Game Over modal
+    if(playerId === g.humanId){
+      console.info(`[gameover-pr] Human player self-evicted, checking for Game Over modal`);
+      
+      // Queue Game Over modal if human was evicted pre-jury
+      // Use helper from eviction.js for consistent behavior
+      if(typeof global.queueGameOverIfHumanPreJury === 'function'){
+        const queued = global.queueGameOverIfHumanPreJury(playerId, player.name, aliveCount);
+        
+        // If modal was queued, show it after a delay
+        // Use same delay as eviction.js (1500ms) for consistency
+        if(queued && g.__showGameOverModal){
+          const delay = 1500; // Match GAME_OVER_MODAL_DELAY from eviction.js
+          setTimeout(async () => {
+            const modalData = g.__showGameOverModal;
+            if(modalData){
+              delete g.__showGameOverModal;
+              if(typeof global.showGameOverModalRobust === 'function'){
+                await global.showGameOverModalRobust(modalData);
+              }
+            }
+          }, delay);
+        }
+      } else {
+        console.warn('[gameover-pr] queueGameOverIfHumanPreJury not available - Game Over modal may not show');
+      }
+    }
   }
 
   /**

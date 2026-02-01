@@ -48,6 +48,137 @@
       .join(' — ');
   }
 
+  /**
+   * Helper: Check if human player was evicted pre-jury and queue Game Over modal
+   * Ensures consistent behavior across single-eviction, multi-eviction, and self-eviction flows
+   * 
+   * @param {number} playerId - ID of evicted player
+   * @param {string} playerName - Name of evicted player
+   * @param {number} playersLeftWhenEvicted - Number of players remaining when this player was evicted
+   * @returns {boolean} - True if Game Over modal was queued, false otherwise
+   */
+  function queueGameOverIfHumanPreJury(playerId, playerName, playersLeftWhenEvicted){
+    const g = global.game;
+    
+    // Only show for human player
+    if(playerId !== g.humanId){
+      return false;
+    }
+    
+    // Only if jury system is enabled
+    if(!g.cfg || !g.cfg.enableJuryHouse){
+      console.info('[gameover-pr] Jury system disabled, skipping Game Over modal');
+      return false;
+    }
+    
+    // Check if player made jury
+    const jurySize = g.cfg.jurySize || 7;
+    
+    // If GameOverModal not yet loaded, we'll handle that in showGameOverModalRobust
+    // For now, just check jury eligibility with inline calculation as fallback
+    let madeJury = false;
+    if(typeof global.GameOverModal !== 'undefined' && typeof global.GameOverModal.makesJury === 'function'){
+      madeJury = global.GameOverModal.makesJury(playersLeftWhenEvicted, jurySize);
+    } else {
+      // Fallback jury calculation if module not loaded yet
+      const firstJurorPlace = jurySize + 2;
+      const lastJurorPlace = 3;
+      madeJury = playersLeftWhenEvicted >= lastJurorPlace && playersLeftWhenEvicted <= firstJurorPlace;
+    }
+    
+    if(madeJury){
+      console.info(`[gameover-pr] Human player made jury at placement ${playersLeftWhenEvicted}, no Game Over modal`);
+      return false;
+    }
+    
+    console.info(`[gameover-pr] Human player evicted pre-jury at placement ${playersLeftWhenEvicted} - queueing Game Over modal`);
+    
+    // Queue modal data to be shown after eviction animations complete
+    g.__showGameOverModal = {
+      playerName: playerName,
+      placement: playersLeftWhenEvicted,
+      jurySize: jurySize
+    };
+    
+    return true;
+  }
+
+  /**
+   * Helper: Robustly show Game Over modal with polling, retry, and fallback
+   * Waits up to 1.5s for GameOverModal to be registered, then shows it
+   * Falls back to global.showCard if module unavailable
+   * 
+   * @param {Object} modalData - Modal data { playerName, placement, jurySize }
+   * @returns {Promise<void>}
+   */
+  async function showGameOverModalRobust(modalData){
+    const { playerName, placement, jurySize } = modalData;
+    
+    console.info(`[gameover-pr] Attempting to show Game Over modal for ${playerName} at placement ${placement}`);
+    
+    // Poll for GameOverModal registration (up to 1.5s)
+    const MAX_WAIT_MS = 1500;
+    const POLL_INTERVAL_MS = 100;
+    const maxAttempts = Math.floor(MAX_WAIT_MS / POLL_INTERVAL_MS);
+    
+    let attempts = 0;
+    while(attempts < maxAttempts && typeof global.GameOverModal === 'undefined'){
+      await sleep(POLL_INTERVAL_MS);
+      attempts++;
+    }
+    
+    // Try to show with GameOverModal if available
+    if(typeof global.GameOverModal !== 'undefined' && typeof global.GameOverModal.show === 'function'){
+      console.info(`[gameover-pr] GameOverModal available after ${attempts * POLL_INTERVAL_MS}ms, showing modal`);
+      try {
+        await global.GameOverModal.show({
+          playerName: playerName,
+          placement: placement,
+          jurySize: jurySize
+        });
+        console.info('[gameover-pr] Game Over modal shown successfully');
+        return;
+      } catch(err){
+        console.error('[gameover-pr] Error showing GameOverModal:', err);
+        // Fall through to fallback
+      }
+    } else {
+      console.warn(`[gameover-pr] GameOverModal not available after ${MAX_WAIT_MS}ms, using fallback`);
+    }
+    
+    // Fallback to global.showCard
+    if(typeof global.showCard === 'function'){
+      console.info('[gameover-pr] Using fallback showCard for Game Over notification');
+      const firstJurorPlace = jurySize + 2;
+      const ordinal = getOrdinalSuffix(placement);
+      global.showCard(
+        'GAME OVER',
+        [
+          `${playerName}, you finished in ${placement}${ordinal} place.`,
+          `Jury started at ${firstJurorPlace}${getOrdinalSuffix(firstJurorPlace)} place.`,
+          'You did not make the jury.'
+        ],
+        'evict',
+        6000,
+        true
+      );
+    } else {
+      console.error('[gameover-pr] No fallback available - cannot show Game Over notification');
+    }
+  }
+  
+  /**
+   * Helper: Get ordinal suffix for a number (1st, 2nd, 3rd, etc.)
+   */
+  function getOrdinalSuffix(num){
+    const j = num % 10;
+    const k = num % 100;
+    if(j === 1 && k !== 11) return 'st';
+    if(j === 2 && k !== 12) return 'nd';
+    if(j === 3 && k !== 13) return 'rd';
+    return 'th';
+  }
+
   function startLiveVote(){
     const g=global.game;
     
@@ -1412,22 +1543,8 @@
       try{ global.juryOnEviction?.(id); }catch{}
       
       // Check if human player was evicted before making jury (Game Over check)
-      if(id === g.humanId && g.cfg.enableJuryHouse && typeof global.GameOverModal !== 'undefined'){
-        const jurySize = g.cfg.jurySize || 7;
-        const playersLeftWhenEvicted = global.alivePlayers().length + evictedIds.length; // Include all players being evicted this round
-        const madeJury = global.GameOverModal.makesJury(playersLeftWhenEvicted, jurySize);
-        
-        if(!madeJury){
-          console.info(`[eviction] Human player evicted pre-jury in multi-eviction at ${playersLeftWhenEvicted} players left - showing Game Over modal`);
-          
-          // Store flag to show modal after eviction sequence completes
-          g.__showGameOverModal = {
-            playerName: p.name,
-            placement: playersLeftWhenEvicted,
-            jurySize: jurySize
-          };
-        }
-      }
+      const playersLeftWhenEvicted = global.alivePlayers().length + evictedIds.length; // Include all players being evicted this round
+      queueGameOverIfHumanPreJury(id, p.name, playersLeftWhenEvicted);
     }
     
     // Clear all badges immediately after eviction reveal (Issue #1)
@@ -1494,10 +1611,11 @@
       const modalData = g.__showGameOverModal;
       delete g.__showGameOverModal;
       
-      console.info(`[eviction] Showing Game Over modal for human player after multi-eviction`);
+      console.info(`[gameover-pr] Showing Game Over modal for human player after multi-eviction`);
       
+      // Use robust show function with retry/polling/fallback
       setTimeout(async () => {
-        await global.GameOverModal.show(modalData);
+        await showGameOverModalRobust(modalData);
       }, GAME_OVER_MODAL_DELAY);
     }
 
@@ -1567,23 +1685,18 @@
     try{ global.juryOnEviction?.(evId); }catch{}
 
     // Check if human player was evicted before making jury (Game Over check)
-    if(evId === g.humanId && g.cfg.enableJuryHouse && typeof global.GameOverModal !== 'undefined'){
-      const jurySize = g.cfg.jurySize || 7;
-      const playersLeftWhenEvicted = global.alivePlayers().length + 1; // +1 because player just got evicted
-      const madeJury = global.GameOverModal.makesJury(playersLeftWhenEvicted, jurySize);
-      
-      if(!madeJury){
-        console.info(`[eviction] Human player evicted pre-jury at ${playersLeftWhenEvicted} players left - showing Game Over modal`);
-        
-        // Show Game Over modal after a brief delay (let eviction animation complete)
-        setTimeout(async () => {
-          await global.GameOverModal.show({
-            playerName: ev.name,
-            placement: playersLeftWhenEvicted,
-            jurySize: jurySize
-          });
-        }, GAME_OVER_MODAL_DELAY);
-      }
+    const playersLeftWhenEvicted = global.alivePlayers().length + 1; // +1 because player just got evicted
+    const queued = queueGameOverIfHumanPreJury(evId, ev.name, playersLeftWhenEvicted);
+    
+    // If modal was queued, show it after eviction animation
+    if(queued){
+      setTimeout(async () => {
+        const modalData = g.__showGameOverModal;
+        if(modalData){
+          delete g.__showGameOverModal;
+          await showGameOverModalRobust(modalData);
+        }
+      }, GAME_OVER_MODAL_DELAY);
     }
 
     // Clear all badges immediately after eviction reveal (Issue #1)
@@ -1748,5 +1861,9 @@
     global.updateHud?.();
   }
   global.proceedNextWeek=proceedNextWeek;
+
+  // Export helper functions for use in other modules (e.g., self-eviction.js)
+  global.queueGameOverIfHumanPreJury = queueGameOverIfHumanPreJury;
+  global.showGameOverModalRobust = showGameOverModalRobust;
 
 })(window);
