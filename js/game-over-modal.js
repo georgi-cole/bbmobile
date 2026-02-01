@@ -265,6 +265,11 @@
         
         // Navigate back to intro hub after modal is closed
         setTimeout(() => {
+          // Hide main game UI by removing the 'main-screen-built' class
+          // This ensures the topbar and wrap elements are hidden via CSS
+          document.body.classList.remove('main-screen-built');
+          console.info('[game-over] Removed main-screen-built class to hide game UI');
+          
           if (global.IntroScreen && typeof global.IntroScreen.showWithPreload === 'function') {
             console.info('[game-over] Showing intro hub after exit');
             global.IntroScreen.showWithPreload();
