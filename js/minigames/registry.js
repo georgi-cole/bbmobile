@@ -13,6 +13,9 @@
    * - name: display name
    * - description: brief description
    * - type: category (reaction, memory, puzzle, trivia, endurance)
+   * - category: gameplay category (arcade, endurance, logic, trivia) - groups similar games
+   * - difficulty: difficulty level (easy, medium, hard)
+   * - estimatedDuration: estimated play time in seconds (30-90)
    * - scoring: scoring type (time, accuracy, hybrid, endurance)
    * - mobileFriendly: true if fully optimized for touch/tap
    * - implemented: true if game is ready to play
@@ -20,6 +23,13 @@
    * - minScore: minimum possible score (default 0)
    * - maxScore: maximum possible score (default 100)
    * - retired: true if game should not be selected anymore
+   * - replacedBy: optional field, key of game that replaced this one
+   * 
+   * Category system:
+   * - arcade: fast-paced action games (snake, laser dash, etc.)
+   * - endurance: time-based stamina games (hold wall, pressure plank, etc.)
+   * - logic: puzzle and memory games (count house, pattern match, etc.)
+   * - trivia: knowledge-based quiz games (trivia pulse, etc.)
    */
   const REGISTRY = {
     // Phase 1: Fully Implemented Mobile-First Games
@@ -28,6 +38,9 @@
       name: 'Count House',
       description: 'Count objects appearing on screen quickly and accurately',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -45,6 +58,9 @@
       name: 'Trivia Pulse',
       description: 'Time-pressured Big Brother trivia questions',
       type: 'trivia',
+      category: 'trivia',
+      difficulty: 'easy',
+      estimatedDuration: 45,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
@@ -60,6 +76,9 @@
       name: 'Quick Tap Race',
       description: 'Tap as many times as possible within time limit',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'easy',
+      estimatedDuration: 30,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -76,6 +95,9 @@
       name: 'Memory Colors',
       description: 'Watch and repeat color sequence',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -93,6 +115,9 @@
       name: 'Timing Bar',
       description: 'Stop the bar near center for high score',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'easy',
+      estimatedDuration: 30,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -110,6 +135,9 @@
       name: 'Pattern Match',
       description: 'Match the pattern of shapes',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -125,6 +153,9 @@
       name: 'Word Anagram',
       description: 'Unscramble Big Brother words',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 45,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -140,6 +171,9 @@
       name: 'Target Practice',
       description: 'Click moving targets quickly',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -157,6 +191,9 @@
       name: 'Estimation',
       description: 'Count dots and guess the total',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 45,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -173,6 +210,9 @@
       name: 'Word Typing',
       description: 'Type passage accurately',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'easy',
+      estimatedDuration: 45,
       scoring: 'hybrid',
       mobileFriendly: false,
       implemented: true,
@@ -190,6 +230,9 @@
       name: 'Slider Precision',
       description: 'Set slider to exact value',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -205,6 +248,9 @@
       name: 'Path Finder',
       description: 'Remember directional path sequence',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -220,6 +266,9 @@
       name: 'Simon Says',
       description: 'Press arrow key sequence',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: false,
       implemented: true,
@@ -236,6 +285,9 @@
       name: 'Hold Wall',
       description: 'Endurance wall hold - last as long as possible',
       type: 'endurance',
+      category: 'endurance',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: true,
@@ -251,6 +303,9 @@
       name: 'The Tilted Ledge',
       description: 'Keep balance on a tilting ledge with telegraphed jerks',
       type: 'endurance',
+      category: 'endurance',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: true,
@@ -266,6 +321,9 @@
       name: 'Pressure Plank',
       description: 'Alternate hold/release to stay within a moving safe window',
       type: 'endurance',
+      category: 'endurance',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: true,
@@ -281,6 +339,9 @@
       name: 'Rain Barrel Balance',
       description: 'Align center-of-mass with target zone while water sloshes',
       type: 'endurance',
+      category: 'endurance',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: true,
@@ -296,6 +357,9 @@
       name: 'Memory Zipline',
       description: 'Remember and repeat zipline path sequence',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -312,6 +376,9 @@
       name: 'Swipe Maze',
       description: 'Navigate through a maze using swipe gestures',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'time',
       mobileFriendly: true,
       implemented: true,
@@ -327,13 +394,16 @@
       name: 'Pattern Trace',
       description: 'Trace the pattern shown on screen',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'autumn']
     },
     
@@ -342,13 +412,16 @@
       name: 'Audio Match',
       description: 'Match sounds to their sources',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['summer', 'winter']
     },
     
@@ -357,13 +430,16 @@
       name: 'Balance Bridge',
       description: 'Keep balance while crossing a virtual bridge',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn']
     },
     
@@ -372,6 +448,9 @@
       name: 'Color Match',
       description: 'Match colors quickly and accurately',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'easy',
+      estimatedDuration: 30,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -387,13 +466,16 @@
       name: 'Color Mix',
       description: 'Mix colors to match the target shade',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -402,13 +484,16 @@
       name: 'Word Ladder',
       description: 'Change one word to another by changing one letter at a time',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['autumn', 'winter']
     },
     
@@ -417,13 +502,16 @@
       name: 'Rhythm Tap',
       description: 'Tap to the rhythm of the beat',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'medium',
+      estimatedDuration: 45,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['summer', 'autumn']
     },
     
@@ -432,13 +520,16 @@
       name: 'Spot The Difference',
       description: 'Find differences between two similar images',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -447,6 +538,9 @@
       name: 'Social Strings',
       description: 'Identify houseguests in alliances together',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -462,6 +556,9 @@
       name: 'Logic Locks',
       description: 'Solve logic puzzles to unlock the vault',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -477,6 +574,9 @@
       name: 'Snake',
       description: 'Classic snake game - eat food and grow',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: true,
@@ -492,13 +592,16 @@
       name: 'Astro Jumper',
       description: 'Jump through space avoiding obstacles',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: false,
       module: 'placeholder.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'winter']
     },
     
@@ -509,6 +612,9 @@
       name: 'Card Clash',
       description: 'Memory card matching game',
       type: 'memory',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -524,6 +630,9 @@
       name: 'Chain Reaction',
       description: 'Create chain combos puzzle',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
@@ -539,6 +648,9 @@
       name: 'Clock Stopper',
       description: 'Stop the clock at exact times',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'medium',
+      estimatedDuration: 45,
       scoring: 'time',
       mobileFriendly: true,
       implemented: true,
@@ -560,6 +672,9 @@
       name: 'Flash Flood',
       description: 'React to flash patterns quickly',
       type: 'reaction',
+      category: 'arcade',
+      difficulty: 'hard',
+      estimatedDuration: 60,
       scoring: 'time',
       mobileFriendly: true,
       implemented: true,
@@ -577,6 +692,9 @@
       name: 'Grid Lock',
       description: 'Unlock grid patterns puzzle',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
@@ -596,6 +714,9 @@
       name: 'Key Master',
       description: 'Unlock sequences puzzle',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -613,6 +734,9 @@
       name: 'Hangman',
       description: 'Classic hangman with on-screen keyboard',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
@@ -628,6 +752,9 @@
       name: 'Tilt Labyrinth',
       description: 'Tilt phone to move ball through maze',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'time',
       mobileFriendly: true,
       implemented: true,
@@ -643,6 +770,9 @@
       name: 'Number Trivia',
       description: 'Answer numeric trivia questions with higher/lower hints',
       type: 'trivia',
+      category: 'trivia',
+      difficulty: 'easy',
+      estimatedDuration: 30,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
@@ -659,6 +789,9 @@
       name: 'Tetris',
       description: 'Classic falling blocks puzzle',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'endurance',
       mobileFriendly: true,
       implemented: true,
@@ -674,6 +807,9 @@
       name: 'Traveling Dots',
       description: 'Draw optimal path between points',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
@@ -689,6 +825,9 @@
       name: 'Minesweeps',
       description: 'Classic minesweeper puzzle',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: true,
@@ -704,6 +843,9 @@
       name: 'Rail Switch Sprint',
       description: 'Switch train routes to correct stations',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
@@ -719,13 +861,16 @@
       name: 'Shadow Cone Sneak',
       description: 'Avoid guard vision cones on patrol routes',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: false,
       module: 'shadow-cone-sneak.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -734,13 +879,16 @@
       name: 'Bomb Defuse Constraints',
       description: 'Toggle switches to satisfy boolean constraints',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: false,
       module: 'bomb-defuse-constraints.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -749,13 +897,16 @@
       name: 'Circuit Loop',
       description: 'Rotate tiles to create closed power loops',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: false,
       module: 'circuit-loop.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -764,13 +915,16 @@
       name: 'Territory Encircle',
       description: 'Draw non-crossing loops to capture dots',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 90,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: false,
       module: 'territory-encircle.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -779,13 +933,16 @@
       name: 'Magnet Maze',
       description: 'Toggle magnets to push/pull ball through maze',
       type: 'puzzle',
+      category: 'logic',
+      difficulty: 'hard',
+      estimatedDuration: 75,
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: false,
       module: 'magnet-maze.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -795,6 +952,9 @@
       name: 'Laser Pantry Dash',
       description: 'Dodge lasers and collect recipe ingredients',
       type: 'arcade',
+      category: 'arcade',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'points',
       mobileFriendly: true,
       implemented: true,
@@ -810,6 +970,9 @@
       name: 'Confetti Cannon',
       description: 'Tap targets quickly while avoiding decoys',
       type: 'arcade',
+      category: 'arcade',
+      difficulty: 'easy',
+      estimatedDuration: 45,
       scoring: 'points',
       mobileFriendly: true,
       implemented: true,
@@ -825,6 +988,9 @@
       name: 'Buzzer Sprint Relay',
       description: 'Memorize and repeat buzzer sequences quickly',
       type: 'arcade',
+      category: 'arcade',
+      difficulty: 'medium',
+      estimatedDuration: 60,
       scoring: 'time',
       mobileFriendly: true,
       implemented: true,
@@ -896,6 +1062,11 @@
         return false;
       }
       
+      // Filter by category
+      if(filters.category && game.category !== filters.category){
+        return false;
+      }
+      
       return true;
     });
   }
@@ -935,6 +1106,81 @@
       implemented: true,
       excludeRetired: true
     });
+  }
+
+  /**
+   * Get games by category
+   * @param {string} category - Game category (arcade, endurance, logic, trivia)
+   * @param {Object} options - Filter options
+   * @param {boolean} options.implementedOnly - Include only implemented games (default: true)
+   * @param {boolean} options.excludeRetired - Exclude retired games (default: true)
+   * @param {boolean} options.mobileFriendlyOnly - Include only mobile-friendly games (default: false)
+   * @returns {Array<string>} Array of matching game keys
+   */
+  function getGamesByCategory(category, options = {}){
+    const {
+      implementedOnly = true,
+      excludeRetired = true,
+      mobileFriendlyOnly = false
+    } = options;
+
+    return getGamesByFilter({
+      category: category,
+      implemented: implementedOnly ? true : undefined,
+      excludeRetired: excludeRetired,
+      mobileFriendly: mobileFriendlyOnly ? true : undefined
+    });
+  }
+
+  /**
+   * Get a balanced selection of games with category diversity
+   * Tries to maximize category diversity (one per category when possible)
+   * @param {number} count - Number of games to select (default: 4)
+   * @returns {Array<string>} Array of up to count game keys, shuffled
+   */
+  function getBalancedSelection(count = 4){
+    const categories = ['arcade', 'endurance', 'logic', 'trivia'];
+    const selected = [];
+    const allGames = getGamesByFilter({
+      implemented: true,
+      excludeRetired: true
+    });
+
+    // Helper to shuffle array
+    function shuffle(array){
+      const shuffled = [...array];
+      for(let i = shuffled.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    // Try to get one game from each category
+    for(const category of categories){
+      if(selected.length >= count) break;
+      
+      const gamesInCategory = allGames.filter(key => {
+        const game = REGISTRY[key];
+        return game && game.category === category;
+      });
+
+      if(gamesInCategory.length > 0){
+        const randomGame = gamesInCategory[Math.floor(Math.random() * gamesInCategory.length)];
+        selected.push(randomGame);
+      }
+    }
+
+    // If we need more games, fill from remaining pool
+    if(selected.length < count){
+      const remaining = allGames.filter(key => !selected.includes(key));
+      const shuffledRemaining = shuffle(remaining);
+      const needed = count - selected.length;
+      selected.push(...shuffledRemaining.slice(0, needed));
+    }
+
+    // Shuffle final selection
+    return shuffle(selected);
   }
 
   // ============================================================================
@@ -1209,6 +1455,8 @@
     getImplementedGames,
     getMobileFriendlyGames,
     getGamesByType,
+    getGamesByCategory,
+    getBalancedSelection,
     
     // New runtime helpers (PR1)
     registerGame,

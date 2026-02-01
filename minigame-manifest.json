@@ -1,8 +1,10 @@
 {
-  "generated": "2025-12-27T18:11:02.841Z",
+  "generated": "2026-02-01T15:57:49.908Z",
   "version": "1.0.0",
-  "gamesScanned": 62,
-  "registryGames": 49,
+  "gamesScanned": 56,
+  "registryGames": 52,
+  "implementedGames": 34,
+  "retiredGames": 9,
   "games": [
     {
       "key": "balanceGame",
@@ -18,7 +20,27 @@
       "module": "bomb-defuse-constraints.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 1202
+      "fileSize": 1202,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 90,
+      "implemented": false,
+      "retired": true,
+      "replacedBy": null
+    },
+    {
+      "key": "buzzerSprintRelay",
+      "name": "Buzzer Sprint Relay",
+      "module": "buzzer-sprint-relay.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 14371,
+      "category": "arcade",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "cardClash",
@@ -26,15 +48,13 @@
       "module": "card-clash.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 6334
-    },
-    {
-      "key": "centralScoring",
-      "name": "Central Scoring",
-      "module": "central-scoring.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 14814
+      "fileSize": 6334,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "chainReaction",
@@ -42,7 +62,13 @@
       "module": "chain-reaction.js",
       "hasRender": false,
       "hasComplete": false,
-      "fileSize": 9301
+      "fileSize": 9301,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "circuitLoop",
@@ -50,7 +76,13 @@
       "module": "circuit-loop.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 1144
+      "fileSize": 1144,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": false,
+      "retired": true,
+      "replacedBy": null
     },
     {
       "key": "clockStopper",
@@ -58,7 +90,13 @@
       "module": "clock-stopper.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 4379
+      "fileSize": 4379,
+      "category": "arcade",
+      "difficulty": "medium",
+      "estimatedDuration": 45,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "colorMatch",
@@ -66,7 +104,27 @@
       "module": "color-match.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 8158
+      "fileSize": 8158,
+      "category": "arcade",
+      "difficulty": "easy",
+      "estimatedDuration": 30,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
+    },
+    {
+      "key": "confettiCannon",
+      "name": "Confetti Cannon",
+      "module": "confetti-cannon.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 20447,
+      "category": "arcade",
+      "difficulty": "easy",
+      "estimatedDuration": 45,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "countHouse",
@@ -74,7 +132,13 @@
       "module": "count-house.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 7445
+      "fileSize": 7652,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "dotsandboxesIntermission",
@@ -86,11 +150,17 @@
     },
     {
       "key": "estimationGame",
-      "name": "Estimation Game",
+      "name": "Estimation",
       "module": "estimation-game.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 4734
+      "fileSize": 4734,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 45,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "flashFlood",
@@ -98,23 +168,13 @@
       "module": "flash-flood.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 4272
-    },
-    {
-      "key": "GameConfig",
-      "name": "GameConfig",
-      "module": "GameConfig.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 5012
-    },
-    {
-      "key": "gameUtils",
-      "name": "GameUtils",
-      "module": "gameUtils.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 10712
+      "fileSize": 4272,
+      "category": "arcade",
+      "difficulty": "hard",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "gridLock",
@@ -122,7 +182,13 @@
       "module": "grid-lock.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 3623
+      "fileSize": 3623,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "guessNumber",
@@ -138,7 +204,13 @@
       "module": "hangman.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 11031
+      "fileSize": 11031,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "hiddenObject",
@@ -149,28 +221,18 @@
       "fileSize": 1213
     },
     {
-      "key": "holdTheWall",
-      "name": "HoldTheWall",
-      "module": "holdTheWall.js",
-      "hasRender": true,
-      "hasComplete": true,
-      "fileSize": 12835
-    },
-    {
       "key": "holdWall",
       "name": "Hold Wall",
       "module": "hold-wall.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 41606
-    },
-    {
-      "key": "instructions",
-      "name": "Instructions",
-      "module": "instructions.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 7502
+      "fileSize": 42413,
+      "category": "endurance",
+      "difficulty": "hard",
+      "estimatedDuration": 90,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "keyMaster",
@@ -178,15 +240,27 @@
       "module": "key-master.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 8506
+      "fileSize": 8506,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
-      "key": "loader",
-      "name": "Loader",
-      "module": "loader.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 2704
+      "key": "laserPantryDash",
+      "name": "Laser Pantry Dash",
+      "module": "laser-pantry-dash.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 25357,
+      "category": "arcade",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "logicLocks",
@@ -194,7 +268,13 @@
       "module": "logic-locks.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 7865
+      "fileSize": 7865,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "magnetMaze",
@@ -202,15 +282,27 @@
       "module": "magnet-maze.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 1143
+      "fileSize": 1143,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": false,
+      "retired": true,
+      "replacedBy": null
     },
     {
       "key": "memoryMatch",
-      "name": "Memory Match",
+      "name": "Memory Colors",
       "module": "memory-match.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 11641
+      "fileSize": 11641,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "memoryZipline",
@@ -218,7 +310,13 @@
       "module": "memory-zipline.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 6601
+      "fileSize": 6601,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "minesweeper",
@@ -245,20 +343,18 @@
       "fileSize": 19047
     },
     {
-      "key": "opponentSynth",
-      "name": "Opponent Synth",
-      "module": "opponent-synth.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 8668
-    },
-    {
       "key": "pathFinder",
       "name": "Path Finder",
       "module": "path-finder.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 5684
+      "fileSize": 5684,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": true,
+      "retired": true,
+      "replacedBy": null
     },
     {
       "key": "patternMatch",
@@ -266,7 +362,13 @@
       "module": "pattern-match.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 10204
+      "fileSize": 10204,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "placeholder",
@@ -282,15 +384,27 @@
       "module": "pressure-plank.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 15192
+      "fileSize": 15192,
+      "category": "endurance",
+      "difficulty": "hard",
+      "estimatedDuration": 90,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "quickTap",
-      "name": "Quick Tap",
+      "name": "Quick Tap Race",
       "module": "quick-tap.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 7285
+      "fileSize": 7285,
+      "category": "arcade",
+      "difficulty": "easy",
+      "estimatedDuration": 30,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "railSwitchSprint",
@@ -298,7 +412,13 @@
       "module": "rail-switch-sprint.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 14452
+      "fileSize": 14452,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "rainBarrelBalance",
@@ -306,23 +426,13 @@
       "module": "rain-barrel-balance.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 18104
-    },
-    {
-      "key": "rulesModal",
-      "name": "Rules Modal",
-      "module": "rules-modal.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 12907
-    },
-    {
-      "key": "rulesRegistry",
-      "name": "Rules Registry",
-      "module": "rules-registry.js",
-      "hasRender": false,
-      "hasComplete": false,
-      "fileSize": 33650
+      "fileSize": 18104,
+      "category": "endurance",
+      "difficulty": "hard",
+      "estimatedDuration": 90,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "shadowConeSneak",
@@ -330,7 +440,13 @@
       "module": "shadow-cone-sneak.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 1167
+      "fileSize": 1167,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": false,
+      "retired": true,
+      "replacedBy": null
     },
     {
       "key": "simonSays",
@@ -338,15 +454,27 @@
       "module": "simon-says.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 7032
+      "fileSize": 7032,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": true,
+      "replacedBy": null
     },
     {
       "key": "sliderPuzzle",
-      "name": "Slider Puzzle",
+      "name": "Slider Precision",
       "module": "slider-puzzle.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 4165
+      "fileSize": 4165,
+      "category": "arcade",
+      "difficulty": "hard",
+      "estimatedDuration": 90,
+      "implemented": true,
+      "retired": true,
+      "replacedBy": null
     },
     {
       "key": "snake",
@@ -354,7 +482,13 @@
       "module": "snake.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 21193
+      "fileSize": 22171,
+      "category": "arcade",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "socialStrings",
@@ -362,7 +496,13 @@
       "module": "social-strings.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 21910
+      "fileSize": 21910,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "spotDifference",
@@ -378,7 +518,13 @@
       "module": "swipe-maze.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 6735
+      "fileSize": 6735,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "targetPractice",
@@ -386,7 +532,13 @@
       "module": "target-practice.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 4929
+      "fileSize": 4929,
+      "category": "arcade",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "territoryEncircle",
@@ -394,7 +546,13 @@
       "module": "territory-encircle.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 1172
+      "fileSize": 1172,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 90,
+      "implemented": false,
+      "retired": true,
+      "replacedBy": null
     },
     {
       "key": "tetris",
@@ -402,15 +560,27 @@
       "module": "tetris.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 14629
+      "fileSize": 16430,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "threeDigitsQuiz",
-      "name": "Three Digits Quiz",
+      "name": "Number Trivia",
       "module": "three-digits-quiz.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 9187
+      "fileSize": 9187,
+      "category": "trivia",
+      "difficulty": "easy",
+      "estimatedDuration": 30,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "tictactoeIntermission",
@@ -422,11 +592,17 @@
     },
     {
       "key": "tiltedLedge",
-      "name": "Tilted Ledge",
+      "name": "The Tilted Ledge",
       "module": "tilted-ledge.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 13857
+      "fileSize": 13857,
+      "category": "endurance",
+      "difficulty": "hard",
+      "estimatedDuration": 90,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "tiltLabyrinth",
@@ -434,7 +610,13 @@
       "module": "tilt-labyrinth.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 23287
+      "fileSize": 23287,
+      "category": "logic",
+      "difficulty": "hard",
+      "estimatedDuration": 75,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "timingBar",
@@ -442,7 +624,13 @@
       "module": "timing-bar.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 9683
+      "fileSize": 9683,
+      "category": "arcade",
+      "difficulty": "easy",
+      "estimatedDuration": 30,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "towerStack",
@@ -458,7 +646,13 @@
       "module": "traveling-dots.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 13648
+      "fileSize": 13648,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 60,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "triviaPulse",
@@ -466,7 +660,13 @@
       "module": "trivia-pulse.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 17507
+      "fileSize": 17507,
+      "category": "trivia",
+      "difficulty": "easy",
+      "estimatedDuration": 45,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "triviaQuiz",
@@ -482,7 +682,13 @@
       "module": "word-anagram.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 5509
+      "fileSize": 5509,
+      "category": "logic",
+      "difficulty": "medium",
+      "estimatedDuration": 45,
+      "implemented": true,
+      "retired": false,
+      "replacedBy": null
     },
     {
       "key": "wordBuilder",
@@ -498,7 +704,13 @@
       "module": "word-typing.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 5157
+      "fileSize": 5157,
+      "category": "logic",
+      "difficulty": "easy",
+      "estimatedDuration": 45,
+      "implemented": true,
+      "retired": true,
+      "replacedBy": null
     }
   ]
 }
