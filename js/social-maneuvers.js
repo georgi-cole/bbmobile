@@ -2105,14 +2105,21 @@
         pausedAt: now
       };
       
-      // Freeze the timer by setting endAt to far future
-      g.endAt = now + (1000 * 60 * 60 * 24); // 24 hours in the future
-      if (typeof g.phaseEndsAt === 'number') {
-        g.phaseEndsAt = g.endAt;
+      // Only freeze the timer if it hasn't already expired
+      // If timer expired (remaining = 0), don't set far-future value to prevent display showing incorrect time
+      if (remaining > 0) {
+        // Freeze the timer by setting endAt to far future
+        g.endAt = now + (1000 * 60 * 60 * 24); // 24 hours in the future
+        if (typeof g.phaseEndsAt === 'number') {
+          g.phaseEndsAt = g.endAt;
+        }
+        console.info('[social-maneuvers] ⏸️ Timer paused (fallback):', remaining, 'ms remaining');
+      } else {
+        // Timer already expired - keep current endAt to show 0:00 instead of far-future time
+        console.info('[social-maneuvers] ⏸️ Timer already expired, not setting far-future value');
       }
       
       timerPaused = true;
-      console.info('[social-maneuvers] ⏸️ Timer paused (fallback):', remaining, 'ms remaining');
     } else {
       console.warn('[social-maneuvers] Cannot pause timer - no endAt found');
     }
