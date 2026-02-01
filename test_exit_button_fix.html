@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Exit Button Fix</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/intro.css">
+  <style>
+    body {
+      background: #0d151f;
+      color: #e0e8f0;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+    }
+    .test-panel {
+      max-width: 900px;
+      margin: 0 auto;
+      background: linear-gradient(145deg, #1a2533, #0f1925);
+      border: 1px solid rgba(110, 160, 220, 0.18);
+      border-radius: 16px;
+      padding: 30px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #6fd3ff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #9bbdff;
+    }
+    button {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background: #4574b8;
+    }
+    button.danger {
+      background: #993636;
+    }
+    button.danger:hover {
+      background: #aa4747;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .pass {
+      color: #4ade80;
+    }
+    .fail {
+      color: #f87171;
+    }
+    .info {
+      color: #9bbdff;
+    }
+    .instructions {
+      background: rgba(255, 212, 120, 0.1);
+      border: 1px solid rgba(255, 212, 120, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #ffdc8b;
+    }
+    
+    /* Mock game UI elements */
+    .topbar {
+      background: #1a2533;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .wrap {
+      background: #0f1925;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    .houseguests-header {
+      margin-bottom: 15px;
+    }
+    .player-card {
+      display: inline-block;
+      width: 80px;
+      height: 100px;
+      background: #2a3544;
+      border-radius: 8px;
+      margin: 5px;
+      text-align: center;
+      padding: 10px;
+    }
+    
+    /* Status indicator */
+    .status-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #1a2533;
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #3563a7;
+      min-width: 200px;
+    }
+    .status-indicator h3 {
+      margin: 0 0 10px 0;
+      font-size: 0.9rem;
+      color: #9bbdff;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body class="main-screen-built">
+
+<div class="status-indicator">
+  <h3>UI State Monitor</h3>
+  <div class="status-item">
+    <span>Body class:</span>
+    <span id="bodyClass" class="info">main-screen-built</span>
+  </div>
+  <div class="status-item">
+    <span>.topbar visible:</span>
+    <span id="topbarVisible" class="info">Yes</span>
+  </div>
+  <div class="status-item">
+    <span>.wrap visible:</span>
+    <span id="wrapVisible" class="info">Yes</span>
+  </div>
+  <div class="status-item">
+    <span>IntroScreen visible:</span>
+    <span id="introVisible" class="info">No</span>
+  </div>
+</div>
+
+<!-- Mock Game UI (should be hidden when intro screen is shown) -->
+<div class="topbar">
+  <button>⚙️ Settings</button>
+  <button>▶ Start</button>
+  <button>🔊 Sound</button>
+  <button>📊 Leaderboard</button>
+</div>
+
+<div class="wrap">
+  <div class="houseguests-header">
+    <h1>Houseguests</h1>
+  </div>
+  <div class="player-card">👤<br>Player 1</div>
+  <div class="player-card">👤<br>Player 2</div>
+  <div class="player-card">👤<br>Player 3</div>
+  <div class="player-card">👤<br>Player 4</div>
+</div>
+
+<!-- Test Panel -->
+<div class="test-panel">
+  <h1>🎮 Exit Button Fix - Test Suite</h1>
+  
+  <div class="instructions">
+    <h3>📋 Test Instructions</h3>
+    <ol>
+      <li><strong>Initial State:</strong> Body has 'main-screen-built' class, game UI is visible</li>
+      <li><strong>Test Exit Flow:</strong>
+        <ul>
+          <li>Click "Show Winner Modal" to simulate game completion</li>
+          <li>Click the "EXIT" button in the winner modal</li>
+          <li>Verify that game UI (topbar, wrap) becomes hidden</li>
+          <li>Verify that intro screen is shown</li>
+        </ul>
+      </li>
+      <li><strong>Monitor:</strong> Watch the "UI State Monitor" in the top-right corner</li>
+      <li><strong>Expected Result:</strong> After clicking EXIT:
+        <ul>
+          <li>'main-screen-built' class should be removed from body</li>
+          <li>Topbar and wrap should be hidden</li>
+          <li>Intro screen should be visible</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+
+  <div class="test-section">
+    <h2>1. Test Winner Modal Exit</h2>
+    <p>Simulates completing the game and clicking Exit from winner modal</p>
+    <button onclick="testWinnerModalExit()">Show Winner Modal</button>
+    <div id="winner-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Test Game Over Modal Exit</h2>
+    <p>Simulates pre-jury eviction and clicking Exit from game over modal</p>
+    <button onclick="testGameOverModalExit()">Show Game Over Modal</button>
+    <div id="gameover-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Manual State Control</h2>
+    <p>Manually control UI state for testing</p>
+    <button onclick="addMainScreenBuilt()">Add 'main-screen-built'</button>
+    <button onclick="removeMainScreenBuilt()">Remove 'main-screen-built'</button>
+    <button onclick="showIntroManually()">Show Intro Screen</button>
+    <button onclick="hideIntroManually()">Hide Intro Screen</button>
+    <div id="manual-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Verification Checklist</h2>
+    <div id="verification-results" class="result">
+      <div><strong>Test Checklist:</strong></div>
+      <div id="checklist"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Load IntroScreen for testing -->
+<script src="src/ui/IntroScreen.js"></script>
+
+<!-- Load modified files -->
+<script src="js/finale.js"></script>
+<script src="js/game-over-modal.js"></script>
+
+<script>
+  // Set up minimal game environment
+  window.game = window.game || {};
+  window.game.players = [
+    { id: 0, name: 'Alice', human: true, stats: { hohWins: 3, vetoWins: 2 }, nominatedCount: 1 },
+    { id: 1, name: 'Bob', stats: { hohWins: 1, vetoWins: 4 }, nominatedCount: 3 },
+    { id: 2, name: 'Charlie', stats: { hohWins: 2, vetoWins: 1 }, nominatedCount: 2 }
+  ];
+  window.game.humanId = 0;
+  window.game.cfg = { jurySize: 7 };
+  window.game.bus = { on: () => {}, emit: () => {} };
+  
+  window.safeName = (id) => window.game.players.find(p => p.id === id)?.name || 'Unknown';
+  window.getP = (id) => window.game.players.find(p => p.id === id);
+  
+  // Mock services
+  window.ProfileService = {
+    setCurrentProfile: (profile) => log('ProfileService.setCurrentProfile: ' + JSON.stringify(profile)),
+    incrementSeason: () => log('ProfileService.incrementSeason() called'),
+    setGuestMode: () => log('ProfileService.setGuestMode() called'),
+    getCurrentProfile: () => ({ id: 'test-profile', name: 'Test User', season: 1 }),
+    isGuestMode: () => false
+  };
+  
+  window.ProfileModal = {
+    show: (options) => {
+      log('ProfileModal.show() called');
+      setTimeout(() => {
+        if (options.onGuest) {
+          log('Simulating guest mode selection');
+          options.onGuest();
+        }
+      }, 500);
+    }
+  };
+  
+  window.CompLocks = {
+    clearAllLocks: () => log('CompLocks.clearAllLocks() called')
+  };
+  
+  window.Game = {
+    rebuildGame: (preservePlayers) => log(`Game.rebuildGame(${preservePlayers}) called`),
+    startOpeningSequence: () => log('Game.startOpeningSequence() called')
+  };
+  
+  // Initialize IntroScreen
+  if (window.IntroScreen && typeof window.IntroScreen.init === 'function') {
+    window.IntroScreen.init({ bus: window.game.bus });
+    log('IntroScreen initialized');
+  }
+  
+  // UI State Monitor (updates every 100ms)
+  setInterval(updateStatusMonitor, 100);
+  
+  function updateStatusMonitor() {
+    const hasClass = document.body.classList.contains('main-screen-built');
+    const topbar = document.querySelector('.topbar');
+    const wrap = document.querySelector('.wrap');
+    const intro = document.querySelector('.intro-screen');
+    
+    const topbarVisible = topbar && window.getComputedStyle(topbar).display !== 'none';
+    const wrapVisible = wrap && window.getComputedStyle(wrap).display !== 'none';
+    const introVisible = intro && intro.classList.contains('intro-screen--visible');
+    
+    // Context: When intro screen is visible, main-screen-built should NOT be present
+    // When game is running, main-screen-built SHOULD be present
+    const isIntroContext = introVisible;
+    const classCorrect = isIntroContext ? !hasClass : hasClass;
+    
+    document.getElementById('bodyClass').textContent = hasClass ? 'main-screen-built' : '(none)';
+    document.getElementById('bodyClass').className = classCorrect ? 'pass' : 'fail';
+    
+    document.getElementById('topbarVisible').textContent = topbarVisible ? 'Yes' : 'No';
+    // Topbar should be hidden when intro is shown
+    document.getElementById('topbarVisible').className = (isIntroContext && !topbarVisible) || (!isIntroContext && topbarVisible) ? 'pass' : 'fail';
+    
+    document.getElementById('wrapVisible').textContent = wrapVisible ? 'Yes' : 'No';
+    // Wrap should be hidden when intro is shown
+    document.getElementById('wrapVisible').className = (isIntroContext && !wrapVisible) || (!isIntroContext && wrapVisible) ? 'pass' : 'fail';
+    
+    document.getElementById('introVisible').textContent = introVisible ? 'Yes' : 'No';
+    document.getElementById('introVisible').className = introVisible ? 'pass' : 'info';
+  }
+  
+  function log(message) {
+    console.log(`[test] ${message}`);
+  }
+  
+  function testWinnerModalExit() {
+    log('=== Testing Winner Modal Exit Flow ===');
+    
+    const results = document.getElementById('winner-results');
+    results.innerHTML = '<span class="info">Step 1: Showing winner modal...</span>';
+    
+    // Show winner modal
+    if (typeof window.showFinaleCinematic === 'function') {
+      window.showFinaleCinematic(0);
+      results.innerHTML += '<br><span class="pass">✓ Winner modal shown</span>';
+      results.innerHTML += '<br><span class="info">Step 2: Click EXIT button in the modal to test fix</span>';
+      results.innerHTML += '<br><span class="info">Step 3: Watch UI State Monitor - game UI should hide and intro should show</span>';
+      
+      updateChecklist('winner-modal-shown', true);
+    } else {
+      results.innerHTML = '<span class="fail">✗ showFinaleCinematic not found</span>';
+      updateChecklist('winner-modal-shown', false);
+    }
+  }
+  
+  function testGameOverModalExit() {
+    log('=== Testing Game Over Modal Exit Flow ===');
+    
+    const results = document.getElementById('gameover-results');
+    results.innerHTML = '<span class="info">Step 1: Showing game over modal...</span>';
+    
+    // Show game over modal
+    if (window.GameOverModal && typeof window.GameOverModal.show === 'function') {
+      window.GameOverModal.show({
+        playerName: 'Test Player',
+        placement: 10,
+        jurySize: 7
+      });
+      results.innerHTML += '<br><span class="pass">✓ Game over modal shown</span>';
+      results.innerHTML += '<br><span class="info">Step 2: Click EXIT button in the modal to test fix</span>';
+      results.innerHTML += '<br><span class="info">Step 3: Watch UI State Monitor - game UI should hide and intro should show</span>';
+      
+      updateChecklist('gameover-modal-shown', true);
+    } else {
+      results.innerHTML = '<span class="fail">✗ GameOverModal not found</span>';
+      updateChecklist('gameover-modal-shown', false);
+    }
+  }
+  
+  function addMainScreenBuilt() {
+    document.body.classList.add('main-screen-built');
+    log('Added main-screen-built class');
+    updateManualResults();
+  }
+  
+  function removeMainScreenBuilt() {
+    document.body.classList.remove('main-screen-built');
+    log('Removed main-screen-built class');
+    updateManualResults();
+  }
+  
+  function showIntroManually() {
+    if (window.IntroScreen && typeof window.IntroScreen.show === 'function') {
+      window.IntroScreen.show();
+      log('IntroScreen.show() called manually');
+      updateManualResults();
+    } else {
+      log('IntroScreen not available');
+    }
+  }
+  
+  function hideIntroManually() {
+    if (window.IntroScreen && typeof window.IntroScreen.hide === 'function') {
+      window.IntroScreen.hide();
+      log('IntroScreen.hide() called manually');
+      updateManualResults();
+    } else {
+      log('IntroScreen not available');
+    }
+  }
+  
+  function updateManualResults() {
+    const hasClass = document.body.classList.contains('main-screen-built');
+    const intro = document.querySelector('.intro-screen');
+    const introVisible = intro && intro.classList.contains('intro-screen--visible');
+    
+    const results = document.getElementById('manual-results');
+    results.innerHTML = 
+      `<div>Body has 'main-screen-built': <span class="${hasClass ? 'fail' : 'pass'}">${hasClass ? 'YES' : 'NO'}</span></div>` +
+      `<div>IntroScreen visible: <span class="${introVisible ? 'pass' : 'info'}">${introVisible ? 'YES' : 'NO'}</span></div>`;
+  }
+  
+  let checklist = {
+    'winner-modal-shown': null,
+    'gameover-modal-shown': null,
+    'exit-clicked': null,
+    'class-removed': null,
+    'intro-shown': null
+  };
+  
+  function updateChecklist(item, status) {
+    checklist[item] = status;
+    renderChecklist();
+  }
+  
+  function renderChecklist() {
+    const checklistEl = document.getElementById('checklist');
+    const items = [
+      { key: 'winner-modal-shown', label: 'Winner modal can be shown' },
+      { key: 'gameover-modal-shown', label: 'Game over modal can be shown' },
+      { key: 'exit-clicked', label: 'Exit button clicked' },
+      { key: 'class-removed', label: 'main-screen-built class removed' },
+      { key: 'intro-shown', label: 'Intro screen shown' }
+    ];
+    
+    let html = '';
+    items.forEach(item => {
+      const status = checklist[item.key];
+      let icon = '⏸️';
+      let className = 'info';
+      if (status === true) {
+        icon = '✓';
+        className = 'pass';
+      } else if (status === false) {
+        icon = '✗';
+        className = 'fail';
+      }
+      html += `<div><span class="${className}">${icon}</span> ${item.label}</div>`;
+    });
+    
+    checklistEl.innerHTML = html;
+  }
+  
+  // Initial render
+  renderChecklist();
+  updateStatusMonitor();
+  
+  log('Test page loaded');
+</script>
+
+</body>
+</html>
