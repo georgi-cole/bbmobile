@@ -56,7 +56,7 @@
     triviaPulse: {
       key: 'triviaPulse',
       name: 'Trivia Pulse',
-      description: 'Time-pressured Big Brother trivia questions',
+      description: 'Time-pressured Big Brother trivia questions (supports pulse and standard variants)',
       type: 'trivia',
       category: 'trivia',
       difficulty: 'easy',
@@ -68,6 +68,25 @@
       minScore: 0,
       maxScore: 100,
       retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    triviaQuiz: {
+      key: 'triviaQuiz',
+      name: 'Big Brother Trivia',
+      description: 'Answer multiple choice trivia questions (no timer)',
+      type: 'trivia',
+      category: 'trivia',
+      difficulty: 'easy',
+      estimatedDuration: 40,
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'trivia-quiz.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: true,
+      replacedBy: 'triviaPulse',
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
