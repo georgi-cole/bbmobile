@@ -13,7 +13,7 @@
   // Target human win rates by phase (read from cfg.playerWinChances)
   const DEFAULT_WIN_RATES = {
     hoh: 0.20,  // 20% win rate for HOH
-    pov: 0.30   // 30% win rate for POV
+    pov: 0.22   // 22% win rate for POV (made tougher so AI wins more often)
   };
 
   /**

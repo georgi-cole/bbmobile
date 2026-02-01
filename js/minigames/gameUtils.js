@@ -13,12 +13,12 @@
 
   // Win probability constant - human players win ~20% of the time when eligible (new golden rule)
   const PLAYER_WIN_CHANCE = 0.20;
-  const PLAYER_WIN_CHANCE_POV = 0.30; // POV has higher win chance
+  const PLAYER_WIN_CHANCE_POV = 0.22; // POV tuned lower so AI wins more often
   
   // Default win chances by phase
   const DEFAULT_WIN_CHANCES = {
     hoh: 0.20,
-    pov: 0.30
+    pov: 0.22
   };
   
   // New outcome logic constants
