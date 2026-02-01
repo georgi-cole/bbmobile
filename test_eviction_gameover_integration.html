@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Eviction Game Over Integration</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0d151f;
+      color: #e0e8f0;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+    }
+    .test-panel {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: linear-gradient(145deg, #1a2533, #0f1925);
+      border: 1px solid rgba(110, 160, 220, 0.18);
+      border-radius: 16px;
+      padding: 30px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #6fd3ff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #9bbdff;
+    }
+    button {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background: #4574b8;
+    }
+    button.run-all {
+      background: #2a7d2e;
+    }
+    button.run-all:hover {
+      background: #3a8d3e;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .pass {
+      color: #4ade80;
+    }
+    .fail {
+      color: #f87171;
+    }
+    .info {
+      color: #9bbdff;
+    }
+    .warn {
+      color: #fbbf24;
+    }
+    .instructions {
+      background: rgba(255, 212, 120, 0.1);
+      border: 1px solid rgba(255, 212, 120, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #ffdc8b;
+    }
+    .summary {
+      background: rgba(110, 160, 220, 0.1);
+      border: 1px solid rgba(110, 160, 220, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    .summary h3 {
+      margin-top: 0;
+      color: #6fd3ff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="test-panel">
+  <h1>🧪 Eviction Game Over Integration Tests</h1>
+  
+  <div class="instructions">
+    <h3>📋 Test Objectives</h3>
+    <p>This test harness validates the Game Over modal logic across all eviction flows:</p>
+    <ul>
+      <li><strong>Single Eviction:</strong> Human evicted pre-jury in standard vote</li>
+      <li><strong>Multi-Eviction:</strong> Human evicted pre-jury in double/triple eviction</li>
+      <li><strong>Self-Eviction:</strong> Human self-evicts pre-jury</li>
+    </ul>
+    <p>Each test mocks the necessary functions and asserts that:</p>
+    <ol>
+      <li><code>g.__showGameOverModal</code> is set correctly</li>
+      <li><code>GameOverModal.show()</code> is called with correct parameters</li>
+      <li>Fallback to <code>global.showCard()</code> works if module unavailable</li>
+    </ol>
+  </div>
+
+  <button class="run-all" onclick="runAllTests()">▶ Run All Tests</button>
+  
+  <div class="test-section">
+    <h2>Test 1: Single Eviction Pre-Jury</h2>
+    <p>Simulates human player evicted at 10th place (7-person jury, jury starts at 9th)</p>
+    <button onclick="testSingleEvictionPreJury()">Run Test</button>
+    <div id="test1-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Multi-Eviction Pre-Jury</h2>
+    <p>Simulates double eviction where human is one of two evicted at 12th place</p>
+    <button onclick="testMultiEvictionPreJury()">Run Test</button>
+    <div id="test2-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Self-Eviction Pre-Jury</h2>
+    <p>Simulates human self-eviction at 11th place - should show Game Over modal</p>
+    <button onclick="testSelfEvictionPreJury()">Run Test</button>
+    <div id="test3-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Modal Loading Resilience</h2>
+    <p>Tests polling/retry when GameOverModal not immediately available</p>
+    <button onclick="testModalLoadingResilience()">Run Test</button>
+    <div id="test4-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Fallback to showCard</h2>
+    <p>Tests fallback when GameOverModal never loads</p>
+    <button onclick="testFallbackToShowCard()">Run Test</button>
+    <div id="test5-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Human Makes Jury (No Modal)</h2>
+    <p>Verifies modal is NOT shown when human makes jury (9th place with 7-person jury)</p>
+    <button onclick="testHumanMakesJury()">Run Test</button>
+    <div id="test6-results" class="result"></div>
+  </div>
+
+  <div id="summary" class="summary" style="display: none;">
+    <h3>📊 Test Summary</h3>
+    <div id="summary-content"></div>
+  </div>
+</div>
+
+<script>
+  // Test state
+  let testResults = [];
+
+  // Mock setup helpers
+  function setupMockGame(humanId = 1, playersLeft = 10, jurySize = 7) {
+    window.game = {
+      humanId: humanId,
+      week: 5,
+      cfg: {
+        enableJuryHouse: true,
+        jurySize: jurySize
+      },
+      players: []
+    };
+
+    // Create mock players
+    for (let i = 1; i <= playersLeft; i++) {
+      window.game.players.push({
+        id: i,
+        name: `Player${i}`,
+        evicted: false,
+        autoMode: i !== humanId
+      });
+    }
+  }
+
+  function setupMockFunctions() {
+    // Mock alivePlayers
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+
+    // Mock getP
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+
+    // Mock safeName
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Unknown${id}`;
+    };
+
+    // Mock updateHud
+    window.updateHud = () => {};
+
+    // Mock addLog
+    window.addLog = (msg, type) => {};
+
+    // Mock PlayerService
+    window.PlayerService = {
+      setAlivePlayers: (players) => {}
+    };
+
+    // Mock visual functions
+    window.notifyEvictedForVisual = (id) => {};
+    window.runEvictionVisual = async (id, opts) => {
+      await new Promise(r => setTimeout(r, 50)); // Simulate animation
+    };
+  }
+
+  function setupGameOverModalMock() {
+    const calls = [];
+    
+    window.GameOverModal = {
+      makesJury: (placement, jurySize = 7) => {
+        const firstJurorPlace = jurySize + 2;
+        const lastJurorPlace = 3;
+        return placement >= lastJurorPlace && placement <= firstJurorPlace;
+      },
+      show: async (data) => {
+        calls.push(data);
+        console.log('[gameover-pr] GameOverModal.show called with:', data);
+        await new Promise(r => setTimeout(r, 50));
+      },
+      _calls: calls
+    };
+    
+    return calls;
+  }
+
+  function setupShowCardMock() {
+    const calls = [];
+    
+    window.showCard = (title, lines, tone, duration, modal) => {
+      calls.push({ title, lines, tone, duration, modal });
+      console.log('[gameover-pr] showCard called with:', { title, lines });
+    };
+    
+    return calls;
+  }
+
+  function log(elementId, message, type = 'info') {
+    const el = document.getElementById(elementId);
+    const color = type === 'pass' ? '#4ade80' : type === 'fail' ? '#f87171' : type === 'warn' ? '#fbbf24' : '#9bbdff';
+    el.innerHTML += `<span style="color: ${color}">${message}</span>\n`;
+  }
+
+  function clearLog(elementId) {
+    document.getElementById(elementId).innerHTML = '';
+  }
+
+  // TEST 1: Single Eviction Pre-Jury
+  async function testSingleEvictionPreJury() {
+    clearLog('test1-results');
+    log('test1-results', '=== Test 1: Single Eviction Pre-Jury ===\n');
+    
+    try {
+      // Setup
+      setupMockGame(1, 10, 7); // Human is player 1, 10 players left
+      setupMockFunctions();
+      const modalCalls = setupGameOverModalMock();
+      
+      log('test1-results', '✓ Setup: 10 players, human ID=1, jury size=7', 'pass');
+      log('test1-results', '  Expected: Human evicted at 10th place (pre-jury, jury starts at 9th)');
+      
+      // Load eviction module helpers
+      await loadEvictionModule();
+      
+      // Test queueGameOverIfHumanPreJury
+      const queued = window.queueGameOverIfHumanPreJury(1, 'Player1', 10);
+      
+      if (!queued) {
+        throw new Error('queueGameOverIfHumanPreJury returned false - should be true for pre-jury');
+      }
+      log('test1-results', '✓ queueGameOverIfHumanPreJury returned true', 'pass');
+      
+      // Check flag was set
+      if (!window.game.__showGameOverModal) {
+        throw new Error('g.__showGameOverModal not set');
+      }
+      log('test1-results', '✓ g.__showGameOverModal flag set', 'pass');
+      
+      // Verify data
+      const modalData = window.game.__showGameOverModal;
+      if (modalData.playerName !== 'Player1') {
+        throw new Error(`Expected playerName=Player1, got ${modalData.playerName}`);
+      }
+      if (modalData.placement !== 10) {
+        throw new Error(`Expected placement=10, got ${modalData.placement}`);
+      }
+      if (modalData.jurySize !== 7) {
+        throw new Error(`Expected jurySize=7, got ${modalData.jurySize}`);
+      }
+      log('test1-results', '✓ Modal data correct: playerName=Player1, placement=10, jurySize=7', 'pass');
+      
+      // Test showGameOverModalRobust
+      delete window.game.__showGameOverModal;
+      await window.showGameOverModalRobust(modalData);
+      
+      // Verify modal was shown
+      if (modalCalls.length !== 1) {
+        throw new Error(`Expected 1 modal call, got ${modalCalls.length}`);
+      }
+      log('test1-results', '✓ GameOverModal.show called exactly once', 'pass');
+      
+      const call = modalCalls[0];
+      if (call.playerName !== 'Player1' || call.placement !== 10 || call.jurySize !== 7) {
+        throw new Error('Modal called with incorrect parameters');
+      }
+      log('test1-results', '✓ Modal called with correct parameters', 'pass');
+      
+      log('test1-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Single Eviction Pre-Jury', passed: true });
+      
+    } catch (err) {
+      log('test1-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      log('test1-results', err.stack, 'fail');
+      testResults.push({ name: 'Single Eviction Pre-Jury', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 2: Multi-Eviction Pre-Jury
+  async function testMultiEvictionPreJury() {
+    clearLog('test2-results');
+    log('test2-results', '=== Test 2: Multi-Eviction Pre-Jury ===\n');
+    
+    try {
+      // Setup
+      setupMockGame(1, 12, 7); // Human is player 1, 12 players left
+      setupMockFunctions();
+      const modalCalls = setupGameOverModalMock();
+      
+      log('test2-results', '✓ Setup: 12 players, human ID=1, jury size=7', 'pass');
+      log('test2-results', '  Expected: Human evicted in double eviction at 12th place (pre-jury)');
+      
+      // Load eviction module helpers
+      await loadEvictionModule();
+      
+      // Simulate multi-eviction: evict player 1 (human) and player 2
+      const queued1 = window.queueGameOverIfHumanPreJury(1, 'Player1', 12);
+      const queued2 = window.queueGameOverIfHumanPreJury(2, 'Player2', 11);
+      
+      if (!queued1) {
+        throw new Error('Human eviction should queue modal');
+      }
+      if (queued2) {
+        throw new Error('AI eviction should NOT queue modal');
+      }
+      log('test2-results', '✓ Only human eviction queued modal', 'pass');
+      
+      // Verify flag
+      if (!window.game.__showGameOverModal) {
+        throw new Error('g.__showGameOverModal not set');
+      }
+      log('test2-results', '✓ g.__showGameOverModal flag set', 'pass');
+      
+      // Verify only one modal queued (for human)
+      const modalData = window.game.__showGameOverModal;
+      if (modalData.playerName !== 'Player1') {
+        throw new Error('Modal should be for Player1 (human)');
+      }
+      log('test2-results', '✓ Modal data is for human player only', 'pass');
+      
+      // Show modal
+      delete window.game.__showGameOverModal;
+      await window.showGameOverModalRobust(modalData);
+      
+      if (modalCalls.length !== 1) {
+        throw new Error(`Expected 1 modal call, got ${modalCalls.length}`);
+      }
+      log('test2-results', '✓ GameOverModal.show called exactly once', 'pass');
+      
+      log('test2-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Multi-Eviction Pre-Jury', passed: true });
+      
+    } catch (err) {
+      log('test2-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      testResults.push({ name: 'Multi-Eviction Pre-Jury', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 3: Self-Eviction Pre-Jury
+  async function testSelfEvictionPreJury() {
+    clearLog('test3-results');
+    log('test3-results', '=== Test 3: Self-Eviction Pre-Jury ===\n');
+    
+    try {
+      // Setup
+      setupMockGame(1, 11, 7); // Human is player 1, 11 players left
+      setupMockFunctions();
+      const modalCalls = setupGameOverModalMock();
+      
+      log('test3-results', '✓ Setup: 11 players, human ID=1, jury size=7', 'pass');
+      log('test3-results', '  Expected: Human self-evicts at 11th place (pre-jury)');
+      
+      // Load eviction module helpers
+      await loadEvictionModule();
+      
+      // Simulate self-eviction logic
+      const player = window.getP(1);
+      player.evicted = true;
+      player.selfEvicted = true;
+      const aliveCount = window.alivePlayers().length + 1; // 11
+      
+      // Queue modal (this is what self-eviction.js should do)
+      const queued = window.queueGameOverIfHumanPreJury(1, 'Player1', aliveCount);
+      
+      if (!queued) {
+        throw new Error('Self-eviction should queue modal for pre-jury human');
+      }
+      log('test3-results', '✓ queueGameOverIfHumanPreJury returned true', 'pass');
+      
+      // Verify flag
+      if (!window.game.__showGameOverModal) {
+        throw new Error('g.__showGameOverModal not set');
+      }
+      log('test3-results', '✓ g.__showGameOverModal flag set', 'pass');
+      
+      // Show modal
+      const modalData = window.game.__showGameOverModal;
+      delete window.game.__showGameOverModal;
+      await window.showGameOverModalRobust(modalData);
+      
+      if (modalCalls.length !== 1) {
+        throw new Error(`Expected 1 modal call, got ${modalCalls.length}`);
+      }
+      log('test3-results', '✓ GameOverModal.show called exactly once', 'pass');
+      
+      log('test3-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Self-Eviction Pre-Jury', passed: true });
+      
+    } catch (err) {
+      log('test3-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      testResults.push({ name: 'Self-Eviction Pre-Jury', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 4: Modal Loading Resilience
+  async function testModalLoadingResilience() {
+    clearLog('test4-results');
+    log('test4-results', '=== Test 4: Modal Loading Resilience ===\n');
+    
+    try {
+      // Setup
+      setupMockGame(1, 10, 7);
+      setupMockFunctions();
+      
+      log('test4-results', '✓ Setup: GameOverModal initially undefined', 'pass');
+      
+      // Remove GameOverModal initially
+      delete window.GameOverModal;
+      
+      // Load eviction module helpers
+      await loadEvictionModule();
+      
+      // Start showing modal (will poll for module)
+      const modalData = { playerName: 'Player1', placement: 10, jurySize: 7 };
+      const showPromise = window.showGameOverModalRobust(modalData);
+      
+      log('test4-results', '⏳ Polling for GameOverModal...', 'info');
+      
+      // Load module after 300ms (within the 1.5s window)
+      setTimeout(() => {
+        const calls = setupGameOverModalMock();
+        log('test4-results', '✓ GameOverModal loaded after 300ms', 'pass');
+      }, 300);
+      
+      // Wait for show to complete
+      await showPromise;
+      
+      // Verify modal was shown
+      if (!window.GameOverModal || window.GameOverModal._calls.length !== 1) {
+        throw new Error('Modal should have been shown after polling');
+      }
+      log('test4-results', '✓ Modal shown after polling completed', 'pass');
+      
+      log('test4-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Modal Loading Resilience', passed: true });
+      
+    } catch (err) {
+      log('test4-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      testResults.push({ name: 'Modal Loading Resilience', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 5: Fallback to showCard
+  async function testFallbackToShowCard() {
+    clearLog('test5-results');
+    log('test5-results', '=== Test 5: Fallback to showCard ===\n');
+    
+    try {
+      // Setup
+      setupMockGame(1, 10, 7);
+      setupMockFunctions();
+      const cardCalls = setupShowCardMock();
+      
+      log('test5-results', '✓ Setup: GameOverModal will never load', 'pass');
+      
+      // Remove GameOverModal (it won't load in time)
+      delete window.GameOverModal;
+      
+      // Load eviction module helpers
+      await loadEvictionModule();
+      
+      // Show modal (will timeout and use fallback)
+      const modalData = { playerName: 'Player1', placement: 10, jurySize: 7 };
+      log('test5-results', '⏳ Waiting for timeout (this may take ~1.5s)...', 'info');
+      await window.showGameOverModalRobust(modalData);
+      
+      // Verify showCard was called
+      if (cardCalls.length !== 1) {
+        throw new Error(`Expected 1 showCard call, got ${cardCalls.length}`);
+      }
+      log('test5-results', '✓ showCard fallback called', 'pass');
+      
+      const call = cardCalls[0];
+      if (call.title !== 'GAME OVER') {
+        throw new Error('Expected title "GAME OVER"');
+      }
+      if (!call.lines || call.lines.length < 2) {
+        throw new Error('Expected multiple lines in showCard');
+      }
+      log('test5-results', '✓ showCard called with correct parameters', 'pass');
+      log('test5-results', `  Title: ${call.title}`, 'info');
+      log('test5-results', `  Lines: ${call.lines.length}`, 'info');
+      
+      log('test5-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Fallback to showCard', passed: true });
+      
+    } catch (err) {
+      log('test5-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      testResults.push({ name: 'Fallback to showCard', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 6: Human Makes Jury (No Modal)
+  async function testHumanMakesJury() {
+    clearLog('test6-results');
+    log('test6-results', '=== Test 6: Human Makes Jury (No Modal) ===\n');
+    
+    try {
+      // Setup
+      setupMockGame(1, 9, 7); // Human is player 1, 9 players left (exactly at jury cutoff)
+      setupMockFunctions();
+      const modalCalls = setupGameOverModalMock();
+      
+      log('test6-results', '✓ Setup: 9 players, human ID=1, jury size=7', 'pass');
+      log('test6-results', '  Expected: Human evicted at 9th place (makes jury, no modal)');
+      
+      // Load eviction module helpers
+      await loadEvictionModule();
+      
+      // Test queueGameOverIfHumanPreJury
+      const queued = window.queueGameOverIfHumanPreJury(1, 'Player1', 9);
+      
+      if (queued) {
+        throw new Error('queueGameOverIfHumanPreJury should return false for jury member');
+      }
+      log('test6-results', '✓ queueGameOverIfHumanPreJury returned false (makes jury)', 'pass');
+      
+      // Verify flag was NOT set
+      if (window.game.__showGameOverModal) {
+        throw new Error('g.__showGameOverModal should not be set for jury member');
+      }
+      log('test6-results', '✓ g.__showGameOverModal flag NOT set', 'pass');
+      
+      // Verify modal was NOT shown
+      if (modalCalls.length !== 0) {
+        throw new Error(`Expected 0 modal calls, got ${modalCalls.length}`);
+      }
+      log('test6-results', '✓ GameOverModal.show NOT called', 'pass');
+      
+      log('test6-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Human Makes Jury (No Modal)', passed: true });
+      
+    } catch (err) {
+      log('test6-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      testResults.push({ name: 'Human Makes Jury (No Modal)', passed: false, error: err.message });
+    }
+  }
+
+  // Helper to load eviction module functions
+  async function loadEvictionModule() {
+    // In real environment, eviction.js is already loaded
+    // For this test, we need to ensure the functions are available
+    if (typeof window.queueGameOverIfHumanPreJury === 'undefined') {
+      // Load from actual eviction.js file
+      const script = document.createElement('script');
+      script.src = 'js/eviction.js';
+      document.head.appendChild(script);
+      
+      // Wait for script to load
+      await new Promise((resolve) => {
+        script.onload = resolve;
+        script.onerror = () => {
+          console.error('Failed to load eviction.js');
+          resolve();
+        };
+      });
+    }
+  }
+
+  // Run all tests
+  async function runAllTests() {
+    testResults = [];
+    document.getElementById('summary').style.display = 'none';
+    
+    await testSingleEvictionPreJury();
+    await testMultiEvictionPreJury();
+    await testSelfEvictionPreJury();
+    await testModalLoadingResilience();
+    await testFallbackToShowCard();
+    await testHumanMakesJury();
+    
+    // Show summary
+    showSummary();
+  }
+
+  function showSummary() {
+    const summaryEl = document.getElementById('summary');
+    const contentEl = document.getElementById('summary-content');
+    
+    const total = testResults.length;
+    const passed = testResults.filter(r => r.passed).length;
+    const failed = total - passed;
+    
+    let html = `<p><strong>Total Tests:</strong> ${total}</p>`;
+    html += `<p class="pass"><strong>Passed:</strong> ${passed}</p>`;
+    html += `<p class="fail"><strong>Failed:</strong> ${failed}</p>`;
+    html += '<hr>';
+    
+    testResults.forEach((result, i) => {
+      const status = result.passed ? '✅' : '❌';
+      const color = result.passed ? 'pass' : 'fail';
+      html += `<p class="${color}">${status} ${result.name}</p>`;
+      if (!result.passed && result.error) {
+        html += `<p style="margin-left: 20px; color: #f87171;">Error: ${result.error}</p>`;
+      }
+    });
+    
+    contentEl.innerHTML = html;
+    summaryEl.style.display = 'block';
+    
+    // Scroll to summary
+    summaryEl.scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>

@@ -152,7 +152,16 @@
   </div>
 
   <div class="test-section">
-    <h2>3. Intro Hub State</h2>
+    <h2>3. Eviction Flow Tests (NEW)</h2>
+    <p>Test Game Over modal in different eviction scenarios</p>
+    <button onclick="testSingleEvictionFlow()">Test Single Eviction Pre-Jury</button>
+    <button onclick="testMultiEvictionFlow()">Test Multi-Eviction Pre-Jury</button>
+    <button onclick="testSelfEvictionFlow()">Test Self-Eviction Pre-Jury</button>
+    <div id="eviction-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Intro Hub State</h2>
     <p>Verify the intro hub can be shown/hidden correctly</p>
     <button onclick="checkIntroHubState()">Check Intro Hub State</button>
     <button onclick="showIntroHubManually()">Show Intro Hub Manually</button>
@@ -161,7 +170,7 @@
   </div>
 
   <div class="test-section">
-    <h2>4. Console Log</h2>
+    <h2>5. Console Log</h2>
     <div id="console-log" class="result">Console messages will appear here...</div>
   </div>
 </div>
@@ -421,6 +430,167 @@
     log('Testing environment initialized', 'info');
     checkIntroHubState();
   });
+
+  // NEW: Test single eviction flow
+  async function testSingleEvictionFlow() {
+    const resultEl = document.getElementById('eviction-results');
+    resultEl.innerHTML = '<span style="color: #9bbdff">=== Testing Single Eviction Pre-Jury ===</span>\n';
+    
+    try {
+      // Setup game state
+      window.game.cfg.enableJuryHouse = true;
+      window.game.cfg.jurySize = 7;
+      window.game.humanId = 0;
+      
+      // Mock alivePlayers - 10 players left (pre-jury for 7-person jury)
+      window.alivePlayers = () => window.game.players.filter((p, i) => i < 10 && !p.evicted);
+      
+      resultEl.innerHTML += '<span style="color: #4ade80">✓ Setup: 10 players left, human ID=0</span>\n';
+      
+      // Load eviction helpers (if available)
+      if (typeof window.queueGameOverIfHumanPreJury === 'function') {
+        const queued = window.queueGameOverIfHumanPreJury(0, 'Alice', 10);
+        
+        if (queued) {
+          resultEl.innerHTML += '<span style="color: #4ade80">✓ Modal queued for pre-jury eviction</span>\n';
+          
+          if (window.game.__showGameOverModal) {
+            resultEl.innerHTML += '<span style="color: #4ade80">✓ g.__showGameOverModal flag set</span>\n';
+            
+            // Show modal
+            const modalData = window.game.__showGameOverModal;
+            delete window.game.__showGameOverModal;
+            
+            if (typeof window.showGameOverModalRobust === 'function') {
+              await window.showGameOverModalRobust(modalData);
+              resultEl.innerHTML += '<span style="color: #4ade80">✓ Modal shown via robust function</span>\n';
+            } else {
+              await window.GameOverModal.show(modalData);
+              resultEl.innerHTML += '<span style="color: #4ade80">✓ Modal shown directly</span>\n';
+            }
+            
+            resultEl.innerHTML += '\n<span style="color: #4ade80">✅ TEST PASSED - Modal displayed</span>\n';
+          } else {
+            throw new Error('Flag not set');
+          }
+        } else {
+          throw new Error('Modal not queued');
+        }
+      } else {
+        // Fallback to direct modal show
+        resultEl.innerHTML += '<span style="color: #fbbf24">⚠ Using fallback (helpers not loaded)</span>\n';
+        await window.GameOverModal.show({
+          playerName: 'Alice',
+          placement: 10,
+          jurySize: 7
+        });
+        resultEl.innerHTML += '<span style="color: #4ade80">✓ Modal shown via fallback</span>\n';
+      }
+    } catch (err) {
+      resultEl.innerHTML += `\n<span style="color: #f87171">❌ TEST FAILED: ${err.message}</span>\n`;
+      console.error('Single eviction test failed:', err);
+    }
+  }
+
+  // NEW: Test multi-eviction flow
+  async function testMultiEvictionFlow() {
+    const resultEl = document.getElementById('eviction-results');
+    resultEl.innerHTML = '<span style="color: #9bbdff">=== Testing Multi-Eviction Pre-Jury ===</span>\n';
+    
+    try {
+      // Setup game state
+      window.game.cfg.enableJuryHouse = true;
+      window.game.cfg.jurySize = 7;
+      window.game.humanId = 0;
+      
+      // Mock alivePlayers - 12 players left (double eviction)
+      window.alivePlayers = () => window.game.players.filter((p, i) => i < 12 && !p.evicted);
+      
+      resultEl.innerHTML += '<span style="color: #4ade80">✓ Setup: 12 players left, double eviction</span>\n';
+      
+      if (typeof window.queueGameOverIfHumanPreJury === 'function') {
+        // Simulate double eviction
+        const queued1 = window.queueGameOverIfHumanPreJury(0, 'Alice', 12);
+        const queued2 = window.queueGameOverIfHumanPreJury(1, 'Bob', 11);
+        
+        if (queued1 && !queued2) {
+          resultEl.innerHTML += '<span style="color: #4ade80">✓ Only human eviction queued modal</span>\n';
+          
+          const modalData = window.game.__showGameOverModal;
+          delete window.game.__showGameOverModal;
+          
+          if (typeof window.showGameOverModalRobust === 'function') {
+            await window.showGameOverModalRobust(modalData);
+          } else {
+            await window.GameOverModal.show(modalData);
+          }
+          
+          resultEl.innerHTML += '\n<span style="color: #4ade80">✅ TEST PASSED - Modal displayed for human only</span>\n';
+        } else {
+          throw new Error('Incorrect queueing behavior');
+        }
+      } else {
+        resultEl.innerHTML += '<span style="color: #fbbf24">⚠ Using fallback</span>\n';
+        await window.GameOverModal.show({
+          playerName: 'Alice',
+          placement: 12,
+          jurySize: 7
+        });
+      }
+    } catch (err) {
+      resultEl.innerHTML += `\n<span style="color: #f87171">❌ TEST FAILED: ${err.message}</span>\n`;
+      console.error('Multi eviction test failed:', err);
+    }
+  }
+
+  // NEW: Test self-eviction flow
+  async function testSelfEvictionFlow() {
+    const resultEl = document.getElementById('eviction-results');
+    resultEl.innerHTML = '<span style="color: #9bbdff">=== Testing Self-Eviction Pre-Jury ===</span>\n';
+    
+    try {
+      // Setup game state
+      window.game.cfg.enableJuryHouse = true;
+      window.game.cfg.jurySize = 7;
+      window.game.humanId = 0;
+      
+      // Mock alivePlayers - 11 players left (self-eviction scenario)
+      window.alivePlayers = () => window.game.players.filter((p, i) => i < 11 && !p.evicted);
+      
+      resultEl.innerHTML += '<span style="color: #4ade80">✓ Setup: 11 players left, human self-evicts</span>\n';
+      
+      if (typeof window.queueGameOverIfHumanPreJury === 'function') {
+        const queued = window.queueGameOverIfHumanPreJury(0, 'Alice', 11);
+        
+        if (queued) {
+          resultEl.innerHTML += '<span style="color: #4ade80">✓ Modal queued for self-eviction</span>\n';
+          
+          const modalData = window.game.__showGameOverModal;
+          delete window.game.__showGameOverModal;
+          
+          if (typeof window.showGameOverModalRobust === 'function') {
+            await window.showGameOverModalRobust(modalData);
+          } else {
+            await window.GameOverModal.show(modalData);
+          }
+          
+          resultEl.innerHTML += '\n<span style="color: #4ade80">✅ TEST PASSED - Self-eviction shows modal</span>\n';
+        } else {
+          throw new Error('Modal not queued for self-eviction');
+        }
+      } else {
+        resultEl.innerHTML += '<span style="color: #fbbf24">⚠ Using fallback</span>\n';
+        await window.GameOverModal.show({
+          playerName: 'Alice',
+          placement: 11,
+          jurySize: 7
+        });
+      }
+    } catch (err) {
+      resultEl.innerHTML += `\n<span style="color: #f87171">❌ TEST FAILED: ${err.message}</span>\n`;
+      console.error('Self eviction test failed:', err);
+    }
+  }
 </script>
 
 </body>
