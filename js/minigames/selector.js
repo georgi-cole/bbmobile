@@ -99,8 +99,9 @@
    * Initialize selection state for a new season
    * This should be called when starting a new game/season
    * @param {Array<string>} availableGames - Array of game keys to include in pool
+   * @param {boolean} useBalancedSelection - If true, use category-balanced selection
    */
-  function initializeSeasonPool(availableGames){
+  function initializeSeasonPool(availableGames, useBalancedSelection = true){
     if(!availableGames || availableGames.length === 0){
       console.warn('[MinigameSelector] No games available for pool initialization');
       return;
@@ -118,7 +119,18 @@
     }
     
     // Create shuffled pool for the season
-    const pool = shuffleArray(seasonalGames.slice());
+    // If balanced selection is requested and registry supports it, use category diversity
+    let pool;
+    if(useBalancedSelection && g.MinigameRegistry && typeof g.MinigameRegistry.getBalancedSelection === 'function'){
+      console.info('[MinigameSelector] Using balanced category selection');
+      // Get a balanced initial set, then fill with remaining games
+      const balancedSet = g.MinigameRegistry.getBalancedSelection(Math.min(8, seasonalGames.length));
+      const remainingGames = seasonalGames.filter(key => !balancedSet.includes(key));
+      pool = [...balancedSet, ...shuffleArray(remainingGames)];
+      console.info('[MinigameSelector] Balanced set:', balancedSet.length, 'games, remaining:', remainingGames.length);
+    } else {
+      pool = shuffleArray(seasonalGames.slice());
+    }
     
     // Store pool and tracking state
     game.__minigamePool = pool;
@@ -126,7 +138,7 @@
     game.__minigameHistory = game.__minigameHistory || [];
     game.__minigameSeason = currentSeason; // Track the season for reset detection
     
-    console.info('[MinigameSelector] Initialized season pool with', pool.length, 'games for', currentSeason, ':', pool);
+    console.info('[MinigameSelector] Initialized season pool with', pool.length, 'games for', currentSeason);
   }
 
   /**
@@ -186,9 +198,19 @@
       if(allowRepeatAfterExhaustion){
         console.info('[MinigameSelector] Pool exhausted, reshuffling...');
         
-        // Reshuffle pool, but try to avoid immediate repeat of last game
+        // Reshuffle pool with balanced selection if available
         const lastGame = game.__minigameHistory[game.__minigameHistory.length - 1];
-        let newPool = shuffleArray(game.__minigamePool.slice());
+        let newPool;
+        
+        if(g.MinigameRegistry && typeof g.MinigameRegistry.getBalancedSelection === 'function'){
+          // Use balanced selection for reshuffle
+          const poolSize = game.__minigamePool.length;
+          const balancedSet = g.MinigameRegistry.getBalancedSelection(Math.min(8, poolSize));
+          const remainingGames = game.__minigamePool.filter(key => !balancedSet.includes(key));
+          newPool = [...balancedSet, ...shuffleArray(remainingGames)];
+        } else {
+          newPool = shuffleArray(game.__minigamePool.slice());
+        }
         
         // If first game in new pool is same as last game, swap it
         if(newPool.length > 1 && newPool[0] === lastGame){
