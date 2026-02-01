@@ -255,20 +255,49 @@
             // Fallback: direct restart
             startNewSeasonFlow();
           }
-        }, 200);
-      });
+        }, 450); // wait for overlay close animation to finish
+      }, { once: true });
 
       // Exit button - navigates back to intro hub
       exitBtn.addEventListener('click', () => {
         console.info('[game-over] EXIT clicked, navigating to intro hub');
+        newSeasonBtn.disabled = true;
+        exitBtn.disabled = true;
         closeModal();
         
         // Navigate back to intro hub after modal is closed
         setTimeout(() => {
+          // Pause/stop any running game loops to avoid background activity
+          try {
+            if (global.PauseController && typeof global.PauseController.pause === 'function') {
+              global.PauseController.pause('game-over-exit');
+            }
+            if (global.game && global.game.pauseManager && typeof global.game.pauseManager.reset === 'function') {
+              global.game.pauseManager.reset();
+            }
+          } catch (e) {
+            console.warn('[game-over] failed to pause game on exit', e);
+          }
+          
           // Hide main game UI by removing the 'main-screen-built' class
           // This ensures the topbar and wrap elements are hidden via CSS
           document.body.classList.remove('main-screen-built');
           console.info('[game-over] Removed main-screen-built class to hide game UI');
+          
+          // Try to close the tab/app where supported
+          try {
+            if (typeof navigator !== 'undefined' && navigator.app && typeof navigator.app.exitApp === 'function') {
+              navigator.app.exitApp();
+              return;
+            }
+            if (typeof global.close === 'function') {
+              global.close();
+            } else if (typeof window !== 'undefined' && typeof window.close === 'function') {
+              window.close();
+            }
+          } catch (e) {
+            console.warn('[game-over] window close failed, showing intro instead', e);
+          }
           
           if (global.IntroScreen && typeof global.IntroScreen.showWithPreload === 'function') {
             console.info('[game-over] Showing intro hub after exit');
