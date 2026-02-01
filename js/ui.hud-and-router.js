@@ -2317,7 +2317,15 @@ header.innerHTML = `
         return;
       }
       const s=Math.ceil(rem/1000), m=Math.floor(s/60), r=s%60;
-      setClock(`${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`);
+      
+      // DEFENSIVE GUARD: If timer shows >120 minutes and is paused, display "PAUSED" instead
+      // This prevents displaying far-future values (1439+ minutes) in rare race conditions
+      if (m > 120 && g.timerPaused) {
+        setClock('PAUSED');
+        console.warn('[hud-timer] Timer paused with far-future value detected (', m, 'min), displaying PAUSED instead');
+      } else {
+        setClock(`${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`);
+      }
       
       // Update both old bar (for compatibility) and new hourglass
       const percentRemaining = (rem/total)*100;
