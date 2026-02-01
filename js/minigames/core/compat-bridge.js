@@ -47,6 +47,11 @@
     'trivia-pulse': 'triviaPulse',
     'triviapulse': 'triviaPulse',
     
+    // triviaQuiz retired - redirect to triviaPulse
+    'triviaQuiz': 'triviaPulse',
+    'trivia-quiz': 'triviaPulse',
+    'triviaquiz': 'triviaPulse',
+    
     'quickTap': 'quickTap',
     'quick-tap': 'quickTap',
     'quicktap': 'quickTap',
@@ -63,10 +68,15 @@
     'timingbar': 'timingBar',
     'bar': 'timingBar',  // Legacy alias
     
-    'patternMatch': 'patternMatch',
-    'pattern-match': 'patternMatch',
-    'patternmatch': 'patternMatch',
-    'pattern': 'patternMatch',  // Legacy alias
+    // clockStopper retired - redirect to timingBar
+    'clockStopper': 'timingBar',
+    'clock-stopper': 'timingBar',
+    'clockstopper': 'timingBar',
+    
+    'patternMatch': 'memoryMatch',  // patternMatch retired - redirect to memoryMatch
+    'pattern-match': 'memoryMatch',
+    'patternmatch': 'memoryMatch',
+    'pattern': 'memoryMatch',  // Legacy alias
     
     'wordAnagram': 'wordAnagram',
     'word-anagram': 'wordAnagram',
