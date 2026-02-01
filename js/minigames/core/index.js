@@ -2,7 +2,7 @@
 // Core minigame utilities and components
 // Re-exports all core modules for convenient importing
 
-(function(g){
+(function(){
   'use strict';
 
   // This file serves as a convenience export for core modules
@@ -21,4 +21,4 @@
 
   console.log('[Core] Core minigame modules loaded');
 
-})(window.game = window.game || {});
+})();
