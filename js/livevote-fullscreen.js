@@ -370,6 +370,12 @@
         overlay.classList.add('removing');
         document.documentElement.classList.remove('eviction-vote-open');
         
+        // Resume main game phase timer when overlay closes
+        if (global.PauseController && typeof global.PauseController.resume === 'function') {
+          global.PauseController.resume();
+          console.info('[livevote-fs] Resumed main game phase timer after manual vote');
+        }
+        
         setTimeout(function() {
           if (overlay.parentNode) {
             overlay.parentNode.removeChild(overlay);
@@ -448,6 +454,12 @@
             overlay.classList.add('removing');
             document.documentElement.classList.remove('eviction-vote-open');
             
+            // Resume main game phase timer when overlay closes
+            if (global.PauseController && typeof global.PauseController.resume === 'function') {
+              global.PauseController.resume();
+              console.info('[livevote-fs] Resumed main game phase timer after auto-vote');
+            }
+            
             setTimeout(function() {
               if (overlay.parentNode) {
                 overlay.parentNode.removeChild(overlay);
@@ -464,6 +476,12 @@
           cleanupTimerAndEmoji();
           overlay.classList.add('removing');
           document.documentElement.classList.remove('eviction-vote-open');
+          
+          // Resume main game phase timer even on error
+          if (global.PauseController && typeof global.PauseController.resume === 'function') {
+            global.PauseController.resume();
+            console.info('[livevote-fs] Resumed main game phase timer after error');
+          }
           
           setTimeout(function() {
             if (overlay.parentNode) {
@@ -562,6 +580,13 @@
       // ============= CRITICAL: Append to document.body, NOT inside any container
       // This ensures the overlay is outside any stacking context
       document.body.appendChild(overlay);
+      
+      // Pause main game phase timer when fullscreen vote overlay opens
+      // This establishes timer hierarchy: vote timer is foreground, main timer is background
+      if (global.PauseController && typeof global.PauseController.pause === 'function') {
+        global.PauseController.pause('live-vote-overlay');
+        console.info('[livevote-fs] Paused main game phase timer during voting');
+      }
       
       // Clear legacy timers before starting our authoritative timer
       clearLegacyVoteTimers();
@@ -694,6 +719,13 @@
       
       overlay.classList.add('removing');
       document.documentElement.classList.remove('eviction-vote-open');
+      
+      // Resume main game phase timer when overlay closes
+      if (global.PauseController && typeof global.PauseController.resume === 'function') {
+        global.PauseController.resume();
+        console.info('[livevote-fs] Resumed main game phase timer on hide');
+      }
+      
       setTimeout(function() {
         if (overlay.parentNode) {
           overlay.parentNode.removeChild(overlay);
