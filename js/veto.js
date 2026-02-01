@@ -3826,7 +3826,7 @@
     var scored = poolIds.map(function(id){
       var p = getP(id);
       var aff = (hoh && hoh.affinity && typeof hoh.affinity[id]==='number') ? hoh.affinity[id] : 0;
-      var inAl = (global.inSameAlliance && typeof global.inSameAlliance==='function') ? (global.inSameAlliance(hoh.id, id) ? 1 : 0) : 0;
+      var inAl = (hoh && global.inSameAlliance && typeof global.inSameAlliance==='function') ? (global.inSameAlliance(hoh.id, id) ? 1 : 0) : 0;
       var threat = (p && p.threat) || 0.5;
       return { id: id, score: (-aff) + threat + (inAl ? 0.6 : 0) };
     }).sort(function(a,b){ return b.score - a.score; });
@@ -3880,6 +3880,20 @@
     console.info('[veto] Final decision: used=' + decision.used + ', savedId=' + (decision.savedId || 'none'));
 
     var aliveCount = alivePlayers().length;
+
+    // Final 3 check: Cancel ceremony and transition to Final 3 flow
+    if(aliveCount === 3){
+      console.info('[veto] Final 3 reached - cancelling veto ceremony and transitioning to Final 3');
+      g.__vetoCeremonyResolved = true;
+      g.__vetoDecisionInProgress = false;
+      try{ if(global.addLog) global.addLog('Final 3 reached. Veto ceremony cancelled.','info'); }catch(e){}
+      setTimeout(function(){
+        if(typeof global.startFinal3Flow === 'function'){
+          global.startFinal3Flow();
+        }
+      }, 300);
+      return;
+    }
 
     if(decision.used){
       var savedId = (typeof decision.savedId==='number') ? decision.savedId : g.vetoHolder;
