@@ -50,17 +50,12 @@
         if (!id) throw new Error('PauseManager.open requires an id');
         const wasPaused = openModals.size > 0;
         openModals.add(id);
+        // Always add owner to PauseController (it handles reference counting)
+        if (window.PauseController && typeof window.PauseController.pause === 'function') {
+          window.PauseController.pause('modal:' + id);
+        }
         if (!wasPaused && openModals.size > 0) {
           emit('game:pause');
-          // Actually pause the game using PauseController
-          if (window.PauseController && typeof window.PauseController.pause === 'function') {
-            window.PauseController.pause('modal:' + id);
-          }
-        } else if (openModals.size > 0) {
-          // Already paused, just add another owner
-          if (window.PauseController && typeof window.PauseController.pause === 'function') {
-            window.PauseController.pause('modal:' + id);
-          }
         }
       } catch (err) {
         if (window.console && typeof window.console.error === 'function') {

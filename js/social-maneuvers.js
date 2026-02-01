@@ -3716,10 +3716,11 @@
         const g = global.game;
         const now = Date.now();
         
-        // Set endAt to 1 second from now (fast advance to next phase)
-        g.endAt = now + 1000;
+        // Fast advance: Set timer to 1 second from now
+        const PHASE_ADVANCE_DELAY_MS = 1000; // 1 second - fast advance to next phase
+        g.endAt = now + PHASE_ADVANCE_DELAY_MS;
         if (typeof g.phaseEndsAt === 'number') {
-          g.phaseEndsAt = now + 1000;
+          g.phaseEndsAt = now + PHASE_ADVANCE_DELAY_MS;
         }
         console.info('[social-maneuvers] ⏱️ OK pressed - timer set to 1 second remaining (endAt:', g.endAt, ')');
         

@@ -2252,6 +2252,9 @@ header.innerHTML = `
     }
   }
   
+  // Constants for timer rendering
+  const MAX_REASONABLE_PAUSE_MINUTES = 120; // Display "PAUSED" if paused time exceeds this
+  
   function startPhaseTimer(phase, seconds, onTimeout, bar, setClock, hourglassSandTop, hourglassSandBottom, hourglassSandFlow){
     const game = g.game;
     if(!game) return;
@@ -2290,8 +2293,8 @@ header.innerHTML = `
           const m = Math.floor(s / 60);
           const r = s % 60;
           
-          // Safety guard: if paused time is unreasonably large (>120 min), show PAUSED
-          if (m > 120) {
+          // Safety guard: if paused time is unreasonably large, show PAUSED
+          if (m > MAX_REASONABLE_PAUSE_MINUTES) {
             setClock('PAUSED');
           } else {
             setClock(`${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`);
@@ -2318,8 +2321,8 @@ header.innerHTML = `
           const m = Math.floor(s / 60);
           const r = s % 60;
           
-          // Safety guard: if paused time is unreasonably large (>120 min), show PAUSED
-          if (m > 120) {
+          // Safety guard: if paused time is unreasonably large, show PAUSED
+          if (m > MAX_REASONABLE_PAUSE_MINUTES) {
             setClock('PAUSED');
           } else {
             setClock(`${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`);
@@ -2354,9 +2357,9 @@ header.innerHTML = `
       }
       const s=Math.ceil(rem/1000), m=Math.floor(s/60), r=s%60;
       
-      // DEFENSIVE GUARD: If timer shows >120 minutes and is paused, display "PAUSED" instead
-      // This prevents displaying far-future values (1439+ minutes) in rare race conditions
-      if (m > 120 && g.timerPaused) {
+      // DEFENSIVE GUARD: If timer shows unreasonably large value and is paused, display "PAUSED" instead
+      // This prevents displaying far-future values in rare race conditions
+      if (m > MAX_REASONABLE_PAUSE_MINUTES && g.timerPaused) {
         setClock('PAUSED');
         console.warn('[hud-timer] Timer paused with far-future value detected (', m, 'min), displaying PAUSED instead');
       } else {

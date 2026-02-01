@@ -55,7 +55,11 @@
     
     // Only capture state on first pause (transition 0 -> 1 owners)
     if (!wasEmpty) {
-      console.warn(`[PauseController] Inconsistent state: isPaused=false but had owners`);
+      // This should not happen - clear stale state and continue
+      console.error(`[PauseController] CONSISTENCY ERROR: isPaused=false but had ${pauseState.owners.size} owner(s). Clearing stale owners.`);
+      pauseState.owners.clear();
+      pauseState.owners.add(ownerId);
+      pauseState.refCount = 1;
     }
 
     console.info(`[PauseController] ⏸ Pausing game (owner: ${ownerId}, owners: ${Array.from(pauseState.owners).join(', ')})`);
