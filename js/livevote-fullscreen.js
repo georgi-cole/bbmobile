@@ -16,6 +16,17 @@
   };
 
   /**
+   * Helper: Resume main game phase timer via PauseController
+   * Used when closing the vote overlay in any scenario
+   */
+  function resumeMainGameTimer(context) {
+    if (global.PauseController && typeof global.PauseController.resume === 'function') {
+      global.PauseController.resume();
+      console.info('[livevote-fs] Resumed main game phase timer (' + context + ')');
+    }
+  }
+
+  /**
    * Clear all known legacy vote timers to ensure single source of truth
    * This prevents multiple auto-vote timers from running concurrently
    */
@@ -371,10 +382,7 @@
         document.documentElement.classList.remove('eviction-vote-open');
         
         // Resume main game phase timer when overlay closes
-        if (global.PauseController && typeof global.PauseController.resume === 'function') {
-          global.PauseController.resume();
-          console.info('[livevote-fs] Resumed main game phase timer after manual vote');
-        }
+        resumeMainGameTimer('manual vote');
         
         setTimeout(function() {
           if (overlay.parentNode) {
@@ -455,10 +463,7 @@
             document.documentElement.classList.remove('eviction-vote-open');
             
             // Resume main game phase timer when overlay closes
-            if (global.PauseController && typeof global.PauseController.resume === 'function') {
-              global.PauseController.resume();
-              console.info('[livevote-fs] Resumed main game phase timer after auto-vote');
-            }
+            resumeMainGameTimer('auto-vote');
             
             setTimeout(function() {
               if (overlay.parentNode) {
@@ -478,10 +483,7 @@
           document.documentElement.classList.remove('eviction-vote-open');
           
           // Resume main game phase timer even on error
-          if (global.PauseController && typeof global.PauseController.resume === 'function') {
-            global.PauseController.resume();
-            console.info('[livevote-fs] Resumed main game phase timer after error');
-          }
+          resumeMainGameTimer('error');
           
           setTimeout(function() {
             if (overlay.parentNode) {
@@ -721,10 +723,7 @@
       document.documentElement.classList.remove('eviction-vote-open');
       
       // Resume main game phase timer when overlay closes
-      if (global.PauseController && typeof global.PauseController.resume === 'function') {
-        global.PauseController.resume();
-        console.info('[livevote-fs] Resumed main game phase timer on hide');
-      }
+      resumeMainGameTimer('hide');
       
       setTimeout(function() {
         if (overlay.parentNode) {
