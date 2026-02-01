@@ -7,7 +7,7 @@
 
   /**
    * Memory Match minigame
-   * Player watches a sequence of colored blocks, then repeats it
+   * Player watches a sequence of colored blocks OR shapes, then repeats it
    * Score based on correct sequence reproduction and length
    * Mobile-friendly with tap support
    * 
@@ -17,6 +17,7 @@
    *   - debugMode: boolean - If true, bypass win probability bias
    *   - difficulty: string - 'easy', 'medium', or 'hard'
    *   - competitionMode: boolean - If true, enable anti-cheat measures
+   *   - mode: string - 'card' (color buttons, default) or 'pattern' (shape dropdowns)
    */
   function render(container, onComplete, options = {}){
     container.innerHTML = '';
@@ -24,7 +25,8 @@
     const { 
       debugMode = false, 
       difficulty = 'medium',
-      competitionMode = false
+      competitionMode = false,
+      mode = 'card' // 'card' or 'pattern'
     } = options;
     
     // Get difficulty settings
@@ -54,12 +56,14 @@
     
     // Title
     const title = document.createElement('h3');
-    title.textContent = debugMode ? 'Memory Colors (DEBUG MODE)' : 'Memory Colors';
+    title.textContent = mode === 'pattern' ? (debugMode ? 'Pattern Match (DEBUG MODE)' : 'Pattern Match') : (debugMode ? 'Memory Colors (DEBUG MODE)' : 'Memory Colors');
     title.style.cssText = `margin:0;font-size:1.2rem;color:${debugMode ? '#f2ce7b' : '#e3ecf5'};`;
     
     // Instructions
     const instructions = document.createElement('p');
-    instructions.textContent = 'Press Start to begin. Watch the sequence, then repeat it';
+    instructions.textContent = mode === 'pattern' ? 
+      'Press Start to see pattern. Memorize it before time runs out!' :
+      'Press Start to begin. Watch the sequence, then repeat it';
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
     // Debug info
@@ -70,8 +74,14 @@
       wrapper.appendChild(debugInfo);
     }
     
-    // Color palette
+    // Color palette (for card mode)
     const colors = ['#ff6b6b', '#6fd3ff', '#74e48b', '#f7b955', '#b074ff', '#ff9cf1', '#9bdc82'];
+    
+    // Shape options (for pattern mode)
+    const shapes = ['▲', '■', '●', '◆', '★', '✚', '♦', '▼'];
+    
+    // Items to use based on mode
+    const items = mode === 'pattern' ? shapes : colors;
     
     // Game state
     let sequence = null;
@@ -82,6 +92,11 @@
     let gameStarted = false;
     let sequenceDiv = null;
     let protectCleanup = null;
+    let revealTimeout = null;
+    let distractorInterval = null;
+    let timerDiv = null;
+    let distractorDiv = null;
+    let inputSelects = [];
     
     // Status display
     const status = document.createElement('div');
@@ -92,7 +107,20 @@
     const sequenceContainer = document.createElement('div');
     sequenceContainer.style.cssText = 'min-height:60px;display:flex;align-items:center;justify-content:center;';
     
-    // Color buttons for input
+    // Timer display (for pattern mode)
+    if(mode === 'pattern'){
+      timerDiv = document.createElement('div');
+      timerDiv.style.cssText = 'font-size:1.2rem;color:#83bfff;font-weight:bold;min-height:30px;';
+      timerDiv.textContent = '';
+    }
+    
+    // Distractor div (for pattern mode - shows random shapes during recall)
+    if(mode === 'pattern'){
+      distractorDiv = document.createElement('div');
+      distractorDiv.style.cssText = 'font-size:1.5rem;color:rgba(149,169,192,0.3);min-height:30px;text-align:center;';
+    }
+    
+    // Color buttons for input (card mode) OR dropdowns (pattern mode)
     const buttonDiv = document.createElement('div');
     buttonDiv.style.cssText = 'display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;justify-content:center;';
     buttonDiv.innerHTML = '<div style="color:#95a9c0;font-size:0.9rem;">Press Start to begin</div>';
@@ -115,30 +143,38 @@
     function generateSequence(){
       const rng = g.rng || Math.random;
       sequence = g.GameUtils ? 
-        g.GameUtils.generateRandomSequence(colors, diffSettings.patternLength) :
-        Array.from({ length: diffSettings.patternLength }, () => colors[Math.floor(rng() * colors.length)]);
+        g.GameUtils.generateRandomSequence(items, diffSettings.patternLength) :
+        Array.from({ length: diffSettings.patternLength }, () => items[Math.floor(rng() * items.length)]);
       
-      console.log('[MemoryMatch] Sequence generated:', sequence.length, 'colors');
+      console.log(`[Memory${mode === 'pattern' ? 'Pattern' : 'Match'}] Sequence generated:`, sequence.length, mode === 'pattern' ? 'shapes' : 'colors');
     }
     
     /**
      * Create sequence display boxes
      */
     function createSequenceDisplay(){
-      sequenceDiv = document.createElement('div');
-      sequenceDiv.style.cssText = 'display:flex;gap:8px;margin:10px 0;';
+      if(mode === 'pattern'){
+        // Pattern mode: show sequence directly in a display div
+        sequenceDiv = document.createElement('div');
+        sequenceDiv.style.cssText = 'font-size:2rem;margin:20px 0;min-height:60px;display:flex;gap:10px;justify-content:center;align-items:center;padding:15px;background:rgba(13,21,31,0.5);border-radius:8px;border:2px solid #2c3a4d;';
+        sequenceDiv.textContent = 'Press Start to begin';
+      } else {
+        // Card mode: show boxes for sequence
+        sequenceDiv = document.createElement('div');
+        sequenceDiv.style.cssText = 'display:flex;gap:8px;margin:10px 0;';
+        
+        // Create boxes for sequence
+        sequence.forEach(() => {
+          const box = document.createElement('div');
+          box.style.cssText = `width:40px;height:40px;border-radius:8px;background:#2c3a4d;opacity:0.25;border:2px solid #2c3a4d;`;
+          sequenceDiv.appendChild(box);
+        });
+      }
       
       // Apply anti-copy protection
       if(competitionMode && g.AntiCheatWrapper){
         protectCleanup = g.AntiCheatWrapper.protectElement(sequenceDiv);
       }
-      
-      // Create boxes for sequence
-      sequence.forEach(() => {
-        const box = document.createElement('div');
-        box.style.cssText = `width:40px;height:40px;border-radius:8px;background:#2c3a4d;opacity:0.25;border:2px solid #2c3a4d;`;
-        sequenceDiv.appendChild(box);
-      });
       
       sequenceContainer.innerHTML = '';
       sequenceContainer.appendChild(sequenceDiv);
@@ -162,60 +198,162 @@
         antiCheat.startMonitoring();
       }
       
-      const boxes = Array.from(sequenceDiv.children);
-      const interval = 650;
-      
-      function showNext(){
-        // Reset all boxes
-        boxes.forEach(b => {
-          b.style.opacity = '0.25';
-          b.style.background = '#2c3a4d';
-        });
+      if(mode === 'pattern'){
+        // Pattern mode: show full sequence, then hide after time
+        sequenceDiv.textContent = sequence.join(' ');
+        sequenceDiv.style.color = '#e3ecf5';
+        sequenceDiv.style.fontSize = '2rem';
         
-        if(sequenceIndex >= sequence.length){
-          // Auto-hide after reveal duration
-          setTimeout(() => {
+        // Countdown timer
+        const startTime = Date.now();
+        const endTime = startTime + diffSettings.revealDuration;
+        
+        function updateTimer(){
+          const remaining = Math.max(0, endTime - Date.now());
+          const seconds = (remaining / 1000).toFixed(1);
+          if(timerDiv){
+            timerDiv.textContent = `Time remaining: ${seconds}s`;
+            timerDiv.style.color = remaining < 1000 ? '#dc2626' : '#83bfff';
+          }
+          
+          if(remaining > 0){
+            requestAnimationFrame(updateTimer);
+          } else {
             hideSequence();
-          }, diffSettings.revealDuration);
-          return;
+          }
         }
         
-        // Highlight current box with actual color
-        boxes[sequenceIndex].style.opacity = '1';
-        boxes[sequenceIndex].style.background = sequence[sequenceIndex];
-        sequenceIndex++;
+        updateTimer();
+      } else {
+        // Card mode: animate sequence one by one
+        const boxes = Array.from(sequenceDiv.children);
+        const interval = 650;
         
-        setTimeout(showNext, interval);
+        function showNext(){
+          // Reset all boxes
+          boxes.forEach(b => {
+            b.style.opacity = '0.25';
+            b.style.background = '#2c3a4d';
+          });
+          
+          if(sequenceIndex >= sequence.length){
+            // Auto-hide after reveal duration
+            setTimeout(() => {
+              hideSequence();
+            }, diffSettings.revealDuration);
+            return;
+          }
+          
+          // Highlight current box with actual color
+          boxes[sequenceIndex].style.opacity = '1';
+          boxes[sequenceIndex].style.background = sequence[sequenceIndex];
+          sequenceIndex++;
+          
+          setTimeout(showNext, interval);
+        }
+        
+        showNext();
       }
-      
-      showNext();
     }
     
     /**
      * Hide sequence and enable input (ephemeral clearing)
      */
     function hideSequence(){
-      const boxes = Array.from(sequenceDiv.children);
-      boxes.forEach(box => {
-        box.style.opacity = '0.25';
-        box.style.background = '#2c3a4d';
-        // Clear any visual traces
-        box.textContent = '';
-      });
+      if(mode === 'pattern'){
+        // Pattern mode: hide and show distractors
+        sequenceDiv.textContent = '(hidden)';
+        sequenceDiv.style.color = '#555';
+        sequenceDiv.style.fontSize = '1.2rem';
+        
+        if(timerDiv){
+          timerDiv.textContent = 'Now match the pattern!';
+          timerDiv.style.color = '#22c55e';
+        }
+        
+        // Cleanup anti-copy protection for display
+        if(protectCleanup){
+          protectCleanup();
+        }
+        
+        // Start distractors (random shapes to add complexity)
+        if(distractorDiv){
+          distractorDiv.textContent = '';
+          distractorInterval = setInterval(() => {
+            const randomShapes = Array.from({length: 6}, () => 
+              shapes[Math.floor(Math.random() * shapes.length)]
+            ).join(' ');
+            distractorDiv.textContent = randomShapes;
+          }, 800);
+        }
+      } else {
+        // Card mode: hide boxes
+        const boxes = Array.from(sequenceDiv.children);
+        boxes.forEach(box => {
+          box.style.opacity = '0.25';
+          box.style.background = '#2c3a4d';
+          // Clear any visual traces
+          box.textContent = '';
+        });
+      }
       
       acceptingInput = true;
-      status.textContent = 'Now repeat the sequence!';
+      status.textContent = mode === 'pattern' ? 'Now match the pattern!' : 'Now repeat the sequence!';
       submitBtn.style.display = 'inline-block';
       
-      // Enable color buttons
-      createColorButtons();
+      // Enable input UI
+      if(mode === 'pattern'){
+        createInputDropdowns();
+      } else {
+        createColorButtons();
+      }
     }
     
     /**
-     * Create color input buttons
+     * Create input dropdowns (for pattern mode)
+     */
+    function createInputDropdowns(){
+      buttonDiv.innerHTML = '';
+      buttonDiv.style.display = 'flex';
+      buttonDiv.style.gap = '8px';
+      buttonDiv.style.margin = '20px 0';
+      buttonDiv.style.flexWrap = 'wrap';
+      buttonDiv.style.justifyContent = 'center';
+      inputSelects = [];
+      
+      for(let i = 0; i < sequence.length; i++){
+        const select = document.createElement('select');
+        select.style.cssText = 'font-size:1.5rem;padding:8px;background:#1d2734;color:#e3ecf5;border:1px solid #2c3a4d;border-radius:5px;cursor:pointer;';
+        
+        // Add blank option first
+        const blankOpt = document.createElement('option');
+        blankOpt.textContent = '?';
+        blankOpt.value = '';
+        select.appendChild(blankOpt);
+        
+        // Add shape options
+        shapes.forEach(shape => {
+          const option = document.createElement('option');
+          option.textContent = shape;
+          option.value = shape;
+          select.appendChild(option);
+        });
+        
+        inputSelects.push(select);
+        buttonDiv.appendChild(select);
+      }
+    }
+    
+    /**
+     * Create color input buttons (for card mode)
      */
     function createColorButtons(){
       buttonDiv.innerHTML = '';
+      buttonDiv.style.display = 'flex';
+      buttonDiv.style.gap = '8px';
+      buttonDiv.style.margin = '10px 0';
+      buttonDiv.style.flexWrap = 'wrap';
+      buttonDiv.style.justifyContent = 'center';
       
       colors.forEach(color => {
         const btn = document.createElement('button');
@@ -303,6 +441,12 @@
       submitBtn.disabled = true;
       acceptingInput = false;
       
+      // Stop distractors (pattern mode)
+      if(distractorInterval){
+        clearInterval(distractorInterval);
+        if(distractorDiv) distractorDiv.textContent = '';
+      }
+      
       // Cleanup anti-copy protection
       if(protectCleanup){
         protectCleanup();
@@ -310,11 +454,26 @@
       
       // Cleanup anti-cheat
       if(antiCheat){
+        antiCheat.stopMonitoring();
         antiCheat.cleanup();
       }
       
       // Calculate raw score
-      const accuracy = correctMatches / sequence.length;
+      let correctCount = 0;
+      
+      if(mode === 'pattern'){
+        // Pattern mode: check dropdowns
+        inputSelects.forEach((select, index) => {
+          if(select.value === sequence[index]){
+            correctCount++;
+          }
+        });
+      } else {
+        // Card mode: use correctMatches
+        correctCount = correctMatches;
+      }
+      
+      const accuracy = correctCount / sequence.length;
       const rawScore = Math.round(accuracy * 100);
       
       // Use MinigameScoring to calculate final score (SCALE=1000)
@@ -328,7 +487,7 @@
             rawScore * 10; // Fallback: scale to 0-1000
       
       if(debugMode){
-        console.log('[MemoryMatch] Debug - Raw score:', rawScore, 'Accuracy:', accuracy.toFixed(2));
+        console.log(`[Memory${mode === 'pattern' ? 'Pattern' : 'Match'}] Debug - Correct:`, correctCount, '/', sequence.length, 'Raw score:', rawScore);
       }
       
       onComplete(finalScore);
@@ -338,6 +497,12 @@
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
     wrapper.appendChild(sequenceContainer);
+    if(mode === 'pattern' && distractorDiv){
+      wrapper.appendChild(distractorDiv);
+    }
+    if(mode === 'pattern' && timerDiv){
+      wrapper.appendChild(timerDiv);
+    }
     wrapper.appendChild(status);
     wrapper.appendChild(startBtn);
     wrapper.appendChild(buttonDiv);
@@ -347,5 +512,12 @@
 
   if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
   g.MiniGames.memoryMatch = { render };
+  
+  // Also export as patternMatch for backward compatibility
+  g.MiniGames.patternMatch = {
+    render: (container, onComplete, options = {}) => {
+      return render(container, onComplete, { ...options, mode: 'pattern' });
+    }
+  };
 
 })(window);

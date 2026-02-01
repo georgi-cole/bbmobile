@@ -112,7 +112,7 @@
     memoryMatch: {
       key: 'memoryMatch',
       name: 'Memory Colors',
-      description: 'Watch and repeat color sequence',
+      description: 'Watch and repeat color sequence (supports card and pattern modes)',
       type: 'memory',
       category: 'logic',
       difficulty: 'medium',
@@ -163,7 +163,8 @@
       module: 'pattern-match.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
+      replacedBy: 'memoryMatch',
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
