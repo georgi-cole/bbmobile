@@ -863,8 +863,21 @@
       // Build final standings
       const finalStandings = buildFinalStandings(totalTime);
       
+      // Winner-takes-all: raw score 100 for endurance winner
+      const rawScore = 100;
+      const winningScore = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        rawScore * 10; // Fallback: scale to 0-1000
+      
+      console.log(`[HoldWall] Player wins! Duration: ${(totalTime/1000).toFixed(1)}s, Final score: ${Math.round(winningScore)}`);
+      
       // Show results popup
-      showResults(finalStandings, 100); // Winner-takes-all: score 100
+      showResults(finalStandings, Math.round(winningScore));
     }
     
     /**
@@ -1067,8 +1080,21 @@
       // Check if during deal window
       const duringDealWindow = isInDealWindow && rivalName;
       
-      // Player loses (score = 0)
-      const finalScore = 0;
+      // Player loses in endurance game (raw score = 0 for non-winners)
+      const rawScore = 0;
+      
+      // Use centralized scoring system (SCALE=1000)
+      // For endurance games, non-winners get 0
+      const finalScore = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        0; // Fallback: 0 for loss
+      
+      console.log(`[HoldWall] Player dropped at ${(holdDuration/1000).toFixed(1)}s, Final score: ${Math.round(finalScore)}`);
       
       if(moved){
         // Player moved
@@ -1156,7 +1182,7 @@
       }
       
       // Show results popup
-      showResults(finalStandings, finalScore);
+      showResults(finalStandings, Math.round(finalScore));
     }
     
     // Global mouse/touch release handlers

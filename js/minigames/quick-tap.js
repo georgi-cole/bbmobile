@@ -111,38 +111,22 @@
             
             // Calculate raw score (base on taps, scale to ~20-100 range)
             const rawScore = Math.min(100, Math.max(10, taps * 3.5));
-            const maxScore = 100;
             
-            // Determine if player succeeded (legacy threshold for backward compatibility)
-            const playerSucceeded = rawScore >= 60;
+            // Use centralized scoring system (SCALE=1000)
+            const finalScore = g.MinigameScoring ? 
+              g.MinigameScoring.calculateFinalScore({
+                rawScore: rawScore,
+                minScore: 0,
+                maxScore: 100,
+                compBeast: 0.5
+              }) :
+              rawScore * 10; // Fallback: scale to 0-1000
             
-            // Apply new centralized outcome logic in competition mode
-            let finalScore = rawScore;
-            if(g.GameUtils && g.GameUtils.evaluateOutcome && !debugMode && competitionMode){
-              const outcome = g.GameUtils.evaluateOutcome(rawScore, maxScore, {
-                usedSkip: false,
-                failed: !playerSucceeded,
-                cheated: false
-              });
-              
-              finalScore = outcome.finalScore;
-              
-              // If player succeeded but didn't win, coerce to loss band for consistent UX
-              if(rawScore >= 60 && !outcome.didWin && !g.cfg?.debugAlwaysWin){
-                finalScore = g.GameUtils.coerceSuccessToLossScore(finalScore);
-                console.log('[QuickTap] Win probability applied: success forced to loss, score:', finalScore);
-              }
-              
-              if(outcome.didWin){
-                console.log('[QuickTap] Player won! Reasons:', outcome.reasons.join('; '));
-              } else {
-                console.log('[QuickTap] Player lost. Reasons:', outcome.reasons.join('; '));
-              }
-            }
+            console.log(`[QuickTap] Taps: ${taps}, Raw score: ${rawScore}, Final score: ${Math.round(finalScore)}`);
             
             // Announce completion to screen readers
             if(useAccessibility && typeof g.MinigameAccessibility.announceToSR === 'function'){
-              g.MinigameAccessibility.announceToSR(`Game complete! You tapped ${taps} times. Score: ${finalScore.toFixed(0)}`, 'assertive');
+              g.MinigameAccessibility.announceToSR(`Game complete! You tapped ${taps} times. Score: ${Math.round(finalScore)}`, 'assertive');
             }
             
             // Haptic feedback for completion

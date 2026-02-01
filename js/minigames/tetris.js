@@ -430,11 +430,22 @@
       }
       
       // Final score calculation
-      // Normalize game score (which can reach into thousands) to 0-100 scale
-      // Formula: (score / 1000) * 100 caps very high scores at 100
+      // Normalize game score to 0-100 range as raw score
       const SCORE_SCALE_FACTOR = 1000; // Points needed for max normalized score
       const NORMALIZED_MAX = 100;      // Maximum normalized score
-      const finalScore = Math.min(NORMALIZED_MAX, Math.floor((score / SCORE_SCALE_FACTOR) * NORMALIZED_MAX));
+      const rawScore = Math.min(NORMALIZED_MAX, Math.floor((score / SCORE_SCALE_FACTOR) * NORMALIZED_MAX));
+      
+      // Use centralized scoring system (SCALE=1000)
+      const finalScore = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        rawScore * 10; // Fallback: scale to 0-1000
+      
+      console.log(`[Tetris] Score: ${score}, Lines: ${lines}, Raw: ${rawScore}, Final: ${Math.round(finalScore)}`);
       
       const resultDiv = document.createElement('div');
       resultDiv.style.cssText = `
@@ -471,7 +482,7 @@
       }
       
       const finalScoreText = document.createElement('div');
-      finalScoreText.textContent = `Final: ${finalScore}/100`;
+      finalScoreText.textContent = `Final: ${Math.round(finalScore)}`;
       finalScoreText.style.cssText = 'font-size:1.3rem;color:#5bd68a;font-weight:600;';
       
       resultDiv.appendChild(resultText);
@@ -483,7 +494,7 @@
         if(typeof onComplete === 'function') {
           // Return score data with raw score info
           const scoreData = {
-            score: finalScore,
+            score: Math.round(finalScore),
             rawScore: lines,
             rawScoreDisplay: `${lines} lines cleared`,
             isNewPersonalBest: isNewBest

@@ -327,19 +327,31 @@
       }
       draw();
       
-      let score = 0;
+      let rawScore = 0;
       if(won) {
-        score = 100;
+        rawScore = 100;
         // Time bonus (faster is better, cap at 120s)
         const timeBonus = Math.max(0, 20 - Math.min(elapsed / 6, 20));
-        score += timeBonus;
-        score = Math.min(100, Math.round(score));
+        rawScore += timeBonus;
+        rawScore = Math.min(100, Math.round(rawScore));
       } else {
         // Partial credit for progress
         const revealedCount = revealed.flat().filter(r => r).length;
         const totalSafe = ROWS * COLS - MINES;
-        score = Math.round((revealedCount / totalSafe) * 50);
+        rawScore = Math.round((revealedCount / totalSafe) * 50);
       }
+      
+      // Use centralized scoring system (SCALE=1000)
+      const score = g.MinigameScoring ? 
+        g.MinigameScoring.calculateFinalScore({
+          rawScore: rawScore,
+          minScore: 0,
+          maxScore: 100,
+          compBeast: 0.5
+        }) :
+        rawScore * 10; // Fallback: scale to 0-1000
+      
+      console.log(`[Minesweeper] Won: ${won}, Raw: ${rawScore}, Final: ${Math.round(score)}`);
       
       setTimeout(() => {
         const resultDiv = document.createElement('div');
@@ -366,7 +378,7 @@
         timeText.style.cssText = 'font-size:1.1rem;color:#83bfff;margin-bottom:12px;';
         
         const scoreText = document.createElement('div');
-        scoreText.textContent = `Score: ${score}`;
+        scoreText.textContent = `Score: ${Math.round(score)}`;
         scoreText.style.cssText = 'font-size:1.3rem;color:#f7b955;font-weight:600;';
         
         resultDiv.appendChild(resultText);
@@ -376,7 +388,7 @@
         
         setTimeout(() => {
           if(typeof onComplete === 'function') {
-            onComplete(score);
+            onComplete(Math.round(score));
           }
         }, 3000);
       }, 1000);
