@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GameTimer Integration Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { color: #4a90e2; }
+    h2 { color: #83bfff; }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    }
+    .btn {
+      background: linear-gradient(135deg, #5a6a7a 0%, #4a5a6a 100%);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #gameContainer {
+      min-height: 400px;
+      margin-top: 20px;
+    }
+    .info {
+      background: #2c3a4d;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+    .status {
+      padding: 8px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-weight: 500;
+    }
+    .status.success {
+      background: #2d4a2d;
+      color: #6fd86f;
+    }
+    .status.error {
+      background: #4a2d2d;
+      color: #ff6b6b;
+    }
+    .status.info {
+      background: #2d3a4a;
+      color: #83bfff;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏱️ GameTimer Integration Test</h1>
+  
+  <div class="info">
+    <strong>Purpose:</strong> Test GameTimer integration across three pilot minigames:
+    <ul>
+      <li><strong>Snake</strong> (arcade) - Optional countdown timer</li>
+      <li><strong>Hold Wall</strong> (endurance) - Count-up elapsed time tracker</li>
+      <li><strong>Timing Bar</strong> (logic) - Countdown timer for 3 attempts</li>
+    </ul>
+  </div>
+
+  <div id="status" class="status info">
+    Ready to test. Select a game below.
+  </div>
+
+  <div class="test-section">
+    <h2>🐍 Snake (Arcade Category)</h2>
+    <p>Tests GameTimer in countdown mode with optional timer.</p>
+    <button onclick="testSnakeNoTimer()">Test Snake - No Timer (Default)</button>
+    <button onclick="testSnakeTimed()">Test Snake - With Timer (30s)</button>
+    <button onclick="testSnakeTimed60()">Test Snake - With Timer (60s)</button>
+    <div id="gameContainer1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>🧱 Hold Wall (Endurance Category)</h2>
+    <p>Tests GameTimer in count-up mode for elapsed time tracking.</p>
+    <button onclick="testHoldWall()">Test Hold Wall</button>
+    <div id="gameContainer2"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>⏱️ Timing Bar (Logic Category)</h2>
+    <p>Tests GameTimer in countdown mode limiting time to complete 3 attempts.</p>
+    <button onclick="testTimingBarNoTimer()">Test Timing Bar - No Timer (Original)</button>
+    <button onclick="testTimingBarTimed()">Test Timing Bar - With Timer (30s)</button>
+    <button onclick="testTimingBarTimed15()">Test Timing Bar - With Timer (15s)</button>
+    <div id="gameContainer3"></div>
+  </div>
+
+  <!-- Load core timer modules -->
+  <script src="js/minigames/core/timer-config.js"></script>
+  <script src="js/minigames/core/game-timer.js"></script>
+  
+  <!-- Load game modules -->
+  <script src="js/minigames/snake.js"></script>
+  <script src="js/minigames/hold-wall.js"></script>
+  <script src="js/minigames/timing-bar.js"></script>
+  
+  <script>
+    function updateStatus(message, type = 'info') {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+    }
+
+    function testSnakeNoTimer() {
+      const container = document.getElementById('gameContainer1');
+      container.innerHTML = '';
+      updateStatus('Testing Snake without timer...', 'info');
+      
+      try {
+        window.MiniGames.snake.render(container, (score) => {
+          console.log('Snake game ended (no timer). Score:', score);
+          updateStatus(`Snake (No Timer) - Game Over! Score: ${JSON.stringify(score)}`, 'success');
+        }, { 
+          variant: 'normal',
+          timedMode: false
+        });
+      } catch(err) {
+        console.error('Snake test failed:', err);
+        updateStatus(`Error: ${err.message}`, 'error');
+      }
+    }
+
+    function testSnakeTimed() {
+      const container = document.getElementById('gameContainer1');
+      container.innerHTML = '';
+      updateStatus('Testing Snake with 30s timer...', 'info');
+      
+      try {
+        window.MiniGames.snake.render(container, (score) => {
+          console.log('Snake game ended (30s timer). Score:', score);
+          updateStatus(`Snake (30s Timer) - Game Over! Score: ${JSON.stringify(score)}`, 'success');
+        }, { 
+          variant: 'normal',
+          timedMode: true,
+          timeLimitMs: 30000
+        });
+      } catch(err) {
+        console.error('Snake test failed:', err);
+        updateStatus(`Error: ${err.message}`, 'error');
+      }
+    }
+
+    function testSnakeTimed60() {
+      const container = document.getElementById('gameContainer1');
+      container.innerHTML = '';
+      updateStatus('Testing Snake with 60s timer...', 'info');
+      
+      try {
+        window.MiniGames.snake.render(container, (score) => {
+          console.log('Snake game ended (60s timer). Score:', score);
+          updateStatus(`Snake (60s Timer) - Game Over! Score: ${JSON.stringify(score)}`, 'success');
+        }, { 
+          variant: 'normal',
+          timedMode: true,
+          timeLimitMs: 60000
+        });
+      } catch(err) {
+        console.error('Snake test failed:', err);
+        updateStatus(`Error: ${err.message}`, 'error');
+      }
+    }
+
+    function testHoldWall() {
+      const container = document.getElementById('gameContainer2');
+      container.innerHTML = '';
+      updateStatus('Testing Hold Wall with count-up timer...', 'info');
+      
+      try {
+        window.MiniGames.holdWall.render(container, (score) => {
+          console.log('Hold Wall game ended. Score:', score);
+          updateStatus(`Hold Wall - Game Over! Score: ${score}`, 'success');
+        }, {
+          seed: 12345 // Use seed for reproducible AI behavior
+        });
+      } catch(err) {
+        console.error('Hold Wall test failed:', err);
+        updateStatus(`Error: ${err.message}`, 'error');
+      }
+    }
+
+    function testTimingBarNoTimer() {
+      const container = document.getElementById('gameContainer3');
+      container.innerHTML = '';
+      updateStatus('Testing Timing Bar without timer (original behavior)...', 'info');
+      
+      try {
+        window.MiniGames.timingBar.render(container, (score) => {
+          console.log('Timing Bar game ended (no timer). Score:', score);
+          updateStatus(`Timing Bar (No Timer) - Complete! Score: ${score}`, 'success');
+        }, {
+          timedMode: false
+        });
+      } catch(err) {
+        console.error('Timing Bar test failed:', err);
+        updateStatus(`Error: ${err.message}`, 'error');
+      }
+    }
+
+    function testTimingBarTimed() {
+      const container = document.getElementById('gameContainer3');
+      container.innerHTML = '';
+      updateStatus('Testing Timing Bar with 30s timer...', 'info');
+      
+      try {
+        window.MiniGames.timingBar.render(container, (score) => {
+          console.log('Timing Bar game ended (30s timer). Score:', score);
+          updateStatus(`Timing Bar (30s Timer) - Complete! Score: ${score}`, 'success');
+        }, {
+          timedMode: true,
+          timeLimitMs: 30000
+        });
+      } catch(err) {
+        console.error('Timing Bar test failed:', err);
+        updateStatus(`Error: ${err.message}`, 'error');
+      }
+    }
+
+    function testTimingBarTimed15() {
+      const container = document.getElementById('gameContainer3');
+      container.innerHTML = '';
+      updateStatus('Testing Timing Bar with 15s timer (challenging!)...', 'info');
+      
+      try {
+        window.MiniGames.timingBar.render(container, (score) => {
+          console.log('Timing Bar game ended (15s timer). Score:', score);
+          updateStatus(`Timing Bar (15s Timer) - Complete! Score: ${score}`, 'success');
+        }, {
+          timedMode: true,
+          timeLimitMs: 15000
+        });
+      } catch(err) {
+        console.error('Timing Bar test failed:', err);
+        updateStatus(`Error: ${err.message}`, 'error');
+      }
+    }
+
+    // Display timer availability status on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const hasTimerConfig = typeof window.game !== 'undefined' && window.game.TimerConfig;
+      const hasGameTimer = typeof window.game !== 'undefined' && window.game.GameTimer;
+      
+      console.log('Timer modules loaded:');
+      console.log('- TimerConfig:', hasTimerConfig ? '✓' : '✗');
+      console.log('- GameTimer:', hasGameTimer ? '✓' : '✗');
+      
+      if(hasTimerConfig && hasGameTimer) {
+        updateStatus('✓ GameTimer modules loaded successfully. Ready to test!', 'success');
+      } else {
+        updateStatus('✗ GameTimer modules not loaded. Tests will use fallback behavior.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

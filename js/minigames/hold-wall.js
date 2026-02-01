@@ -184,10 +184,27 @@
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
     // Timer display - HIDDEN per requirements (no visible countdown)
-    // NOTE: timerDiv is intentionally hidden and never updated for Hold the Wall
+    // NOTE: timerDiv is intentionally hidden by default for Hold the Wall
+    // Optional GameTimer integration for endurance tracking (count-up mode)
+    let gameTimer = null;
     const timerDiv = document.createElement('div');
-    timerDiv.textContent = ''; // Empty - no visible timer
-    timerDiv.style.cssText = 'display:none;'; // Hidden
+    timerDiv.style.cssText = 'margin:8px 0;';
+    
+    // Initialize GameTimer if available (endurance category, count-up mode)
+    if(g.GameTimer){
+      try {
+        gameTimer = new g.GameTimer('endurance', {
+          showTimer: false, // Hidden by default for endurance
+          countDirection: 'up'
+        });
+        
+        // Note: Timer will be started when player begins holding
+        console.log('[HoldWall] GameTimer initialized (count-up mode)');
+      } catch(err){
+        console.warn('[HoldWall] Failed to initialize GameTimer:', err);
+        gameTimer = null;
+      }
+    }
     
     // Status display
     const statusDiv = document.createElement('div');
@@ -833,6 +850,13 @@
       if(dealCountdownInterval) clearInterval(dealCountdownInterval);
       if(postDealCheckInterval) clearInterval(postDealCheckInterval);
       if(dealReofferTimer) clearTimeout(dealReofferTimer);
+      
+      // Clean up GameTimer if it exists
+      if(gameTimer){
+        gameTimer.stop();
+        gameTimer.destroy();
+        console.log('[HoldWall] GameTimer stopped and cleaned up');
+      }
     }
     
     /**
@@ -971,6 +995,12 @@
       
       isHolding = true;
       startTime = Date.now();
+      
+      // Start GameTimer if available
+      if(gameTimer && !gameTimer.isRunning){
+        gameTimer.start();
+        console.log('[HoldWall] GameTimer started');
+      }
       
       // Record initial position
       if(e.touches){

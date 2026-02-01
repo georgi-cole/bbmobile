@@ -309,10 +309,13 @@
    * Control snake to eat food and grow
    * Avoid walls and yourself
    * Portal mode: edges wrap around
+   * Optional: Timed arcade mode with countdown
    * 
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
    * @param {Object} options - Configuration options
+   * @param {boolean} options.timedMode - Enable countdown timer (default: false)
+   * @param {number} options.timeLimitMs - Time limit in milliseconds (default: 60000)
    */
   function render(container, onComplete, options = {}){
     container.innerHTML = '';
@@ -321,7 +324,9 @@
       debugMode = false, 
       competitionMode = false,
       variant = 'normal', // 'normal' or 'portal'
-      theme = 'nokia' // 'nokia', 'nokia-shell', or 'nokia-image-shell'
+      theme = 'nokia', // 'nokia', 'nokia-shell', or 'nokia-image-shell'
+      timedMode = false, // Enable countdown timer
+      timeLimitMs = 60000 // 60 seconds default
     } = options;
     
     const portalMode = variant === 'portal';
@@ -352,9 +357,19 @@
       }
       
       const instructions = document.createElement('p');
-      instructions.textContent = portalMode ? 'Eat food, grow, edges wrap around!' : 'Eat food, avoid walls and yourself!';
+      const instructionText = timedMode ?
+        (portalMode ? 'Eat food, grow, edges wrap around! (Timed!)' : 'Eat food, avoid walls and yourself! (Timed!)') :
+        (portalMode ? 'Eat food, grow, edges wrap around!' : 'Eat food, avoid walls and yourself!');
+      instructions.textContent = instructionText;
       instructions.className = 'snake-nokia-instructions';
       wrapper.appendChild(instructions);
+      
+      // Add timer if timed mode
+      if(timedMode && g.GameTimer){
+        const timerContainer = document.createElement('div');
+        timerContainer.style.cssText = 'margin:4px 0;';
+        wrapper.appendChild(timerContainer);
+      }
     }
     
     // Store instructions element for later updates (game over message)
@@ -465,13 +480,43 @@
     container.appendChild(wrapper);
     
     // Game state
-    let snake = [{x:10, y:10}];
+    const snake = [{x:10, y:10}];
     let direction = {x:1, y:0};
     let nextDirection = {x:1, y:0};
     let food = null;
     let foodEaten = 0;
     let gameOver = false;
     let gameLoop = null;
+    
+    // Timer (if timed mode enabled)
+    let gameTimer = null;
+    if(timedMode && g.GameTimer){
+      try {
+        gameTimer = new g.GameTimer('arcade', {
+          duration: timeLimitMs,
+          countDirection: 'down'
+        });
+        
+        // Handle timer completion
+        gameTimer.onComplete(() => {
+          console.log('[Snake] Time expired');
+          if(!gameOver){
+            endGame();
+          }
+        });
+        
+        // Render timer UI if we have a timer container
+        const timerContainer = wrapper.querySelector('div[style*="margin:4px"]');
+        if(timerContainer){
+          gameTimer.render(timerContainer);
+        }
+        
+        console.log('[Snake] GameTimer initialized (countdown mode)');
+      } catch(err){
+        console.warn('[Snake] Failed to initialize GameTimer:', err);
+        gameTimer = null;
+      }
+    }
     
     function placeFood(){
       do {
@@ -494,7 +539,7 @@
       direction = nextDirection;
       
       // New head position
-      let newHead = {
+      const newHead = {
         x: snake[0].x + direction.x,
         y: snake[0].y + direction.y
       };
@@ -552,6 +597,13 @@
     function endGame(){
       gameOver = true;
       clearInterval(gameLoop);
+      
+      // Stop timer if it exists
+      if(gameTimer){
+        gameTimer.stop();
+        gameTimer.destroy();
+        console.log('[Snake] GameTimer stopped');
+      }
       
       // Update instructions if they exist (not in image shell theme)
       if (instructions) {
@@ -708,6 +760,12 @@
     placeFood();
     draw();
     gameLoop = setInterval(update, 150);
+    
+    // Start timer if it exists
+    if(gameTimer){
+      gameTimer.start();
+      console.log('[Snake] GameTimer started');
+    }
   }
 
   // Export

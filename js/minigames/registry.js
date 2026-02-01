@@ -115,7 +115,7 @@
       name: 'Timing Bar',
       description: 'Stop the bar near center for high score',
       type: 'reaction',
-      category: 'arcade',
+      category: 'logic',
       difficulty: 'easy',
       estimatedDuration: 30,
       scoring: 'accuracy',
