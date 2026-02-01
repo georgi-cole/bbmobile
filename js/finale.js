@@ -77,6 +77,18 @@
       document.body.classList.remove('main-screen-built');
       console.info('[finale] Removed main-screen-built class to hide game UI');
       
+      // Pause/stop any running game loops to avoid background activity
+      try {
+        if (g.PauseController && typeof g.PauseController.pause === 'function') {
+          g.PauseController.pause('finale-exit');
+        }
+        if (g.game && g.game.pauseManager && typeof g.game.pauseManager.reset === 'function') {
+          g.game.pauseManager.reset();
+        }
+      } catch (e) {
+        console.warn('[finale] failed to pause game on exit', e);
+      }
+      
       // Remove the finale modal
       try{dim.remove();}catch{} 
       
