@@ -1,6 +1,28 @@
 // MODULE: minigames/registry.js
 // Unified minigame registry with comprehensive metadata for Phase 1 refactor
 // Each game entry includes: key, name, type, scoring, mobile-friendly flags, etc.
+//
+// === CONSOLIDATION MIGRATION NOTES ===
+// As of PR#5, overlapping minigames have been consolidated into variant-enabled modules:
+//
+// 1. Trivia Consolidation:
+//    - triviaPulse now supports options.variant: 'pulse' (timed, default) or 'standard' (no timer)
+//    - triviaQuiz is retired and redirects to triviaPulse with variant: 'standard'
+//    - Usage: render(container, onComplete, { variant: 'pulse' | 'standard' })
+//
+// 2. Timing Consolidation:
+//    - timingBar now supports options.variant: 'bar' (moving bar, default) or 'clock' (clock stopping)
+//    - clockStopper is retired and redirects to timingBar with variant: 'clock'
+//    - Usage: render(container, onComplete, { variant: 'bar' | 'clock' })
+//
+// 3. Memory Consolidation:
+//    - memoryMatch now supports options.mode: 'card' (color buttons, default) or 'pattern' (shape dropdowns)
+//    - patternMatch is retired and redirects to memoryMatch with mode: 'pattern'
+//    - Usage: render(container, onComplete, { mode: 'card' | 'pattern' })
+//
+// All retired games maintain backward compatibility through the compat-bridge legacy map.
+// Retired games are marked with retired: true and replacedBy: '<canonical-key>'.
+// ===
 
 (function(g){
   'use strict';
@@ -56,7 +78,7 @@
     triviaPulse: {
       key: 'triviaPulse',
       name: 'Trivia Pulse',
-      description: 'Time-pressured Big Brother trivia questions',
+      description: 'Time-pressured Big Brother trivia questions (supports pulse and standard variants)',
       type: 'trivia',
       category: 'trivia',
       difficulty: 'easy',
@@ -68,6 +90,25 @@
       minScore: 0,
       maxScore: 100,
       retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    triviaQuiz: {
+      key: 'triviaQuiz',
+      name: 'Big Brother Trivia',
+      description: 'Answer multiple choice trivia questions (no timer)',
+      type: 'trivia',
+      category: 'trivia',
+      difficulty: 'easy',
+      estimatedDuration: 40,
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'trivia-quiz.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: true,
+      replacedBy: 'triviaPulse',
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -93,7 +134,7 @@
     memoryMatch: {
       key: 'memoryMatch',
       name: 'Memory Colors',
-      description: 'Watch and repeat color sequence',
+      description: 'Watch and repeat color sequence (supports card and pattern modes)',
       type: 'memory',
       category: 'logic',
       difficulty: 'medium',
@@ -113,7 +154,7 @@
     timingBar: {
       key: 'timingBar',
       name: 'Timing Bar',
-      description: 'Stop the bar near center for high score',
+      description: 'Stop the bar near center for high score (supports bar and clock variants)',
       type: 'reaction',
       category: 'logic',
       difficulty: 'easy',
@@ -144,7 +185,8 @@
       module: 'pattern-match.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
+      replacedBy: 'memoryMatch',
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
@@ -657,7 +699,8 @@
       module: 'clock-stopper.js',
       minScore: 0,
       maxScore: 100,
-      retired: false,
+      retired: true,
+      replacedBy: 'timingBar',
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     

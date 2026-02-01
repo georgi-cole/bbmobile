@@ -13,7 +13,9 @@
         data[gameName] = score;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
-    } catch(e){}
+    } catch(e){
+      // Ignore localStorage errors
+    }
   }
 
   function loadBestScore(gameName){
@@ -111,23 +113,24 @@
     
     const { 
       debugMode = false, 
-      competitionMode = false
+      competitionMode = false,
+      variant = 'pulse' // 'pulse' (timed with bonuses) or 'standard' (no timer)
     } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:20px;max-width:500px;margin:0 auto;';
     
     const title = document.createElement('h3');
-    title.textContent = 'Trivia Pulse';
+    title.textContent = variant === 'pulse' ? 'Trivia Pulse' : 'Big Brother Trivia';
     title.style.cssText = 'margin:0;font-size:1.2rem;color:#e3ecf5;text-align:center;';
     
-    const bestScore = loadBestScore('triviaPulse');
+    const bestScore = loadBestScore(variant === 'pulse' ? 'triviaPulse' : 'triviaQuiz');
     const bestDisplay = document.createElement('div');
     bestDisplay.textContent = `Best: ${Math.round(bestScore)}`;
     bestDisplay.style.cssText = 'font-size:0.75rem;color:#95a9c0;text-align:center;';
     
     const progressBar = document.createElement('div');
-    progressBar.style.cssText = 'width:100%;height:8px;background:#1d2734;border-radius:4px;overflow:hidden;';
+    progressBar.style.cssText = variant === 'pulse' ? 'width:100%;height:8px;background:#1d2734;border-radius:4px;overflow:hidden;' : 'display:none;';
     const progressFill = document.createElement('div');
     progressFill.style.cssText = 'height:100%;background:#83bfff;width:100%;transition:width 0.1s linear;';
     progressBar.appendChild(progressFill);
@@ -147,10 +150,10 @@
     let currentQuestion = 0;
     let totalScore = 0;
     let correctCount = 0;
-    const totalQuestions = 6;
+    const totalQuestions = variant === 'pulse' ? 6 : 5; // pulse: 6 questions, standard: 5
     const selectedQuestions = [];
     let questionStartTime = 0;
-    let timeLimit = 15000; // 15 seconds per question
+    const timeLimit = variant === 'pulse' ? 15000 : 0; // 15 seconds for pulse, no limit for standard
     let timerInterval = null;
     let gameActive = false;
     let isPaused = false;
@@ -181,6 +184,11 @@
     }
     
     function startTimer(){
+      if(variant === 'standard'){
+        // No timer for standard variant
+        return;
+      }
+      
       if(timerInterval) clearInterval(timerInterval);
       
       timerInterval = setInterval(() => {
@@ -245,7 +253,7 @@
           answersContainer.querySelectorAll('button').forEach(b => b.disabled = true);
           
           const elapsed = Date.now() - questionStartTime;
-          const timeBonus = Math.max(0, (timeLimit - elapsed) / timeLimit);
+          const timeBonus = variant === 'pulse' ? Math.max(0, (timeLimit - elapsed) / timeLimit) : 0;
           
           if(index === question.correct){
             // Correct!
@@ -253,23 +261,29 @@
             btn.style.color = '#fff';
             correctCount++;
             
-            // Base points: 10, Time bonus: up to 6.67 points per correct
-            const points = 10 + (timeBonus * 6.67);
-            totalScore += points;
-            scoreDisplay.textContent = `+${points.toFixed(1)} points! (${(timeBonus * 100).toFixed(0)}% time bonus)`;
+            if(variant === 'pulse'){
+              // Base points: 10, Time bonus: up to 6.67 points per correct
+              const points = 10 + (timeBonus * 6.67);
+              totalScore += points;
+              scoreDisplay.textContent = `+${points.toFixed(1)} points! (${(timeBonus * 100).toFixed(0)}% time bonus)`;
+            } else {
+              // Standard: no time bonus, simpler scoring
+              totalScore += 20; // 20 points per correct answer
+              scoreDisplay.textContent = '✓ Correct!';
+            }
           } else {
             // Wrong
             btn.style.background = '#ff6d6d';
             btn.style.color = '#fff';
             answersContainer.querySelectorAll('button')[question.correct].style.background = '#77d58d';
             answersContainer.querySelectorAll('button')[question.correct].style.color = '#fff';
-            scoreDisplay.textContent = '0 points - Incorrect';
+            scoreDisplay.textContent = variant === 'pulse' ? '0 points - Incorrect' : '✗ Incorrect';
           }
           
           setTimeout(() => {
             currentQuestion++;
             showQuestion();
-          }, 1800);
+          }, variant === 'pulse' ? 1800 : 1500);
         }, { passive: false });
         
         answersContainer.appendChild(btn);
@@ -285,19 +299,35 @@
       questionCounter.textContent = '';
       progressBar.style.display = 'none';
       
-      // Normalize to 0-100: Perfect score is 100 (6 questions x 16.67 points each)
-      const maxPossibleScore = totalQuestions * 16.67;
-      const rawScore = Math.min(100, (totalScore / maxPossibleScore) * 100);
+      let finalScore;
       
-      // Use MinigameScoring to calculate final score (SCALE=1000)
-          const finalScore = g.MinigameScoring ? 
-            g.MinigameScoring.calculateFinalScore({
-              rawScore: rawScore,
-              minScore: 0,
-              maxScore: 100,
-              compBeast: 0.5
-            }) :
-            rawScore * 10; // Fallback: scale to 0-1000
+      if(variant === 'pulse'){
+        // Normalize to 0-100: Perfect score is 100 (6 questions x 16.67 points each)
+        const maxPossibleScore = totalQuestions * 16.67;
+        const rawScore = Math.min(100, (totalScore / maxPossibleScore) * 100);
+        
+        // Use MinigameScoring to calculate final score (SCALE=1000)
+        finalScore = g.MinigameScoring ? 
+          g.MinigameScoring.calculateFinalScore({
+            rawScore: rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5
+          }) :
+          rawScore * 10; // Fallback: scale to 0-1000
+      } else {
+        // Standard variant: simpler scoring (20-100 range based on correct answers)
+        const rawScore = Math.max(20, Math.min(100, (correctCount / selectedQuestions.length) * 80 + 20));
+        
+        finalScore = g.MinigameScoring ? 
+          g.MinigameScoring.calculateFinalScore({
+            rawScore: rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5
+          }) :
+          rawScore * 10; // Fallback: scale to 0-1000
+      }
       
       scoreDisplay.innerHTML = `
         <div style="font-size:1.1rem;margin:10px 0;">Correct: ${correctCount}/${selectedQuestions.length}</div>
@@ -305,7 +335,7 @@
       `;
       
       // Save best score
-      saveScore('triviaPulse', finalScore);
+      saveScore(variant === 'pulse' ? 'triviaPulse' : 'triviaQuiz', finalScore);
       
       // Cleanup
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -330,5 +360,12 @@
   // Export
   if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
   g.MiniGames.triviaPulse = { render };
+  
+  // Also export as triviaQuiz for backward compatibility
+  g.MiniGames.triviaQuiz = {
+    render: (container, onComplete, options = {}) => {
+      return render(container, onComplete, { ...options, variant: 'standard' });
+    }
+  };
 
 })(window);

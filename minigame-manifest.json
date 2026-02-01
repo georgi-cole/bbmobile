@@ -1,10 +1,10 @@
 {
-  "generated": "2026-02-01T17:52:45.876Z",
+  "generated": "2026-02-01T18:39:17.361Z",
   "version": "1.0.0",
   "gamesScanned": 56,
-  "registryGames": 52,
-  "implementedGames": 34,
-  "retiredGames": 9,
+  "registryGames": 53,
+  "implementedGames": 32,
+  "retiredGames": 12,
   "games": [
     {
       "key": "balanceGame",
@@ -95,8 +95,8 @@
       "difficulty": "medium",
       "estimatedDuration": 45,
       "implemented": true,
-      "retired": false,
-      "replacedBy": null
+      "retired": true,
+      "replacedBy": "timingBar"
     },
     {
       "key": "colorMatch",
@@ -296,7 +296,7 @@
       "module": "memory-match.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 11641,
+      "fileSize": 18144,
       "category": "logic",
       "difficulty": "medium",
       "estimatedDuration": 60,
@@ -367,8 +367,8 @@
       "difficulty": "medium",
       "estimatedDuration": 60,
       "implemented": true,
-      "retired": false,
-      "replacedBy": null
+      "retired": true,
+      "replacedBy": "memoryMatch"
     },
     {
       "key": "placeholder",
@@ -624,7 +624,7 @@
       "module": "timing-bar.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 11618,
+      "fileSize": 14313,
       "category": "logic",
       "difficulty": "easy",
       "estimatedDuration": 30,
@@ -660,7 +660,7 @@
       "module": "trivia-pulse.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 17507,
+      "fileSize": 19096,
       "category": "trivia",
       "difficulty": "easy",
       "estimatedDuration": 45,
@@ -670,11 +670,17 @@
     },
     {
       "key": "triviaQuiz",
-      "name": "Trivia Quiz",
+      "name": "Big Brother Trivia",
       "module": "trivia-quiz.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 11140
+      "fileSize": 11140,
+      "category": "trivia",
+      "difficulty": "easy",
+      "estimatedDuration": 40,
+      "implemented": true,
+      "retired": true,
+      "replacedBy": "triviaPulse"
     },
     {
       "key": "wordAnagram",

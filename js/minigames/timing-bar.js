@@ -8,12 +8,14 @@
   /**
    * Timing Bar minigame
    * Player must stop a moving bar as close to center as possible (3 attempts)
-   * Score is based on accuracy to center position
+   * OR stop a clock at exact target times (clock variant)
+   * Score is based on accuracy to center position or target time
    * Optional countdown timer limits the time to complete all attempts
    * 
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
    * @param {Object} options - Configuration options
+   * @param {string} options.variant - 'bar' (default, timing bar) or 'clock' (stop at target time)
    * @param {boolean} options.timedMode - Enable countdown timer (default: true)
    * @param {number} options.timeLimitMs - Time limit in milliseconds (default: 30000)
    */
@@ -23,6 +25,7 @@
     const { 
       debugMode = false, 
       competitionMode = false,
+      variant = 'bar', // 'bar' or 'clock'
       timedMode = true,
       timeLimitMs = 30000
     } = options;
@@ -46,20 +49,34 @@
     
     // Title
     const title = document.createElement('h3');
-    title.textContent = 'Timing Bar';
+    title.textContent = variant === 'clock' ? 'Clock Stopper' : 'Timing Bar';
     title.style.cssText = 'margin:0;font-size:1.2rem;color:#e3ecf5;';
     
     // Instructions
     const instructions = document.createElement('p');
-    const instructionText = timedMode ? 
-      'Stop the bar near center (3 tries, timed!)' : 
-      'Stop the bar near center (3 tries)';
+    const instructionText = variant === 'clock' ?
+      'Stop the clock at the target time! (3 attempts)' :
+      (timedMode ? 
+        'Stop the bar near center (3 tries, timed!)' : 
+        'Stop the bar near center (3 tries)');
     instructions.textContent = instructionText;
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;line-height:1.5;';
     
-    // Bar container
+    // Clock variant UI elements
+    let targetDiv, clockDiv, clockStartTime, targetTime, clockRafId;
+    
+    if(variant === 'clock'){
+      targetDiv = document.createElement('div');
+      targetDiv.style.cssText = 'font-size:1.2rem;color:#f7b955;';
+      
+      clockDiv = document.createElement('div');
+      clockDiv.textContent = '0.00s';
+      clockDiv.style.cssText = 'font-size:3rem;font-weight:bold;color:#83bfff;font-family:monospace;';
+    }
+    
+    // Bar container (only for bar variant)
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'width:100%;max-width:400px;height:30px;background:#1d2734;border:2px solid #2c3a4d;border-radius:10px;overflow:hidden;position:relative;margin:10px 0;';
+    wrap.style.cssText = variant === 'clock' ? 'display:none;' : 'width:100%;max-width:400px;height:30px;background:#1d2734;border:2px solid #2c3a4d;border-radius:10px;overflow:hidden;position:relative;margin:10px 0;';
     
     // Moving bar
     const bar = document.createElement('div');
@@ -184,6 +201,20 @@
       rafId = requestAnimationFrame(frame);
     }
     
+    // Clock variant functions
+    function newTarget(){
+      if(variant !== 'clock') return;
+      targetTime = 2000 + Math.random() * 3000; // 2-5 seconds
+      targetDiv.textContent = `Target: ${(targetTime/1000).toFixed(2)}s`;
+    }
+    
+    function updateClock(){
+      if(variant !== 'clock' || !running) return;
+      const elapsed = Date.now() - clockStartTime;
+      clockDiv.textContent = `${(elapsed/1000).toFixed(2)}s`;
+      clockRafId = requestAnimationFrame(updateClock);
+    }
+    
     // Apply accessibility to buttons
     if(useAccessibility){
       g.MinigameAccessibility.makeAccessibleButton(startBtn, { label: 'Start timing bar' });
@@ -204,8 +235,20 @@
       startBtn.disabled = true;
       stopBtn.disabled = false;
       running = true;
-      direction = 1;
-      position = 0;
+      
+      if(variant === 'clock'){
+        // Clock variant
+        clockStartTime = Date.now();
+        clockDiv.textContent = '0.00s';
+        newTarget();
+        updateClock();
+      } else {
+        // Bar variant
+        direction = 1;
+        position = 0;
+        if(rafId) cancelAnimationFrame(rafId);
+        frame();
+      }
       
       // Announce to screen readers
       if(useAccessibility){
@@ -216,9 +259,6 @@
       if(useMobileUtils){
         g.MinigameMobileUtils.vibrate(30);
       }
-      
-      if(rafId) cancelAnimationFrame(rafId);
-      frame();
     };
     
     if(useMobileUtils){
@@ -231,18 +271,37 @@
     const stopHandler = () => {
       running = false;
       if(rafId) cancelAnimationFrame(rafId);
+      if(clockRafId) cancelAnimationFrame(clockRafId);
       
       startBtn.disabled = false;
       stopBtn.disabled = true;
       attempts++;
       
-      // Calculate distance from center (0.5)
-      // Bar is 12% wide, so add 6% to position for center of bar
-      const barCenter = position + 0.06;
-      const distanceFromCenter = Math.abs(barCenter - 0.5);
+      let attemptScore;
       
-      // Convert to score (0-1, closer to center = higher)
-      const attemptScore = Math.max(0, 1 - distanceFromCenter * 2.1);
+      if(variant === 'clock'){
+        // Clock variant scoring
+        const elapsed = Date.now() - clockStartTime;
+        const diff = Math.abs(elapsed - targetTime);
+        
+        // Score based on accuracy (closer = better)
+        if(diff < 50) attemptScore = 1.0; // 100%
+        else if(diff < 100) attemptScore = 0.9; // 90%
+        else if(diff < 200) attemptScore = 0.8; // 80%
+        else if(diff < 300) attemptScore = 0.7; // 70%
+        else if(diff < 500) attemptScore = 0.6; // 60%
+        else if(diff < 800) attemptScore = 0.4; // 40%
+        else attemptScore = 0.2; // 20%
+      } else {
+        // Bar variant scoring
+        // Calculate distance from center (0.5)
+        // Bar is 12% wide, so add 6% to position for center of bar
+        const barCenter = position + 0.06;
+        const distanceFromCenter = Math.abs(barCenter - 0.5);
+        
+        // Convert to score (0-1, closer to center = higher)
+        attemptScore = Math.max(0, 1 - distanceFromCenter * 2.1);
+      }
       
       if(attemptScore > bestScore){
         bestScore = attemptScore;
@@ -337,6 +396,10 @@
     if(timerContainer){
       wrapper.appendChild(timerContainer);
     }
+    if(variant === 'clock'){
+      wrapper.appendChild(targetDiv);
+      wrapper.appendChild(clockDiv);
+    }
     wrapper.appendChild(wrap);
     wrapper.appendChild(controlsDiv);
     wrapper.appendChild(status);
@@ -346,5 +409,12 @@
   // Export to global minigames namespace
   if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
   g.MiniGames.timingBar = { render };
+  
+  // Also export as clockStopper for backward compatibility
+  g.MiniGames.clockStopper = {
+    render: (container, onComplete, options = {}) => {
+      return render(container, onComplete, { ...options, variant: 'clock' });
+    }
+  };
 
 })(window);
