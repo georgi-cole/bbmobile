@@ -71,6 +71,13 @@
     // Wire buttons
     panel.querySelector('#cinExit').onclick=()=>{ 
       console.info('[finale] EXIT clicked, navigating to intro hub');
+      
+      // Hide main game UI by removing the 'main-screen-built' class first
+      // This ensures the topbar and wrap elements are hidden via CSS
+      document.body.classList.remove('main-screen-built');
+      console.info('[finale] Removed main-screen-built class to hide game UI');
+      
+      // Remove the finale modal
       try{dim.remove();}catch{} 
       
       // Navigate back to intro hub
