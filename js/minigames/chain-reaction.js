@@ -240,8 +240,9 @@
       try {
         if (typeof root.MinigameScoring?.calculateFinalScore === 'function') {
           const filled = grid.reduce((acc, row) => acc + row.filter(Boolean).length, 0);
-          const cleared = config.rows * config.cols - filled;
-          const rawScore = Math.max(0, Math.min(100, cleared));
+          const totalCells = config.rows * config.cols;
+          const cleared = totalCells - filled;
+          const rawScore = Math.max(0, Math.min(100, (cleared / totalCells) * 100));
           const finalScore = root.MinigameScoring.calculateFinalScore({
             rawScore,
             minScore: 0,

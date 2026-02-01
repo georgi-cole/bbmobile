@@ -155,7 +155,7 @@
               correct: rawScore,
               total: 100,
               timeMs: rawScore * 50,
-              targetTimeMs: 1000
+              targetTimeMs: 2000
             });
             break;
           case 'endurance':
