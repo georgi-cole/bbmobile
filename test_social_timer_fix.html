@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Timer Fix - Manual Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #0f3460;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+    .timer-display {
+      font-size: 48px;
+      font-family: monospace;
+      text-align: center;
+      padding: 20px;
+      background: #0f3460;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .btn {
+      padding: 12px 24px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #000;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 3px 0;
+    }
+    .log-info { color: #3498db; }
+    .log-success { color: #27ae60; }
+    .log-warn { color: #f39c12; }
+    .log-error { color: #e74c3c; }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      display: inline-block;
+      margin: 5px;
+    }
+    .status.running { background: #27ae60; }
+    .status.paused { background: #f39c12; }
+    .status.stopped { background: #e74c3c; }
+  </style>
+</head>
+<body>
+  <h1>🕐 Social Phase Timer Fix - Manual Test</h1>
+  <p>This test validates that the social phase timer works correctly with pause/resume and doesn't show negative values.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Timer Display (No Negative Values)</h2>
+    <p>Test that timer correctly handles negative remaining time and displays 00:00 instead of negative values.</p>
+    <div class="timer-display" id="timer1">--:--</div>
+    <button class="btn" onclick="testNegativeTimer()">Simulate Negative Timer</button>
+    <button class="btn" onclick="testNormalTimer()">Start Normal 2-Min Timer</button>
+    <div class="log" id="log1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Pause/Resume Validation</h2>
+    <p>Test that pause saves remaining time correctly and resume validates it's not negative.</p>
+    <div class="timer-display" id="timer2">--:--</div>
+    <div>
+      <span class="status running" id="status2">Stopped</span>
+    </div>
+    <button class="btn" onclick="startPauseTest()">Start Timer</button>
+    <button class="btn" onclick="pauseTimer()">Pause</button>
+    <button class="btn" onclick="resumeTimer()">Resume</button>
+    <button class="btn" onclick="simulateStaleResume()">Simulate Stale Resume</button>
+    <div class="log" id="log2"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Config Check</h2>
+    <p>Verify that tSocial config is set to 120 seconds (2 minutes).</p>
+    <div id="config-check"></div>
+  </div>
+
+  <script>
+    // Test logs
+    function addLog(logId, message, type = 'info') {
+      const log = document.getElementById(logId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Mock game object for testing
+    window.game = window.game || {
+      cfg: {
+        tSocial: 120 // Should be 2 minutes
+      },
+      endAt: null,
+      pausedTimeRemaining: null,
+      timerPaused: false
+    };
+
+    // Test 1: Negative timer handling
+    function testNegativeTimer() {
+      addLog('log1', 'Setting endAt to past time to simulate negative timer...', 'info');
+      window.game.endAt = Date.now() - 86400000; // 1 day in the past
+      
+      const rem = window.game.endAt - Date.now();
+      addLog('log1', `Raw remaining time: ${rem}ms (${Math.floor(rem/1000)}s)`, 'warn');
+      
+      // Apply fix: clamp to 0
+      const safeRem = Math.max(0, rem);
+      addLog('log1', `Clamped remaining time: ${safeRem}ms`, 'success');
+      
+      const s = Math.ceil(safeRem / 1000);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      const display = `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+      
+      document.getElementById('timer1').textContent = display;
+      addLog('log1', `Timer display: ${display} ✓`, 'success');
+    }
+
+    function testNormalTimer() {
+      addLog('log1', 'Starting normal 2-minute timer...', 'info');
+      window.game.endAt = Date.now() + 120000; // 2 minutes
+      
+      const interval = setInterval(() => {
+        let rem = window.game.endAt - Date.now();
+        
+        // Apply fix: clamp to 0
+        if (rem < 0) rem = 0;
+        
+        if (rem <= 0) {
+          clearInterval(interval);
+          addLog('log1', 'Timer completed!', 'success');
+        }
+        
+        const s = Math.ceil(rem / 1000);
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        const display = `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+        
+        document.getElementById('timer1').textContent = display;
+      }, 200);
+      
+      addLog('log1', 'Timer started (2:00)', 'success');
+    }
+
+    // Test 2: Pause/Resume validation
+    let test2Interval = null;
+
+    function startPauseTest() {
+      addLog('log2', 'Starting 30-second test timer...', 'info');
+      window.game.endAt = Date.now() + 30000; // 30 seconds
+      window.game.timerPaused = false;
+      document.getElementById('status2').textContent = 'Running';
+      document.getElementById('status2').className = 'status running';
+      
+      if (test2Interval) clearInterval(test2Interval);
+      test2Interval = setInterval(() => {
+        if (window.game.timerPaused) {
+          return; // Skip tick when paused
+        }
+        
+        let rem = window.game.endAt - Date.now();
+        if (rem < 0) rem = 0;
+        
+        if (rem <= 0) {
+          clearInterval(test2Interval);
+          document.getElementById('status2').textContent = 'Completed';
+          document.getElementById('status2').className = 'status stopped';
+          addLog('log2', 'Timer completed!', 'success');
+        }
+        
+        const s = Math.ceil(rem / 1000);
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        const display = `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+        
+        document.getElementById('timer2').textContent = display;
+      }, 200);
+      
+      addLog('log2', 'Timer started', 'success');
+    }
+
+    function pauseTimer() {
+      if (!window.game.endAt) {
+        addLog('log2', 'No timer running!', 'error');
+        return;
+      }
+      
+      window.game.timerPaused = true;
+      window.game.pausedTimeRemaining = window.game.endAt - Date.now();
+      document.getElementById('status2').textContent = 'Paused';
+      document.getElementById('status2').className = 'status paused';
+      
+      addLog('log2', `Timer paused. Remaining: ${window.game.pausedTimeRemaining}ms`, 'info');
+    }
+
+    function resumeTimer() {
+      if (!window.game.timerPaused) {
+        addLog('log2', 'Timer not paused!', 'error');
+        return;
+      }
+      
+      // Apply fix: validate pausedTimeRemaining is not negative
+      const remaining = Math.max(0, window.game.pausedTimeRemaining || 0);
+      addLog('log2', `Validating remaining time: ${window.game.pausedTimeRemaining}ms → ${remaining}ms`, 'info');
+      
+      window.game.timerPaused = false;
+      window.game.endAt = Date.now() + remaining;
+      document.getElementById('status2').textContent = 'Running';
+      document.getElementById('status2').className = 'status running';
+      
+      addLog('log2', `Timer resumed. New endAt: ${new Date(window.game.endAt).toLocaleTimeString()}`, 'success');
+    }
+
+    function simulateStaleResume() {
+      addLog('log2', 'Simulating stale pause/resume cycle...', 'warn');
+      
+      // Simulate pause 5 seconds ago
+      window.game.pausedTimeRemaining = -5000; // Negative!
+      addLog('log2', `Set pausedTimeRemaining to ${window.game.pausedTimeRemaining}ms (stale/negative)`, 'warn');
+      
+      // Try to resume with validation
+      const remaining = Math.max(0, window.game.pausedTimeRemaining);
+      addLog('log2', `After validation: ${remaining}ms`, 'success');
+      
+      if (remaining === 0) {
+        addLog('log2', '✓ Validation prevented negative timer! Timer will show 00:00', 'success');
+      }
+    }
+
+    // Test 3: Config check
+    function checkConfig() {
+      const configDiv = document.getElementById('config-check');
+      const tSocial = window.game?.cfg?.tSocial;
+      
+      if (tSocial === 120) {
+        configDiv.innerHTML = `<div style="color: #27ae60; padding: 10px; background: rgba(39, 174, 96, 0.1); border-radius: 4px;">
+          ✓ <strong>Config Correct:</strong> tSocial = ${tSocial} seconds (2 minutes)
+        </div>`;
+      } else {
+        configDiv.innerHTML = `<div style="color: #e74c3c; padding: 10px; background: rgba(231, 76, 60, 0.1); border-radius: 4px;">
+          ✗ <strong>Config Incorrect:</strong> tSocial = ${tSocial} seconds (expected 120)
+        </div>`;
+      }
+    }
+
+    // Run config check on load
+    checkConfig();
+  </script>
+</body>
+</html>

@@ -3663,7 +3663,7 @@
       try {
         const g = global.game;
         // Check if timer has already expired
-        const hasTimeRemaining = g?.endAt && g.endAt > Date.now();
+        const hasTimeRemaining = g?.endAt > Date.now();
         
         if (hasTimeRemaining) {
           // Timer still has time - resume it
@@ -3673,6 +3673,7 @@
           // Timer expired - allow phase to advance
           console.info('[social-maneuvers] Timer expired while summary was open - phase will advance');
           // Trigger phase timeout callback if available
+          // Small delay allows modal animation to complete before phase transition
           if (typeof g?.phaseTimeoutCallback === 'function') {
             setTimeout(() => {
               try {
@@ -3704,7 +3705,7 @@
         // TASK 1: Restore social launcher if phase is still active and energy/time remain
         const g = global.game;
         const isPhaseStillActive = g?.phase === 'social_intermission';
-        const hasTimeRemaining = g?.endAt && g.endAt > Date.now();
+        const hasTimeRemaining = g?.endAt > Date.now();
         const humanId = g?.humanId;
         const humanEnergy = humanId ? SocialResources.get(humanId, 'energy') : 0;
         
