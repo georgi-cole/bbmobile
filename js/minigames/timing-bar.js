@@ -9,16 +9,22 @@
    * Timing Bar minigame
    * Player must stop a moving bar as close to center as possible (3 attempts)
    * Score is based on accuracy to center position
+   * Optional countdown timer limits the time to complete all attempts
    * 
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
+   * @param {Object} options - Configuration options
+   * @param {boolean} options.timedMode - Enable countdown timer (default: true)
+   * @param {number} options.timeLimitMs - Time limit in milliseconds (default: 30000)
    */
   function render(container, onComplete, options = {}){
     container.innerHTML = '';
     
     const { 
       debugMode = false, 
-      competitionMode = false
+      competitionMode = false,
+      timedMode = true,
+      timeLimitMs = 30000
     } = options;
     
     // Use accessibility and mobile utils if available
@@ -45,7 +51,10 @@
     
     // Instructions
     const instructions = document.createElement('p');
-    instructions.textContent = 'Stop the bar near center (3 tries)';
+    const instructionText = timedMode ? 
+      'Stop the bar near center (3 tries, timed!)' : 
+      'Stop the bar near center (3 tries)';
+    instructions.textContent = instructionText;
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;line-height:1.5;';
     
     // Bar container
@@ -98,6 +107,61 @@
     let attempts = 0;
     let bestScore = 0;
     
+    // Timer container (if timed mode) - must be after game state variables
+    let gameTimer = null;
+    let timerContainer = null;
+    if(timedMode && g.GameTimer){
+      timerContainer = document.createElement('div');
+      timerContainer.style.cssText = 'margin:8px 0;';
+      
+      // Create GameTimer instance
+      gameTimer = new g.GameTimer('logic', {
+        duration: timeLimitMs,
+        countDirection: 'down'
+      });
+      
+      // Handle timer completion
+      gameTimer.onComplete(() => {
+        // Time's up - force submit with current best score
+        console.log('[TimingBar] Time expired, auto-submitting');
+        
+        // Stop any running animation
+        running = false;
+        if(rafId) cancelAnimationFrame(rafId);
+        
+        // Disable all buttons
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        submitBtn.disabled = true;
+        
+        // Calculate final score
+        const rng = g.rng || Math.random;
+        const rawScore = (bestScore * 100) + rng() * 4;
+        const finalScore = g.MinigameScoring ? 
+          g.MinigameScoring.calculateFinalScore({
+            rawScore: rawScore,
+            minScore: 0,
+            maxScore: 100,
+            compBeast: 0.5
+          }) :
+          rawScore * 10;
+        
+        console.log(`[TimingBar] Time expired - Best score: ${bestScore.toFixed(2)}, Final score: ${Math.round(finalScore)}`);
+        
+        if(useAccessibility){
+          g.MinigameAccessibility.announceToSR('Time expired! Submitting score', 'assertive');
+        }
+        
+        // Brief delay before completing
+        setTimeout(() => {
+          onComplete(finalScore);
+        }, 500);
+      });
+      
+      // Render timer UI
+      gameTimer.render(timerContainer);
+    }
+    
     // Animation frame function
     function frame(){
       if(!running) return;
@@ -130,6 +194,12 @@
     // Start button handler
     const startHandler = () => {
       if(attempts >= 3) return;
+      
+      // Start timer on first attempt
+      if(gameTimer && attempts === 0 && !gameTimer.isRunning){
+        gameTimer.start();
+        console.log('[TimingBar] Game timer started');
+      }
       
       startBtn.disabled = true;
       stopBtn.disabled = false;
@@ -219,6 +289,12 @@
     const submitHandler = () => {
       submitBtn.disabled = true;
       
+      // Stop game timer if running
+      if(gameTimer){
+        gameTimer.stop();
+        gameTimer.destroy();
+      }
+      
       // Calculate raw score: 0-100 based on best attempt
       // Add small random variance for variety
       const rng = g.rng || Math.random;
@@ -258,6 +334,9 @@
     // Assemble UI
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
+    if(timerContainer){
+      wrapper.appendChild(timerContainer);
+    }
     wrapper.appendChild(wrap);
     wrapper.appendChild(controlsDiv);
     wrapper.appendChild(status);
