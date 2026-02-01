@@ -226,6 +226,7 @@
       };
 
       // New Season button - starts a new game
+      const OVERLAY_CLOSE_DELAY_MS = 450; // overlay fade + safety buffer
       newSeasonBtn.addEventListener('click', () => {
         console.info('[game-over] NEW SEASON clicked');
         newSeasonBtn.disabled = true;
@@ -255,7 +256,7 @@
             // Fallback: direct restart
             startNewSeasonFlow();
           }
-        }, 450); // wait for overlay close animation to finish
+        }, OVERLAY_CLOSE_DELAY_MS); // wait for overlay close animation to finish
       }, { once: true });
 
       // Exit button - navigates back to intro hub
@@ -284,11 +285,10 @@
           document.body.classList.remove('main-screen-built');
           console.info('[game-over] Removed main-screen-built class to hide game UI');
           
-          // Try to close the tab/app where supported
+          // Try to close the tab/app where supported (fallback will still run if the call is ignored)
           try {
             if (typeof navigator !== 'undefined' && navigator.app && typeof navigator.app.exitApp === 'function') {
               navigator.app.exitApp();
-              return;
             }
             if (typeof global.close === 'function') {
               global.close();
