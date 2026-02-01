@@ -74,13 +74,13 @@ All migrated to use `MinigameScoring.calculateFinalScore`:
 DEFAULT_CFG = {
   ...
   playerWinChanceHOH: 20,  // Percentage
-  playerWinChancePOV: 30,  // Percentage
+  playerWinChancePOV: 22,  // Percentage (reduced to make POV harder for human)
 };
 
 // Converted in applyCfgEffects:
 cfg.playerWinChances = {
   hoh: cfg.playerWinChanceHOH / 100,  // 0.20
-  pov: cfg.playerWinChancePOV / 100   // 0.30
+  pov: cfg.playerWinChancePOV / 100   // 0.22
 };
 ```
 

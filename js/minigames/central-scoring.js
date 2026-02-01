@@ -13,7 +13,7 @@
   
   const DEFAULT_WIN_CHANCES = {
     hoh: 0.20,  // 20% win chance for HOH competitions
-    pov: 0.30   // 30% win chance for POV competitions
+    pov: 0.22   // 22% win chance for POV competitions (harder for human)
   };
 
   // ============================================================================

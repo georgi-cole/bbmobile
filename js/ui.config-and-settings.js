@@ -186,7 +186,7 @@
     skipIntros: false,  // When true, skip intro video and animated intro sequence
     debugAlwaysWin: false,  // Debug: Always win minigames/competitions (testing only)
     playerWinChanceHOH: 20,  // HOH win chance (percentage, converted to 0.20 decimal internally)
-    playerWinChancePOV: 30,  // POV win chance (percentage, converted to 0.30 decimal internally)
+    playerWinChancePOV: 22,  // POV win chance (percentage, converted to 0.22 decimal internally to reduce human auto-wins)
     skipIdleTimersF3: true,  // Skip idle timers in Final Week (optimized pacing)
   };
 
