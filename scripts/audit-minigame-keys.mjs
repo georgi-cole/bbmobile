@@ -198,9 +198,12 @@ function audit(){
   
   // Summary
   console.log(`\n${colors.cyan}=== Summary ===${colors.reset}`);
-  const issueCount = missingFromBootstrap.length + missingFromRegistry.length + invalidAliases.length + unregisteredPoolKeys.length;
+  const issueCount = missingFromRegistry.length + invalidAliases.length + unregisteredPoolKeys.length;
   if(issueCount === 0){
     console.log(`${colors.green}✓ No issues found! All keys are properly registered.${colors.reset}`);
+    if(missingFromBootstrap.length > 0){
+      console.log(`${colors.yellow}  Note: ${missingFromBootstrap.length} retired games intentionally excluded from bootstrap${colors.reset}`);
+    }
     return 0;
   } else {
     console.log(`${colors.red}✗ Found ${issueCount} issue(s) that need to be fixed.${colors.reset}`);

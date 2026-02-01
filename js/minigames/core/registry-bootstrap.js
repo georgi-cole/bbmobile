@@ -32,17 +32,15 @@
       
       // Fallback: hardcoded list of canonical keys (implemented && !retired only)
       const fallbackKeys = [
-        'countHouse', 'reactionRoyale', 'triviaPulse', 'quickTap',
-        'memoryMatch', 'mathBlitz', 'timingBar', 'sequenceMemory',
-        'patternMatch', 'wordAnagram', 'targetPractice', 'memoryPairs',
-        'estimationGame', 'wordTyping', 'reactionTimer', 'sliderPuzzle',
-        'pathFinder', 'simonSays', 'holdWall', 'tiltedLedge', 'pressurePlank',
+        'countHouse', 'triviaPulse', 'quickTap',
+        'memoryMatch', 'timingBar', 'patternMatch',
+        'wordAnagram', 'targetPractice', 'estimationGame',
+        'wordTyping', 'sliderPuzzle', 'pathFinder',
+        'simonSays', 'holdWall', 'tiltedLedge', 'pressurePlank',
         'rainBarrelBalance', 'memoryZipline', 'swipeMaze',
-        'logicLocks', 'bubbleBurst', 'cardClash', 'chainReaction',
-        'clockStopper', 'comboKeys', 'diceDash', 'echoChamber',
-        'flashFlood', 'gearShift', 'gridLock', 'iconMatch',
-        'jumpRope', 'keyMaster', 'lightSpeed', 'puzzleDash',
-        'colorMatch', 'socialStrings', 'snake',
+        'logicLocks', 'cardClash', 'chainReaction',
+        'clockStopper', 'flashFlood', 'gridLock',
+        'keyMaster', 'colorMatch', 'socialStrings', 'snake',
         'hangman', 'tiltLabyrinth', 'threeDigitsQuiz',
         'tetris', 'travelingDots', 'minesweeps', 'railSwitchSprint',
         'laserPantryDash', 'confettiCannon', 'buzzerSprintRelay'
