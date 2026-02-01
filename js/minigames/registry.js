@@ -1,6 +1,28 @@
 // MODULE: minigames/registry.js
 // Unified minigame registry with comprehensive metadata for Phase 1 refactor
 // Each game entry includes: key, name, type, scoring, mobile-friendly flags, etc.
+//
+// === CONSOLIDATION MIGRATION NOTES ===
+// As of PR#5, overlapping minigames have been consolidated into variant-enabled modules:
+//
+// 1. Trivia Consolidation:
+//    - triviaPulse now supports options.variant: 'pulse' (timed, default) or 'standard' (no timer)
+//    - triviaQuiz is retired and redirects to triviaPulse with variant: 'standard'
+//    - Usage: render(container, onComplete, { variant: 'pulse' | 'standard' })
+//
+// 2. Timing Consolidation:
+//    - timingBar now supports options.variant: 'bar' (moving bar, default) or 'clock' (clock stopping)
+//    - clockStopper is retired and redirects to timingBar with variant: 'clock'
+//    - Usage: render(container, onComplete, { variant: 'bar' | 'clock' })
+//
+// 3. Memory Consolidation:
+//    - memoryMatch now supports options.mode: 'card' (color buttons, default) or 'pattern' (shape dropdowns)
+//    - patternMatch is retired and redirects to memoryMatch with mode: 'pattern'
+//    - Usage: render(container, onComplete, { mode: 'card' | 'pattern' })
+//
+// All retired games maintain backward compatibility through the compat-bridge legacy map.
+// Retired games are marked with retired: true and replacedBy: '<canonical-key>'.
+// ===
 
 (function(g){
   'use strict';

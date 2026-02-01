@@ -175,9 +175,7 @@
     'chainReaction': 'chainReaction',
     'chain-reaction': 'chainReaction',
     'chainreaction': 'chainReaction',
-    'clockStopper': 'clockStopper',
-    'clock-stopper': 'clockStopper',
-    'clockstopper': 'clockStopper',
+    // clockStopper entries moved up to line 72 (redirected to timingBar)
     'flashFlood': 'flashFlood',
     'flash-flood': 'flashFlood',
     'flashflood': 'flashFlood',

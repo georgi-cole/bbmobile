@@ -13,7 +13,9 @@
         data[gameName] = score;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
-    } catch(e){}
+    } catch(e){
+      // Ignore localStorage errors
+    }
   }
 
   function loadBestScore(gameName){
@@ -151,7 +153,7 @@
     const totalQuestions = variant === 'pulse' ? 6 : 5; // pulse: 6 questions, standard: 5
     const selectedQuestions = [];
     let questionStartTime = 0;
-    let timeLimit = variant === 'pulse' ? 15000 : 0; // 15 seconds for pulse, no limit for standard
+    const timeLimit = variant === 'pulse' ? 15000 : 0; // 15 seconds for pulse, no limit for standard
     let timerInterval = null;
     let gameActive = false;
     let isPaused = false;

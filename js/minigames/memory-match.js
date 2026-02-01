@@ -92,7 +92,6 @@
     let gameStarted = false;
     let sequenceDiv = null;
     let protectCleanup = null;
-    let revealTimeout = null;
     let distractorInterval = null;
     let timerDiv = null;
     let distractorDiv = null;
@@ -208,7 +207,7 @@
         const startTime = Date.now();
         const endTime = startTime + diffSettings.revealDuration;
         
-        function updateTimer(){
+        const updateTimer = () => {
           const remaining = Math.max(0, endTime - Date.now());
           const seconds = (remaining / 1000).toFixed(1);
           if(timerDiv){
@@ -221,7 +220,7 @@
           } else {
             hideSequence();
           }
-        }
+        };
         
         updateTimer();
       } else {
@@ -229,7 +228,7 @@
         const boxes = Array.from(sequenceDiv.children);
         const interval = 650;
         
-        function showNext(){
+        const showNext = () => {
           // Reset all boxes
           boxes.forEach(b => {
             b.style.opacity = '0.25';
@@ -250,7 +249,7 @@
           sequenceIndex++;
           
           setTimeout(showNext, interval);
-        }
+        };
         
         showNext();
       }
