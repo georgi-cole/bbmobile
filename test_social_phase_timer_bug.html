@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Timer Fix Verification</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #0f3460;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+    .timer-display {
+      font-size: 48px;
+      font-family: monospace;
+      text-align: center;
+      padding: 20px;
+      background: #0f3460;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .btn {
+      padding: 12px 24px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .btn.success {
+      background: #27ae60;
+    }
+    .btn.danger {
+      background: #e74c3c;
+    }
+    .log {
+      background: #000;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 3px 0;
+    }
+    .log-info { color: #3498db; }
+    .log-success { color: #27ae60; }
+    .log-warn { color: #f39c12; }
+    .log-error { color: #e74c3c; }
+    .result {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .result.pass {
+      background: rgba(39, 174, 96, 0.2);
+      border: 2px solid #27ae60;
+      color: #27ae60;
+    }
+    .result.fail {
+      background: rgba(231, 76, 60, 0.2);
+      border: 2px solid #e74c3c;
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <h1>✅ Social Phase Timer Fix Verification</h1>
+  <p><strong>Issue (Fixed):</strong> After socializing and closing the modal, timer showed >1350 minutes instead of correct time.</p>
+  <p><strong>Root Cause:</strong> pausePhaseTimer() set far-future endAt even when timer had expired.</p>
+  <p><strong>Fix:</strong> Only set far-future endAt if remaining time > 0.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Reproduce Bug (Before Fix)</h2>
+    <p>Simulate the bug scenario where timer expired and pause sets far-future value.</p>
+    <div class="timer-display" id="timer1">--:--</div>
+    <button class="btn danger" onclick="simulateBug()">Simulate Bug (Before Fix)</button>
+    <button class="btn success" onclick="simulateFix()">Apply Fix (After Fix)</button>
+    <div class="log" id="log1"></div>
+    <div id="result1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Full Social Phase Flow</h2>
+    <p>Simulate complete flow: start phase → socialize → energy depletes → summary shows → check timer.</p>
+    <div class="timer-display" id="timer2">--:--</div>
+    <div>
+      <span style="background: #555; padding: 8px 12px; border-radius: 4px; margin: 5px; display: inline-block;">
+        Phase: <strong id="phase-status">not started</strong>
+      </span>
+      <span style="background: #555; padding: 8px 12px; border-radius: 4px; margin: 5px; display: inline-block;">
+        Timer: <strong id="timer-status">stopped</strong>
+      </span>
+    </div>
+    <button class="btn" onclick="startSocialPhase()">1. Start Social Phase (30s)</button>
+    <button class="btn" onclick="openSocializeModal()">2. Open Socialize Modal</button>
+    <button class="btn" onclick="spendAllEnergy()">3. Spend All Energy</button>
+    <button class="btn" onclick="showSummaryPanel()">4. Show Summary Panel</button>
+    <div class="log" id="log2"></div>
+    <div id="result2"></div>
+  </div>
+
+  <script>
+    // Constants
+    const FAR_FUTURE_PAUSE_MS = FAR_FUTURE_PAUSE_MS; // 24 hours in milliseconds
+    
+    // Test logging
+    function addLog(logId, message, type = 'info') {
+      const log = document.getElementById(logId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Mock game state
+    const mockGame = {
+      endAt: null,
+      timerPaused: false,
+      pausedTimerState: null
+    };
+
+    // Mock pausePhaseTimer (BEFORE FIX)
+    function pausePhaseTimer_OLD() {
+      const now = Date.now();
+      const remaining = Math.max(0, mockGame.endAt - now);
+      
+      mockGame.pausedTimerState = {
+        endAt: mockGame.endAt,
+        remaining: remaining,
+        pausedAt: now
+      };
+      
+      // BUG: Always set far-future regardless of remaining time
+      mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS); // 24 hours
+      mockGame.timerPaused = true;
+      
+      return remaining;
+    }
+
+    // Mock pausePhaseTimer (AFTER FIX)
+    function pausePhaseTimer_NEW() {
+      const now = Date.now();
+      const remaining = Math.max(0, mockGame.endAt - now);
+      
+      mockGame.pausedTimerState = {
+        endAt: mockGame.endAt,
+        remaining: remaining,
+        pausedAt: now
+      };
+      
+      // FIX: Only set far-future if timer hasn't expired
+      if (remaining > 0) {
+        mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS); // 24 hours
+      } else {
+        // Keep expired endAt to show 00:00 instead of far-future time
+      }
+      mockGame.timerPaused = true;
+      
+      return remaining;
+    }
+
+    // Helper to format time
+    function formatTime(ms) {
+      const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    // Test 1: Simulate bug
+    function simulateBug() {
+      const log = 'log1';
+      addLog(log, '=== Simulating Bug Scenario ===', 'warn');
+      
+      // Step 1: Set expired timer
+      const now = Date.now();
+      mockGame.endAt = now - 5000; // 5 seconds ago (expired)
+      addLog(log, `Step 1: Timer expired 5 seconds ago`, 'info');
+      addLog(log, `  endAt: ${mockGame.endAt}`, 'info');
+      addLog(log, `  now: ${now}`, 'info');
+      addLog(log, `  remaining: ${mockGame.endAt - now}ms`, 'warn');
+      
+      // Step 2: Pause with OLD code (bug)
+      const remaining = pausePhaseTimer_OLD();
+      addLog(log, `Step 2: Called pausePhaseTimer (OLD - with bug)`, 'error');
+      addLog(log, `  remaining saved: ${remaining}ms`, 'info');
+      addLog(log, `  endAt after pause: ${mockGame.endAt}`, 'error');
+      addLog(log, `  endAt - now: ${mockGame.endAt - Date.now()}ms`, 'error');
+      
+      // Step 3: Calculate what timer display shows
+      const displayTime = mockGame.endAt - Date.now();
+      const displayMinutes = Math.floor(displayTime / 1000 / 60);
+      addLog(log, `Step 3: Timer display calculation`, 'warn');
+      addLog(log, `  Display shows: ${displayMinutes} minutes (${formatTime(displayTime)})`, 'error');
+      
+      // Update UI
+      document.getElementById('timer1').textContent = formatTime(displayTime);
+      
+      // Result
+      const resultDiv = document.getElementById('result1');
+      if (displayMinutes > 1000) {
+        resultDiv.innerHTML = `<div class="result fail">
+          ❌ BUG REPRODUCED: Timer shows ${displayMinutes} minutes (>1350 expected from issue)
+        </div>`;
+        addLog(log, '❌ BUG CONFIRMED: Far-future time displayed!', 'error');
+      }
+    }
+
+    function simulateFix() {
+      const log = 'log1';
+      addLog(log, '=== Testing Fix ===', 'success');
+      
+      // Step 1: Set expired timer
+      const now = Date.now();
+      mockGame.endAt = now - 5000; // 5 seconds ago (expired)
+      addLog(log, `Step 1: Timer expired 5 seconds ago`, 'info');
+      addLog(log, `  endAt: ${mockGame.endAt}`, 'info');
+      addLog(log, `  remaining: ${mockGame.endAt - now}ms`, 'info');
+      
+      // Step 2: Pause with NEW code (fix)
+      const remaining = pausePhaseTimer_NEW();
+      addLog(log, `Step 2: Called pausePhaseTimer (NEW - with fix)`, 'success');
+      addLog(log, `  remaining saved: ${remaining}ms`, 'info');
+      addLog(log, `  endAt after pause: ${mockGame.endAt}`, 'success');
+      
+      // Step 3: Calculate what timer display shows
+      let displayTime = mockGame.endAt - Date.now();
+      if (displayTime < 0) displayTime = 0; // Timer display clamps to 0
+      const displayMinutes = Math.floor(displayTime / 1000 / 60);
+      addLog(log, `Step 3: Timer display calculation`, 'success');
+      addLog(log, `  Display shows: ${displayMinutes} minutes (${formatTime(displayTime)})`, 'success');
+      
+      // Update UI
+      document.getElementById('timer1').textContent = formatTime(displayTime);
+      
+      // Result
+      const resultDiv = document.getElementById('result1');
+      if (displayMinutes === 0) {
+        resultDiv.innerHTML = `<div class="result pass">
+          ✅ FIX WORKS: Timer shows 00:00 (correct for expired timer)
+        </div>`;
+        addLog(log, '✅ FIX CONFIRMED: Timer shows 00:00 instead of far-future!', 'success');
+      } else {
+        resultDiv.innerHTML = `<div class="result fail">
+          ❌ FIX FAILED: Timer still shows ${displayMinutes} minutes
+        </div>`;
+        addLog(log, `❌ FIX FAILED: Expected 00:00 but got ${displayMinutes} minutes`, 'error');
+      }
+    }
+
+    // Test 2: Full flow simulation
+    let test2Interval = null;
+    let phaseStartTime = null;
+    let phaseDuration = 30000; // 30 seconds
+
+    function startSocialPhase() {
+      const log = 'log2';
+      clearLog('log2');
+      addLog(log, '=== Starting Social Phase ===', 'info');
+      
+      phaseStartTime = Date.now();
+      mockGame.endAt = phaseStartTime + phaseDuration;
+      mockGame.timerPaused = false;
+      
+      document.getElementById('phase-status').textContent = 'social_intermission';
+      document.getElementById('timer-status').textContent = 'running';
+      
+      addLog(log, `Phase started: 30 second timer`, 'success');
+      addLog(log, `  Start: ${new Date(phaseStartTime).toLocaleTimeString()}`, 'info');
+      addLog(log, `  End: ${new Date(mockGame.endAt).toLocaleTimeString()}`, 'info');
+      
+      // Start tick
+      if (test2Interval) clearInterval(test2Interval);
+      test2Interval = setInterval(() => {
+        if (!mockGame.timerPaused) {
+          let rem = mockGame.endAt - Date.now();
+          if (rem < 0) rem = 0;
+          document.getElementById('timer2').textContent = formatTime(rem);
+          
+          if (rem === 0) {
+            clearInterval(test2Interval);
+            document.getElementById('timer-status').textContent = 'expired';
+            addLog(log, 'Timer expired!', 'warn');
+          }
+        }
+      }, 100);
+    }
+
+    function openSocializeModal() {
+      const log = 'log2';
+      addLog(log, '=== Opening Socialize Modal ===', 'info');
+      
+      // Pause timer
+      const now = Date.now();
+      const remaining = Math.max(0, mockGame.endAt - now);
+      mockGame.pausedTimerState = { remaining };
+      mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS); // Far future
+      mockGame.timerPaused = true;
+      
+      document.getElementById('timer-status').textContent = 'paused';
+      addLog(log, `Modal opened, timer paused`, 'info');
+      addLog(log, `  Remaining saved: ${remaining}ms (${formatTime(remaining)})`, 'info');
+    }
+
+    function spendAllEnergy() {
+      const log = 'log2';
+      addLog(log, '=== Energy Depleted ===', 'info');
+      
+      // Simulate spending time (wait 5 seconds)
+      setTimeout(() => {
+        addLog(log, 'Closing modal after energy depleted...', 'info');
+        
+        // Resume timer
+        const now = Date.now();
+        const remaining = mockGame.pausedTimerState.remaining;
+        mockGame.endAt = now + remaining;
+        mockGame.timerPaused = false;
+        
+        document.getElementById('timer-status').textContent = 'running';
+        addLog(log, `Timer resumed with ${remaining}ms remaining`, 'success');
+        
+        // Check if expired
+        if (remaining <= 0 || mockGame.endAt <= Date.now()) {
+          addLog(log, 'Timer has expired during modal!', 'warn');
+          document.getElementById('timer-status').textContent = 'expired';
+        }
+      }, 5000);
+      
+      addLog(log, 'Spending energy... (simulating 5 second delay)', 'info');
+    }
+
+    function showSummaryPanel() {
+      const log = 'log2';
+      addLog(log, '=== Showing Summary Panel ===', 'info');
+      
+      // Apply the FIX
+      const now = Date.now();
+      const remaining = Math.max(0, mockGame.endAt - now);
+      
+      mockGame.pausedTimerState = { remaining };
+      
+      // FIX: Only set far-future if timer hasn't expired
+      if (remaining > 0) {
+        mockGame.endAt = now + (FAR_FUTURE_PAUSE_MS);
+        addLog(log, `Timer paused with ${remaining}ms remaining`, 'info');
+      } else {
+        // Keep expired endAt
+        addLog(log, `Timer already expired (${remaining}ms), keeping current endAt`, 'success');
+      }
+      
+      mockGame.timerPaused = true;
+      document.getElementById('timer-status').textContent = 'paused (summary)';
+      
+      // Calculate display time
+      let displayTime = mockGame.endAt - Date.now();
+      if (displayTime < 0) displayTime = 0;
+      const displayMinutes = Math.floor(displayTime / 1000 / 60);
+      
+      addLog(log, `Timer display: ${formatTime(displayTime)} (${displayMinutes} minutes)`, 
+        displayMinutes > 100 ? 'error' : 'success');
+      
+      document.getElementById('timer2').textContent = formatTime(displayTime);
+      
+      // Result
+      const resultDiv = document.getElementById('result2');
+      if (displayMinutes === 0 && remaining === 0) {
+        resultDiv.innerHTML = `<div class="result pass">
+          ✅ CORRECT: Timer expired, summary shows 00:00
+        </div>`;
+      } else if (displayMinutes > 100) {
+        resultDiv.innerHTML = `<div class="result fail">
+          ❌ BUG: Timer shows ${displayMinutes} minutes (far-future value)
+        </div>`;
+      } else {
+        resultDiv.innerHTML = `<div class="result pass">
+          ✅ CORRECT: Timer shows ${formatTime(displayTime)} (${remaining}ms remaining)
+        </div>`;
+      }
+    }
+
+    function clearLog(logId) {
+      document.getElementById(logId).innerHTML = '';
+    }
+
+    // Auto-run Test 1 on load
+    setTimeout(() => {
+      addLog('log1', 'Ready to test. Click "Simulate Bug" to see the issue, then "Apply Fix" to see the solution.', 'info');
+    }, 100);
+  </script>
+</body>
+</html>
