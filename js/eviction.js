@@ -1616,7 +1616,7 @@
       // Use robust show function with retry/polling/fallback
       setTimeout(async () => {
         await showGameOverModalRobust(modalData);
-      }, GAME_OVER_MODAL_DELAY || 600);
+      }, GAME_OVER_MODAL_DELAY);
     }
 
     postEvictionRouting();
@@ -1696,7 +1696,7 @@
           delete g.__showGameOverModal;
           await showGameOverModalRobust(modalData);
         }
-      }, GAME_OVER_MODAL_DELAY || 600);
+      }, GAME_OVER_MODAL_DELAY);
     }
 
     // Clear all badges immediately after eviction reveal (Issue #1)

@@ -494,8 +494,9 @@
         const queued = global.queueGameOverIfHumanPreJury(playerId, player.name, aliveCount);
         
         // If modal was queued, show it after a delay
+        // Use same delay as eviction.js (1500ms) for consistency
         if(queued && g.__showGameOverModal){
-          const GAME_OVER_MODAL_DELAY = 1500;
+          const delay = 1500; // Match GAME_OVER_MODAL_DELAY from eviction.js
           setTimeout(async () => {
             const modalData = g.__showGameOverModal;
             if(modalData){
@@ -504,7 +505,7 @@
                 await global.showGameOverModalRobust(modalData);
               }
             }
-          }, GAME_OVER_MODAL_DELAY);
+          }, delay);
         }
       } else {
         console.warn('[gameover-pr] queueGameOverIfHumanPreJury not available - Game Over modal may not show');
