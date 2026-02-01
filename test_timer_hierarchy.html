@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timer Hierarchy Test - Info Buttons & Live Vote</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #16213e;
+      border-radius: 8px;
+      border: 2px solid #0f3460;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #e94560;
+    }
+    .timer-display {
+      font-size: 24px;
+      font-weight: bold;
+      padding: 10px;
+      background: #0f3460;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-family: monospace;
+    }
+    .timer-display.paused {
+      background: #e94560;
+      color: white;
+    }
+    .test-button {
+      padding: 12px 24px;
+      margin: 10px 10px 10px 0;
+      background: #e94560;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .test-button:hover {
+      background: #c13b52;
+    }
+    .test-button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .log-output {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 0;
+    }
+    .log-entry.info { color: #4caf50; }
+    .log-entry.warn { color: #ff9800; }
+    .log-entry.error { color: #f44336; }
+    .log-entry.debug { color: #2196f3; }
+    .status-indicator {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      margin: 0 5px;
+    }
+    .status-indicator.running {
+      background: #4caf50;
+      color: white;
+    }
+    .status-indicator.paused {
+      background: #ff9800;
+      color: white;
+    }
+    .status-indicator.stopped {
+      background: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Timer Hierarchy Test Suite</h1>
+  <p>Tests for info button timer pause and vote timer hierarchy issues.</p>
+
+  <!-- Test 1: Main Game Timer Monitoring -->
+  <div class="test-section">
+    <h2>📊 Test 1: Main Game Phase Timer</h2>
+    <p>Simulates a main game phase with a timer (like veto_comp or hoh_comp).</p>
+    
+    <div>
+      <strong>Main Timer Status:</strong>
+      <span id="mainTimerStatus" class="status-indicator stopped">Stopped</span>
+    </div>
+    
+    <div class="timer-display" id="mainTimerDisplay">
+      Main Timer: Not Started
+    </div>
+    
+    <button class="test-button" id="startMainTimer">Start Main Timer (30s)</button>
+    <button class="test-button" id="pauseMainTimer" disabled>Pause Main Timer</button>
+    <button class="test-button" id="resumeMainTimer" disabled>Resume Main Timer</button>
+    <button class="test-button" id="stopMainTimer" disabled>Stop Main Timer</button>
+    
+    <div>
+      <strong>PauseController Status:</strong>
+      <span id="pauseControllerStatus">Not Paused</span>
+    </div>
+  </div>
+
+  <!-- Test 2: Info Button During Main Timer -->
+  <div class="test-section">
+    <h2>ℹ️ Test 2: Info Button Timer Pause</h2>
+    <p>Opens info modal while main timer is running. Timer should pause.</p>
+    
+    <button class="test-button" id="openInfoModal" disabled>
+      Open Info Modal (ℹ️)
+    </button>
+    
+    <div id="infoModalLog" class="log-output"></div>
+  </div>
+
+  <!-- Test 3: Live Vote with Timer Hierarchy -->
+  <div class="test-section">
+    <h2>🗳️ Test 3: Live Vote Timer Hierarchy</h2>
+    <p>Opens fullscreen vote overlay. Main timer should pause, vote timer should be active.</p>
+    
+    <div>
+      <strong>Vote Timer Status:</strong>
+      <span id="voteTimerStatus" class="status-indicator stopped">Stopped</span>
+    </div>
+    
+    <button class="test-button" id="openVoteOverlay" disabled>
+      Open Vote Overlay (90s timer)
+    </button>
+    
+    <div id="voteTimerLog" class="log-output"></div>
+  </div>
+
+  <!-- Test 4: Nested Scenario -->
+  <div class="test-section">
+    <h2>🔄 Test 4: Nested Pause Scenario</h2>
+    <p>Opens info button during live vote. Both timers should pause.</p>
+    
+    <button class="test-button" id="testNested" disabled>
+      Test Nested Scenario
+    </button>
+    
+    <div id="nestedLog" class="log-output"></div>
+  </div>
+
+  <!-- Global Event Log -->
+  <div class="test-section">
+    <h2>📝 Global Event Log</h2>
+    <button class="test-button" onclick="clearGlobalLog()">Clear Log</button>
+    <div id="globalLog" class="log-output"></div>
+  </div>
+
+  <script type="module">
+    // Mock game object with timer functionality
+    window.game = {
+      phase: 'veto_comp',
+      week: 3,
+      endAt: null,
+      phaseEndsAt: null,
+      timerPaused: false,
+      pausedTimeRemaining: null,
+      isGloballyPaused: false,
+      cfg: {
+        voteTimeoutMs: 90000 // 90 seconds
+      },
+      bus: {
+        emit: function(event, data) {
+          logGlobal('info', `Event: ${event}`, data);
+        },
+        on: function(event, handler) {
+          // Simple event bus
+        }
+      },
+      phaseTimeoutCallback: function() {
+        logGlobal('warn', 'Phase timeout callback triggered!');
+        stopMainTimer();
+      }
+    };
+
+    // Mock player data
+    window.getP = function(id) {
+      const players = [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' }
+      ];
+      return players.find(p => p.id === id) || null;
+    };
+
+    // Logging utilities
+    function logGlobal(type, message, data) {
+      const log = document.getElementById('globalLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      if (data && Object.keys(data).length > 0) {
+        entry.textContent += ` ${JSON.stringify(data)}`;
+      }
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function logToSection(sectionId, type, message) {
+      const log = document.getElementById(sectionId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    window.clearGlobalLog = function() {
+      document.getElementById('globalLog').innerHTML = '';
+    };
+
+    // Main Timer Management
+    let mainTimerInterval = null;
+    let mainTimerStartTime = null;
+    let mainTimerDurationMs = 30000; // 30 seconds
+
+    function updateMainTimerDisplay() {
+      const display = document.getElementById('mainTimerDisplay');
+      const status = document.getElementById('mainTimerStatus');
+      
+      if (window.game.timerPaused) {
+        display.classList.add('paused');
+        status.className = 'status-indicator paused';
+        status.textContent = 'Paused';
+        
+        if (window.game.pausedTimeRemaining !== null) {
+          const seconds = Math.ceil(window.game.pausedTimeRemaining / 1000);
+          display.textContent = `Main Timer: ${seconds}s (PAUSED)`;
+        }
+      } else if (window.game.endAt) {
+        display.classList.remove('paused');
+        status.className = 'status-indicator running';
+        status.textContent = 'Running';
+        
+        const remaining = Math.max(0, window.game.endAt - Date.now());
+        const seconds = Math.ceil(remaining / 1000);
+        display.textContent = `Main Timer: ${seconds}s`;
+        
+        if (remaining <= 0) {
+          stopMainTimer();
+          if (typeof window.game.phaseTimeoutCallback === 'function') {
+            window.game.phaseTimeoutCallback();
+          }
+        }
+      } else {
+        display.classList.remove('paused');
+        status.className = 'status-indicator stopped';
+        status.textContent = 'Stopped';
+        display.textContent = 'Main Timer: Not Started';
+      }
+      
+      // Update PauseController status
+      const pcStatus = document.getElementById('pauseControllerStatus');
+      if (window.PauseController?.isPaused()) {
+        const state = window.PauseController.getState();
+        pcStatus.textContent = `PAUSED (reason: ${state.reason}, refCount: ${state.refCount})`;
+        pcStatus.style.color = '#ff9800';
+        pcStatus.style.fontWeight = 'bold';
+      } else {
+        pcStatus.textContent = 'Not Paused';
+        pcStatus.style.color = '#4caf50';
+        pcStatus.style.fontWeight = 'normal';
+      }
+    }
+
+    function startMainTimer() {
+      if (mainTimerInterval) {
+        stopMainTimer();
+      }
+      
+      window.game.endAt = Date.now() + mainTimerDurationMs;
+      window.game.phaseEndsAt = window.game.endAt;
+      window.game.timerPaused = false;
+      mainTimerStartTime = Date.now();
+      
+      mainTimerInterval = setInterval(updateMainTimerDisplay, 100);
+      updateMainTimerDisplay();
+      
+      logGlobal('info', 'Main timer started (30s)');
+      
+      // Enable controls
+      document.getElementById('startMainTimer').disabled = true;
+      document.getElementById('pauseMainTimer').disabled = false;
+      document.getElementById('stopMainTimer').disabled = false;
+      document.getElementById('openInfoModal').disabled = false;
+      document.getElementById('openVoteOverlay').disabled = false;
+      document.getElementById('testNested').disabled = false;
+    }
+
+    function pauseMainTimer() {
+      if (window.PauseController) {
+        window.PauseController.pause('manual-test');
+        logGlobal('info', 'Main timer paused via PauseController');
+        updateMainTimerDisplay();
+        
+        document.getElementById('pauseMainTimer').disabled = true;
+        document.getElementById('resumeMainTimer').disabled = false;
+      }
+    }
+
+    function resumeMainTimer() {
+      if (window.PauseController) {
+        window.PauseController.resume();
+        logGlobal('info', 'Main timer resumed via PauseController');
+        updateMainTimerDisplay();
+        
+        document.getElementById('pauseMainTimer').disabled = false;
+        document.getElementById('resumeMainTimer').disabled = true;
+      }
+    }
+
+    function stopMainTimer() {
+      if (mainTimerInterval) {
+        clearInterval(mainTimerInterval);
+        mainTimerInterval = null;
+      }
+      
+      window.game.endAt = null;
+      window.game.phaseEndsAt = null;
+      window.game.timerPaused = false;
+      window.game.pausedTimeRemaining = null;
+      
+      updateMainTimerDisplay();
+      
+      logGlobal('info', 'Main timer stopped');
+      
+      // Reset controls
+      document.getElementById('startMainTimer').disabled = false;
+      document.getElementById('pauseMainTimer').disabled = true;
+      document.getElementById('resumeMainTimer').disabled = true;
+      document.getElementById('stopMainTimer').disabled = true;
+      document.getElementById('openInfoModal').disabled = true;
+      document.getElementById('openVoteOverlay').disabled = true;
+      document.getElementById('testNested').disabled = true;
+    }
+
+    // Button handlers
+    document.getElementById('startMainTimer').addEventListener('click', startMainTimer);
+    document.getElementById('pauseMainTimer').addEventListener('click', pauseMainTimer);
+    document.getElementById('resumeMainTimer').addEventListener('click', resumeMainTimer);
+    document.getElementById('stopMainTimer').addEventListener('click', stopMainTimer);
+
+    // Test 2: Info Button
+    document.getElementById('openInfoModal').addEventListener('click', function() {
+      logToSection('infoModalLog', 'info', 'Opening info modal...');
+      logGlobal('info', 'TEST: Opening info modal with timer active');
+      
+      const beforePauseState = {
+        isPaused: window.game.timerPaused,
+        remaining: window.game.endAt ? window.game.endAt - Date.now() : null
+      };
+      
+      logToSection('infoModalLog', 'debug', `Before: timerPaused=${beforePauseState.isPaused}, remaining=${beforePauseState.remaining}ms`);
+      
+      // Open the info modal
+      if (window.showHouseguestProfile) {
+        window.showHouseguestProfile(1).then(() => {
+          const afterPauseState = {
+            isPaused: window.game.timerPaused,
+            remaining: window.game.endAt ? window.game.endAt - Date.now() : null
+          };
+          
+          logToSection('infoModalLog', 'debug', `After: timerPaused=${afterPauseState.isPaused}, remaining=${afterPauseState.remaining}ms`);
+          logToSection('infoModalLog', 'info', 'Info modal closed');
+          logGlobal('info', 'TEST: Info modal closed, timer should be resumed');
+        });
+        
+        setTimeout(() => {
+          const duringPauseState = {
+            isPaused: window.game.timerPaused,
+            pcPaused: window.PauseController?.isPaused()
+          };
+          logToSection('infoModalLog', 'info', `During modal: timerPaused=${duringPauseState.isPaused}, PauseController.isPaused()=${duringPauseState.pcPaused}`);
+        }, 500);
+      } else {
+        logToSection('infoModalLog', 'error', 'showHouseguestProfile not available');
+      }
+    });
+
+    // Test 3: Vote Overlay
+    document.getElementById('openVoteOverlay').addEventListener('click', function() {
+      logToSection('voteTimerLog', 'info', 'Opening vote overlay...');
+      logGlobal('info', 'TEST: Opening vote overlay with main timer active');
+      
+      const beforeState = {
+        mainPaused: window.game.timerPaused,
+        pcPaused: window.PauseController?.isPaused(),
+        mainRemaining: window.game.endAt ? window.game.endAt - Date.now() : null
+      };
+      
+      logToSection('voteTimerLog', 'debug', `Before: mainPaused=${beforeState.mainPaused}, pcPaused=${beforeState.pcPaused}, mainRemaining=${beforeState.mainRemaining}ms`);
+      
+      // Update vote timer status
+      document.getElementById('voteTimerStatus').className = 'status-indicator running';
+      document.getElementById('voteTimerStatus').textContent = 'Running';
+      
+      // Open the vote overlay
+      if (window.showFullscreenEvictionVote) {
+        window.showFullscreenEvictionVote({
+          nominees: [1, 2, 3],
+          onVote: function(nomineeId) {
+            logToSection('voteTimerLog', 'info', `Vote cast for player ${nomineeId}`);
+            logGlobal('info', `TEST: Vote cast, main timer should be resumed`);
+            
+            const afterState = {
+              mainPaused: window.game.timerPaused,
+              pcPaused: window.PauseController?.isPaused()
+            };
+            
+            logToSection('voteTimerLog', 'debug', `After vote: mainPaused=${afterState.mainPaused}, pcPaused=${afterState.pcPaused}`);
+            
+            document.getElementById('voteTimerStatus').className = 'status-indicator stopped';
+            document.getElementById('voteTimerStatus').textContent = 'Stopped';
+          }
+        }).then(nomineeId => {
+          logGlobal('info', 'Vote overlay promise resolved');
+        });
+        
+        setTimeout(() => {
+          const duringState = {
+            mainPaused: window.game.timerPaused,
+            pcPaused: window.PauseController?.isPaused(),
+            voteRemaining: window.LiveVoteFullscreen?.getRemainingVoteMs()
+          };
+          logToSection('voteTimerLog', 'info', `During vote: mainPaused=${duringState.mainPaused}, pcPaused=${duringState.pcPaused}, voteRemaining=${duringState.voteRemaining}ms`);
+          
+          if (duringState.mainPaused && duringState.pcPaused) {
+            logToSection('voteTimerLog', 'info', '✅ SUCCESS: Main timer paused during vote');
+          } else {
+            logToSection('voteTimerLog', 'error', '❌ FAIL: Main timer not paused during vote');
+          }
+        }, 1000);
+      } else {
+        logToSection('voteTimerLog', 'error', 'showFullscreenEvictionVote not available');
+      }
+    });
+
+    // Test 4: Nested Scenario
+    document.getElementById('testNested').addEventListener('click', function() {
+      logToSection('nestedLog', 'info', 'Starting nested scenario test...');
+      logGlobal('info', 'TEST: Opening vote overlay, then info modal');
+      
+      // Open vote overlay first
+      if (window.showFullscreenEvictionVote) {
+        window.showFullscreenEvictionVote({
+          nominees: [1, 2, 3],
+          onVote: function(nomineeId) {
+            logToSection('nestedLog', 'info', `Vote cast for player ${nomineeId}`);
+          }
+        });
+        
+        // Wait a bit, then open info modal
+        setTimeout(() => {
+          logToSection('nestedLog', 'info', 'Vote overlay open, now opening info modal...');
+          
+          const beforeInfoState = {
+            pcRefCount: window.PauseController?.getState().refCount
+          };
+          logToSection('nestedLog', 'debug', `Before info: PauseController refCount=${beforeInfoState.pcRefCount}`);
+          
+          // Click on the first nominee card's info button
+          const infoBtn = document.querySelector('.fev-info-btn');
+          if (infoBtn) {
+            infoBtn.click();
+            
+            setTimeout(() => {
+              const duringInfoState = {
+                pcRefCount: window.PauseController?.getState().refCount,
+                pcPaused: window.PauseController?.isPaused()
+              };
+              logToSection('nestedLog', 'info', `During info modal: refCount=${duringInfoState.pcRefCount}, isPaused=${duringInfoState.pcPaused}`);
+              
+              if (duringInfoState.pcRefCount === 2) {
+                logToSection('nestedLog', 'info', '✅ SUCCESS: Nested pause working (refCount=2)');
+              } else {
+                logToSection('nestedLog', 'error', `❌ FAIL: Expected refCount=2, got ${duringInfoState.pcRefCount}`);
+              }
+            }, 500);
+          } else {
+            logToSection('nestedLog', 'error', 'Info button not found in vote overlay');
+          }
+        }, 1000);
+      } else {
+        logToSection('nestedLog', 'error', 'showFullscreenEvictionVote not available');
+      }
+    });
+
+    // Initialize
+    logGlobal('info', 'Test suite initialized');
+    updateMainTimerDisplay();
+  </script>
+
+  <!-- Load required modules -->
+  <script src="js/flow/PauseController.js"></script>
+  <script src="js/houseguest-profile.js"></script>
+  <script src="js/livevote-fullscreen.js"></script>
+</body>
+</html>
