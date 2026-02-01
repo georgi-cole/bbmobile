@@ -98,8 +98,11 @@
       div.textContent = message;
       document.getElementById(container).appendChild(div);
       
-      if(type === 'pass') passCount++;
-      if(type === 'fail') failCount++;
+      if(type === 'pass') {
+        passCount++;
+      } else if(type === 'fail') {
+        failCount++;
+      }
     }
 
     function testSetup() {
