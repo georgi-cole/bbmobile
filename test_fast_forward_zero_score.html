@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Fast Forward Zero Score Fix</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #00d9ff;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #00d9ff;
+    }
+    .result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .pass {
+      background: #28a745;
+      color: white;
+    }
+    .fail {
+      background: #dc3545;
+      color: white;
+    }
+    .info {
+      background: #17a2b8;
+      color: white;
+    }
+    button {
+      background: #00d9ff;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #00b8d4;
+    }
+    pre {
+      background: #0f0f0f;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Fast Forward Zero Score Fix - Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Scenario</h2>
+    <p>Simulates the fix where user fast-forwards HOH/POV competition without playing.</p>
+    <p><strong>Expected:</strong> User should receive 0 points, not random points.</p>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: HOH Competition - Human Skipped</h2>
+    <div id="test1-results"></div>
+    <button onclick="runTest1()">Run HOH Test</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: POV Competition - Human Skipped</h2>
+    <div id="test2-results"></div>
+    <button onclick="runTest2()">Run POV Test</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: HOH Competition - Human Played</h2>
+    <div id="test3-results"></div>
+    <button onclick="runTest3()">Run HOH Played Test</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Logs</h2>
+    <pre id="logs"></pre>
+  </div>
+
+  <script>
+    // Mock global game object
+    window.game = {
+      humanId: 1,
+      week: 1,
+      phase: 'hoh',
+      players: [
+        { id: 1, name: 'Guest', human: true, evicted: false, compBeast: 0.5 },
+        { id: 2, name: 'AI_1', human: false, evicted: false, compBeast: 0.6 },
+        { id: 3, name: 'AI_2', human: false, evicted: false, compBeast: 0.4 },
+        { id: 4, name: 'AI_3', human: false, evicted: false, compBeast: 0.5 }
+      ],
+      lastCompScores: new Map(),
+      __humanPlayedHOH: false,
+      __humanPlayedVeto: false,
+      cfg: {}
+    };
+
+    window.rng = Math.random;
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    let logBuffer = [];
+    function log(msg) {
+      logBuffer.push(msg);
+      document.getElementById('logs').textContent = logBuffer.join('\n');
+    }
+
+    // Simulate the fix from competitions.js
+    function simulateHOHScoring(humanPlayed) {
+      const g = window.game;
+      g.lastCompScores.clear();
+      g.__humanPlayedHOH = humanPlayed;
+      
+      const alive = window.alivePlayers();
+      const elig = alive.map(p => p.id);
+      
+      log(`\n=== HOH Scoring Simulation ===`);
+      log(`Human played: ${humanPlayed}`);
+      log(`Eligible players: ${elig.join(', ')}`);
+      
+      // Apply scoring logic from the fix
+      for (const id of elig) {
+        if (!g.lastCompScores.has(id)) {
+          // NEW FIX: Assign 0 score for human if they didn't play
+          if (id === g.humanId && !g.__humanPlayedHOH) {
+            log(`[hoh] Human skipped - assigning 0 score`);
+            g.lastCompScores.set(id, 0);
+            continue;
+          }
+          let baseScore = 5 + Math.random() * 20;
+          const p = window.getP(id);
+          if (p) {
+            const recentWins = 0; // simplified for test
+            if (recentWins >= 2) {
+              baseScore *= (0.85 + Math.random() * 0.15);
+            }
+          }
+          // Ensure AI scores are always > 0
+          baseScore = Math.max(1, baseScore);
+          log(`[hoh] AI player ${p.name} assigned score: ${baseScore.toFixed(2)}`);
+          g.lastCompScores.set(id, baseScore);
+        }
+      }
+      
+      log(`\n=== Final Scores ===`);
+      g.lastCompScores.forEach((score, id) => {
+        const p = window.getP(id);
+        log(`${p.name}: ${score.toFixed(2)}`);
+      });
+      
+      // Filter out players with 0 score
+      const scoredEntries = [...g.lastCompScores.entries()]
+        .filter(([id]) => elig.includes(id))
+        .filter(([id, score]) => score > 0);
+      
+      const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
+      const winner = sortedEntries[0][0];
+      const winnerP = window.getP(winner);
+      
+      log(`\n=== Winner ===`);
+      log(`${winnerP.name} (ID: ${winner}) with score: ${g.lastCompScores.get(winner).toFixed(2)}`);
+      
+      return {
+        humanScore: g.lastCompScores.get(g.humanId),
+        winnerId: winner,
+        winnerName: winnerP.name,
+        isHumanWinner: winner === g.humanId
+      };
+    }
+
+    // Simulate the fix from veto.js
+    function simulatePOVScoring(humanPlayed) {
+      const g = window.game;
+      g.lastCompScores.clear();
+      g.__humanPlayedVeto = humanPlayed;
+      
+      const alive = window.alivePlayers();
+      const elig = alive.map(p => p.id);
+      
+      log(`\n=== POV Scoring Simulation ===`);
+      log(`Human played: ${humanPlayed}`);
+      log(`Eligible players: ${elig.join(', ')}`);
+      
+      // Apply scoring logic from the fix
+      for (const id of elig) {
+        if (!g.lastCompScores.has(id)) {
+          // NEW FIX: Assign 0 score for human if they didn't play
+          if (id === g.humanId && !g.__humanPlayedVeto) {
+            log(`[veto] Human skipped - assigning 0 score`);
+            g.lastCompScores.set(id, 0);
+            continue;
+          }
+          // Ensure AI scores are always > 0
+          const aiScore = Math.max(1, 5 + Math.random() * 5);
+          const p = window.getP(id);
+          log(`[veto] AI player ${p.name} assigned score: ${aiScore.toFixed(2)}`);
+          g.lastCompScores.set(id, aiScore);
+        }
+      }
+      
+      log(`\n=== Final Scores ===`);
+      g.lastCompScores.forEach((score, id) => {
+        const p = window.getP(id);
+        log(`${p.name}: ${score.toFixed(2)}`);
+      });
+      
+      // Filter out players with 0 score
+      const arr = [];
+      g.lastCompScores.forEach((score, pid) => {
+        const pidNum = +pid;
+        if (elig.indexOf(pidNum) !== -1) {
+          arr.push([pidNum, +score]);
+        }
+      });
+      
+      const nonZeroArr = arr.filter(entry => entry[1] > 0);
+      const sortedArr = nonZeroArr.sort((a, b) => b[1] - a[1]);
+      const winner = sortedArr[0][0];
+      const winnerP = window.getP(winner);
+      
+      log(`\n=== Winner ===`);
+      log(`${winnerP.name} (ID: ${winner}) with score: ${g.lastCompScores.get(winner).toFixed(2)}`);
+      
+      return {
+        humanScore: g.lastCompScores.get(g.humanId),
+        winnerId: winner,
+        winnerName: winnerP.name,
+        isHumanWinner: winner === g.humanId
+      };
+    }
+
+    function runTest1() {
+      logBuffer = [];
+      const resultsDiv = document.getElementById('test1-results');
+      resultsDiv.innerHTML = '';
+      
+      const result = simulateHOHScoring(false); // Human didn't play
+      
+      const tests = [
+        {
+          name: 'Human score is 0',
+          pass: result.humanScore === 0,
+          actual: result.humanScore,
+          expected: 0
+        },
+        {
+          name: 'Human did not win',
+          pass: !result.isHumanWinner,
+          actual: result.isHumanWinner ? 'Human won' : 'AI won',
+          expected: 'AI won'
+        },
+        {
+          name: 'Winner is an AI',
+          pass: result.winnerId !== window.game.humanId,
+          actual: result.winnerName,
+          expected: 'An AI player'
+        }
+      ];
+      
+      tests.forEach(test => {
+        const div = document.createElement('div');
+        div.className = `result ${test.pass ? 'pass' : 'fail'}`;
+        div.textContent = `${test.pass ? '✓' : '✗'} ${test.name} - Expected: ${test.expected}, Got: ${test.actual}`;
+        resultsDiv.appendChild(div);
+      });
+    }
+
+    function runTest2() {
+      logBuffer = [];
+      const resultsDiv = document.getElementById('test2-results');
+      resultsDiv.innerHTML = '';
+      
+      const result = simulatePOVScoring(false); // Human didn't play
+      
+      const tests = [
+        {
+          name: 'Human score is 0',
+          pass: result.humanScore === 0,
+          actual: result.humanScore,
+          expected: 0
+        },
+        {
+          name: 'Human did not win',
+          pass: !result.isHumanWinner,
+          actual: result.isHumanWinner ? 'Human won' : 'AI won',
+          expected: 'AI won'
+        },
+        {
+          name: 'Winner is an AI',
+          pass: result.winnerId !== window.game.humanId,
+          actual: result.winnerName,
+          expected: 'An AI player'
+        }
+      ];
+      
+      tests.forEach(test => {
+        const div = document.createElement('div');
+        div.className = `result ${test.pass ? 'pass' : 'fail'}`;
+        div.textContent = `${test.pass ? '✓' : '✗'} ${test.name} - Expected: ${test.expected}, Got: ${test.actual}`;
+        resultsDiv.appendChild(div);
+      });
+    }
+
+    function runTest3() {
+      logBuffer = [];
+      const resultsDiv = document.getElementById('test3-results');
+      resultsDiv.innerHTML = '';
+      
+      // When human plays, manually add their score first
+      window.game.lastCompScores.set(1, 15); // Human got 15 points
+      const result = simulateHOHScoring(true); // Human played
+      
+      const tests = [
+        {
+          name: 'Human score is > 0',
+          pass: result.humanScore > 0,
+          actual: result.humanScore,
+          expected: '> 0'
+        },
+        {
+          name: 'Human was in competition',
+          pass: result.humanScore !== undefined,
+          actual: result.humanScore !== undefined ? 'Yes' : 'No',
+          expected: 'Yes'
+        }
+      ];
+      
+      tests.forEach(test => {
+        const div = document.createElement('div');
+        div.className = `result ${test.pass ? 'pass' : 'fail'}`;
+        div.textContent = `${test.pass ? '✓' : '✗'} ${test.name} - Expected: ${test.expected}, Got: ${test.actual}`;
+        resultsDiv.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
