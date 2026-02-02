@@ -2,6 +2,8 @@
 
 // Simple test script to verify twist week restrictions logic
 // Tests the pickWeeklyTwist function behavior across different weeks
+// Note: This script is designed for Unix-like systems (Linux, macOS).
+// On Windows, run with: node test_twist_week_restrictions.mjs
 
 console.log('🧪 Testing Twist Week Restrictions\n');
 
@@ -105,7 +107,9 @@ test('Week 4: No twist with 10% chance and 20% roll', testPickWeeklyTwist(4, 10,
 // Test edge cases
 console.log('\n--- Edge Case Tests ---');
 test('Undefined week (defaults to 1): No twist', testPickWeeklyTwist(undefined, 100, 100, 0.01) === null);
-test('Week 0: No twist', testPickWeeklyTwist(0, 100, 100, 0.01) === null);
+// Note: Week 0 is treated as week 1 due to falsy evaluation (0 || 1 = 1),
+// but the test passes because 0 <= 2 is also true. Both paths lead to no twist.
+test('Week 0: No twist (treated as early week)', testPickWeeklyTwist(0, 100, 100, 0.01) === null);
 
 // Summary
 console.log('\n' + '='.repeat(50));

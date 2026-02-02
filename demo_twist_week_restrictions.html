@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twist Week Restrictions Demo</title>
+  <style>
+    body {
+      padding: 30px;
+      background: linear-gradient(135deg, #0a0e14 0%, #1a2530 100%);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+    }
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #4a9eff;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: #8a9fb5;
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+    .requirements {
+      background: #1a2530;
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid #3a7bd5;
+      margin-bottom: 30px;
+    }
+    .requirements h2 {
+      color: #6abeef;
+      margin-top: 0;
+    }
+    .requirements ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .requirements li {
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+    .week-section {
+      background: #1a2530;
+      padding: 25px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      border: 1px solid #2a3540;
+    }
+    .week-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #2a3540;
+    }
+    .week-title {
+      color: #6abeef;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .week-status {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .status-blocked {
+      background: #d53a3a;
+      color: white;
+    }
+    .status-capped {
+      background: #f59e0b;
+      color: white;
+    }
+    .status-normal {
+      background: #3ad56a;
+      color: white;
+    }
+    .simulation-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+    }
+    .sim-card {
+      background: #0a1520;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #2a3540;
+    }
+    .sim-title {
+      color: #8a9fb5;
+      font-size: 13px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .sim-result {
+      font-size: 16px;
+      font-weight: 600;
+      padding: 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .result-none {
+      background: #2a3540;
+      color: #8a9fb5;
+    }
+    .result-double {
+      background: #f59e0b22;
+      color: #f59e0b;
+    }
+    .result-triple {
+      background: #d53a3a22;
+      color: #d53a3a;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background: #3a7bd5;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #4a8be5;
+      transform: translateY(-1px);
+    }
+    button.primary {
+      background: #3ad56a;
+    }
+    button.primary:hover {
+      background: #4ae57a;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .stat-card {
+      background: #0a1520;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 5px 0;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: #8a9fb5;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>🎲 Twist Week Restrictions - Interactive Demo</h1>
+    <p class="subtitle">Visualize how double/triple eviction restrictions work across different weeks</p>
+    
+    <div class="requirements">
+      <h2>📋 Requirements</h2>
+      <ul>
+        <li><strong>Weeks 1-2:</strong> No double/triple evictions regardless of settings (100% blocked)</li>
+        <li><strong>Week 3:</strong> Maximum 5% chance regardless of settings (capped)</li>
+        <li><strong>Week 4+:</strong> Use configured settings normally</li>
+      </ul>
+    </div>
+
+    <div class="controls">
+      <button class="primary" onclick="runSimulations()">▶ Run Simulations</button>
+      <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    // Simulate the pickWeeklyTwist logic
+    function simulatePickWeeklyTwist(week, doubleChance, tripleChance, rngValue) {
+      const currentWeek = week || 1;
+      
+      // Weeks 1-2: No double/triple evictions regardless of settings
+      if (currentWeek <= 2) return null;
+      
+      let dc = Number(doubleChance || 0);
+      let tc = Number(tripleChance || 0);
+      
+      // Week 3: Cap both chances at 5% regardless of settings
+      if (currentWeek === 3) {
+        dc = Math.min(dc, 5);
+        tc = Math.min(tc, 5);
+      }
+      
+      // No twists configured
+      if (dc <= 0 && tc <= 0) return null;
+      
+      const roll = rngValue * 100;
+      
+      // Triple takes priority: if roll < tc, activate triple
+      if (tc > 0 && roll < tc) {
+        return 'triple';
+      }
+      
+      // Double: if roll < dc, activate double
+      if (dc > 0 && roll < dc) {
+        return 'double';
+      }
+      
+      return null;
+    }
+
+    function runSimulations() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+      
+      const weeks = [
+        { num: 1, status: 'BLOCKED', statusClass: 'status-blocked', description: 'No twists allowed' },
+        { num: 2, status: 'BLOCKED', statusClass: 'status-blocked', description: 'No twists allowed' },
+        { num: 3, status: 'CAPPED at 5%', statusClass: 'status-capped', description: 'Maximum 5% chance' },
+        { num: 4, status: 'NORMAL', statusClass: 'status-normal', description: 'Uses configured settings' },
+        { num: 8, status: 'NORMAL', statusClass: 'status-normal', description: 'Uses configured settings' }
+      ];
+      
+      const testSettings = [
+        { double: 100, triple: 100, desc: 'Settings: 100% Double, 100% Triple' },
+        { double: 50, triple: 30, desc: 'Settings: 50% Double, 30% Triple' },
+        { double: 10, triple: 5, desc: 'Settings: 10% Double, 5% Triple' }
+      ];
+      
+      weeks.forEach(week => {
+        const weekDiv = document.createElement('div');
+        weekDiv.className = 'week-section';
+        
+        weekDiv.innerHTML = `
+          <div class="week-header">
+            <div class="week-title">Week ${week.num}</div>
+            <div class="week-status ${week.statusClass}">${week.status}</div>
+          </div>
+          <p style="color: #8a9fb5; margin-bottom: 20px;">${week.description}</p>
+          <div class="simulation-grid" id="week${week.num}-sims"></div>
+          <div class="stats" id="week${week.num}-stats"></div>
+        `;
+        
+        resultsDiv.appendChild(weekDiv);
+        
+        const simsDiv = document.getElementById(`week${week.num}-sims`);
+        const statsDiv = document.getElementById(`week${week.num}-stats`);
+        
+        testSettings.forEach(setting => {
+          // Run 100 simulations for statistics
+          const results = { none: 0, double: 0, triple: 0 };
+          for (let i = 0; i < 100; i++) {
+            const rng = Math.random();
+            const result = simulatePickWeeklyTwist(week.num, setting.double, setting.triple, rng);
+            if (result === 'triple') results.triple++;
+            else if (result === 'double') results.double++;
+            else results.none++;
+          }
+          
+          const simCard = document.createElement('div');
+          simCard.className = 'sim-card';
+          
+          const expectedDouble = week.num <= 2 ? 0 : week.num === 3 ? Math.min(setting.double, 5) : setting.double;
+          const expectedTriple = week.num <= 2 ? 0 : week.num === 3 ? Math.min(setting.triple, 5) : setting.triple;
+          
+          simCard.innerHTML = `
+            <div class="sim-title">${setting.desc}</div>
+            <div style="font-size: 12px; color: #6abeef; margin-bottom: 8px;">
+              Expected: ${expectedTriple}% Triple, ${expectedDouble}% Double
+            </div>
+            <div style="font-size: 12px; color: #8a9fb5; margin-bottom: 8px;">
+              Actual (100 trials): ${results.triple}% Triple, ${results.double}% Double, ${results.none}% None
+            </div>
+          `;
+          
+          simsDiv.appendChild(simCard);
+        });
+        
+        // Calculate overall stats for this week
+        let totalNone = 0, totalDouble = 0, totalTriple = 0;
+        testSettings.forEach(setting => {
+          for (let i = 0; i < 1000; i++) {
+            const rng = Math.random();
+            const result = simulatePickWeeklyTwist(week.num, setting.double, setting.triple, rng);
+            if (result === 'triple') totalTriple++;
+            else if (result === 'double') totalDouble++;
+            else totalNone++;
+          }
+        });
+        
+        const total = totalNone + totalDouble + totalTriple;
+        const pctNone = Math.round((totalNone / total) * 100);
+        const pctDouble = Math.round((totalDouble / total) * 100);
+        const pctTriple = Math.round((totalTriple / total) * 100);
+        
+        statsDiv.innerHTML = `
+          <div class="stat-card">
+            <div class="stat-value" style="color: #8a9fb5;">${pctNone}%</div>
+            <div class="stat-label">No Twist</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: #f59e0b;">${pctDouble}%</div>
+            <div class="stat-label">Double Eviction</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: #d53a3a;">${pctTriple}%</div>
+            <div class="stat-label">Triple Eviction</div>
+          </div>
+        `;
+      });
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+    }
+
+    // Run on load
+    window.addEventListener('DOMContentLoaded', runSimulations);
+  </script>
+</body>
+</html>
