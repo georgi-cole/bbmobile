@@ -649,7 +649,8 @@
         endSocialPhaseCleanup(); 
       }catch(e){ console.error(e); }
       
-      // Only advance phase if no summary was shown (fallback)
+      // Fallback: Only advance phase if no summary was shown successfully
+      // (If summary was shown, phase advancement is handled by the OK button callback)
       if(typeof callback === 'function'){
         try{ callback(); }catch(e){ console.error(e); }
       } else {

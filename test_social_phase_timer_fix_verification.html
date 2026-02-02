@@ -110,7 +110,7 @@
     <p>Scenario: Timer expires, summary shown, user clicks OK button.</p>
     <div class="timer-display" id="timer2">--:--</div>
     <button class="btn" onclick="test2_start()">Start Test</button>
-    <button class="btn success" onclick="test2_clickOK()" id="okButton" disabled>Simulate OK Click</button>
+    <button class="btn success" onclick="test2_clickOK()" id="okButton2" disabled>Simulate OK Click</button>
     <div id="status2" class="status pending">Ready to test</div>
     <div class="log" id="log2"></div>
   </div>
@@ -235,13 +235,13 @@
     function test2_start() {
       setupMockGame();
       addLog('log2', '=== Starting Test 2 ===', 'info');
-      document.getElementById('okButton').disabled = false;
+      document.getElementById('okButton2').disabled = false;
 
       // Mock the advancement
       test2_callback = () => {
         addLog('log2', '✓ Phase advanced!', 'success');
         setStatus('status2', '✅ TEST PASSED: Phase advanced when OK clicked', 'success');
-        document.getElementById('okButton').disabled = true;
+        document.getElementById('okButton2').disabled = true;
       };
 
       // Store callback like the fix does
