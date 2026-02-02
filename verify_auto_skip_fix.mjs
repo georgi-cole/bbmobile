@@ -39,10 +39,10 @@ const jsContent = readFileSync(jsPath, 'utf8');
 const cssContent = readFileSync(cssPath, 'utf8');
 const htmlContent = readFileSync(htmlPath, 'utf8');
 
-console.log('📋 Test 1: stopSocialPhaseTimer function exists');
-test('stopSocialPhaseTimer function defined', () => {
-  if (!jsContent.includes('function stopSocialPhaseTimer()')) {
-    throw new Error('stopSocialPhaseTimer function not found');
+console.log('📋 Test 1: pauseSocialPhaseTimer function exists');
+test('pauseSocialPhaseTimer function defined', () => {
+  if (!jsContent.includes('function pauseSocialPhaseTimer()')) {
+    throw new Error('pauseSocialPhaseTimer function not found');
   }
   if (!jsContent.includes('g.timerPaused = true')) {
     throw new Error('Timer pause logic not found');
@@ -71,17 +71,17 @@ test('__smSkipInProgress flag used', () => {
   }
 });
 
-console.log('\n📋 Test 3: Timer stopped before showing overlay');
-test('stopSocialPhaseTimer called in showEmptyEnergyOverlayAndSkip', () => {
+console.log('\n📋 Test 3: Timer paused before showing overlay');
+test('pauseSocialPhaseTimer called in showEmptyEnergyOverlayAndSkip', () => {
   const fnIndex = jsContent.indexOf('function showEmptyEnergyOverlayAndSkip');
-  const timerStopIndex = jsContent.indexOf('stopSocialPhaseTimer()', fnIndex);
+  const timerStopIndex = jsContent.indexOf('pauseSocialPhaseTimer()', fnIndex);
   const overlayIndex = jsContent.indexOf('wrapper.appendChild(overlay)', fnIndex);
   
   if (timerStopIndex === -1) {
-    throw new Error('stopSocialPhaseTimer not called');
+    throw new Error('pauseSocialPhaseTimer not called');
   }
   if (timerStopIndex > overlayIndex) {
-    throw new Error('Timer stop should be called before creating overlay');
+    throw new Error('Timer pause should be called before creating overlay');
   }
 });
 

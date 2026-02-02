@@ -22,7 +22,7 @@ The original implementation:
 
 **Pauses then exhausts the timer when energy is empty:**
 ```javascript
-function stopSocialPhaseTimer() {
+function pauseSocialPhaseTimer() {
   const g = global.game;
   if(!g) return;
 
@@ -145,7 +145,7 @@ window.dispatchEvent(new CustomEvent('sm-phase-skip-empty', {
 ## Files Modified
 
 1. **js/social-maneuvers.js**
-   - Added `stopSocialPhaseTimer()` function
+   - Added `pauseSocialPhaseTimer()` function
    - Updated `showEmptyEnergyOverlayAndSkip()` with idempotency guard and new layout logic
    - Timer is stopped before overlay is shown
    - Wrapper element created for proper centering

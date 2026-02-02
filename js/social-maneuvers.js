@@ -2954,7 +2954,7 @@
    * Pause the Social phase timer to prevent countdown during auto-skip.
    * Keeps the timer frozen until the empty-energy overlay is dismissed.
    */
-  function stopSocialPhaseTimer() {
+  function pauseSocialPhaseTimer() {
     const g = global.game;
     if(!g) return;
     
@@ -2994,7 +2994,7 @@
     console.info(`[sm-phase-skip] Showing empty energy overlay for player ${playerId}, week ${week}`);
     
     // Stop the phase timer immediately
-    stopSocialPhaseTimer();
+    pauseSocialPhaseTimer();
     
     // HIDE SOCIAL LAUNCHER to prevent stacking/overlap on mobile
     const socialLauncher = document.getElementById('socializeLauncher');
