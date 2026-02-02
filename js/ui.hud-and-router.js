@@ -2435,6 +2435,24 @@ header.innerHTML = `
       if(phase === 'intermission'){
         if(typeof g.startHOH === 'function') return g.startHOH();
       }
+      if(phase === 'social_intermission' || phase === 'social'){
+        // If social phase times out without proper callback, try stored callback or start nominations
+        if(typeof g.game?.__socialPhaseAdvanceCallback === 'function'){
+          console.info('[defaultAdvance] Using stored social phase callback');
+          g.game.__socialPhaseAdvanceCallback();
+          delete g.game.__socialPhaseAdvanceCallback;
+          return;
+        }
+        // Fallback: start nominations directly
+        const startNoms = ['startNominations', 'beginNominations', 'startNominationsPhase'];
+        for(const fn of startNoms){
+          if(typeof g[fn] === 'function'){
+            console.info('[defaultAdvance] Calling', fn);
+            return g[fn]();
+          }
+        }
+      }
+
       if(phase === 'return_twist'){
         // If twist didn’t finalize itself for some reason:
         g.finishAmericaReturnVote?.();
