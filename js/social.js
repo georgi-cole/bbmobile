@@ -587,29 +587,52 @@
           // Show engine summary instead of legacy
           await global.cardQueueWaitIdle?.();
           
-          // Try to delegate to engine summary panel
+          // Define phase advancement function
+          const advanceToNextPhase = () => {
+            console.info('[social.js] ✓ Advancing to next phase after summary dismissed');
+            if(typeof callback === 'function'){
+              try{ callback(); }catch(e){ console.error(e); }
+            } else {
+              const startNoms = resolveStartNominations();
+              try{ startNoms(); }catch(e){ console.error(e); }
+            }
+          };
+          
+          // Try to delegate to engine summary panel with advancement callback
           let summaryShown = false;
           if(global.SocialManeuvers?.showSummaryPanel){
             try{
+              // Store advancement callback for summary OK button to call
+              global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
               global.SocialManeuvers.showSummaryPanel();
               summaryShown = true;
               console.info('[social.js] ✓ Showed engine summary via showSummaryPanel');
+              // Don't call advanceToNextPhase here - let the summary OK button handle it
+              return; // Exit early - phase will advance when user clicks OK
             }catch(e){
               console.error('[social.js] showSummaryPanel failed:', e);
             }
           }else if(global.SocialManeuvers?.showEndOfPhaseSummary){
             try{
+              // Store advancement callback for summary OK button to call
+              global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
               global.SocialManeuvers.showEndOfPhaseSummary();
               summaryShown = true;
               console.info('[social.js] ✓ Showed engine summary via showEndOfPhaseSummary');
+              // Don't call advanceToNextPhase here - let the summary OK button handle it
+              return; // Exit early - phase will advance when user clicks OK
             }catch(e){
               console.error('[social.js] showEndOfPhaseSummary failed:', e);
             }
           }else if(global.SocialManeuvers?.presentPhaseSummary){
             try{
+              // Store advancement callback for summary OK button to call
+              global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
               global.SocialManeuvers.presentPhaseSummary();
               summaryShown = true;
               console.info('[social.js] ✓ Showed engine summary via presentPhaseSummary');
+              // Don't call advanceToNextPhase here - let the summary OK button handle it
+              return; // Exit early - phase will advance when user clicks OK
             }catch(e){
               console.error('[social.js] presentPhaseSummary failed:', e);
             }
@@ -626,6 +649,7 @@
         endSocialPhaseCleanup(); 
       }catch(e){ console.error(e); }
       
+      // Only advance phase if no summary was shown (fallback)
       if(typeof callback === 'function'){
         try{ callback(); }catch(e){ console.error(e); }
       } else {
