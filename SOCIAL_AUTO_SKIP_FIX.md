@@ -20,24 +20,33 @@ The original implementation:
 
 ### 1. Timer Control ✅
 
-**Added `stopSocialPhaseTimer()` function:**
+**Pauses then exhausts the timer when energy is empty:**
 ```javascript
-function stopSocialPhaseTimer() {
+function pauseSocialPhaseTimer() {
   const g = global.game;
   if(!g) return;
-  
-  console.info('[sm-phase-skip] Stopping Social phase timer...');
-  
-  // Set endAt to far future to effectively stop countdown
-  const farFuture = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
-  g.endAt = farFuture;
-  g.phaseEndsAt = farFuture;
-  
-  console.info('[sm-phase-skip] ✓ Timer stopped (endAt set to far future)');
+
+  console.info('[sm-phase-skip] Pausing Social phase timer...');
+  const remaining = typeof g.endAt === 'number' ? Math.max(0, g.endAt - Date.now()) : 0;
+  g.timerPaused = true;
+  g.pausedTimeRemaining = remaining;
+  console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', remaining, 'ms remaining');
+}
+
+function exhaustSocialPhaseTimerToOneSecond() {
+  const g = global.game;
+  if(!g) return;
+
+  const now = Date.now();
+  g.endAt = now + 1000;
+  g.phaseEndsAt = now + 1000;
+  g.timerPaused = false;
+  g.pausedTimeRemaining = null;
+  console.info('[sm-phase-skip] ⏱️ Timer exhausted to 0:01 after empty energy overlay');
 }
 ```
 
-This is called immediately when energy ≤ 0 is detected in `onSocialPhaseStart()`, before showing the overlay.
+The timer is paused immediately when energy ≤ 0 is detected in `onSocialPhaseStart()`, then exhausted to 0:01 after the empty-energy overlay fades out.
 
 ### 2. Idempotency Guard ✅
 
@@ -136,7 +145,7 @@ window.dispatchEvent(new CustomEvent('sm-phase-skip-empty', {
 ## Files Modified
 
 1. **js/social-maneuvers.js**
-   - Added `stopSocialPhaseTimer()` function
+   - Added `pauseSocialPhaseTimer()` function
    - Updated `showEmptyEnergyOverlayAndSkip()` with idempotency guard and new layout logic
    - Timer is stopped before overlay is shown
    - Wrapper element created for proper centering
