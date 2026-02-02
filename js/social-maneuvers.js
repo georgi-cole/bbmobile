@@ -2959,9 +2959,10 @@
     if(!g) return;
     
     console.info('[sm-phase-skip] Pausing Social phase timer...');
+    const remaining = typeof g.endAt === 'number' ? Math.max(0, g.endAt - Date.now()) : 0;
     g.timerPaused = true;
-    g.pausedTimeRemaining = 0;
-    console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay');
+    g.pausedTimeRemaining = remaining;
+    console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', remaining, 'ms remaining');
   }
 
   /**
