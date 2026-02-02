@@ -38,11 +38,11 @@
         'wordTyping', 'sliderPuzzle', 'pathFinder',
         'simonSays', 'holdWall', 'tiltedLedge', 'pressurePlank',
         'rainBarrelBalance', 'memoryZipline', 'swipeMaze',
-        'logicLocks', 'cardClash', 'chainReaction',
+        'logicLocks', 'cardClash',
         'clockStopper', 'flashFlood', 'gridLock',
         'keyMaster', 'colorMatch', 'socialStrings', 'snake',
         'hangman', 'tiltLabyrinth', 'threeDigitsQuiz',
-        'tetris', 'travelingDots', 'minesweeps', 'railSwitchSprint',
+        'tetris', 'travelingDots', 'minesweeps',
         'laserPantryDash', 'confettiCannon', 'buzzerSprintRelay'
       ];
       

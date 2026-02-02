@@ -667,23 +667,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    chainReaction: {
-      key: 'chainReaction',
-      name: 'Chain Reaction',
-      description: 'Create chain combos puzzle',
-      type: 'puzzle',
-      category: 'logic',
-      difficulty: 'hard',
-      estimatedDuration: 75,
-      scoring: 'hybrid',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'chain-reaction.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+    
     
     clockStopper: {
       key: 'clockStopper',
@@ -881,23 +865,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    railSwitchSprint: {
-      key: 'railSwitchSprint',
-      name: 'Rail Switch Sprint',
-      description: 'Switch train routes to correct stations',
-      type: 'puzzle',
-      category: 'logic',
-      difficulty: 'medium',
-      estimatedDuration: 60,
-      scoring: 'hybrid',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'rail-switch-sprint.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+    
     
     shadowConeSneak: {
       key: 'shadowConeSneak',
