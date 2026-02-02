@@ -2959,10 +2959,14 @@
     if(!g) return;
     
     console.info('[sm-phase-skip] Pausing Social phase timer...');
-    const remaining = typeof g.endAt === 'number' ? Math.max(0, g.endAt - Date.now()) : 0;
+    const remaining = typeof g.endAt === 'number' ? Math.max(0, g.endAt - Date.now()) : null;
+    if (remaining === null) {
+      console.warn('[sm-phase-skip] No valid endAt found while pausing timer');
+    }
+    const safeRemaining = remaining ?? 0;
     g.timerPaused = true;
-    g.pausedTimeRemaining = remaining;
-    console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', remaining, 'ms remaining');
+    g.pausedTimeRemaining = safeRemaining;
+    console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', safeRemaining, 'ms remaining');
   }
 
   /**
@@ -3047,6 +3051,7 @@
     
     const OVERLAY_DURATION_MS = 3000;
     const FADE_OUT_MS = 300;
+    const PHASE_ADVANCE_BUFFER_MS = 1500;
     const fadeDelayMs = Math.max(0, OVERLAY_DURATION_MS - FADE_OUT_MS);
 
     // Fade out then exhaust timer to 0:01 so the phase ends naturally
@@ -3060,7 +3065,7 @@
         // Clean up idempotency flag after expected phase advance
         setTimeout(() => {
           if(g) g.__smSkipInProgress = false;
-        }, 1500);
+        }, PHASE_ADVANCE_BUFFER_MS);
       }, FADE_OUT_MS);
     }, fadeDelayMs);
   }
