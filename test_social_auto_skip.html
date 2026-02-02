@@ -240,10 +240,10 @@
           const endAt = window.game?.endAt || 0;
           const now = Date.now();
           const timeRemaining = endAt - now;
-          if (timeRemaining > 100000000) {
-            logEvent('✅ Timer stopped successfully (far future endAt)', 'skip-event');
+          if (timeRemaining <= 1000) {
+            logEvent('✅ Timer paused for empty-energy overlay', 'skip-event');
           } else {
-            logEvent(`⚠️ Timer may still be running (${Math.round(timeRemaining/1000)}s remaining)`, 'skip-event');
+            logEvent(`⚠️ Timer pause state unexpected (${Math.round(timeRemaining/1000)}s remaining)`, 'skip-event');
           }
         }, 500);
       }, 100);
