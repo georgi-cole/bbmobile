@@ -1621,7 +1621,7 @@
           console.error('[hoh] No eligible players for fallback winner - all players scored 0 and only human is eligible');
           // Absolute fallback: pick first non-human player
           const nonHuman = elig.find(id => id !== g.humanId);
-          if (nonHuman) {
+          if (nonHuman !== undefined) {
             eligibleForFallback.push(nonHuman);
           } else {
             // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)

@@ -1143,9 +1143,15 @@
       
       if(eligibleForFallback.length === 0){
         console.error('[veto] No eligible players for fallback winner - all players scored 0 and only human is eligible');
-        // Absolute fallback: pick first non-human player
-        var nonHuman = eligible.find(function(id){ return id !== g.humanId; });
-        if(nonHuman){
+        // Absolute fallback: pick first non-human player (ES5 compatible)
+        var nonHuman = null;
+        for(var i = 0; i < eligible.length; i++){
+          if(eligible[i] !== g.humanId){
+            nonHuman = eligible[i];
+            break;
+          }
+        }
+        if(nonHuman !== null){
           eligibleForFallback.push(nonHuman);
         } else {
           // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
@@ -1181,9 +1187,15 @@
       
       if(eligibleForFallback.length === 0){
         console.error('[veto] No eligible players for final guard fallback - all players scored 0 and only human is eligible');
-        // Absolute fallback: pick first non-human player
-        var nonHuman = eligible.find(function(id){ return id !== g.humanId; });
-        if(nonHuman){
+        // Absolute fallback: pick first non-human player (ES5 compatible)
+        var nonHuman = null;
+        for(var i = 0; i < eligible.length; i++){
+          if(eligible[i] !== g.humanId){
+            nonHuman = eligible[i];
+            break;
+          }
+        }
+        if(nonHuman !== null){
           eligibleForFallback.push(nonHuman);
         } else {
           // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
