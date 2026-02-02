@@ -2960,13 +2960,13 @@
     
     console.info('[sm-phase-skip] Pausing Social phase timer...');
     const hasValidEndAt = typeof g.endAt === 'number';
-    const safeRemaining = hasValidEndAt ? Math.max(0, g.endAt - Date.now()) : 0;
+    const remainingMs = hasValidEndAt ? Math.max(0, g.endAt - Date.now()) : 0;
     if (!hasValidEndAt) {
       console.warn('[sm-phase-skip] No valid endAt found while pausing timer; defaulting remaining to 0');
     }
     g.timerPaused = true;
-    g.pausedTimeRemaining = safeRemaining;
-    console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', safeRemaining, 'ms remaining');
+    g.pausedTimeRemaining = remainingMs;
+    console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', remainingMs, 'ms remaining');
   }
 
   /**
@@ -3052,7 +3052,7 @@
     const OVERLAY_DURATION_MS = 3000;
     const FADE_OUT_MS = 300;
     const PHASE_ADVANCE_BUFFER_MS = 1500;
-    const fadeDelayMs = Math.max(0, OVERLAY_DURATION_MS - FADE_OUT_MS);
+    const fadeDelayMs = OVERLAY_DURATION_MS - FADE_OUT_MS;
 
     // Fade out then exhaust timer to 0:01 so the phase ends naturally
     setTimeout(() => {
