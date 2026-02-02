@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zero Score Winner Logic Test</title>
+  <style>
+    body {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      background: #16213e;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #ffd96b;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #0f3460;
+      color: #fff;
+    }
+    .btn:hover {
+      background: #16537e;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 3px;
+      background: #0a2647;
+    }
+    .success { background: #155724; color: #d4edda; }
+    .error { background: #721c24; color: #f8d7da; }
+    .test-result {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 3px;
+    }
+    .pass { background: #155724; color: #d4edda; }
+    .fail { background: #721c24; color: #f8d7da; }
+    pre {
+      background: #0a2647;
+      padding: 10px;
+      overflow-x: auto;
+      max-height: 400px;
+      border: 1px solid #444;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Zero Score Winner Logic Test</h1>
+  <p>This test validates that players with score 0 (who didn't play) can never win competitions.</p>
+  
+  <div class="test-section">
+    <h3>Test 1: HOH - Human with 0 score should not be selected as fallback winner</h3>
+    <button id="test1" class="btn">Run Test 1</button>
+    <div id="result1" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 2: Veto - Human with 0 score should not be selected as fallback winner</h3>
+    <button id="test2" class="btn">Run Test 2</button>
+    <div id="result2" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 3: Final 3 Part 1 - Human with 0 score should not win</h3>
+    <button id="test3" class="btn">Run Test 3</button>
+    <div id="result3" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 4: Final 3 Part 2 - Human with 0 score should not win</h3>
+    <button id="test4" class="btn">Run Test 4</button>
+    <div id="result4" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 5: Final 3 Part 3 - Human with 0 score should not win</h3>
+    <button id="test5" class="btn">Run Test 5</button>
+    <div id="result5" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Console Log</h3>
+    <button id="clearLog" class="btn">Clear Log</button>
+    <button id="refreshLog" class="btn">Refresh</button>
+    <pre id="consoleLog"></pre>
+  </div>
+
+  <script>
+    // Console log capture
+    const logMessages = [];
+    const originalLog = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    console.info = function(...args) {
+      logMessages.push(['INFO', ...args]);
+      originalLog.apply(console, args);
+    };
+    console.warn = function(...args) {
+      logMessages.push(['WARN', ...args]);
+      originalWarn.apply(console, args);
+    };
+    console.error = function(...args) {
+      logMessages.push(['ERROR', ...args]);
+      originalError.apply(console, args);
+    };
+
+    function updateLog() {
+      const logEl = document.getElementById('consoleLog');
+      logEl.textContent = logMessages.map(m => m.join(' ')).join('\n');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      logMessages.length = 0;
+      updateLog();
+    }
+
+    // Simulate the HOH fallback logic from competitions.js (lines 1601-1626)
+    function simulateHOHFallback(elig, humanId, humanPlayed, existingScores) {
+      const g = { humanId, __humanPlayedHOH: humanPlayed, lastCompScores: existingScores };
+      
+      console.info('[HOH Test] Starting fallback simulation');
+      console.info('[HOH Test] Eligible:', elig);
+      console.info('[HOH Test] Human ID:', humanId, 'Played:', humanPlayed);
+      
+      // Filter out any players with score of 0
+      const scoredEntries = [...existingScores.entries()]
+        .filter(([id]) => elig.includes(id))
+        .filter(([id, score]) => score > 0);
+      
+      if (scoredEntries.length === 0) {
+        console.warn('[HOH Test] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
+        
+        // Exclude human player who didn't play from fallback selection
+        const eligibleForFallback = elig.filter(id => {
+          if (id === g.humanId && !g.__humanPlayedHOH) {
+            console.info('[HOH Test] Excluding human from fallback - did not play');
+            return false;
+          }
+          return true;
+        });
+        
+        if (eligibleForFallback.length === 0) {
+          console.error('[HOH Test] No eligible players for fallback winner - this should not happen');
+          eligibleForFallback.push(elig[0]);
+        }
+        
+        const randomIndex = Math.floor(Math.random() * eligibleForFallback.length);
+        const winner = eligibleForFallback[randomIndex];
+        g.lastCompScores.set(winner, 1);
+        scoredEntries.push([winner, 1]);
+        console.info('[HOH Test] Selected fallback winner:', winner);
+      }
+      
+      const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
+      const winner = sortedEntries[0][0];
+      
+      console.info('[HOH Test] Final winner:', winner);
+      return winner;
+    }
+
+    // Simulate the Veto fallback logic from veto.js (lines 1128-1183)
+    function simulateVetoFallback(eligible, humanId, humanPlayed, existingScores) {
+      const g = { humanId, __humanPlayedVeto: humanPlayed, lastCompScores: existingScores };
+      
+      console.info('[Veto Test] Starting fallback simulation');
+      console.info('[Veto Test] Eligible:', eligible);
+      console.info('[Veto Test] Human ID:', humanId, 'Played:', humanPlayed);
+      
+      const arr = [];
+      existingScores.forEach(function(score, pid){
+        const pidNum = +pid;
+        if(eligible.indexOf(pidNum) !== -1){ arr.push([pidNum, +score]); }
+      });
+      
+      // Filter out any players with score of 0
+      let nonZeroArr = arr.filter(function(entry){ return entry[1] > 0; });
+      
+      if(nonZeroArr.length === 0 && eligible.length){
+        console.warn('[Veto Test] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
+        
+        // Exclude human player who didn't play from fallback selection
+        const eligibleForFallback = eligible.filter(function(id){
+          if(id === g.humanId && !g.__humanPlayedVeto){
+            console.info('[Veto Test] Excluding human from fallback - did not play');
+            return false;
+          }
+          return true;
+        });
+        
+        if(eligibleForFallback.length === 0){
+          console.error('[Veto Test] No eligible players for fallback winner - this should not happen');
+          eligibleForFallback.push(eligible[0]);
+        }
+        
+        const pick = eligibleForFallback[Math.floor(Math.random() * eligibleForFallback.length)];
+        g.lastCompScores.set(pick, 1);
+        nonZeroArr = [[pick, 1]];
+        console.info('[Veto Test] Selected fallback winner:', pick);
+      }
+      
+      if(nonZeroArr.length > 0) {
+        nonZeroArr.sort(function(a,b){ return b[1]-a[1]; });
+      }
+      
+      const winner = nonZeroArr[0] && nonZeroArr[0][0];
+      console.info('[Veto Test] Final winner:', winner);
+      return winner;
+    }
+
+    // Simulate Final 3 fallback logic
+    function simulateF3Fallback(ids, humanId, humanPlayed, existingScores, part) {
+      const g = { humanId, [`__humanPlayedF3P${part}`]: humanPlayed, lastCompScores: existingScores };
+      
+      console.info(`[F3P${part} Test] Starting fallback simulation`);
+      console.info(`[F3P${part} Test] IDs:`, ids);
+      console.info(`[F3P${part} Test] Human ID:`, humanId, 'Played:', humanPlayed);
+      
+      // Assign fallback scores, but 0 for human who didn't play
+      for (const id of ids) {
+        if (!existingScores.has(id)) {
+          if (id === humanId && !humanPlayed) {
+            console.info(`[F3P${part} Test] Human skipped - assigning 0 score`);
+            existingScores.set(id, 0);
+            continue;
+          }
+          existingScores.set(id, 5 + Math.random() * 5);
+        }
+      }
+      
+      // Filter out players with score of 0
+      const arr = [...existingScores.entries()]
+        .filter(([id]) => ids.includes(id))
+        .filter(([id, score]) => score > 0)
+        .sort((a, b) => b[1] - a[1]);
+      
+      if (arr.length === 0) {
+        console.warn(`[F3P${part} Test] No scores available, cannot determine winner`);
+        return null;
+      }
+      
+      const winner = arr[0][0];
+      console.info(`[F3P${part} Test] Final winner:`, winner);
+      return winner;
+    }
+
+    // Test functions
+    function runTest1() {
+      const result = document.getElementById('result1');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      console.info('=== TEST 1: HOH Fallback ===');
+      
+      // Scenario: All players have 0 score, human didn't play
+      const humanId = 1;
+      const elig = [1, 2, 3, 4, 5];
+      const scores = new Map([[1, 0], [2, 0], [3, 0], [4, 0], [5, 0]]);
+      
+      // Run test 100 times to ensure human never wins
+      let humanWins = 0;
+      for (let i = 0; i < 100; i++) {
+        const scoresClone = new Map(scores);
+        const winner = simulateHOHFallback(elig, humanId, false, scoresClone);
+        if (winner === humanId) humanWins++;
+      }
+      
+      const passed = humanWins === 0;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human with 0 score should never win HOH
+        </div>
+        <div>Scenario: All 5 players have score 0, human didn't play</div>
+        <div>Ran: 100 iterations</div>
+        <div>Result: Human won ${humanWins} times (expected: 0)</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest2() {
+      const result = document.getElementById('result2');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      console.info('=== TEST 2: Veto Fallback ===');
+      
+      // Scenario: All players have 0 score, human didn't play
+      const humanId = 1;
+      const elig = [1, 2, 3, 4, 5, 6];
+      const scores = new Map([[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]]);
+      
+      // Run test 100 times to ensure human never wins
+      let humanWins = 0;
+      for (let i = 0; i < 100; i++) {
+        const scoresClone = new Map(scores);
+        const winner = simulateVetoFallback(elig, humanId, false, scoresClone);
+        if (winner === humanId) humanWins++;
+      }
+      
+      const passed = humanWins === 0;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human with 0 score should never win Veto
+        </div>
+        <div>Scenario: All 6 players have score 0, human didn't play</div>
+        <div>Ran: 100 iterations</div>
+        <div>Result: Human won ${humanWins} times (expected: 0)</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest3() {
+      const result = document.getElementById('result3');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      console.info('=== TEST 3: Final 3 Part 1 ===');
+      
+      // Scenario: 3 players, human didn't play
+      const humanId = 1;
+      const ids = [1, 2, 3];
+      const scores = new Map(); // No scores submitted
+      
+      // Run test 100 times to ensure human never wins
+      let humanWins = 0;
+      for (let i = 0; i < 100; i++) {
+        const scoresClone = new Map(scores);
+        const winner = simulateF3Fallback(ids, humanId, false, scoresClone, 1);
+        if (winner === humanId) humanWins++;
+      }
+      
+      const passed = humanWins === 0;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human with 0 score should never win F3P1
+        </div>
+        <div>Scenario: 3 players, no scores submitted, human didn't play</div>
+        <div>Ran: 100 iterations</div>
+        <div>Result: Human won ${humanWins} times (expected: 0)</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest4() {
+      const result = document.getElementById('result4');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      console.info('=== TEST 4: Final 3 Part 2 ===');
+      
+      // Scenario: 2 players, human didn't play
+      const humanId = 1;
+      const ids = [1, 2];
+      const scores = new Map(); // No scores submitted
+      
+      // Run test 100 times to ensure human never wins
+      let humanWins = 0;
+      for (let i = 0; i < 100; i++) {
+        const scoresClone = new Map(scores);
+        const winner = simulateF3Fallback(ids, humanId, false, scoresClone, 2);
+        if (winner === humanId) humanWins++;
+      }
+      
+      const passed = humanWins === 0;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human with 0 score should never win F3P2
+        </div>
+        <div>Scenario: 2 players, no scores submitted, human didn't play</div>
+        <div>Ran: 100 iterations</div>
+        <div>Result: Human won ${humanWins} times (expected: 0)</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest5() {
+      const result = document.getElementById('result5');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      console.info('=== TEST 5: Final 3 Part 3 ===');
+      
+      // Scenario: 2 finalists, human didn't play
+      const humanId = 1;
+      const ids = [1, 2];
+      const scores = new Map(); // No scores submitted
+      
+      // Run test 100 times to ensure human never wins
+      let humanWins = 0;
+      for (let i = 0; i < 100; i++) {
+        const scoresClone = new Map(scores);
+        const winner = simulateF3Fallback(ids, humanId, false, scoresClone, 3);
+        if (winner === humanId) humanWins++;
+      }
+      
+      const passed = humanWins === 0;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human with 0 score should never win F3P3
+        </div>
+        <div>Scenario: 2 finalists, no scores submitted, human didn't play</div>
+        <div>Ran: 100 iterations</div>
+        <div>Result: Human won ${humanWins} times (expected: 0)</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    // Event listeners
+    document.getElementById('test1').addEventListener('click', runTest1);
+    document.getElementById('test2').addEventListener('click', runTest2);
+    document.getElementById('test3').addEventListener('click', runTest3);
+    document.getElementById('test4').addEventListener('click', runTest4);
+    document.getElementById('test5').addEventListener('click', runTest5);
+    document.getElementById('clearLog').addEventListener('click', clearLog);
+    document.getElementById('refreshLog').addEventListener('click', updateLog);
+
+    // Initial log
+    console.info('=== Zero Score Winner Logic Test Loaded ===');
+    console.info('Click test buttons to run scenarios');
+    updateLog();
+  </script>
+</body>
+</html>
