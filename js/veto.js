@@ -1143,9 +1143,15 @@
       
       if(eligibleForFallback.length === 0){
         console.error('[veto] No eligible players for fallback winner - all players scored 0 and only human is eligible');
-        // Absolute fallback: pick first non-human player, or if none exist, first eligible
+        // Absolute fallback: pick first non-human player
         var nonHuman = eligible.find(function(id){ return id !== g.humanId; });
-        eligibleForFallback.push(nonHuman || eligible[0]);
+        if(nonHuman){
+          eligibleForFallback.push(nonHuman);
+        } else {
+          // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
+          console.error('[veto] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
+          eligibleForFallback.push(g.humanId);
+        }
       }
       
       var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];
@@ -1175,9 +1181,15 @@
       
       if(eligibleForFallback.length === 0){
         console.error('[veto] No eligible players for final guard fallback - all players scored 0 and only human is eligible');
-        // Absolute fallback: pick first non-human player, or if none exist, first eligible
+        // Absolute fallback: pick first non-human player
         var nonHuman = eligible.find(function(id){ return id !== g.humanId; });
-        eligibleForFallback.push(nonHuman || eligible[0]);
+        if(nonHuman){
+          eligibleForFallback.push(nonHuman);
+        } else {
+          // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
+          console.error('[veto] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
+          eligibleForFallback.push(g.humanId);
+        }
       }
       
       var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];

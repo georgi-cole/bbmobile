@@ -1619,9 +1619,16 @@
         
         if (eligibleForFallback.length === 0) {
           console.error('[hoh] No eligible players for fallback winner - all players scored 0 and only human is eligible');
-          // Absolute fallback: pick first non-human player, or if none exist, first eligible
+          // Absolute fallback: pick first non-human player
           const nonHuman = elig.find(id => id !== g.humanId);
-          eligibleForFallback.push(nonHuman || elig[0]);
+          if (nonHuman) {
+            eligibleForFallback.push(nonHuman);
+          } else {
+            // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
+            // Give human a score anyway to avoid deadlock, but log as error
+            console.error('[hoh] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
+            eligibleForFallback.push(g.humanId);
+          }
         }
         
         const randomIndex = Math.floor((global.rng?.() || Math.random()) * eligibleForFallback.length);
