@@ -159,11 +159,11 @@
           global.LiveVoteFullscreen.resumeVoteTimer();
         }
 
-        // Resume main game timer using PauseController (if available)
-        if (global.PauseController && typeof global.PauseController.resume === 'function') {
-          global.PauseController.resume();
-          console.info('[houseguest-profile] Resumed main game timer via PauseController');
-        }
+      // Resume main game timer using PauseController (if available)
+      if (global.PauseController && typeof global.PauseController.resume === 'function') {
+        global.PauseController.resume('info-modal');
+        console.info('[houseguest-profile] Resumed main game timer via PauseController');
+      }
 
         setTimeout(() => {
           if (modal.parentNode) {

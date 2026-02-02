@@ -407,9 +407,8 @@
         }
       });
       
-      // Start countdown immediately to align with HUD timer
-      // Use same duration as phase timer (tVote) for synchronization
-      const liveVoteSeconds = g.cfg?.tVote || 30;
+      // Start countdown immediately using the fullscreen vote timer duration
+      const liveVoteSeconds = Math.max(1, Math.ceil(((g.cfg?.voteTimeoutMs) || 120000) / 1000));
       startVoteCountdown(liveVoteSeconds, g.eviction.nominees, voters);
       
       return;
@@ -627,6 +626,26 @@
     
     let timeLeft = seconds;
     
+    // Track when fullscreen overlay handles auto-vote to avoid duplicate timers
+    if (global.LiveVoteFullscreen && typeof global.LiveVoteFullscreen.clearTimer === 'function') {
+      g.eviction._fullVoteTimerActive = true;
+      if (typeof global.autoCastEvictionVote !== 'function') {
+        g.eviction._autoCastEvictionVotePrev = global.autoCastEvictionVote;
+        g.eviction._autoCastEvictionVoteOverride = true;
+        global.autoCastEvictionVote = function(autoNominees) {
+          const targetList = Array.isArray(autoNominees) && autoNominees.length ? autoNominees : nominees;
+          let autoPick;
+          if (targetList.length === 2) {
+            autoPick = voteFor2(g.humanId, targetList);
+          } else {
+            autoPick = voteForMulti(g.humanId, targetList);
+          }
+          global.addLog?.(`Auto-voted to evict ${global.safeName(autoPick)} (time expired).`, 'warn');
+          return autoPick;
+        };
+      }
+    }
+    
     // No UI timer in overlay - central HUD timer is the single source of truth
     // This countdown logic handles auto-vote only
     
@@ -640,54 +659,56 @@
       }
     }, 1000);
     
-    // Set up timeout for auto-vote
-    g.eviction._countdownTimeout = setTimeout(() => {
-      // Check if human has already voted
-      if(g.__human_vote != null) {
-        return;
-      }
-      
-      console.info('[Eviction] Auto-voting: time expired');
-      
-      // Compute auto-pick based on affinity/threat logic
-      let autoPick;
-      if(nominees.length === 2){
-        autoPick = voteFor2(g.humanId, nominees);
-      } else {
-        autoPick = voteForMulti(g.humanId, nominees);
-      }
-      
-      // Close all vote UI
-      if(global.closeAllVoteUI){
-        global.closeAllVoteUI();
-      }
-      
-      // Lock the auto-vote
-      lockHumanVote(autoPick);
-      
-      // COMMIT 2: Show rollout only for voters (not observers)
-      if(global.LiveVoteRollout && humanIsVoter){
-        const expectedVotes = voters.length;
-        global.LiveVoteRollout.show({
-          expectedVotes: expectedVotes,
-          nominees: nominees
-        });
-        
-        // Mark user auto-vote as first vote in rollout
-        const userPlayer = global.getP?.(g.humanId);
-        const targetPlayer = global.getP?.(autoPick);
-        if(userPlayer && targetPlayer){
-          global.LiveVoteRollout.addVote({
-            voterId: g.humanId,
-            voterName: userPlayer.name,
-            targetId: autoPick,
-            targetName: targetPlayer.name
-          });
+    // Set up timeout for auto-vote (legacy fallback when fullscreen timer isn't handling it)
+    if (!g.eviction._fullVoteTimerActive) {
+      g.eviction._countdownTimeout = setTimeout(() => {
+        // Check if human has already voted
+        if(g.__human_vote != null) {
+          return;
         }
-      }
-      
-      global.addLog?.(`Auto-voted to evict ${global.safeName(autoPick)} (time expired).`, 'warn');
-    }, seconds * 1000);
+        
+        console.info('[Eviction] Auto-voting: time expired');
+        
+        // Compute auto-pick based on affinity/threat logic
+        let autoPick;
+        if(nominees.length === 2){
+          autoPick = voteFor2(g.humanId, nominees);
+        } else {
+          autoPick = voteForMulti(g.humanId, nominees);
+        }
+        
+        // Close all vote UI
+        if(global.closeAllVoteUI){
+          global.closeAllVoteUI();
+        }
+        
+        // Lock the auto-vote
+        lockHumanVote(autoPick);
+        
+        // COMMIT 2: Show rollout only for voters (not observers)
+        if(global.LiveVoteRollout && humanIsVoter){
+          const expectedVotes = voters.length;
+          global.LiveVoteRollout.show({
+            expectedVotes: expectedVotes,
+            nominees: nominees
+          });
+          
+          // Mark user auto-vote as first vote in rollout
+          const userPlayer = global.getP?.(g.humanId);
+          const targetPlayer = global.getP?.(autoPick);
+          if(userPlayer && targetPlayer){
+            global.LiveVoteRollout.addVote({
+              voterId: g.humanId,
+              voterName: userPlayer.name,
+              targetId: autoPick,
+              targetName: targetPlayer.name
+            });
+          }
+        }
+        
+        global.addLog?.(`Auto-voted to evict ${global.safeName(autoPick)} (time expired).`, 'warn');
+      }, seconds * 1000);
+    }
   }
 
   // Helper to show diary room card with avatars (Issue #5)
