@@ -1142,9 +1142,10 @@
       });
       
       if(eligibleForFallback.length === 0){
-        console.error('[veto] No eligible players for fallback winner - this should not happen');
-        // Absolute fallback: pick first eligible player
-        eligibleForFallback.push(eligible[0]);
+        console.error('[veto] No eligible players for fallback winner - all players scored 0 and only human is eligible');
+        // Absolute fallback: pick first non-human player, or if none exist, first eligible
+        var nonHuman = eligible.find(function(id){ return id !== g.humanId; });
+        eligibleForFallback.push(nonHuman || eligible[0]);
       }
       
       var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];
@@ -1173,8 +1174,10 @@
       });
       
       if(eligibleForFallback.length === 0){
-        console.error('[veto] No eligible players for final guard fallback - using first eligible');
-        eligibleForFallback.push(eligible[0]);
+        console.error('[veto] No eligible players for final guard fallback - all players scored 0 and only human is eligible');
+        // Absolute fallback: pick first non-human player, or if none exist, first eligible
+        var nonHuman = eligible.find(function(id){ return id !== g.humanId; });
+        eligibleForFallback.push(nonHuman || eligible[0]);
       }
       
       var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];

@@ -1618,9 +1618,10 @@
         });
         
         if (eligibleForFallback.length === 0) {
-          console.error('[hoh] No eligible players for fallback winner - this should not happen');
-          // Absolute fallback: pick first eligible player
-          eligibleForFallback.push(elig[0]);
+          console.error('[hoh] No eligible players for fallback winner - all players scored 0 and only human is eligible');
+          // Absolute fallback: pick first non-human player, or if none exist, first eligible
+          const nonHuman = elig.find(id => id !== g.humanId);
+          eligibleForFallback.push(nonHuman || elig[0]);
         }
         
         const randomIndex = Math.floor((global.rng?.() || Math.random()) * eligibleForFallback.length);
