@@ -614,6 +614,15 @@
     } else if (g.phase === 'veto_comp' || g.phase === 'veto') {
       g.__humanPlayedVeto = true;
       console.info('[Competition] ✓ Human participation flag set for Veto');
+    } else if (g.phase === 'final3_comp1') {
+      g.__humanPlayedF3P1 = true;
+      console.info('[Competition] ✓ Human participation flag set for Final 3 Part 1');
+    } else if (g.phase === 'final3_comp2') {
+      g.__humanPlayedF3P2 = true;
+      console.info('[Competition] ✓ Human participation flag set for Final 3 Part 2');
+    } else if (g.phase === 'final3_comp3') {
+      g.__humanPlayedF3P3 = true;
+      console.info('[Competition] ✓ Human participation flag set for Final 3 Part 3');
     }
 
     // 2) Check if CompetitionFlow is available for new flow
@@ -1596,10 +1605,26 @@
         .filter(([id, score]) => score > 0);
       
       // If all players scored 0, pick a random eligible player as fallback
+      // EXCEPT: Never pick human player with 0 score (who didn't play)
       if (scoredEntries.length === 0) {
-        console.warn('[hoh] All players scored 0, selecting random winner from eligible');
-        const randomIndex = Math.floor((global.rng?.() || Math.random()) * elig.length);
-        const winner = elig[randomIndex];
+        console.warn('[hoh] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
+        // Exclude human player who didn't play from fallback selection
+        const eligibleForFallback = elig.filter(id => {
+          if (id === g.humanId && !g.__humanPlayedHOH) {
+            console.info('[hoh] Excluding human from fallback - did not play');
+            return false;
+          }
+          return true;
+        });
+        
+        if (eligibleForFallback.length === 0) {
+          console.error('[hoh] No eligible players for fallback winner - this should not happen');
+          // Absolute fallback: pick first eligible player
+          eligibleForFallback.push(elig[0]);
+        }
+        
+        const randomIndex = Math.floor((global.rng?.() || Math.random()) * eligibleForFallback.length);
+        const winner = eligibleForFallback[randomIndex];
         // Give the random winner a minimal score > 0
         g.lastCompScores.set(winner, 1);
         scoredEntries.push([winner, 1]);
@@ -2102,6 +2127,7 @@
     g.lastCompScores = new Map();
     g.lastCompScoresMeta = new Map();
     g.__f3p1GameKey = null; // Track game key
+    g.__humanPlayedF3P1 = false; // Reset participation flag
     global.tv.say('Final 3 — Part 1');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P1);
@@ -2138,8 +2164,24 @@
     }
     
     const ids = global.alivePlayers().map(p => p.id);
-    for (const id of ids) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
-    const arr = [...g.lastCompScores.entries()].filter(([id]) => ids.includes(id)).sort((a, b) => b[1] - a[1]);
+    // Assign fallback scores, but 0 for human who didn't play
+    for (const id of ids) {
+      if (!g.lastCompScores.has(id)) {
+        // Assign 0 score for human if they didn't play
+        if (id === g.humanId && !g.__humanPlayedF3P1) {
+          console.info('[F3P1] Human skipped - assigning 0 score');
+          g.lastCompScores.set(id, 0);
+          continue;
+        }
+        g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
+      }
+    }
+    
+    // Filter out players with score of 0 - they cannot win
+    const arr = [...g.lastCompScores.entries()]
+      .filter(([id]) => ids.includes(id))
+      .filter(([id, score]) => score > 0)
+      .sort((a, b) => b[1] - a[1]);
 
     if (arr.length === 0) {
       console.warn('[F3P1] No scores available, cannot determine winner');
@@ -2341,6 +2383,7 @@
     g.lastCompScores = new Map();
     g.lastCompScoresMeta = new Map();
     g.__f3p2GameKey = null; // Track game key
+    g.__humanPlayedF3P2 = false; // Reset participation flag
     global.tv.say('Final 3 — Part 2');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P2);
@@ -2432,8 +2475,30 @@
       g.__skipRequested = false;
     }
     
-    for (const id of duo) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
-    const sorted = [...g.lastCompScores.entries()].filter(([id]) => duo.includes(id)).sort((a, b) => b[1] - a[1]);
+    // Assign fallback scores, but 0 for human who didn't play
+    for (const id of duo) {
+      if (!g.lastCompScores.has(id)) {
+        // Assign 0 score for human if they didn't play
+        if (id === g.humanId && !g.__humanPlayedF3P2) {
+          console.info('[F3P2] Human skipped - assigning 0 score');
+          g.lastCompScores.set(id, 0);
+          continue;
+        }
+        g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
+      }
+    }
+    
+    // Filter out players with score of 0 - they cannot win
+    const sorted = [...g.lastCompScores.entries()]
+      .filter(([id]) => duo.includes(id))
+      .filter(([id, score]) => score > 0)
+      .sort((a, b) => b[1] - a[1]);
+    
+    if (sorted.length === 0) {
+      console.warn('[F3P2] No scores available, cannot determine winner');
+      return;
+    }
+    
     const winner = sorted[0][0];
     g.__f3p2Winner = winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
@@ -2660,6 +2725,7 @@
     // CRITICAL: Set finalists BEFORE setPhase() to ensure renderF3P3() has access to them
     g.__f3_finalists = finalists.slice();
     g.__f3p3GameKey = null; // Track game key
+    g.__humanPlayedF3P3 = false; // Reset participation flag
     global.tv.say('Final 3 — Part 3');
     global.phaseMusic?.('hoh');
     // setPhase() triggers renderPanel() -> renderF3P3(), which needs g.__f3_finalists
@@ -2757,8 +2823,30 @@
       g.__skipRequested = false;
     }
     
-    for (const id of finalists) if (!g.lastCompScores.has(id)) g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
-    const sorted = [...g.lastCompScores.entries()].filter(([id]) => finalists.includes(id)).sort((a, b) => b[1] - a[1]);
+    // Assign fallback scores, but 0 for human who didn't play
+    for (const id of finalists) {
+      if (!g.lastCompScores.has(id)) {
+        // Assign 0 score for human if they didn't play
+        if (id === g.humanId && !g.__humanPlayedF3P3) {
+          console.info('[F3P3] Human skipped - assigning 0 score');
+          g.lastCompScores.set(id, 0);
+          continue;
+        }
+        g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
+      }
+    }
+    
+    // Filter out players with score of 0 - they cannot win
+    const sorted = [...g.lastCompScores.entries()]
+      .filter(([id]) => finalists.includes(id))
+      .filter(([id, score]) => score > 0)
+      .sort((a, b) => b[1] - a[1]);
+    
+    if (sorted.length === 0) {
+      console.warn('[F3P3] No scores available, cannot determine winner');
+      return;
+    }
+    
     const winner = sorted[0][0], loser = sorted[1][0];
     for (const p of g.players) p.hoh = false; g.hohId = winner; global.getP(winner).hoh = true;
 
