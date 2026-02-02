@@ -1096,9 +1096,10 @@
           g.lastCompScores.set(id, +v);
         }
         if(!g.lastCompScores.has(id)){
-          // Skip auto-score for human if they didn't play
+          // Assign 0 score for human if they didn't play (fast-forward without playing)
           if(id === g.humanId && !g.__humanPlayedVeto){
-            console.info('[veto] Human skipped - no auto-score');
+            console.info('[veto] Human skipped - assigning 0 score');
+            g.lastCompScores.set(id, 0);
             continue;
           }
           // Ensure AI scores are always > 0 to prevent 0-score players from winning

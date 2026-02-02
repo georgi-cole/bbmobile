@@ -1542,9 +1542,10 @@
       // Apply dampening for consecutive winners
       for (const id of elig) {
         if (!g.lastCompScores.has(id)) {
-          // Skip auto-score for human if they didn't play
+          // Assign 0 score for human if they didn't play (fast-forward without playing)
           if (id === g.humanId && !g.__humanPlayedHOH) {
-            console.info('[hoh] Human skipped - no auto-score');
+            console.info('[hoh] Human skipped - assigning 0 score');
+            g.lastCompScores.set(id, 0);
             continue;
           }
           let baseScore = 5 + (global.rng?.() || Math.random()) * 20;
