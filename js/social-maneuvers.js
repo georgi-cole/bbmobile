@@ -2959,11 +2959,11 @@
     if(!g) return;
     
     console.info('[sm-phase-skip] Pausing Social phase timer...');
-    const remaining = typeof g.endAt === 'number' ? Math.max(0, g.endAt - Date.now()) : null;
-    if (remaining === null) {
-      console.warn('[sm-phase-skip] No valid endAt found while pausing timer');
+    const hasValidEndAt = typeof g.endAt === 'number';
+    const safeRemaining = hasValidEndAt ? Math.max(0, g.endAt - Date.now()) : 0;
+    if (!hasValidEndAt) {
+      console.warn('[sm-phase-skip] No valid endAt found while pausing timer; defaulting remaining to 0');
     }
-    const safeRemaining = remaining ?? 0;
     g.timerPaused = true;
     g.pausedTimeRemaining = safeRemaining;
     console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', safeRemaining, 'ms remaining');
