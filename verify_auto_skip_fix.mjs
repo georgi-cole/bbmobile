@@ -44,11 +44,17 @@ test('stopSocialPhaseTimer function defined', () => {
   if (!jsContent.includes('function stopSocialPhaseTimer()')) {
     throw new Error('stopSocialPhaseTimer function not found');
   }
-  if (!jsContent.includes('g.endAt = farFuture')) {
-    throw new Error('Timer stop logic not found');
+  if (!jsContent.includes('g.timerPaused = true')) {
+    throw new Error('Timer pause logic not found');
   }
-  if (!jsContent.includes('g.phaseEndsAt = farFuture')) {
-    throw new Error('phaseEndsAt not set to far future');
+  if (!jsContent.includes('g.pausedTimeRemaining = remaining')) {
+    throw new Error('pausedTimeRemaining not set');
+  }
+  if (!jsContent.includes('function exhaustSocialPhaseTimerToOneSecond()')) {
+    throw new Error('exhaustSocialPhaseTimerToOneSecond function not found');
+  }
+  if (!jsContent.includes('g.endAt = now + 1000')) {
+    throw new Error('Timer exhaust logic not found');
   }
 });
 
