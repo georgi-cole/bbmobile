@@ -16,12 +16,23 @@
   };
 
   /**
+   * Helper: Pause main game phase timer via PauseController
+   * Used when opening the vote overlay to enforce timer hierarchy
+   */
+  function pauseMainGameTimer(context) {
+    if (global.PauseController && typeof global.PauseController.pause === 'function') {
+      global.PauseController.pause('live-vote-overlay');
+      console.info('[livevote-fs] Paused main game phase timer (' + context + ')');
+    }
+  }
+
+  /**
    * Helper: Resume main game phase timer via PauseController
    * Used when closing the vote overlay in any scenario
    */
   function resumeMainGameTimer(context) {
     if (global.PauseController && typeof global.PauseController.resume === 'function') {
-      global.PauseController.resume();
+      global.PauseController.resume('live-vote-overlay');
       console.info('[livevote-fs] Resumed main game phase timer (' + context + ')');
     }
   }
@@ -415,6 +426,8 @@
       // Timer update function
       function updateTimerDisplay() {
         var seconds = Math.ceil(timerState.remainingMs / 1000);
+        if (seconds < 0) seconds = 0;
+        if (seconds < 0) seconds = 0;
         var mins = Math.floor(seconds / 60);
         var secs = seconds % 60;
         var timeStr = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
@@ -503,6 +516,7 @@
         if (timerState.intervalId) clearInterval(timerState.intervalId);
         
         timerState.startTimeMs = Date.now();
+        timerState.remainingMs = timeoutMs;
         
         // Update display every second
         timerState.intervalId = setInterval(function() {
@@ -514,6 +528,13 @@
             if (timerState.remainingMs <= 0) {
               clearInterval(timerState.intervalId);
               timerState.intervalId = null;
+              if (timerState.timeoutId) {
+                clearTimeout(timerState.timeoutId);
+                timerState.timeoutId = null;
+              }
+            if (!timerState.isPaused) {
+              performAutoVote();
+            }
             }
           }
         }, 1000);
@@ -585,10 +606,7 @@
       
       // Pause main game phase timer when fullscreen vote overlay opens
       // This establishes timer hierarchy: vote timer is foreground, main timer is background
-      if (global.PauseController && typeof global.PauseController.pause === 'function') {
-        global.PauseController.pause('live-vote-overlay');
-        console.info('[livevote-fs] Paused main game phase timer during voting');
-      }
+      pauseMainGameTimer('overlay-open');
       
       // Clear legacy timers before starting our authoritative timer
       clearLegacyVoteTimers();
@@ -652,6 +670,7 @@
     // Update display function
     function updateDisplay() {
       var seconds = Math.ceil(timerState.remainingMs / 1000);
+      if (seconds < 0) seconds = 0;
       var mins = Math.floor(seconds / 60);
       var secs = seconds % 60;
       var timeStr = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
@@ -675,6 +694,13 @@
         if (timerState.remainingMs <= 0) {
           clearInterval(timerState.intervalId);
           timerState.intervalId = null;
+          if (timerState.timeoutId) {
+            clearTimeout(timerState.timeoutId);
+            timerState.timeoutId = null;
+          }
+          if (!timerState.isPaused) {
+            console.debug('[livevote-fs] Timer expired after resume');
+          }
         }
       }
     }, 1000);
@@ -682,10 +708,7 @@
     // Set timeout
     timerState.timeoutId = setTimeout(function() {
       if (!timerState.isPaused) {
-        // Trigger auto-vote (we need to reconstruct the context)
         console.debug('[livevote-fs] Timer expired after resume');
-        // Note: Auto-vote logic is in the main function scope, so we can't easily call it here
-        // In practice, the interval will catch the zero case
       }
     }, timerState.remainingMs);
     

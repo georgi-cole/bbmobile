@@ -77,7 +77,7 @@
 
     // Pause PhaseTimerBridge if available
     if (global.PhaseTimerBridge && typeof global.PhaseTimerBridge.handleSuspend === 'function') {
-      global.PhaseTimerBridge.handleSuspend({ reason });
+      global.PhaseTimerBridge.handleSuspend({ reason: ownerId });
     }
 
     // Pause social AI scheduler if running

@@ -31,6 +31,20 @@
       global.game.eviction._countdownTimeout = null;
       console.debug('[livevote-helpers] Countdown timeout cleared');
     }
+    if (global.game?.eviction?._autoCastEvictionVoteOverride) {
+      if (global.game.eviction._autoCastEvictionVotePrev) {
+        global.autoCastEvictionVote = global.game.eviction._autoCastEvictionVotePrev;
+      } else {
+        delete global.autoCastEvictionVote;
+      }
+      global.game.eviction._autoCastEvictionVotePrev = null;
+      global.game.eviction._autoCastEvictionVoteOverride = false;
+      console.debug('[livevote-helpers] Auto-vote hook restored');
+    }
+    if (global.game?.eviction?._fullVoteTimerActive) {
+      global.game.eviction._fullVoteTimerActive = false;
+      console.debug('[livevote-helpers] Fullscreen auto-vote flag cleared');
+    }
   }
 
   /**
