@@ -199,6 +199,10 @@
   /**
    * Pick weekly twist based on config probabilities
    * Triple eviction takes priority over double when both are possible
+   * Week-based restrictions:
+   *  - Weeks 1-2: No double/triple evictions
+   *  - Week 3: Maximum 5% chance regardless of settings
+   *  - Week 4+: Use configured settings
    * @param {object} g - Game state object
    * @returns {string|null} 'triple', 'double', or null
    */
@@ -209,8 +213,19 @@
       || (Array.isArray(g.players) ? g.players.filter(p => !p.evicted).length : 0);
     if(aliveCount <= 6) return null;
     
-    const dc = Number(g.cfg?.doubleChance || 0);
-    const tc = Number(g.cfg?.tripleChance || 0);
+    const currentWeek = g.week || 1;
+    
+    // Weeks 1-2: No double/triple evictions regardless of settings
+    if(currentWeek <= 2) return null;
+    
+    let dc = Number(g.cfg?.doubleChance || 0);
+    let tc = Number(g.cfg?.tripleChance || 0);
+    
+    // Week 3: Cap both chances at 5% regardless of settings
+    if(currentWeek === 3){
+      dc = Math.min(dc, 5);
+      tc = Math.min(tc, 5);
+    }
     
     // No twists configured
     if(dc <= 0 && tc <= 0) return null;

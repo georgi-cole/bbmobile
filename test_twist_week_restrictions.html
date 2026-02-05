@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twist Week Restrictions - Unit Tests</title>
+  <style>
+    body {
+      padding: 20px;
+      background: #0a0e14;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .test-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 { color: #4a9eff; margin-bottom: 30px; }
+    h2 { color: #6abeef; margin-top: 30px; }
+    .test-section {
+      background: #1a2530;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #2a3540;
+    }
+    .pass { color: #3ad56a; }
+    .fail { color: #d53a3a; }
+    .info { color: #8a9fb5; }
+    .test-result {
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      background: #0a1520;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #3a7bd5;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 5px;
+    }
+    button:hover { background: #4a8be5; }
+    button.success { background: #3ad56a; }
+    button.success:hover { background: #4ae57a; }
+    #summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: #0a1520;
+      border-radius: 8px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Twist Week Restrictions - Unit Tests</h1>
+    <p class="info">Testing week-based restrictions for double/triple eviction twists.</p>
+    <p class="info">
+      <strong>Requirements:</strong><br>
+      • Weeks 1-2: No double/triple evictions regardless of settings<br>
+      • Week 3: Maximum 5% chance regardless of settings<br>
+      • Week 4+: Use configured settings normally
+    </p>
+    
+    <div class="test-section">
+      <button class="success" onclick="runAllTests()">▶ Run All Tests</button>
+      <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+    <div id="summary"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/twists.js"></script>
+  
+  <script>
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function log(message, status = 'info') {
+      const results = document.getElementById('results');
+      const div = document.createElement('div');
+      div.className = `test-result ${status}`;
+      div.innerHTML = message;
+      results.appendChild(div);
+      
+      if (status === 'pass') testsPassed++;
+      if (status === 'fail') testsFailed++;
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('summary').innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+    }
+
+    function assert(condition, message) {
+      if (condition) {
+        log(`✓ ${message}`, 'pass');
+        return true;
+      } else {
+        log(`✗ ${message}`, 'fail');
+        return false;
+      }
+    }
+
+    function setupMockGame(overrides = {}) {
+      // Create enough alive players to allow twists
+      const players = Array(10).fill(0).map((_, i) => ({ 
+        id: i, 
+        evicted: false,
+        name: `Player ${i}`
+      }));
+      
+      window.game = {
+        cfg: { 
+          numPlayers: 10, 
+          enableJuryHouse: true, 
+          doubleChance: 20,  // Default 20% chance
+          tripleChance: 10   // Default 10% chance
+        },
+        players: players,
+        juryHouse: [],
+        week: 1,
+        phase: 'intermission',
+        rngSeed: 12345,
+        ...overrides
+      };
+      
+      // Mock helpers
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+      
+      // Mock RNG for predictable testing
+      let rngSeed = window.game.rngSeed || 12345;
+      window.rng = () => {
+        let x = Math.sin(rngSeed++) * 10000;
+        return x - Math.floor(x);
+      };
+      
+      window.updateHud = () => {};
+    }
+
+    async function runAllTests() {
+      clearResults();
+      log('=== Starting Week Restriction Tests ===', 'info');
+      
+      // Test 1: Week 1 restriction
+      log('<h2>Test Suite 1: Week 1 Restrictions</h2>', 'info');
+      await testWeek1Restrictions();
+      
+      // Test 2: Week 2 restriction
+      log('<h2>Test Suite 2: Week 2 Restrictions</h2>', 'info');
+      await testWeek2Restrictions();
+      
+      // Test 3: Week 3 restriction (5% cap)
+      log('<h2>Test Suite 3: Week 3 Restrictions (5% Cap)</h2>', 'info');
+      await testWeek3Restrictions();
+      
+      // Test 4: Week 4+ normal behavior
+      log('<h2>Test Suite 4: Week 4+ Normal Settings</h2>', 'info');
+      await testWeek4PlusBehavior();
+      
+      // Test 5: Edge cases
+      log('<h2>Test Suite 5: Edge Cases</h2>', 'info');
+      await testEdgeCases();
+      
+      // Summary
+      const total = testsPassed + testsFailed;
+      const passRate = total > 0 ? Math.round((testsPassed / total) * 100) : 0;
+      const summaryEl = document.getElementById('summary');
+      const color = testsFailed === 0 ? '#3ad56a' : '#d53a3a';
+      summaryEl.innerHTML = `
+        <div style="color: ${color};">
+          <strong>Test Results:</strong> ${testsPassed} passed, ${testsFailed} failed (${passRate}% pass rate)
+        </div>
+      `;
+    }
+
+    async function testWeek1Restrictions() {
+      // Test with very high settings - should still return null for week 1
+      setupMockGame({ 
+        week: 1,
+        cfg: { doubleChance: 100, tripleChance: 100 }
+      });
+      
+      // Run multiple times to ensure it never activates
+      let anyTwistActivated = false;
+      for (let i = 0; i < 50; i++) {
+        await window.decideForWeek();
+        if (window.game.__twistMode !== null) {
+          anyTwistActivated = true;
+          break;
+        }
+      }
+      
+      assert(!anyTwistActivated, 'Week 1: No twists activate even with 100% chance');
+      assert(!window.game.doubleEvictionWeek, 'Week 1: doubleEvictionWeek flag is false');
+      assert(!window.game.tripleEvictionWeek, 'Week 1: tripleEvictionWeek flag is false');
+    }
+
+    async function testWeek2Restrictions() {
+      // Test with very high settings - should still return null for week 2
+      setupMockGame({ 
+        week: 2,
+        cfg: { doubleChance: 100, tripleChance: 100 }
+      });
+      
+      // Run multiple times to ensure it never activates
+      let anyTwistActivated = false;
+      for (let i = 0; i < 50; i++) {
+        await window.decideForWeek();
+        if (window.game.__twistMode !== null) {
+          anyTwistActivated = true;
+          break;
+        }
+      }
+      
+      assert(!anyTwistActivated, 'Week 2: No twists activate even with 100% chance');
+      assert(!window.game.doubleEvictionWeek, 'Week 2: doubleEvictionWeek flag is false');
+      assert(!window.game.tripleEvictionWeek, 'Week 2: tripleEvictionWeek flag is false');
+    }
+
+    async function testWeek3Restrictions() {
+      // Test that week 3 caps both chances at 5%
+      // Use deterministic RNG to test both sides of the 5% threshold
+      
+      // Test 1: RNG = 0.04 (4%) should activate twist
+      setupMockGame({ 
+        week: 3,
+        cfg: { doubleChance: 100, tripleChance: 100 },
+        rngSeed: 42  // Adjust to get a specific RNG value
+      });
+      
+      // Override RNG to return exactly 4
+      window.rng = () => 0.04;
+      await window.decideForWeek();
+      
+      const activatedAt4Percent = window.game.__twistMode !== null;
+      assert(activatedAt4Percent, 'Week 3: Twist activates when RNG < 5% (test with 4%)');
+      
+      // Test 2: RNG = 0.06 (6%) should NOT activate twist
+      setupMockGame({ 
+        week: 3,
+        cfg: { doubleChance: 100, tripleChance: 100 }
+      });
+      
+      window.rng = () => 0.06;
+      await window.decideForWeek();
+      
+      const notActivatedAt6Percent = window.game.__twistMode === null;
+      assert(notActivatedAt6Percent, 'Week 3: Twist does NOT activate when RNG > 5% (test with 6%)');
+      
+      // Test 3: Low settings (e.g., 2%) should still work
+      setupMockGame({ 
+        week: 3,
+        cfg: { doubleChance: 2, tripleChance: 1 }
+      });
+      
+      window.rng = () => 0.015; // 1.5%
+      await window.decideForWeek();
+      
+      const respectsLowSettings = window.game.__twistMode !== null;
+      assert(respectsLowSettings, 'Week 3: Lower settings than 5% still work (2% double, 1% triple with 1.5% roll)');
+    }
+
+    async function testWeek4PlusBehavior() {
+      // Test that week 4+ uses normal settings
+      
+      // Test with 50% double chance
+      setupMockGame({ 
+        week: 4,
+        cfg: { doubleChance: 50, tripleChance: 0 }
+      });
+      
+      window.rng = () => 0.40; // 40% - should activate
+      await window.decideForWeek();
+      
+      assert(window.game.__twistMode === 'double', 'Week 4: Double twist activates with configured 50% chance (40% roll)');
+      
+      // Test with 30% triple chance
+      setupMockGame({ 
+        week: 5,
+        cfg: { doubleChance: 0, tripleChance: 30 }
+      });
+      
+      window.rng = () => 0.25; // 25% - should activate
+      await window.decideForWeek();
+      
+      assert(window.game.__twistMode === 'triple', 'Week 5: Triple twist activates with configured 30% chance (25% roll)');
+      
+      // Test that high settings work in week 10
+      setupMockGame({ 
+        week: 10,
+        cfg: { doubleChance: 80, tripleChance: 40 }
+      });
+      
+      window.rng = () => 0.35; // 35% - should activate triple (priority)
+      await window.decideForWeek();
+      
+      assert(window.game.__twistMode === 'triple', 'Week 10: Triple takes priority with 40% chance (35% roll)');
+      
+      // Test that settings work correctly after week 3
+      setupMockGame({ 
+        week: 4,
+        cfg: { doubleChance: 100, tripleChance: 100 }
+      });
+      
+      window.rng = () => 0.50; // 50% - should still activate
+      await window.decideForWeek();
+      
+      assert(window.game.__twistMode !== null, 'Week 4: High settings work normally (100% chance)');
+    }
+
+    async function testEdgeCases() {
+      // Test undefined week defaults to 1
+      setupMockGame({ 
+        week: undefined,
+        cfg: { doubleChance: 100, tripleChance: 100 }
+      });
+      
+      window.rng = () => 0.01;
+      await window.decideForWeek();
+      
+      assert(!window.game.__twistMode, 'Undefined week (defaults to 1): No twist activates');
+      
+      // Test week 0 (should be treated as week 1)
+      setupMockGame({ 
+        week: 0,
+        cfg: { doubleChance: 100, tripleChance: 100 }
+      });
+      
+      window.rng = () => 0.01;
+      await window.decideForWeek();
+      
+      assert(!window.game.__twistMode, 'Week 0 (treated as early week): No twist activates');
+      
+      // Test that insufficient players still blocks twists in week 4+
+      setupMockGame({ 
+        week: 5,
+        cfg: { doubleChance: 100, tripleChance: 100 },
+        players: Array(6).fill(0).map((_, i) => ({ id: i, evicted: false, name: `Player ${i}` }))
+      });
+      
+      window.rng = () => 0.01;
+      await window.decideForWeek();
+      
+      assert(!window.game.__twistMode, 'Week 5 with 6 or fewer players: No twist activates (player count check still applies)');
+    }
+  </script>
+</body>
+</html>
