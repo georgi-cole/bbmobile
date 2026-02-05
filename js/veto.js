@@ -1129,9 +1129,38 @@
     var nonZeroArr = arr.filter(function(entry){ return entry[1] > 0; });
     
     // If all players scored 0, pick a random eligible player as fallback
+    // EXCEPT: Never pick human player with 0 score (who didn't play)
     if(nonZeroArr.length === 0 && eligible.length){
-      console.warn('[veto] All players scored 0, selecting random winner from eligible');
-      var pick = eligible[Math.floor(rng()*eligible.length)];
+      console.warn('[veto] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
+      // Exclude human player who didn't play from fallback selection
+      var eligibleForFallback = eligible.filter(function(id){
+        if(id === g.humanId && !g.__humanPlayedVeto){
+          console.info('[veto] Excluding human from fallback - did not play');
+          return false;
+        }
+        return true;
+      });
+      
+      if(eligibleForFallback.length === 0){
+        console.error('[veto] No eligible players for fallback winner - all players scored 0 and only human is eligible');
+        // Absolute fallback: pick first non-human player (ES5 compatible)
+        var nonHuman = null;
+        for(var i = 0; i < eligible.length; i++){
+          if(eligible[i] !== g.humanId){
+            nonHuman = eligible[i];
+            break;
+          }
+        }
+        if(nonHuman !== null){
+          eligibleForFallback.push(nonHuman);
+        } else {
+          // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
+          console.error('[veto] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
+          eligibleForFallback.push(g.humanId);
+        }
+      }
+      
+      var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];
       // Give the random winner a minimal score > 0
       g.lastCompScores.set(pick, 1);
       nonZeroArr = [[pick, 1]];
@@ -1145,8 +1174,37 @@
     arr.sort(function(a,b){ return b[1]-a[1]; });
 
     // Final guard: if still no scores, pick a random eligible to avoid deadlock
+    // EXCEPT: Never pick human player with 0 score (who didn't play)
     if(!arr.length && eligible.length){
-      var pick = eligible[Math.floor(rng()*eligible.length)];
+      // Exclude human player who didn't play from fallback selection
+      var eligibleForFallback = eligible.filter(function(id){
+        if(id === g.humanId && !g.__humanPlayedVeto){
+          console.info('[veto] Excluding human from final guard fallback - did not play');
+          return false;
+        }
+        return true;
+      });
+      
+      if(eligibleForFallback.length === 0){
+        console.error('[veto] No eligible players for final guard fallback - all players scored 0 and only human is eligible');
+        // Absolute fallback: pick first non-human player (ES5 compatible)
+        var nonHuman = null;
+        for(var i = 0; i < eligible.length; i++){
+          if(eligible[i] !== g.humanId){
+            nonHuman = eligible[i];
+            break;
+          }
+        }
+        if(nonHuman !== null){
+          eligibleForFallback.push(nonHuman);
+        } else {
+          // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
+          console.error('[veto] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
+          eligibleForFallback.push(g.humanId);
+        }
+      }
+      
+      var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];
       arr = [[pick, 1]]; // Give minimal score instead of 0
     }
 
