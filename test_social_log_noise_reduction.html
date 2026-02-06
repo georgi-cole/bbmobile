@@ -271,6 +271,8 @@
       // Trigger various actions
       if (window.__smDebug?.runAiTickOnce) {
         window.__smDebug.runAiTickOnce();
+      } else {
+        originalConsole.warn('__smDebug.runAiTickOnce not available');
       }
       
       // Trigger adapter event
@@ -314,6 +316,8 @@
       // Trigger various actions
       if (window.__smDebug?.runAiTickOnce) {
         window.__smDebug.runAiTickOnce();
+      } else {
+        originalConsole.warn('__smDebug.runAiTickOnce not available');
       }
       
       // Trigger adapter event
