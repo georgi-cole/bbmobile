@@ -654,6 +654,64 @@
   }
 
   function showSocialSummary() {
+    console.info('[socialize-mobile] 📊 Showing social summary with phase advancement callback');
+    
+    // Define phase advancement function (to be called by OK button)
+    const advanceToNextPhase = () => {
+      console.info('[socialize-mobile] ✓ OK clicked - advancing to next phase');
+      
+      // Try to find and call startNominations function
+      const startNomsCandidates = [
+        'startNominations', 'startNomination', 'startNoms',
+        'startNominationsPhase', 'startNomsPhase', 'startNominationsFlow'
+      ];
+      
+      let advanceFn = null;
+      for (const name of startNomsCandidates) {
+        if (typeof global[name] === 'function') {
+          advanceFn = global[name];
+          console.info(`[socialize-mobile] ✓ Found advance function: ${name}`);
+          break;
+        }
+      }
+      
+      // Fallback: use setPhase if startNominations not found
+      if (!advanceFn && typeof global.setPhase === 'function') {
+        console.info('[socialize-mobile] Using setPhase fallback to advance to nominations');
+        const g = global.game;
+        global.tv?.say?.('Nominations');
+        global.setPhase('nominations', g?.cfg?.tNoms || 25, () => {
+          if (typeof global.startVeto === 'function') {
+            global.startVeto();
+          } else if (typeof global.startVetoComp === 'function') {
+            global.startVetoComp();
+          }
+        });
+        global.renderPanel?.();
+        return;
+      }
+      
+      // Call the advancement function
+      if (advanceFn) {
+        try {
+          advanceFn();
+          console.info('[socialize-mobile] ✓ Phase advanced to nominations');
+        } catch(e) {
+          console.error('[socialize-mobile] Error advancing phase:', e);
+        }
+      } else {
+        console.error('[socialize-mobile] ❌ No method available to advance to nominations');
+      }
+    };
+    
+    // Store the callback for the OK button to call
+    if (global.game) {
+      global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
+      console.info('[socialize-mobile] ✓ Phase advancement callback stored for OK button');
+    } else {
+      console.warn('[socialize-mobile] ⚠ game object not available - callback not stored');
+    }
+    
     // Try to generate and show the summary using SocialManeuvers methods
     if (global.SocialManeuvers?.generatePhaseSummary && global.SocialManeuvers?.showSummaryPanel) {
       try {
