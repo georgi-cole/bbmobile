@@ -357,14 +357,22 @@
       if(influence > 0) {
         const influenceBonus = influence * 0.0025; // 0.25% per point
         chance += influenceBonus;
-        console.info(`[unified-success] Influence bonus: ${influence.toFixed(1)} pts → +${(influenceBonus * 100).toFixed(1)}%`);
+        // Gate high-frequency calculation logs behind debugSocialAI flag
+        const debugEnabled = global.game?.cfg?.debugSocialAI;
+        if (debugEnabled) {
+          console.info(`[unified-success] Influence bonus: ${influence.toFixed(1)} pts → +${(influenceBonus * 100).toFixed(1)}%`);
+        }
       }
     }
     
     // Apply Information boost
     if(infoBoost > 0) {
       chance += infoBoost;
-      console.info(`[unified-success] Information boost: +${(infoBoost * 100).toFixed(1)}%`);
+      // Gate high-frequency calculation logs behind debugSocialAI flag
+      const debugEnabled = global.game?.cfg?.debugSocialAI;
+      if (debugEnabled) {
+        console.info(`[unified-success] Information boost: +${(infoBoost * 100).toFixed(1)}%`);
+      }
     }
     
     // Clamp to [5%, 95%] per spec
