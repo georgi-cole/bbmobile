@@ -562,6 +562,11 @@
     const content = getTVOverlayContent();
     if (!content) return;
     
+    // Unblock phase advance when showing end card (sequence complete)
+    if(global.PhaseAdvanceController && typeof global.PhaseAdvanceController.unblock === 'function'){
+      global.PhaseAdvanceController.unblock('tv-sequence');
+    }
+    
     // Clear previous content
     const oldCard = content.querySelector('.tv-sequence-card, .tv-sequence-end-card');
     const skipBtn = content.querySelector('.tv-sequence-skip-btn');
@@ -752,11 +757,20 @@
     // Reset state
     isAborted = false;
     
+    // Block phase advance during TV sequence
+    if(global.PhaseAdvanceController && typeof global.PhaseAdvanceController.block === 'function'){
+      global.PhaseAdvanceController.block('tv-sequence');
+    }
+    
     // Split content into chunks
     const chunks = splitContentIntoChunks(rawText, options);
     
     if (!chunks || chunks.length === 0) {
       console.warn('[TVSequence] No chunks to display');
+      // Unblock if no chunks
+      if(global.PhaseAdvanceController && typeof global.PhaseAdvanceController.unblock === 'function'){
+        global.PhaseAdvanceController.unblock('tv-sequence');
+      }
       return Promise.resolve();
     }
     
@@ -799,6 +813,11 @@
     }
     
     currentSequence = null;
+    
+    // Unblock phase advance when aborting
+    if(global.PhaseAdvanceController && typeof global.PhaseAdvanceController.unblock === 'function'){
+      global.PhaseAdvanceController.unblock('tv-sequence');
+    }
   }
 
   /**

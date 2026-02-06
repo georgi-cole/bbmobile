@@ -868,8 +868,17 @@
     console.info(`[CompetitionFlow] ═══ launchFullscreenMinigame ═══`);
     console.info(`[CompetitionFlow] Game: ${gameKey}, Options:`, options);
     
+    // Block phase advance during minigame
+    if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.block === 'function'){
+      g.PhaseAdvanceController.block('minigame-active');
+    }
+    
     // ═══ Guard: Check if called before ready ═══
     if (checkAndQueueIfNotReady('launchFullscreenMinigame', [gameKey, onComplete, options])) {
+      // Unblock if returning early
+      if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.unblock === 'function'){
+        g.PhaseAdvanceController.unblock('minigame-active');
+      }
       return { close: () => {}, overlay: null }; // Return no-op controls
     }
     
@@ -886,6 +895,11 @@
           activeGame: currentGameKey,
           message: 'Cannot launch multiple fullscreen overlays simultaneously'
         });
+        
+        // Unblock if returning early
+        if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.unblock === 'function'){
+          g.PhaseAdvanceController.unblock('minigame-active');
+        }
         
         return { close: () => {}, overlay: null }; // Return no-op controls
       }
@@ -1165,6 +1179,12 @@
             // Close and submit after brief display
             setTimeout(() => {
               close(false);
+              
+              // Unblock phase advance on timeout
+              if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.unblock === 'function'){
+                g.PhaseAdvanceController.unblock('minigame-active');
+              }
+              
               // Call onComplete with current score or 0
               // The minigame should have tracked the score internally
               if(typeof onComplete === 'function'){
@@ -1312,6 +1332,12 @@
           setTimeout(() => {
             console.info('[CompetitionFlow] → Closing fullscreen overlay and calling onComplete');
             close(false); // Use fade out animation
+            
+            // Unblock phase advance when minigame completes
+            if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.unblock === 'function'){
+              g.PhaseAdvanceController.unblock('minigame-active');
+            }
+            
             if(typeof onComplete === 'function'){
               onComplete(score);
             }
