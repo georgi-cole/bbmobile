@@ -1099,18 +1099,15 @@
           // ROBUST CHECK: If this is the human player AND no score exists, assign 0
           // This covers all edge cases: fast-forward, skip, timing issues, etc.
           if(id === g.humanId){
-            // Double-check: did human actually play and submit?
-            // If flag is set, they played - should have a score (defensive check)
+            // Always assign 0 for human with no score (defensive programming)
             if(!g.__humanPlayedVeto){
               console.info('[veto] Human did not complete challenge - assigning 0 score');
-              g.lastCompScores.set(id, 0);
-              continue;
             } else {
               // Flag says they played, but no score? Unusual - still assign 0 for safety
               console.warn('[veto] Human played flag set but no score found - assigning 0 (defensive)');
-              g.lastCompScores.set(id, 0);
-              continue;
             }
+            g.lastCompScores.set(id, 0);
+            continue;
           }
           // AI players get random scores (always > 0)
           // Ensure AI scores are always > 0 to prevent 0-score players from winning
