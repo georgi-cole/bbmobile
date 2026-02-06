@@ -600,15 +600,21 @@
           
           // Try to delegate to engine summary panel with advancement callback
           let summaryShown = false;
-          if(global.SocialManeuvers?.showSummaryPanel){
+          if(global.SocialManeuvers?.showSummaryPanel && global.SocialManeuvers?.generatePhaseSummary){
             try{
-              // Store advancement callback for summary OK button to call
-              global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
-              global.SocialManeuvers.showSummaryPanel();
-              summaryShown = true;
-              console.info('[social.js] ✓ Showed engine summary via showSummaryPanel');
-              // Don't call advanceToNextPhase here - let the summary OK button handle it
-              return; // Exit early - phase will advance when user clicks OK
+              // Generate summary data first
+              const summary = global.SocialManeuvers.generatePhaseSummary();
+              if(summary){
+                // Store advancement callback for summary OK button to call
+                global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
+                global.SocialManeuvers.showSummaryPanel(summary);
+                summaryShown = true;
+                console.info('[social.js] ✓ Showed engine summary via showSummaryPanel');
+                // Don't call advanceToNextPhase here - let the summary OK button handle it
+                return; // Exit early - phase will advance when user clicks OK
+              }else{
+                console.warn('[social.js] generatePhaseSummary returned null/undefined');
+              }
             }catch(e){
               console.error('[social.js] showSummaryPanel failed:', e);
             }
