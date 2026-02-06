@@ -498,6 +498,9 @@
     g.__socialShown = 0;        // reset per intermission (max 3 prompts)
     g.__socialLogBudget = 6;    // reset ambient budget
 
+    // Clear idempotency guard for new phase
+    if(g) g.__socialOnDoneFired = false;
+
     // Clear any lingering ceremony cards before starting social phase
     if(global.CardManager){
       console.info('[social.js] Clearing ceremony cards before social phase');
@@ -552,6 +555,16 @@
     try{ await global.cardQueueWaitIdle?.(); }catch{}
 
     const onDone = async ()=>{
+      // Idempotency guard: prevent onDone from executing twice
+      if(global.game?.__socialOnDoneFired) {
+        console.warn('[social.js] onDone already fired this phase - ignoring duplicate call');
+        return;
+      }
+      global.game.__socialOnDoneFired = true;
+
+      // Track if summary was shown to determine fallback advancement
+      let summaryShown = false;
+
       try{ 
         // Call onSocialPhaseEnd when Social Maneuvers is enabled
         if(global.SocialManeuvers?.isEnabled?.()){
@@ -599,7 +612,6 @@
           };
           
           // Try to delegate to engine summary panel with advancement callback
-          let summaryShown = false;
           if(global.SocialManeuvers?.showSummaryPanel && global.SocialManeuvers?.generatePhaseSummary){
             try{
               // Generate summary data first
@@ -657,11 +669,13 @@
       
       // Fallback: Only advance phase if no summary was shown successfully
       // (If summary was shown, phase advancement is handled by the OK button callback)
-      if(typeof callback === 'function'){
-        try{ callback(); }catch(e){ console.error(e); }
-      } else {
-        const startNoms = resolveStartNominations();
-        try{ startNoms(); }catch(e){ console.error(e); }
+      if(!summaryShown){
+        if(typeof callback === 'function'){
+          try{ callback(); }catch(e){ console.error(e); }
+        } else {
+          const startNoms = resolveStartNominations();
+          try{ startNoms(); }catch(e){ console.error(e); }
+        }
       }
     };
     global.setPhase?.('social_intermission', g.cfg?.tComms||30, onDone);
