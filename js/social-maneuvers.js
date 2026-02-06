@@ -3369,6 +3369,14 @@
       console.warn('[social-maneuvers] No session data to summarize');
       return null;
     }
+    
+    // Check if human player is evicted - skip summary if so
+    const humanId = g?.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    if (humanPlayer?.evicted) {
+      console.info('[social-maneuvers] 🚫 Human player is evicted - skipping summary generation');
+      return null;
+    }
 
     const alivePlayers = global.alivePlayers?.() || [];
     const summary = {
@@ -3600,6 +3608,15 @@
 
   function showSummaryPanel(summary){
     if(!summary) return;
+    
+    // Check if human player is evicted - skip summary if so
+    const g = global.game;
+    const humanId = g?.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    if (humanPlayer?.evicted) {
+      console.info('[social-maneuvers] 🚫 Human player is evicted - skipping summary display');
+      return;
+    }
 
     // Singleton guard: only show summary once per phase end
     if(socialSummaryOpen){
@@ -3740,25 +3757,7 @@
       // Reset summary guard so it can be shown again next phase
       socialSummaryOpen = false;
       
-      // OK button behavior: Resume timer and advance phase
-      try {
-        const g = global.game;
-        
-        // Resume timer with owner ID
-        if (global.PauseController && typeof global.PauseController.resume === 'function') {
-          global.PauseController.resume('social-summary');
-          console.info('[social-maneuvers] ▶️ Timer resumed via PauseController (OK pressed)');
-        } else {
-          // Fallback: resume via legacy method
-          if (typeof global.resumePhaseTimer === 'function') {
-            global.resumePhaseTimer();
-          }
-          console.info('[social-maneuvers] ▶️ Timer resumed (OK pressed, legacy fallback)');
-        }
-      } catch(e) {
-        console.error('[social-maneuvers] Failed to resume timer on OK:', e);
-      }
-      
+      // OK button behavior: DO NOT resume timer - let callback handle phase advancement
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();
@@ -3784,7 +3783,33 @@
             console.error('[social-maneuvers] Error calling phase advancement callback:', e);
           }
         } else {
-          console.warn('[social-maneuvers] ⚠ No phase advancement callback found - phase may not advance');
+          console.warn('[social-maneuvers] ⚠ No phase advancement callback found - attempting direct phase advancement as fallback');
+          
+          // Fallback: directly advance to nominations if callback missing
+          const startNomsMethods = [
+            'startNominations',
+            'beginNominations', 
+            'startNominationsPhase',
+            'proceedToNominations'
+          ];
+          
+          let advanced = false;
+          for (const methodName of startNomsMethods) {
+            if (typeof g?.[methodName] === 'function') {
+              console.info(`[social-maneuvers] ✓ Fallback: Starting nominations via ${methodName}`);
+              try {
+                g[methodName]();
+                advanced = true;
+                break;
+              } catch(e) {
+                console.error(`[social-maneuvers] ${methodName} failed:`, e);
+              }
+            }
+          }
+          
+          if (!advanced) {
+            console.error('[social-maneuvers] ⚠️ Failed to advance phase - no callback or fallback method found');
+          }
         }
       }, 400);
     };

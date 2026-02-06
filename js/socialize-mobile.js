@@ -654,6 +654,41 @@
   }
 
   function showSocialSummary() {
+    // Define phase advancement function (advances to nominations)
+    const advanceToNextPhase = () => {
+      console.info('[socialize-mobile] ✓ Advancing to next phase after summary dismissed (energy depleted)');
+      const g = global.game;
+      
+      // Try multiple methods to start nominations
+      const startNomsMethods = [
+        'startNominations',
+        'beginNominations', 
+        'startNominationsPhase',
+        'proceedToNominations'
+      ];
+      
+      for (const methodName of startNomsMethods) {
+        if (typeof g[methodName] === 'function') {
+          console.info(`[socialize-mobile] ✓ Starting nominations via ${methodName}`);
+          try {
+            g[methodName]();
+            return;
+          } catch(e) {
+            console.error(`[socialize-mobile] ${methodName} failed:`, e);
+          }
+        }
+      }
+      
+      console.error('[socialize-mobile] No method available to advance to nominations');
+    };
+    
+    // Store advancement callback for summary OK button to call
+    const g = global.game;
+    if (g) {
+      g.__socialPhaseAdvanceCallback = advanceToNextPhase;
+      console.info('[socialize-mobile] ✓ Phase advancement callback stored (energy depletion path)');
+    }
+    
     // Try to generate and show the summary using SocialManeuvers methods
     if (global.SocialManeuvers?.generatePhaseSummary && global.SocialManeuvers?.showSummaryPanel) {
       try {
