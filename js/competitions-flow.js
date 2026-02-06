@@ -1233,30 +1233,43 @@
         
         // Immediately trigger phase transition when user exits prematurely
         // This prevents the game from waiting for the timer to expire
-        console.info('[CompetitionFlow] User exited prematurely - triggering immediate phase transition');
+        console.info('[CompetitionFlow] User exited prematurely - triggering immediate phase resolution');
         close(true); // Skip animation when manually closed
         
-        // Call the fast-forward logic to immediately show results and move to next phase
-        if(global.CompetitionFlow?.showCompetitionResultsAndFastForward && typeof global.CompetitionFlow.showCompetitionResultsAndFastForward === 'function'){
-          // Use score of 0 for premature exit (no score submission)
-          setTimeout(() => {
-            console.info('[CompetitionFlow] Triggering fast-forward after premature exit');
-            global.CompetitionFlow.showCompetitionResultsAndFastForward(0);
-          }, 100); // Small delay to allow close() to complete
-        } else {
-          // Fallback: directly resolve the phase if fast-forward not available
-          console.warn('[CompetitionFlow] Fast-forward not available, using fallback phase resolution');
-          setTimeout(() => {
-            const phase = g.phase;
-            if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !g.__hohResolved){
-              console.info('[CompetitionFlow] Calling finishCompPhase() after premature exit');
-              global.finishCompPhase();
-            } else if(typeof global.defaultAdvance === 'function'){
-              console.info('[CompetitionFlow] Calling defaultAdvance() after premature exit');
-              global.defaultAdvance(phase);
-            }
-          }, 100);
-        }
+        // Submit score of 0 for the human player if they haven't submitted yet
+        // This ensures they appear in the results with a 0 score
+        setTimeout(() => {
+          const humanId = g.humanId;
+          if(humanId !== null && humanId !== undefined && g.lastCompScores && !g.lastCompScores.has(humanId)){
+            console.info('[CompetitionFlow] Submitting score of 0 for human player after premature exit');
+            g.lastCompScores.set(humanId, 0);
+          }
+          
+          // Directly trigger the phase finish function to show results and advance
+          // This bypasses the fast-forward logic which can cause race conditions with the phase timer
+          const phase = g.phase;
+          if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !g.__hohResolved){
+            console.info('[CompetitionFlow] Calling finishCompPhase() after premature exit');
+            global.finishCompPhase();
+          } else if((phase === 'pov' || phase === 'veto' || phase === 'veto_comp') && typeof global.finishVetoComp === 'function' && !g.__vetoResolved){
+            console.info('[CompetitionFlow] Calling finishVetoComp() after premature exit');
+            global.finishVetoComp();
+          } else if(phase === 'final3_comp1' && typeof global.finishF3P1 === 'function' && !g.__f3p1Resolved){
+            console.info('[CompetitionFlow] Calling finishF3P1() after premature exit');
+            global.finishF3P1();
+          } else if(phase === 'final3_comp2' && typeof global.finishF3P2 === 'function' && !g.__f3p2Resolved){
+            console.info('[CompetitionFlow] Calling finishF3P2() after premature exit');
+            global.finishF3P2();
+          } else if(phase === 'final3_comp3' && typeof global.finishF3P3 === 'function' && !g.__f3p3Resolved){
+            console.info('[CompetitionFlow] Calling finishF3P3() after premature exit');
+            global.finishF3P3();
+          } else if(typeof global.defaultAdvance === 'function'){
+            console.info('[CompetitionFlow] Calling defaultAdvance() after premature exit');
+            global.defaultAdvance(phase);
+          } else {
+            console.warn('[CompetitionFlow] No phase resolution function found for phase:', phase);
+          }
+        }, 100); // Small delay to allow close() to complete
         return;
       }
       close(true); // Skip animation when manually closed (already completed case)
