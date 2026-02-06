@@ -1,0 +1,155 @@
+/* MODULE: phase-advance-button.css
+ * Styling for manual phase advance "Next ▶" button
+ * Three states: blocked, ready, waiting
+ */
+
+#btnNextPhase {
+  /* Base positioning - inline in tvHead */
+  display: none; /* Hidden by default, shown in manual mode */
+  
+  /* Typography */
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  /* Sizing - compact to fit in tvHead */
+  padding: 6px 14px;
+  min-width: auto;
+  min-height: 32px;
+  height: 32px;
+  
+  /* Dark theme base */
+  background: rgba(30, 40, 55, 0.95);
+  border: 2px solid rgba(80, 90, 110, 0.5);
+  border-radius: 6px;
+  color: rgba(200, 210, 220, 0.8);
+  
+  /* Interaction */
+  cursor: default;
+  user-select: none;
+  transition: all 0.2s ease;
+  
+  /* Box model */
+  box-sizing: border-box;
+  
+  /* Prevent text selection */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  
+  /* Margin for spacing in tvHead */
+  margin: 0 8px;
+}
+
+/* === BLOCKED STATE === */
+/* Grayed out with subtle spinner */
+#btnNextPhase.phase-btn--blocked {
+  background: rgba(20, 25, 35, 0.7);
+  border-color: rgba(60, 70, 85, 0.3);
+  color: rgba(120, 130, 140, 0.5);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Spinner via ::after pseudo-element */
+#btnNextPhase.phase-btn--blocked::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(120, 130, 140, 0.2);
+  border-top-color: rgba(120, 130, 140, 0.6);
+  border-radius: 50%;
+  animation: phaseAdvanceSpinner 0.8s linear infinite;
+}
+
+@keyframes phaseAdvanceSpinner {
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* === READY STATE === */
+/* Subtle but clearly clickable - NO pulsing, NO glowing, NO animation */
+#btnNextPhase.phase-btn--ready {
+  /* Slightly brighter background - subtle but visible */
+  background: rgba(100, 180, 255, 0.15);
+  
+  /* Solid but not flashy border */
+  border: 2px solid rgba(100, 180, 255, 0.5);
+  
+  /* White text for readability */
+  color: rgba(255, 255, 255, 0.95);
+  
+  /* Normal pointer cursor */
+  cursor: pointer;
+  
+  /* Subtle hover effect (not pulsing) */
+}
+
+#btnNextPhase.phase-btn--ready:hover {
+  background: rgba(100, 180, 255, 0.22);
+  border-color: rgba(100, 180, 255, 0.65);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(100, 180, 255, 0.2);
+}
+
+#btnNextPhase.phase-btn--ready:active {
+  transform: translateY(0);
+  background: rgba(100, 180, 255, 0.25);
+}
+
+/* === WAITING STATE === */
+/* Brief loading/transition state */
+#btnNextPhase.phase-btn--waiting {
+  background: rgba(40, 50, 65, 0.6);
+  border-color: rgba(80, 90, 110, 0.4);
+  color: rgba(160, 170, 180, 0.6);
+  cursor: wait;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 640px) {
+  #btnNextPhase {
+    font-size: 11px;
+    padding: 5px 12px;
+    min-height: 28px;
+    height: 28px;
+    margin: 0 6px;
+  }
+}
+
+/* === ACCESSIBILITY === */
+#btnNextPhase:focus {
+  outline: 2px solid rgba(100, 180, 255, 0.8);
+  outline-offset: 2px;
+}
+
+#btnNextPhase:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  #btnNextPhase.phase-btn--ready {
+    border-width: 3px;
+    border-color: rgba(100, 180, 255, 0.9);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  #btnNextPhase {
+    transition: none;
+  }
+  
+  #btnNextPhase.phase-btn--blocked::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}

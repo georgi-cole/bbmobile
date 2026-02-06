@@ -60,6 +60,7 @@
 <link rel="stylesheet" href="css/veto-results.css">
 <link rel="stylesheet" href="css/veto-wait-card.css">
 <link rel="stylesheet" href="css/winner-announcement.css">
+<link rel="stylesheet" href="css/phase-advance-button.css">
 
 <!-- Unified Popup Card Design System - must load before component CSS -->
 <link rel="stylesheet" href="css/ui/unified-popup-card.css">
@@ -170,6 +171,7 @@
       <div class="tvHead">
         <div class="tvTitle">House Network Live</div>
         <div class="tvTimer" id="tvTimer">00:00</div>
+        <button id="btnNextPhase" class="phase-btn--blocked" aria-label="Advance to next phase" title="Advance to next phase">Next ▶</button>
         <button class="tvDrBtn" id="btnDiaryRoom" aria-label="Open Diary Room" title="Diary Room">🚪 DR</button>
       </div>
       <div class="tvViewport" data-sm-faux-tv>
@@ -355,6 +357,9 @@
 
 <!-- Phase transition cleanup system -->
 <script src="js/phase-terminator.js"></script>
+
+<!-- Phase Advance Controller (manual "Next ▶" button system) -->
+<script defer src="js/phase-advance-controller.js"></script>
 
 <script defer src="js/ui.hud-and-router.js?v=bio-panel-2"></script>
 
