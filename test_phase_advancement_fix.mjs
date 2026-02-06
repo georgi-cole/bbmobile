@@ -27,14 +27,14 @@ const socialJsContent = readFileSync(socialJsPath, 'utf-8');
 // Check for the pattern: generatePhaseSummary() followed by showSummaryPanel(summary)
 const hasGenerateSummaryCall = /generatePhaseSummary\(\)/.test(socialJsContent);
 const hasSummaryParamCheck = /if\s*\(\s*summary\s*\)/.test(socialJsContent);
-const passesummaryToPanel = /showSummaryPanel\(\s*summary\s*\)/.test(socialJsContent);
+const passesSummaryToPanel = /showSummaryPanel\(\s*summary\s*\)/.test(socialJsContent);
 
-if (hasGenerateSummaryCall && passesummaryToPanel) {
+if (hasGenerateSummaryCall && passesSummaryToPanel) {
   console.log('  ✅ PASS: social.js generates summary and passes it to showSummaryPanel');
 } else {
   console.log('  ❌ FAIL: social.js does not properly generate/pass summary');
   console.log('    - Generates summary:', hasGenerateSummaryCall);
-  console.log('    - Passes to panel:', passesummaryToPanel);
+  console.log('    - Passes to panel:', passesSummaryToPanel);
 }
 
 // Test 2: Verify callback is stored before showSummaryPanel is called
@@ -106,7 +106,7 @@ console.log('\n═════════════════════�
 console.log('📊 Test Summary');
 console.log('═══════════════════════════════════════════\n');
 
-const allPassed = hasGenerateSummaryCall && passesummaryToPanel && 
+const allPassed = hasGenerateSummaryCall && passesSummaryToPanel && 
                   callbackStoredBeforeSummary && hasGuardCheck && 
                   okButtonCallsCallback && okButtonDeletesCallback &&
                   fallbackStoresCallback && fallbackDefinesAdvanceFunction &&

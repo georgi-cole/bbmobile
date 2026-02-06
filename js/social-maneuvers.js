@@ -1826,14 +1826,15 @@
       g.__socialFastAdvanceTimeout = null;
     }
     
-    // Helper to try showing a summary method
-    const tryShowSummaryMethod = (fn, successMsg, errorMsg, summaryShownRef) => {
+    // Helper to try showing a summary method - returns true if successful
+    const tryShowSummaryMethod = (fn, successMsg, errorMsg) => {
       try {
         fn();
-        summaryShownRef.value = true;
         console.info(successMsg);
+        return true;
       } catch (e) {
         console.error(errorMsg, e);
+        return false;
       }
     };
     
@@ -1845,7 +1846,7 @@
         // (a) Render the Social Maneuvers summary
         await global.cardQueueWaitIdle?.();
         
-        const summaryShownRef = { value: false };
+        let summaryShown = false;
         
         // Define phase advancement function
         const advanceToNextPhase = () => {
@@ -1880,29 +1881,26 @@
         g.__socialPhaseAdvanceCallback = advanceToNextPhase;
         
         if (typeof showSummaryPanel === 'function') {
-          tryShowSummaryMethod(
+          summaryShown = tryShowSummaryMethod(
             () => showSummaryPanel(generatePhaseSummary()),
             '[social-maneuvers] ✓ Summary shown via showSummaryPanel',
-            '[social-maneuvers] showSummaryPanel failed:',
-            summaryShownRef
+            '[social-maneuvers] showSummaryPanel failed:'
           );
         }
         
-        if (!summaryShownRef.value && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
-          tryShowSummaryMethod(
+        if (!summaryShown && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
+          summaryShown = tryShowSummaryMethod(
             () => global.SocialManeuvers.showEndOfPhaseSummary(),
             '[social-maneuvers] ✓ Summary shown via showEndOfPhaseSummary',
-            '[social-maneuvers] showEndOfPhaseSummary failed:',
-            summaryShownRef
+            '[social-maneuvers] showEndOfPhaseSummary failed:'
           );
         }
         
-        if (!summaryShownRef.value && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
-          tryShowSummaryMethod(
+        if (!summaryShown && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
+          summaryShown = tryShowSummaryMethod(
             () => global.SocialManeuvers.presentPhaseSummary(),
             '[social-maneuvers] ✓ Summary shown via presentPhaseSummary',
-            '[social-maneuvers] presentPhaseSummary failed:',
-            summaryShownRef
+            '[social-maneuvers] presentPhaseSummary failed:'
           );
         }
         
