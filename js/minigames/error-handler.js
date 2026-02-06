@@ -173,7 +173,8 @@
         }
 
         // Clamp score to valid range (for legacy number format)
-        finalScore = Math.max(0, Math.min(150, finalScore));
+        // Max 1500 to match central-scoring.js scale (1.5x SCALE of 1000)
+        finalScore = Math.max(0, Math.min(1500, finalScore));
 
         // Call original callback
         onComplete(finalScore);
