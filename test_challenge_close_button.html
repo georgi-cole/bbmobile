@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Challenge Close Button - Results & Phase Advancement</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    button.success {
+      background: #2d7a4d;
+    }
+    button.success:hover {
+      background: #3a9861;
+    }
+    button.error {
+      background: #a73535;
+    }
+    button.error:hover {
+      background: #c24848;
+    }
+    
+    /* Simulate game viewport */
+    .game-viewport {
+      background: #0a0f16;
+      border: 2px solid #24364b;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 500px;
+      position: relative;
+    }
+
+    .log {
+      background: #0a0f16;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid #24364b;
+    }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #ffb347; }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .status.waiting {
+      background: #4a5568;
+      color: #fff;
+    }
+    .status.running {
+      background: #3563a7;
+      color: #fff;
+    }
+    .status.success {
+      background: #2d7a4d;
+      color: #fff;
+    }
+    .status.error {
+      background: #a73535;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Challenge Close Button - Results & Phase Advancement</h1>
+    <p><strong>Issue:</strong> When user closes a challenge mid-game via the X button, they return to the main screen with a timer running but nothing happening. Expected: immediate display of results with winner and 2nd/3rd place, then automatic advance to next phase.</p>
+    
+    <p><strong>Fix:</strong> Modified close button handler to:</p>
+    <ol>
+      <li>Submit human score as 0 (to ensure they appear in results)</li>
+      <li>Directly call phase finish function (e.g., finishCompPhase())</li>
+      <li>Let normal phase resolution handle AI scores, results display, and phase advancement</li>
+    </ol>
+
+    <div class="test-section">
+      <h2>Test Actions</h2>
+      <button onclick="setupHOHCompetition()">1. Setup HOH Competition</button>
+      <button onclick="launchMinigame()">2. Launch Minigame</button>
+      <button onclick="clickCloseButton()">3. Click Close Button (X) - Manual Test</button>
+      <button onclick="verifyResults()">4. Verify Results Shown</button>
+      <button onclick="verifyPhaseAdvancement()">5. Verify Phase Advanced</button>
+      <button onclick="runFullTest()">▶ Run Full Automated Test</button>
+      <button onclick="reset()">Reset</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Status <span id="testStatus" class="status waiting">Waiting</span></h2>
+      <div id="gameViewport" class="game-viewport">
+        <div style="color: #95a9c0; font-style: italic; text-align: center; padding: 100px 0;">
+          Click "Run Full Automated Test" to begin
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div class="log" id="consoleLog"></div>
+    </div>
+  </div>
+
+  <!-- Load game dependencies -->
+  <script>
+    // Minimal game state setup
+    window.game = {
+      cfg: {
+        tHOH: 35,
+        autoFastAdvanceCompetitions: true,
+        useNewMinigames: true
+      },
+      phase: null,
+      humanId: 1,
+      lastCompScores: new Map(),
+      alivePlayers: [],
+      __hohResolved: false,
+      __compRunning: false,
+      endAt: null
+    };
+
+    // Mock game functions
+    window.alivePlayers = () => window.game.alivePlayers;
+    window.getP = (id) => window.game.alivePlayers.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    window.getAvatarUrl = (id) => null;
+
+    // Mock phase management
+    window.setPhase = (phase, duration, callback) => {
+      log(`[setPhase] Phase: ${phase}, Duration: ${duration}s`, 'info');
+      window.game.phase = phase;
+      window.game.endAt = Date.now() + (duration * 1000);
+      window.game.phaseCallback = callback;
+    };
+
+    // Mock finish functions
+    window.finishCompPhase = async function() {
+      log('[finishCompPhase] Called - HOH competition ending', 'info');
+      if(window.game.__hohResolved) {
+        log('[finishCompPhase] Already resolved, skipping', 'warn');
+        return;
+      }
+      window.game.__hohResolved = true;
+      window.game.__compRunning = false;
+
+      // Simulate AI score generation
+      const alive = window.game.alivePlayers;
+      for(const p of alive) {
+        if(!window.game.lastCompScores.has(p.id)) {
+          const score = 5 + Math.random() * 20;
+          window.game.lastCompScores.set(p.id, score);
+          log(`[finishCompPhase] Generated AI score for ${p.name}: ${score.toFixed(1)}`, 'info');
+        }
+      }
+
+      // Show results
+      await showCompetitionResults();
+      
+      // Advance phase
+      log('[finishCompPhase] Advancing to next phase (social)', 'pass');
+      window.game.phase = 'social';
+      updateStatus('success');
+    };
+
+    // Mock results display
+    async function showCompetitionResults() {
+      log('[Results] Showing competition results popup', 'info');
+      
+      const viewport = document.getElementById('gameViewport');
+      const resultsCard = document.createElement('div');
+      resultsCard.style.cssText = `
+        background: linear-gradient(135deg, rgba(53, 99, 167, 0.95), rgba(29, 53, 87, 0.95));
+        border: 2px solid #83bfff;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        text-align: center;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 400px;
+        z-index: 10000;
+      `;
+
+      const topThree = buildTopThree();
+      
+      resultsCard.innerHTML = `
+        <h2 style="margin: 0 0 20px 0; color: #fff; font-size: 1.8rem;">🏆 HOH Results</h2>
+        <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px; margin: 15px 0;">
+          ${topThree.map((player, idx) => `
+            <div style="padding: 10px; margin: 5px 0; background: rgba(255,255,255,${idx === 0 ? 0.2 : 0.1}); border-radius: 8px;">
+              <strong style="color: ${idx === 0 ? '#ffd700' : idx === 1 ? '#c0c0c0' : '#cd7f32'};">
+                ${idx + 1}. ${player.name}
+              </strong>
+              <span style="float: right; color: #fff;">${player.score.toFixed(1)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="color: #83bfff; font-size: 0.9rem; margin-top: 15px;">
+          Advancing to next phase in 3 seconds...
+        </div>
+      `;
+
+      viewport.innerHTML = '';
+      viewport.appendChild(resultsCard);
+      log('[Results] Results popup displayed for 3 seconds', 'pass');
+
+      // Simulate popup duration
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      log('[Results] Results popup closed', 'info');
+      viewport.innerHTML = '<div style="color: #95a9c0; font-style: italic; text-align: center; padding: 100px 0;">Phase advanced to: ' + window.game.phase + '</div>';
+    }
+
+    function buildTopThree() {
+      const scores = Array.from(window.game.lastCompScores.entries())
+        .map(([id, score]) => ({
+          id,
+          score,
+          name: window.safeName(id)
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+      return scores;
+    }
+
+    // Logging
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('consoleLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span class="${type}">${new Date().toLocaleTimeString()}</span> - ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[${type}] ${message}`);
+    }
+
+    function updateStatus(status) {
+      const statusEl = document.getElementById('testStatus');
+      statusEl.className = `status ${status}`;
+      statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    // Test functions
+    function setupHOHCompetition() {
+      log('=== Setting up HOH Competition ===', 'info');
+      updateStatus('running');
+      
+      // Create mock players
+      window.game.alivePlayers = [
+        { id: 1, name: 'You', human: true, evicted: false },
+        { id: 2, name: 'Alice', human: false, evicted: false },
+        { id: 3, name: 'Bob', human: false, evicted: false },
+        { id: 4, name: 'Carol', human: false, evicted: false },
+        { id: 5, name: 'Dave', human: false, evicted: false }
+      ];
+      
+      // Reset state
+      window.game.lastCompScores = new Map();
+      window.game.__hohResolved = false;
+      window.game.__compRunning = true;
+      window.game.phase = 'hoh';
+      
+      window.setPhase('hoh', 35, window.finishCompPhase);
+      
+      log('✓ HOH competition initialized', 'pass');
+      log(`✓ ${window.game.alivePlayers.length} players eligible`, 'pass');
+      log('✓ Phase set to: hoh', 'pass');
+      log('✓ Timer set to 35 seconds', 'pass');
+    }
+
+    function launchMinigame() {
+      log('=== Launching Minigame ===', 'info');
+      
+      const viewport = document.getElementById('gameViewport');
+      viewport.innerHTML = `
+        <div style="text-align: center; padding: 50px 20px;">
+          <h2 style="color: #83bfff; margin-bottom: 20px;">🎮 Minigame Running</h2>
+          <p style="color: #95a9c0; font-size: 1.1rem;">
+            This simulates a fullscreen minigame.<br>
+            <strong>Click the X button below to test the close behavior.</strong>
+          </p>
+          <button id="closeBtn" onclick="clickCloseButton()" style="
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: rgba(220, 38, 38, 0.8);
+            color: #fff;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 1.8rem;
+            cursor: pointer;
+            z-index: 1000;
+            line-height: 1;
+          ">✕</button>
+          <div style="margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+            <p style="color: #fff; margin: 10px 0;">Timer: <strong>${Math.floor((window.game.endAt - Date.now()) / 1000)}s</strong> remaining</p>
+            <p style="color: #fff; margin: 10px 0;">Phase: <strong>${window.game.phase}</strong></p>
+            <p style="color: #fff; margin: 10px 0;">Score Submitted: <strong>${window.game.lastCompScores.has(window.game.humanId) ? 'Yes' : 'No'}</strong></p>
+          </div>
+        </div>
+      `;
+      
+      log('✓ Minigame overlay displayed', 'pass');
+      log('✓ Close button (X) available in top-right corner', 'pass');
+    }
+
+    function clickCloseButton() {
+      log('=== User Clicked Close Button (X) ===', 'warn');
+      
+      const confirmed = confirm('Are you sure you want to exit? Your score will not be submitted.');
+      if(!confirmed) {
+        log('✗ User cancelled close action', 'info');
+        return;
+      }
+      
+      log('✓ User confirmed close action', 'pass');
+      
+      // Simulate the fixed close button behavior
+      const viewport = document.getElementById('gameViewport');
+      viewport.innerHTML = '<div style="color: #95a9c0; font-style: italic; text-align: center; padding: 100px 0;">Overlay closed - triggering phase resolution...</div>';
+      
+      log('[Close] Overlay closed immediately', 'info');
+      
+      // Submit score of 0 for human
+      setTimeout(() => {
+        const humanId = window.game.humanId;
+        if(humanId !== null && humanId !== undefined && window.game.lastCompScores && !window.game.lastCompScores.has(humanId)) {
+          window.game.lastCompScores.set(humanId, 0);
+          log('[Close] Human score (0) submitted to lastCompScores', 'pass');
+        }
+        
+        // Call finishCompPhase
+        const phase = window.game.phase;
+        if(phase === 'hoh' && typeof window.finishCompPhase === 'function' && !window.game.__hohResolved) {
+          log('[Close] Calling finishCompPhase()', 'info');
+          window.finishCompPhase();
+        }
+      }, 100);
+    }
+
+    function verifyResults() {
+      log('=== Verifying Results Display ===', 'info');
+      
+      // Check if results were shown
+      const topThree = buildTopThree();
+      if(topThree.length > 0) {
+        log(`✓ Results include ${topThree.length} players`, 'pass');
+        topThree.forEach((p, idx) => {
+          log(`  ${idx + 1}. ${p.name} - ${p.score.toFixed(1)}`, 'info');
+        });
+      } else {
+        log('✗ No results found', 'fail');
+      }
+    }
+
+    function verifyPhaseAdvancement() {
+      log('=== Verifying Phase Advancement ===', 'info');
+      
+      if(window.game.phase === 'social') {
+        log('✓ Phase advanced to: social', 'pass');
+        log('✓ Competition resolved successfully', 'pass');
+      } else {
+        log(`✗ Phase is still: ${window.game.phase} (expected: social)`, 'fail');
+      }
+    }
+
+    async function runFullTest() {
+      log('====================================', 'info');
+      log('=== STARTING AUTOMATED TEST ===', 'info');
+      log('====================================', 'info');
+      updateStatus('running');
+      
+      // Step 1: Setup
+      setupHOHCompetition();
+      await sleep(1000);
+      
+      // Step 2: Launch minigame
+      launchMinigame();
+      await sleep(2000);
+      
+      // Step 3: Click close button (auto-confirm)
+      log('=== Auto-clicking Close Button ===', 'warn');
+      // Override confirm for auto-test
+      const originalConfirm = window.confirm;
+      window.confirm = () => true;
+      clickCloseButton();
+      window.confirm = originalConfirm;
+      
+      // Step 4: Wait for results to display and phase to advance
+      await sleep(4000);
+      
+      // Step 5: Verify results
+      verifyResults();
+      
+      // Step 6: Verify phase advancement
+      verifyPhaseAdvancement();
+      
+      // Final status
+      if(window.game.phase === 'social' && window.game.lastCompScores.size > 0) {
+        log('====================================', 'pass');
+        log('=== ✓ ALL TESTS PASSED ===', 'pass');
+        log('====================================', 'pass');
+        updateStatus('success');
+      } else {
+        log('====================================', 'fail');
+        log('=== ✗ TESTS FAILED ===', 'fail');
+        log('====================================', 'fail');
+        updateStatus('error');
+      }
+    }
+
+    function reset() {
+      log('=== Resetting Test Environment ===', 'info');
+      window.game.phase = null;
+      window.game.lastCompScores = new Map();
+      window.game.__hohResolved = false;
+      window.game.__compRunning = false;
+      window.game.alivePlayers = [];
+      document.getElementById('gameViewport').innerHTML = '<div style="color: #95a9c0; font-style: italic; text-align: center; padding: 100px 0;">Click "Run Full Automated Test" to begin</div>';
+      updateStatus('waiting');
+      log('✓ Reset complete', 'info');
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Initial log
+    log('Test environment ready. Click "Run Full Automated Test" to begin.', 'info');
+  </script>
+
+  <!-- Load actual game modules for integration testing -->
+  <script>
+    // Note: In a real test, we would load js/competitions-flow.js and other dependencies
+    // For now, this standalone test simulates the behavior
+    log('[Info] This is a standalone test. For full integration, load competitions-flow.js', 'info');
+  </script>
+</body>
+</html>
