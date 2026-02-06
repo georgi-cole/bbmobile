@@ -145,17 +145,38 @@
     // Wrap onComplete with error handling
     const safeOnComplete = (score) => {
       try {
-        // Validate score
-        if(typeof score !== 'number' || isNaN(score)){
-          console.warn(`[MinigameError] Invalid score from "${gameKey}":`, score);
-          score = 50; // Default to middle score
+        // Handle both scoreData object and legacy number formats
+        let finalScore = score;
+        
+        if(typeof score === 'object' && score !== null){
+          // New scoreData object format: {score, rawScore, rawScoreDisplay, isNewPersonalBest}
+          if(typeof score.score === 'number' && !isNaN(score.score)){
+            // Valid scoreData object - pass through as-is
+            onComplete(score);
+            return;
+          } else {
+            console.warn(`[MinigameError] Invalid scoreData from "${gameKey}":`, score);
+            finalScore = 50; // Default to middle score
+          }
+        } else if(typeof score === 'number'){
+          // Legacy number format
+          if(isNaN(score)){
+            console.warn(`[MinigameError] Invalid number score from "${gameKey}":`, score);
+            finalScore = 50; // Default to middle score
+          } else {
+            finalScore = score;
+          }
+        } else {
+          // Invalid type
+          console.warn(`[MinigameError] Invalid score type from "${gameKey}":`, score);
+          finalScore = 50; // Default to middle score
         }
 
-        // Clamp score to valid range
-        score = Math.max(0, Math.min(150, score));
+        // Clamp score to valid range (for legacy number format)
+        finalScore = Math.max(0, Math.min(150, finalScore));
 
         // Call original callback
-        onComplete(score);
+        onComplete(finalScore);
       } catch(error){
         console.error(`[MinigameError] Error in completion callback for "${gameKey}":`, error);
         
