@@ -948,7 +948,8 @@
 
     // Show quick reveal sequence with winner announcement
     showRevealSequenceWithWinner(() => {
-      cleanup();
+      // Don't call cleanup() here - let finishF3P3() handle it
+      // This prevents showing the main screen before results are displayed
       
       // Auto-advance: Set phase timer to 1 second for quick progression
       const g = global.game;
