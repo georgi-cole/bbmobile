@@ -1847,6 +1847,38 @@
           }
         }
         
+        // Define phase advancement function
+        const advanceToNextPhase = () => {
+          console.info('[social-maneuvers] ⏩ Advancing to next phase after fast-advance');
+          // (b) Call onSocialPhaseEnd
+          if (typeof onSocialPhaseEnd === 'function') {
+            try {
+              onSocialPhaseEnd();
+              console.info('[social-maneuvers] ✓ onSocialPhaseEnd called');
+            } catch (e) {
+              console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
+            }
+          }
+          
+          // (c) Advance to nominations
+          if (typeof global.startNominations === 'function') {
+            global.startNominations();
+            console.info('[social-maneuvers] ✓ Advanced to nominations via startNominations');
+          } else if (typeof global.setPhase === 'function') {
+            global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
+              if (typeof global.startVeto === 'function') global.startVeto();
+              else if (typeof global.startVetoComp === 'function') global.startVetoComp();
+            });
+            global.renderPanel?.();
+            console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
+          } else {
+            console.error('[social-maneuvers] No method available to advance to nominations');
+          }
+        };
+        
+        // Store callback for summary OK button
+        g.__socialPhaseAdvanceCallback = advanceToNextPhase;
+        
         if (typeof showSummaryPanel === 'function') {
           tryShowSummaryMethod(
             () => showSummaryPanel(generatePhaseSummary()),
@@ -1873,30 +1905,8 @@
         
         await global.cardQueueWaitIdle?.();
         
-        // (b) Call onSocialPhaseEnd
-        if (typeof onSocialPhaseEnd === 'function') {
-          try {
-            onSocialPhaseEnd();
-            console.info('[social-maneuvers] ✓ onSocialPhaseEnd called');
-          } catch (e) {
-            console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
-          }
-        }
-        
-        // (c) Advance to nominations
-        if (typeof global.startNominations === 'function') {
-          global.startNominations();
-          console.info('[social-maneuvers] ✓ Advanced to nominations via startNominations');
-        } else if (typeof global.setPhase === 'function') {
-          global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
-            if (typeof global.startVeto === 'function') global.startVeto();
-            else if (typeof global.startVetoComp === 'function') global.startVetoComp();
-          });
-          global.renderPanel?.();
-          console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
-        } else {
-          console.error('[social-maneuvers] No method available to advance to nominations');
-        }
+        // Summary shown, callback stored - phase will advance when OK clicked
+        console.info('[social-maneuvers] ✓ Summary shown, advancement callback stored for OK button');
       } catch (e) {
         console.error('[social-maneuvers] Fast-advance fallback failed:', e);
       }
