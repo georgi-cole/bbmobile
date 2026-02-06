@@ -544,7 +544,8 @@
 
     // Show quick reveal sequence (2-3 seconds)
     showRevealSequence(() => {
-      cleanup();
+      // Don't call cleanup() here - let finishF3P1/finishF3P2 handle it
+      // This prevents showing the main screen before results are displayed
       
       // Auto-advance: Set phase timer to 1 second for quick progression
       const g = global.game;
