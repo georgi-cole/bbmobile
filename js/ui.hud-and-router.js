@@ -2041,6 +2041,11 @@ header.innerHTML = `
   async function setPhase(phase, seconds, onTimeout){
     const game=g.game; if(!game) return;
     
+    // Reset PhaseAdvanceController for new phase
+    if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.reset === 'function'){
+      g.PhaseAdvanceController.reset();
+    }
+    
     // Guard: Block phase changes while game is paused
     if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
       console.info('[phase] setPhase blocked: game is paused');
@@ -2267,6 +2272,24 @@ header.innerHTML = `
     // Track pause state
     game.timerPaused = false;
     game.pausedTimeRemaining = null;
+    
+    // PhaseAdvanceController integration: Block timer and store advance function
+    if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.block === 'function'){
+      g.PhaseAdvanceController.block('phase-timer');
+      
+      // Store the advance function
+      const advanceFn = () => {
+        try{
+          if(typeof onTimeout==='function'){ onTimeout(); }
+          else { defaultAdvance(phase); }
+        }catch(e){ console.error(e); }
+        try{ g.twists?.afterPhase?.(phase); }catch{}
+      };
+      
+      if(typeof g.PhaseAdvanceController.setPendingAdvance === 'function'){
+        g.PhaseAdvanceController.setPendingAdvance(advanceFn);
+      }
+    }
 
     function tick(){
       // Helper to freeze timer by extending endAt
@@ -2348,6 +2371,28 @@ header.innerHTML = `
         if(typeof window.updateSkipProgress === 'function'){
           window.updateSkipProgress(total, total);
         }
+        
+        // PhaseAdvanceController integration: check mode
+        if(g.PhaseAdvanceController && typeof g.PhaseAdvanceController.getMode === 'function'){
+          const mode = g.PhaseAdvanceController.getMode();
+          
+          if(mode === 'manual'){
+            // Manual mode: unblock and show "NEXT" indicator
+            console.info('[phase] Timer expired in manual mode - waiting for user to click Next');
+            if(typeof g.PhaseAdvanceController.unblock === 'function'){
+              g.PhaseAdvanceController.unblock('phase-timer');
+            }
+            // Show "NEXT" or "▶" in clock display
+            setClock('NEXT');
+            // Update button text
+            if(typeof g.PhaseAdvanceController.updateButtonText === 'function'){
+              g.PhaseAdvanceController.updateButtonText();
+            }
+            return; // Don't auto-advance
+          }
+        }
+        
+        // Auto mode (or PhaseAdvanceController not available): execute normally
         try{
           if(typeof onTimeout==='function'){ onTimeout(); }
           else { defaultAdvance(phase); }
