@@ -660,6 +660,8 @@
       const g = global.game;
       
       // Try multiple methods to start nominations
+      // Use shared constant from SocialManeuvers if available, with defensive fallback
+      // (Fallback ensures robustness if module load order changes)
       const startNomsMethods = global.SocialManeuvers?.START_NOMINATIONS_METHODS || [
         'startNominations',
         'beginNominations', 

@@ -312,11 +312,12 @@
       
       logToUI('Simulating OK button click without callback...', 'info');
       
-      // Simulate the fallback logic
+      // Simulate the fallback logic using the constant from SocialManeuvers
       if (typeof window.game.__socialPhaseAdvanceCallback !== 'function') {
         logToUI('No callback found - trying fallback methods', 'warn');
         
-        const startNomsMethods = [
+        // Use the shared constant if available, otherwise fallback
+        const startNomsMethods = window.SocialManeuvers?.START_NOMINATIONS_METHODS || [
           'startNominations',
           'beginNominations', 
           'startNominationsPhase',
