@@ -222,7 +222,9 @@
   function attachCTAToEntry(entryEl, entryId, spendPrompt, detailedText) {
     // Check if already has CTA
     if (entryEl.querySelector('.social-spend-cta')) {
-      console.debug('[social-ui-adapter] Entry already has CTA:', entryId);
+      if (cfg.debugSocialAI) {
+        console.debug('[social-ui-adapter] Entry already has CTA:', entryId);
+      }
       return;
     }
     
@@ -459,7 +461,9 @@
     const event = new CustomEvent(eventName, { detail: data });
     window.dispatchEvent(event);
     
-    console.debug('[social-ui-adapter] Emitted:', eventName, data);
+    if (cfg.debugSocialAI) {
+      console.debug('[social-ui-adapter] Emitted:', eventName, data);
+    }
   }
 
   // ============================================================================
@@ -487,14 +491,18 @@
    * Handle social.action:result event
    */
   function handleSocialActionResult(payload) {
-    console.debug('[social-ui-adapter] social.action:result:', payload);
+    if (cfg.debugSocialAI) {
+      console.debug('[social-ui-adapter] social.action:result:', payload);
+    }
     
     if (!payload) return;
     
     const { entryId, spendPrompt, detailedText } = payload;
     
     if (!spendPrompt || !entryId) {
-      console.debug('[social-ui-adapter] No spendPrompt or entryId in payload');
+      if (cfg.debugSocialAI) {
+        console.debug('[social-ui-adapter] No spendPrompt or entryId in payload');
+      }
       return;
     }
     
@@ -522,14 +530,18 @@
    * Handle social.entry:story event
    */
   function handleSocialEntryStory(payload) {
-    console.debug('[social-ui-adapter] social.entry:story:', payload);
+    if (cfg.debugSocialAI) {
+      console.debug('[social-ui-adapter] social.entry:story:', payload);
+    }
     
     if (!payload) return;
     
     const { entryId, spendPrompt, detailedText } = payload;
     
     if (!spendPrompt || !entryId) {
-      console.debug('[social-ui-adapter] No spendPrompt or entryId in story payload');
+      if (cfg.debugSocialAI) {
+        console.debug('[social-ui-adapter] No spendPrompt or entryId in story payload');
+      }
       return;
     }
     
