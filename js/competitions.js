@@ -1551,12 +1551,23 @@
       // Apply dampening for consecutive winners
       for (const id of elig) {
         if (!g.lastCompScores.has(id)) {
-          // Assign 0 score for human if they didn't play (fast-forward without playing)
-          if (id === g.humanId && !g.__humanPlayedHOH) {
-            console.info('[hoh] Human skipped - assigning 0 score');
-            g.lastCompScores.set(id, 0);
-            continue;
+          // ROBUST CHECK: If this is the human player AND no score exists, assign 0
+          // This covers all edge cases: fast-forward, skip, timing issues, etc.
+          if (id === g.humanId) {
+            // Double-check: did human actually play and submit?
+            // If flag is set, they played - should have a score (defensive check)
+            if (!g.__humanPlayedHOH) {
+              console.info('[hoh] Human did not complete challenge - assigning 0 score');
+              g.lastCompScores.set(id, 0);
+              continue;
+            } else {
+              // Flag says they played, but no score? Unusual - still assign 0 for safety
+              console.warn('[hoh] Human played flag set but no score found - assigning 0 (defensive)');
+              g.lastCompScores.set(id, 0);
+              continue;
+            }
           }
+          // AI players get random scores (always > 0)
           let baseScore = 5 + (global.rng?.() || Math.random()) * 20;
           const p = global.getP(id);
           if (p) {
