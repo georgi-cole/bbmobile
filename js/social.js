@@ -373,7 +373,7 @@
     }
 
     // Ensure reveal cards have completely finished before showing any decision
-    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* Ignore errors */ }
 
     g.__decisionActive = true;
     
@@ -529,7 +529,7 @@
       try{
         const deck = document.getElementById('decisionDeck');
         if(deck) deck.remove();
-      }catch(e){}
+      }catch(e){ /* Ignore errors */ }
       
       // Mount launcher with robust fallback
       if(global.SocializeMobile?.ensureSocializeLauncher){
@@ -554,10 +554,10 @@
     global.tv?.say?.('Social Intermission');
     
     // Trigger social music
-    try{ global.phaseMusic?.('social'); }catch{}
+    try{ global.phaseMusic?.('social'); }catch(e){ /* Ignore errors */ }
 
     // Ensure prior reveal cards have finished before starting prompts
-    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* Ignore errors */ }
 
     const onDone = async ()=>{
       // CRITICAL: Always store phase advancement callback FIRST, before any other logic
@@ -708,19 +708,19 @@
         if(global.SocializeMobile?.ensureSocializeLauncher){
           try{
             global.SocializeMobile.ensureSocializeLauncher();
-          }catch(e){}
+          }catch(e){ /* Ignore errors */ }
         }
         
         // Update HUD
         if(global.SocializeMobile?.show){
           try{
             global.SocializeMobile.show();
-          }catch(e){}
+          }catch(e){ /* Ignore errors */ }
         }
         if(global.SocializeMobile?.updateHUD){
           try{
             global.SocializeMobile.updateHUD();
-          }catch(e){}
+          }catch(e){ /* Ignore errors */ }
         }
       }
     }
@@ -734,7 +734,7 @@
       if(global.SocializeMobile?.hide){
         try{
           global.SocializeMobile.hide();
-        }catch(e){}
+        }catch(e){ /* Ignore errors */ }
       }
       
       // Reset flags for next phase

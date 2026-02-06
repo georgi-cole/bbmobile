@@ -2278,7 +2278,6 @@
           global.SocializeMobile.hide();
         }
       }
-      }
       
       // ENHANCEMENT 2: HOH phase exit fallback for placement rules
       if (previousPhase === 'hoh' && phase !== 'hoh' && isEnabled()) {
