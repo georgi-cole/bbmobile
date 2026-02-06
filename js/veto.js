@@ -1096,12 +1096,20 @@
           g.lastCompScores.set(id, +v);
         }
         if(!g.lastCompScores.has(id)){
-          // Assign 0 score for human if they didn't play (fast-forward without playing)
-          if(id === g.humanId && !g.__humanPlayedVeto){
-            console.info('[veto] Human skipped - assigning 0 score');
+          // ROBUST CHECK: If this is the human player AND no score exists, assign 0
+          // This covers all edge cases: fast-forward, skip, timing issues, etc.
+          if(id === g.humanId){
+            // Always assign 0 for human with no score (defensive programming)
+            if(!g.__humanPlayedVeto){
+              console.info('[veto] Human did not complete challenge - assigning 0 score');
+            } else {
+              // Flag says they played, but no score? Unusual - still assign 0 for safety
+              console.warn('[veto] Human played flag set but no score found - assigning 0 (defensive)');
+            }
             g.lastCompScores.set(id, 0);
             continue;
           }
+          // AI players get random scores (always > 0)
           // Ensure AI scores are always > 0 to prevent 0-score players from winning
           var aiScore = Math.max(1, 5 + rng()*5);
           g.lastCompScores.set(id, aiScore);

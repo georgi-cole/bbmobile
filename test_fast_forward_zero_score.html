@@ -143,12 +143,20 @@
       // Apply scoring logic from the fix
       for (const id of elig) {
         if (!g.lastCompScores.has(id)) {
-          // NEW FIX: Assign 0 score for human if they didn't play
-          if (id === g.humanId && !g.__humanPlayedHOH) {
-            log(`[hoh] Human skipped - assigning 0 score`);
+          // ROBUST CHECK: If this is the human player AND no score exists, assign 0
+          // This covers all edge cases: fast-forward, skip, timing issues, etc.
+          if (id === g.humanId) {
+            // Always assign 0 for human with no score (defensive programming)
+            if (!g.__humanPlayedHOH) {
+              log(`[hoh] Human did not complete challenge - assigning 0 score`);
+            } else {
+              // Flag says they played, but no score? Unusual - still assign 0 for safety
+              log(`[hoh] Human played flag set but no score found - assigning 0 (defensive)`);
+            }
             g.lastCompScores.set(id, 0);
             continue;
           }
+          // AI players get random scores (always > 0)
           let baseScore = 5 + Math.random() * 20;
           const p = window.getP(id);
           if (p) {
@@ -206,12 +214,20 @@
       // Apply scoring logic from the fix
       for (const id of elig) {
         if (!g.lastCompScores.has(id)) {
-          // NEW FIX: Assign 0 score for human if they didn't play
-          if (id === g.humanId && !g.__humanPlayedVeto) {
-            log(`[veto] Human skipped - assigning 0 score`);
+          // ROBUST CHECK: If this is the human player AND no score exists, assign 0
+          // This covers all edge cases: fast-forward, skip, timing issues, etc.
+          if (id === g.humanId) {
+            // Always assign 0 for human with no score (defensive programming)
+            if (!g.__humanPlayedVeto) {
+              log(`[veto] Human did not complete challenge - assigning 0 score`);
+            } else {
+              // Flag says they played, but no score? Unusual - still assign 0 for safety
+              log(`[veto] Human played flag set but no score found - assigning 0 (defensive)`);
+            }
             g.lastCompScores.set(id, 0);
             continue;
           }
+          // AI players get random scores (always > 0)
           // Ensure AI scores are always > 0
           const aiScore = Math.max(1, 5 + Math.random() * 5);
           const p = window.getP(id);
