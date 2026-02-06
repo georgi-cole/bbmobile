@@ -1278,19 +1278,23 @@
    * Useful for testing and diagnostics
    */
   global.__smDebug.runAiTickOnce = function() {
-    console.group('[__smDebug] Running single AI tick');
+    const debugEnabled = global.game?.cfg?.debugSocialAI;
     
-    const config = getConfig();
-    console.log('Config:', config);
-    console.log('State:', global.__smDebug.getState());
-    
-    const eligible = getEligibleAIPlayers();
-    console.log('Eligible AI players:', eligible.length, eligible.map(p => p.name || p.id));
-    
-    if (eligible.length < 2) {
-      console.warn('Need at least 2 AI players for interactions');
-      console.groupEnd();
-      return;
+    if (debugEnabled) {
+      console.group('[__smDebug] Running single AI tick');
+      
+      const config = getConfig();
+      console.log('Config:', config);
+      console.log('State:', global.__smDebug.getState());
+      
+      const eligible = getEligibleAIPlayers();
+      console.log('Eligible AI players:', eligible.length, eligible.map(p => p.name || p.id));
+      
+      if (eligible.length < 2) {
+        console.warn('Need at least 2 AI players for interactions');
+        console.groupEnd();
+        return;
+      }
     }
     
     // Perform a single interaction with debug logging enabled
@@ -1305,8 +1309,10 @@
       global.game.cfg.debugSocialAI = oldDebug;
     }
     
-    console.log('Action counts:', Object.fromEntries(actionCounts));
-    console.groupEnd();
+    if (debugEnabled) {
+      console.log('Action counts:', Object.fromEntries(actionCounts));
+      console.groupEnd();
+    }
   };
 
   // Module initialization logs (always visible)

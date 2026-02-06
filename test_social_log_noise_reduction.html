@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Log Noise Reduction Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    .section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #667eea;
+      font-size: 18px;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .status.info {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+    }
+    .status.success {
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+    }
+    .status.warning {
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .console-output {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .console-output div {
+      margin: 2px 0;
+      white-space: pre-wrap;
+    }
+    .console-output .info {
+      color: #4fc3f7;
+    }
+    .console-output .debug {
+      color: #9e9e9e;
+    }
+    .console-output .warn {
+      color: #ffb74d;
+    }
+    .console-output .error {
+      color: #e57373;
+    }
+    .test-result {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .test-result.pass {
+      background: #4caf50;
+      color: white;
+    }
+    .test-result.fail {
+      background: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔇 Social AI Log Noise Reduction Test</h1>
+    <div class="subtitle">Testing console log gating with debugSocialAI flag</div>
+
+    <!-- Status Section -->
+    <div class="section">
+      <h2>📊 Current Status</h2>
+      <div id="status-container"></div>
+    </div>
+
+    <!-- Test Controls -->
+    <div class="section">
+      <h2>🧪 Test Controls</h2>
+      <div>
+        <button onclick="testWithoutDebug()">Test WITHOUT debugSocialAI</button>
+        <button onclick="testWithDebug()">Test WITH debugSocialAI</button>
+        <button onclick="clearConsole()">Clear Console</button>
+      </div>
+      <div style="margin-top: 15px;">
+        <button onclick="triggerSchedulerDebug()">Trigger __smDebug.runAiTickOnce()</button>
+        <button onclick="triggerAdapterEvent()">Trigger social.action:result</button>
+        <button onclick="triggerRegistryLookup()">Trigger Registry Lookup</button>
+      </div>
+    </div>
+
+    <!-- Expected Behavior -->
+    <div class="section">
+      <h2>✅ Expected Behavior</h2>
+      <div style="font-size: 14px; line-height: 1.6;">
+        <p><strong>WITHOUT debugSocialAI:</strong></p>
+        <ul>
+          <li>✅ Module initialization messages should appear (info level)</li>
+          <li>✅ Lifecycle events should appear (start/stop/pause/resume)</li>
+          <li>✅ Errors and warnings should always appear</li>
+          <li>❌ Per-tick logs should NOT appear</li>
+          <li>❌ Per-action event payload logs should NOT appear</li>
+          <li>❌ Legacy alias resolution logs should NOT appear</li>
+          <li>❌ __smDebug console group should NOT appear</li>
+        </ul>
+        <p><strong>WITH debugSocialAI=true:</strong></p>
+        <ul>
+          <li>✅ All verbose/debug logs should appear</li>
+          <li>✅ __smDebug console group should appear</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="section">
+      <h2>📋 Test Results</h2>
+      <div id="test-results"></div>
+    </div>
+
+    <!-- Console Monitor -->
+    <div class="section">
+      <h2>🖥️ Console Monitor (Recent Messages)</h2>
+      <div class="console-output" id="console-output"></div>
+    </div>
+  </div>
+
+  <script>
+    // Mock game environment
+    if (!window.game) {
+      window.game = {
+        cfg: {},
+        phase: 'intermission',
+        players: [
+          { id: 1, name: 'Alice', isHuman: false, evicted: false },
+          { id: 2, name: 'Bob', isHuman: false, evicted: false },
+          { id: 3, name: 'Charlie', isHuman: false, evicted: false }
+        ]
+      };
+    }
+
+    // Console monitoring
+    const consoleMessages = [];
+    const originalConsole = {
+      log: console.log,
+      info: console.info,
+      debug: console.debug,
+      warn: console.warn,
+      error: console.error
+    };
+
+    function monitorConsole(method, type) {
+      console[method] = function(...args) {
+        const message = args.join(' ');
+        consoleMessages.push({ type, message, timestamp: Date.now() });
+        updateConsoleOutput();
+        originalConsole[method].apply(console, args);
+      };
+    }
+
+    monitorConsole('log', 'log');
+    monitorConsole('info', 'info');
+    monitorConsole('debug', 'debug');
+    monitorConsole('warn', 'warn');
+    monitorConsole('error', 'error');
+
+    function updateConsoleOutput() {
+      const output = document.getElementById('console-output');
+      const recent = consoleMessages.slice(-20); // Last 20 messages
+      output.innerHTML = recent.map(msg => {
+        const time = new Date(msg.timestamp).toLocaleTimeString();
+        return `<div class="${msg.type}">[${time}] ${msg.message}</div>`;
+      }).join('');
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function clearConsole() {
+      consoleMessages.length = 0;
+      updateConsoleOutput();
+      originalConsole.info('Console cleared');
+    }
+
+    function updateStatus() {
+      const debugEnabled = window.game?.cfg?.debugSocialAI === true;
+      const status = document.getElementById('status-container');
+      status.innerHTML = `
+        <div class="status ${debugEnabled ? 'warning' : 'success'}">
+          <strong>debugSocialAI:</strong> <code>${debugEnabled}</code>
+          ${debugEnabled ? '⚠️ Verbose logging enabled' : '✅ Quiet mode (production default)'}
+        </div>
+        <div class="status info">
+          <strong>Modules loaded:</strong> 
+          ${window.SocialAIScheduler ? '✅ Scheduler' : '❌ Scheduler'}
+          ${window.SocialUIAdapter ? '✅ UI Adapter' : '❌ UI Adapter'}
+          ${window.SocialActionsRegistry ? '✅ Registry' : '❌ Registry'}
+        </div>
+      `;
+    }
+
+    function testWithoutDebug() {
+      originalConsole.info('=== TEST: WITHOUT debugSocialAI ===');
+      window.game.cfg.debugSocialAI = false;
+      updateStatus();
+      
+      const results = [];
+      const beforeCount = consoleMessages.length;
+      
+      // Trigger various actions
+      if (window.__smDebug?.runAiTickOnce) {
+        window.__smDebug.runAiTickOnce();
+      } else {
+        originalConsole.warn('__smDebug.runAiTickOnce not available');
+      }
+      
+      // Trigger adapter event
+      const event = new CustomEvent('social.action:result', {
+        detail: { entryId: 'test-1', action: 'test', actor: { id: 1, name: 'Alice' } }
+      });
+      window.dispatchEvent(event);
+      
+      // Trigger registry lookup
+      if (window.SocialActionsRegistry?.get) {
+        window.SocialActionsRegistry.get('gossip'); // Legacy alias
+      }
+      
+      const afterCount = consoleMessages.length;
+      const newMessages = consoleMessages.slice(beforeCount);
+      
+      // Check for unwanted debug logs
+      const hasDebugLogs = newMessages.some(m => 
+        m.message.includes('[__smDebug]') || 
+        m.message.includes('social.action:result:') ||
+        m.message.includes('Resolved legacy id')
+      );
+      
+      results.push({
+        test: 'No debug logs without flag',
+        pass: !hasDebugLogs,
+        message: hasDebugLogs ? 'Found debug logs in output' : 'No debug logs found (correct)'
+      });
+      
+      displayTestResults(results);
+    }
+
+    function testWithDebug() {
+      originalConsole.info('=== TEST: WITH debugSocialAI ===');
+      window.game.cfg.debugSocialAI = true;
+      updateStatus();
+      
+      const results = [];
+      const beforeCount = consoleMessages.length;
+      
+      // Trigger various actions
+      if (window.__smDebug?.runAiTickOnce) {
+        window.__smDebug.runAiTickOnce();
+      } else {
+        originalConsole.warn('__smDebug.runAiTickOnce not available');
+      }
+      
+      // Trigger adapter event
+      const event = new CustomEvent('social.action:result', {
+        detail: { 
+          entryId: 'test-2', 
+          spendPrompt: { text: 'Test', cost: 1 },
+          detailedText: 'Test details',
+          action: 'test', 
+          actor: { id: 1, name: 'Alice' } 
+        }
+      });
+      window.dispatchEvent(event);
+      
+      // Trigger registry lookup
+      if (window.SocialActionsRegistry?.get) {
+        window.SocialActionsRegistry.get('gossip'); // Legacy alias
+      }
+      
+      const afterCount = consoleMessages.length;
+      const newMessages = consoleMessages.slice(beforeCount);
+      
+      // Check for presence of debug logs
+      const hasDebugLogs = newMessages.some(m => 
+        m.type === 'debug' || m.message.includes('debug')
+      );
+      
+      results.push({
+        test: 'Debug logs present with flag',
+        pass: hasDebugLogs,
+        message: hasDebugLogs ? 'Debug logs found (correct)' : 'No debug logs found (incorrect)'
+      });
+      
+      displayTestResults(results);
+    }
+
+    function displayTestResults(results) {
+      const container = document.getElementById('test-results');
+      container.innerHTML = results.map(r => `
+        <div style="margin: 8px 0;">
+          <strong>${r.test}</strong>
+          <span class="test-result ${r.pass ? 'pass' : 'fail'}">${r.pass ? 'PASS' : 'FAIL'}</span>
+          <div style="margin-top: 4px; font-size: 13px; color: #666;">${r.message}</div>
+        </div>
+      `).join('');
+    }
+
+    function triggerSchedulerDebug() {
+      originalConsole.info('Triggering __smDebug.runAiTickOnce()...');
+      if (window.__smDebug?.runAiTickOnce) {
+        window.__smDebug.runAiTickOnce();
+      } else {
+        originalConsole.warn('__smDebug.runAiTickOnce not available');
+      }
+    }
+
+    function triggerAdapterEvent() {
+      originalConsole.info('Triggering social.action:result event...');
+      const event = new CustomEvent('social.action:result', {
+        detail: {
+          entryId: 'manual-test-' + Date.now(),
+          spendPrompt: { text: 'Reveal Details', cost: 2 },
+          detailedText: 'This is a manual test',
+          action: 'secret_chat',
+          actor: { id: 1, name: 'TestPlayer' },
+          target: { id: 2, name: 'TargetPlayer' }
+        }
+      });
+      window.dispatchEvent(event);
+    }
+
+    function triggerRegistryLookup() {
+      originalConsole.info('Triggering registry lookup (legacy alias)...');
+      if (window.SocialActionsRegistry?.get) {
+        const action = window.SocialActionsRegistry.get('gossip');
+        originalConsole.info('Registry lookup result:', action ? action.id : 'not found');
+      } else {
+        originalConsole.warn('SocialActionsRegistry not available');
+      }
+    }
+
+    // Initialize
+    updateStatus();
+    
+    // Load modules
+    const scripts = [
+      'js/social-ai-scheduler.js',
+      'js/social/social-ui-adapter.js',
+      'js/social/social-actions-registry.js',
+      'js/social/sm-to-dr-adapter.js'
+    ];
+    
+    scripts.forEach(src => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onerror = () => originalConsole.warn('Failed to load:', src);
+      script.onload = () => {
+        originalConsole.info('Loaded:', src);
+        updateStatus();
+      };
+      document.head.appendChild(script);
+    });
+  </script>
+</body>
+</html>
