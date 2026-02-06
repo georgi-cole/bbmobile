@@ -443,12 +443,12 @@
       if (energyRemaining > 0) {
         // Player still has energy - just close modal, don't show summary
         console.info('[socialize-mobile] ✓ Closing module with energy remaining - phase continues');
-        closeSocializeModal(true); // Skip energy check - we already checked
+        closeSocializeModal(true); // skipEnergyCheck=true (we already checked above)
         // Don't show summary - player can reopen to spend remaining energy
       } else {
         // Energy depleted - close and show summary (zero-energy flow)
         console.info('[socialize-mobile] ⚡ Zero energy on close - triggering fast-advance');
-        closeSocializeModal(true); // Skip energy check - we already know it's zero
+        closeSocializeModal(true); // skipEnergyCheck=true (we already checked above)
         // Show summary after modal closes
         setTimeout(() => {
           showSocialSummary();
