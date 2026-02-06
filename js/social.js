@@ -373,7 +373,7 @@
     }
 
     // Ensure reveal cards have completely finished before showing any decision
-    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* Ignore errors */ }
 
     g.__decisionActive = true;
     
@@ -498,8 +498,13 @@
     g.__socialShown = 0;        // reset per intermission (max 3 prompts)
     g.__socialLogBudget = 6;    // reset ambient budget
 
-    // Clear idempotency guard for new phase
-    if(g) g.__socialOnDoneFired = false;
+    // Clear phase advancement guards for new phase
+    if(g) {
+      g.__socialPhaseAdvanced = false;
+      delete g.__socialPhaseAdvanceCallback;
+      delete g.__socialPhaseStartCalled;
+      delete g.__socialPhaseEndCalled;
+    }
 
     // Clear any lingering ceremony cards before starting social phase
     if(global.CardManager){
@@ -524,7 +529,7 @@
       try{
         const deck = document.getElementById('decisionDeck');
         if(deck) deck.remove();
-      }catch(e){}
+      }catch(e){ /* Ignore errors */ }
       
       // Mount launcher with robust fallback
       if(global.SocializeMobile?.ensureSocializeLauncher){
@@ -549,18 +554,34 @@
     global.tv?.say?.('Social Intermission');
     
     // Trigger social music
-    try{ global.phaseMusic?.('social'); }catch{}
+    try{ global.phaseMusic?.('social'); }catch(e){ /* Ignore errors */ }
 
     // Ensure prior reveal cards have finished before starting prompts
-    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* Ignore errors */ }
 
     const onDone = async ()=>{
-      // Idempotency guard: prevent onDone from executing twice
-      if(global.game?.__socialOnDoneFired) {
-        console.warn('[social.js] onDone already fired this phase - ignoring duplicate call');
-        return;
-      }
-      global.game.__socialOnDoneFired = true;
+      // CRITICAL: Always store phase advancement callback FIRST, before any other logic
+      // This ensures the summary OK button can always advance the phase, regardless of race conditions
+      const advanceToNextPhase = () => {
+        // One-shot guard: prevent double advancement
+        if(global.game?.__socialPhaseAdvanced) {
+          console.warn('[social.js] Phase already advanced - ignoring duplicate call');
+          return;
+        }
+        global.game.__socialPhaseAdvanced = true;
+        
+        console.info('[social.js] ✓ Advancing to next phase');
+        if(typeof callback === 'function'){
+          try{ callback(); }catch(e){ console.error(e); }
+        } else {
+          const startNoms = resolveStartNominations();
+          try{ startNoms(); }catch(e){ console.error(e); }
+        }
+      };
+      
+      // Store callback immediately - this MUST happen before any guards or early returns
+      global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
+      console.info('[social.js] ✓ Phase advancement callback stored');
 
       // Track if summary was shown to determine fallback advancement
       let summaryShown = false;
@@ -588,28 +609,8 @@
             }
           }
           
-          // Ensure timer resumes if paused
-          if(global.SocialManeuvers?.resumePhaseTimer){
-            try{
-              global.SocialManeuvers.resumePhaseTimer();
-            }catch(e){
-              console.error('[social.js] Failed to resume timer:', e);
-            }
-          }
-          
           // Show engine summary instead of legacy
           await global.cardQueueWaitIdle?.();
-          
-          // Define phase advancement function
-          const advanceToNextPhase = () => {
-            console.info('[social.js] ✓ Advancing to next phase after summary dismissed');
-            if(typeof callback === 'function'){
-              try{ callback(); }catch(e){ console.error(e); }
-            } else {
-              const startNoms = resolveStartNominations();
-              try{ startNoms(); }catch(e){ console.error(e); }
-            }
-          };
           
           // Try to delegate to engine summary panel with advancement callback
           if(global.SocialManeuvers?.showSummaryPanel && global.SocialManeuvers?.generatePhaseSummary){
@@ -617,12 +618,10 @@
               // Generate summary data first
               const summary = global.SocialManeuvers.generatePhaseSummary();
               if(summary){
-                // Store advancement callback for summary OK button to call
-                global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
                 global.SocialManeuvers.showSummaryPanel(summary);
                 summaryShown = true;
-                console.info('[social.js] ✓ Showed engine summary via showSummaryPanel');
-                // Don't call advanceToNextPhase here - let the summary OK button handle it
+                console.info('[social.js] ✓ Showed engine summary via showSummaryPanel - phase will advance when user clicks OK');
+                endSocialPhaseCleanup();
                 return; // Exit early - phase will advance when user clicks OK
               }else{
                 console.warn('[social.js] generatePhaseSummary returned null/undefined');
@@ -632,24 +631,20 @@
             }
           }else if(global.SocialManeuvers?.showEndOfPhaseSummary){
             try{
-              // Store advancement callback for summary OK button to call
-              global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
               global.SocialManeuvers.showEndOfPhaseSummary();
               summaryShown = true;
-              console.info('[social.js] ✓ Showed engine summary via showEndOfPhaseSummary');
-              // Don't call advanceToNextPhase here - let the summary OK button handle it
+              console.info('[social.js] ✓ Showed engine summary via showEndOfPhaseSummary - phase will advance when user clicks OK');
+              endSocialPhaseCleanup();
               return; // Exit early - phase will advance when user clicks OK
             }catch(e){
               console.error('[social.js] showEndOfPhaseSummary failed:', e);
             }
           }else if(global.SocialManeuvers?.presentPhaseSummary){
             try{
-              // Store advancement callback for summary OK button to call
-              global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
               global.SocialManeuvers.presentPhaseSummary();
               summaryShown = true;
-              console.info('[social.js] ✓ Showed engine summary via presentPhaseSummary');
-              // Don't call advanceToNextPhase here - let the summary OK button handle it
+              console.info('[social.js] ✓ Showed engine summary via presentPhaseSummary - phase will advance when user clicks OK');
+              endSocialPhaseCleanup();
               return; // Exit early - phase will advance when user clicks OK
             }catch(e){
               console.error('[social.js] presentPhaseSummary failed:', e);
@@ -670,12 +665,8 @@
       // Fallback: Only advance phase if no summary was shown successfully
       // (If summary was shown, phase advancement is handled by the OK button callback)
       if(!summaryShown){
-        if(typeof callback === 'function'){
-          try{ callback(); }catch(e){ console.error(e); }
-        } else {
-          const startNoms = resolveStartNominations();
-          try{ startNoms(); }catch(e){ console.error(e); }
-        }
+        console.info('[social.js] No summary shown - advancing immediately');
+        advanceToNextPhase();
       }
     };
     global.setPhase?.('social_intermission', g.cfg?.tComms||30, onDone);
@@ -717,19 +708,19 @@
         if(global.SocializeMobile?.ensureSocializeLauncher){
           try{
             global.SocializeMobile.ensureSocializeLauncher();
-          }catch(e){}
+          }catch(e){ /* Ignore errors */ }
         }
         
         // Update HUD
         if(global.SocializeMobile?.show){
           try{
             global.SocializeMobile.show();
-          }catch(e){}
+          }catch(e){ /* Ignore errors */ }
         }
         if(global.SocializeMobile?.updateHUD){
           try{
             global.SocializeMobile.updateHUD();
-          }catch(e){}
+          }catch(e){ /* Ignore errors */ }
         }
       }
     }
@@ -738,31 +729,12 @@
       _inSocialPhase = false;
       console.info('[social.js wrapper] ◼ Detected leaving social_intermission via setPhase');
       
-      if(global.SocialManeuvers?.isEnabled?.()){
-        // Call onSocialPhaseEnd if not already called
-        if(global.SocialManeuvers?.onSocialPhaseEnd && !global.game?.__socialPhaseEndCalled){
-          try{
-            global.game.__socialPhaseEndCalled = true;
-            global.SocialManeuvers.onSocialPhaseEnd();
-            console.info('[social.js wrapper] ✓ Called onSocialPhaseEnd');
-          }catch(e){
-            console.error('[social.js wrapper] onSocialPhaseEnd failed:', e);
-          }
-        }
-        
-        // Hide launcher
-        if(global.SocializeMobile?.hide){
-          try{
-            global.SocializeMobile.hide();
-          }catch(e){}
-        }
-        
-        // Resume timer
-        if(global.SocialManeuvers?.resumePhaseTimer){
-          try{
-            global.SocialManeuvers.resumePhaseTimer();
-          }catch(e){}
-        }
+      // Only do UI cleanup here - NOT phase end logic
+      // Phase end logic should only happen in onDone()
+      if(global.SocializeMobile?.hide){
+        try{
+          global.SocializeMobile.hide();
+        }catch(e){ /* Ignore errors */ }
       }
       
       // Reset flags for next phase
