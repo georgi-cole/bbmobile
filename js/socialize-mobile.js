@@ -660,7 +660,7 @@
       const g = global.game;
       
       // Try multiple methods to start nominations
-      const startNomsMethods = [
+      const startNomsMethods = global.SocialManeuvers?.START_NOMINATIONS_METHODS || [
         'startNominations',
         'beginNominations', 
         'startNominationsPhase',

@@ -26,6 +26,17 @@
   // ============================================================================
   let socialPhaseEnded = false;
   let socialSummaryOpen = false;
+  
+  // ============================================================================
+  // SHARED CONSTANTS
+  // ============================================================================
+  // Methods to try when advancing to nominations phase
+  const START_NOMINATIONS_METHODS = [
+    'startNominations',
+    'beginNominations', 
+    'startNominationsPhase',
+    'proceedToNominations'
+  ];
 
   // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
@@ -3361,6 +3372,14 @@
   // SUMMARY & TELEMETRY (PR #266)
   // ============================================================================
 
+  // Helper function to check if human player is evicted
+  function isHumanPlayerEvicted() {
+    const g = global.game;
+    const humanId = g?.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    return humanPlayer?.evicted === true;
+  }
+
   function generatePhaseSummary(){
     const g = global.game;
     const session = g?.__socialManeuversSession;
@@ -3371,9 +3390,7 @@
     }
     
     // Check if human player is evicted - skip summary if so
-    const humanId = g?.humanId;
-    const humanPlayer = global.getP?.(humanId);
-    if (humanPlayer?.evicted) {
+    if (isHumanPlayerEvicted()) {
       console.info('[social-maneuvers] 🚫 Human player is evicted - skipping summary generation');
       return null;
     }
@@ -3610,10 +3627,7 @@
     if(!summary) return;
     
     // Check if human player is evicted - skip summary if so
-    const g = global.game;
-    const humanId = g?.humanId;
-    const humanPlayer = global.getP?.(humanId);
-    if (humanPlayer?.evicted) {
+    if (isHumanPlayerEvicted()) {
       console.info('[social-maneuvers] 🚫 Human player is evicted - skipping summary display');
       return;
     }
@@ -3786,15 +3800,8 @@
           console.warn('[social-maneuvers] ⚠ No phase advancement callback found - attempting direct phase advancement as fallback');
           
           // Fallback: directly advance to nominations if callback missing
-          const startNomsMethods = [
-            'startNominations',
-            'beginNominations', 
-            'startNominationsPhase',
-            'proceedToNominations'
-          ];
-          
           let advanced = false;
-          for (const methodName of startNomsMethods) {
+          for (const methodName of START_NOMINATIONS_METHODS) {
             if (typeof g?.[methodName] === 'function') {
               console.info(`[social-maneuvers] ✓ Fallback: Starting nominations via ${methodName}`);
               try {
@@ -4038,7 +4045,8 @@
     // Constants
     DEFAULT_ENERGY, SOCIAL_ACTIONS, RESOURCE_CONFIG, SM_BANK_CONFIG,
     WEEKLY_ENERGY_BONUSES, WEEKLY_ENERGY_PENALTIES,
-    INFLUENCE_DELTAS, INFORMATION_EARNINGS, INFORMATION_COSTS
+    INFLUENCE_DELTAS, INFORMATION_EARNINGS, INFORMATION_COSTS,
+    START_NOMINATIONS_METHODS // Phase advancement methods
   };
   global.SocialManager = global.SocialManeuvers;
   Object.defineProperty(global, 'USE_SOCIAL_MANEUVERS', {
