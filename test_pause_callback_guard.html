@@ -129,7 +129,7 @@
     <div>
       <button id="test-missing-callback" class="primary">Test 1: Missing Callback (Edge Case)</button>
       <button id="test-invalid-callback" class="primary">Test 2: Invalid Callback (Non-Function)</button>
-      <button id="test-valid-callback" class="success">Test 3: Valid Callback (Should Work)</button>
+      <button id="test-valid-callback" class="success">Test 3: Valid Callback (Expired Timer)</button>
       <button id="test-expired-timer" class="primary">Test 4: Expired Timer + Missing Callback</button>
     </div>
   </div>
@@ -276,9 +276,9 @@
       }, 100);
     }
 
-    // Test 3: Valid callback (should work normally when timer already expired at pause time)
+    // Test 3: Valid callback (expired timer scenario - callback should be invoked)
     function testValidCallback() {
-      log('=== Test 3: Valid Callback ===', 'info');
+      log('=== Test 3: Valid Callback (Expired Timer) ===', 'info');
       errorOccurred = false;
       let callbackCalled = false;
       
@@ -300,7 +300,7 @@
           window.PauseController.resume('test-valid');
           log('Resume completed', 'info');
           
-          // Wait for callback to be called (callback is called async via setTimeout with 10ms delay)
+          // Wait for callback to be called asynchronously
           setTimeout(() => {
             if (callbackCalled && !errorOccurred) {
               addTestResult('Test 3: Valid Callback', true, 'Callback was called successfully for expired timer');
