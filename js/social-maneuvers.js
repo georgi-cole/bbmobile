@@ -1479,7 +1479,7 @@
       historySection.innerHTML = '';
       if(selectedPlayers.length === 0){ historySection.style.display = 'none'; return; }
       historySection.style.display = 'block';
-      const historyContent = createHistoryUI ? createHistoryUI(playerId, selectedPlayers[0].id) : document.createElement('div');
+      const historyContent = (typeof createHistoryUI === 'function') ? createHistoryUI(playerId, selectedPlayers[0].id) : document.createElement('div');
       if(!historyContent || !historyContent.classList){ // fallback text
         const d = document.createElement('div'); d.textContent = 'History unavailable'; historySection.appendChild(d);
       } else {
@@ -1826,6 +1826,17 @@
       g.__socialFastAdvanceTimeout = null;
     }
     
+    // Helper to try showing a summary method
+    const tryShowSummaryMethod = (fn, successMsg, errorMsg, summaryShownRef) => {
+      try {
+        fn();
+        summaryShownRef.value = true;
+        console.info(successMsg);
+      } catch (e) {
+        console.error(errorMsg, e);
+      }
+    };
+    
     g.__socialFastAdvanceTimeout = setTimeout(async () => {
       console.info('[social-maneuvers] ⏩ Fast-advance triggered (fallback)');
       g.__socialFastAdvanceTimeout = null;
@@ -1834,18 +1845,7 @@
         // (a) Render the Social Maneuvers summary
         await global.cardQueueWaitIdle?.();
         
-        let summaryShown = false;
-        
-        // Helper to try showing a summary method
-        function tryShowSummaryMethod(fn, successMsg, errorMsg) {
-          try {
-            fn();
-            summaryShown = true;
-            console.info(successMsg);
-          } catch (e) {
-            console.error(errorMsg, e);
-          }
-        }
+        const summaryShownRef = { value: false };
         
         // Define phase advancement function
         const advanceToNextPhase = () => {
@@ -1883,23 +1883,26 @@
           tryShowSummaryMethod(
             () => showSummaryPanel(generatePhaseSummary()),
             '[social-maneuvers] ✓ Summary shown via showSummaryPanel',
-            '[social-maneuvers] showSummaryPanel failed:'
+            '[social-maneuvers] showSummaryPanel failed:',
+            summaryShownRef
           );
         }
         
-        if (!summaryShown && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
+        if (!summaryShownRef.value && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
           tryShowSummaryMethod(
             () => global.SocialManeuvers.showEndOfPhaseSummary(),
             '[social-maneuvers] ✓ Summary shown via showEndOfPhaseSummary',
-            '[social-maneuvers] showEndOfPhaseSummary failed:'
+            '[social-maneuvers] showEndOfPhaseSummary failed:',
+            summaryShownRef
           );
         }
         
-        if (!summaryShown && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
+        if (!summaryShownRef.value && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
           tryShowSummaryMethod(
             () => global.SocialManeuvers.presentPhaseSummary(),
             '[social-maneuvers] ✓ Summary shown via presentPhaseSummary',
-            '[social-maneuvers] presentPhaseSummary failed:'
+            '[social-maneuvers] presentPhaseSummary failed:',
+            summaryShownRef
           );
         }
         
