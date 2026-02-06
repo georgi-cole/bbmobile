@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pause Controller - Callback Guard Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0a0e1a;
+      color: #e6e8ee;
+    }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #9fb5ff;
+    }
+    button {
+      background: #172034;
+      border: 1px solid #2c3446;
+      color: #e6e8ee;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1d2840;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      border-color: #2d8ab4;
+    }
+    button.danger {
+      background: #8b3838;
+      border-color: #a04545;
+    }
+    button.success {
+      background: #2d6b3f;
+      border-color: #3d8a54;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .status.pass {
+      background: rgba(121, 209, 154, 0.1);
+      border: 1px solid #79d19a;
+      color: #79d19a;
+    }
+    .status.fail {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid #ff6b6b;
+      color: #ff6b6b;
+    }
+    .status.warn {
+      background: rgba(242, 200, 98, 0.1);
+      border: 1px solid #f2c862;
+      color: #f2c862;
+    }
+    .log {
+      background: #0a0e1a;
+      border: 1px solid #1d2742;
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1d2742;
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .log-entry.error {
+      color: #ff6b6b;
+    }
+    .log-entry.warn {
+      color: #f2c862;
+    }
+    .log-entry.success {
+      color: #79d19a;
+    }
+    .log-entry.info {
+      color: #9fb5ff;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .test-result.pass {
+      background: rgba(121, 209, 154, 0.2);
+      color: #79d19a;
+    }
+    .test-result.fail {
+      background: rgba(255, 107, 107, 0.2);
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏸️ Pause Controller - Callback Guard Test</h1>
+  <p>Tests the fix for: <strong>Uncaught TypeError: pauseState.timerState.phaseTimeoutCallback is not a function</strong></p>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Tests</h2>
+    <div>
+      <button id="test-missing-callback" class="primary">Test 1: Missing Callback (Edge Case)</button>
+      <button id="test-invalid-callback" class="primary">Test 2: Invalid Callback (Non-Function)</button>
+      <button id="test-valid-callback" class="success">Test 3: Valid Callback (Should Work)</button>
+      <button id="test-expired-timer" class="primary">Test 4: Expired Timer + Missing Callback</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <button id="clear-log" class="danger">Clear Log</button>
+    <div class="log" id="event-log"></div>
+  </div>
+
+  <script>
+    // Test results tracker
+    const testResults = [];
+    let errorOccurred = false;
+    
+    // Mock game object
+    window.game = {
+      phase: 'eviction',
+      week: 3,
+      endAt: null,
+      phaseEndsAt: null,
+      timerPaused: false,
+      bus: {
+        emit: function(event, data) {
+          log(`Bus event: ${event}`, 'info', data);
+        }
+      }
+    };
+
+    // Capture any uncaught errors
+    window.addEventListener('error', (event) => {
+      errorOccurred = true;
+      log(`❌ UNCAUGHT ERROR: ${event.message}`, 'error');
+      addTestResult('Runtime Error Check', false, `Uncaught error: ${event.message}`);
+    });
+
+    // Logger
+    function log(message, type = 'info', data = null) {
+      const logEl = document.getElementById('event-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      if (data) {
+        entry.textContent += ' ' + JSON.stringify(data, null, 2);
+      }
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(message, data);
+    }
+
+    // Test result tracker
+    function addTestResult(testName, passed, message = '') {
+      testResults.push({ testName, passed, message });
+      const resultsEl = document.getElementById('test-results');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.textContent = `${passed ? '✓' : '✗'} ${testName}`;
+      if (message) {
+        resultDiv.textContent += ` - ${message}`;
+      }
+      resultsEl.appendChild(resultDiv);
+    }
+
+    // Test 1: Missing callback (undefined)
+    function testMissingCallback() {
+      log('=== Test 1: Missing Callback ===', 'info');
+      errorOccurred = false;
+      
+      // Setup: Timer with NO callback
+      window.game.phase = 'eviction';
+      window.game.phaseEndsAt = Date.now() + 1000; // 1 second
+      window.game.phaseTimeoutCallback = undefined; // Missing
+      
+      // Pause
+      window.PauseController.pause('test-missing');
+      log('Paused with missing callback', 'info');
+      
+      // Wait for timer to expire, then resume
+      setTimeout(() => {
+        window.game.phaseEndsAt = Date.now() - 100; // Make it expired
+        log('Timer expired while paused', 'warn');
+        
+        // Resume should NOT crash
+        setTimeout(() => {
+          try {
+            window.PauseController.resume('test-missing');
+            log('✓ Resume completed without crash', 'success');
+            
+            // Wait a bit for any async errors
+            setTimeout(() => {
+              if (!errorOccurred) {
+                addTestResult('Test 1: Missing Callback', true, 'No crash occurred');
+              } else {
+                addTestResult('Test 1: Missing Callback', false, 'Runtime error occurred');
+              }
+            }, 100);
+          } catch (err) {
+            log(`✗ Resume threw error: ${err.message}`, 'error');
+            addTestResult('Test 1: Missing Callback', false, err.message);
+          }
+        }, 50);
+      }, 100);
+    }
+
+    // Test 2: Invalid callback (non-function)
+    function testInvalidCallback() {
+      log('=== Test 2: Invalid Callback ===', 'info');
+      errorOccurred = false;
+      
+      // Setup: Timer with INVALID callback
+      window.game.phase = 'eviction';
+      window.game.phaseEndsAt = Date.now() + 1000;
+      window.game.phaseTimeoutCallback = "not a function"; // Invalid!
+      
+      // Pause
+      window.PauseController.pause('test-invalid');
+      log('Paused with invalid callback (string)', 'info');
+      
+      // Wait for timer to expire, then resume
+      setTimeout(() => {
+        window.game.phaseEndsAt = Date.now() - 100; // Make it expired
+        log('Timer expired while paused', 'warn');
+        
+        // Resume should NOT crash
+        setTimeout(() => {
+          try {
+            window.PauseController.resume('test-invalid');
+            log('✓ Resume completed without crash', 'success');
+            
+            // Wait a bit for any async errors
+            setTimeout(() => {
+              if (!errorOccurred) {
+                addTestResult('Test 2: Invalid Callback', true, 'No crash occurred');
+              } else {
+                addTestResult('Test 2: Invalid Callback', false, 'Runtime error occurred');
+              }
+            }, 100);
+          } catch (err) {
+            log(`✗ Resume threw error: ${err.message}`, 'error');
+            addTestResult('Test 2: Invalid Callback', false, err.message);
+          }
+        }, 50);
+      }, 100);
+    }
+
+    // Test 3: Valid callback (should work normally when timer already expired at pause time)
+    function testValidCallback() {
+      log('=== Test 3: Valid Callback ===', 'info');
+      errorOccurred = false;
+      let callbackCalled = false;
+      
+      // Setup: Timer that is ALREADY expired when we pause
+      window.game.phase = 'nominations';
+      window.game.phaseEndsAt = Date.now() - 100; // Already expired!
+      window.game.phaseTimeoutCallback = function() {
+        callbackCalled = true;
+        log('✓ Phase timeout callback was called', 'success');
+      };
+      
+      // Pause with an already-expired timer
+      window.PauseController.pause('test-valid');
+      log('Paused (timer already expired)', 'info');
+      
+      // Resume immediately - should trigger callback
+      setTimeout(() => {
+        try {
+          window.PauseController.resume('test-valid');
+          log('Resume completed', 'info');
+          
+          // Wait for callback to be called (callback is called async via setTimeout with 10ms delay)
+          setTimeout(() => {
+            if (callbackCalled && !errorOccurred) {
+              addTestResult('Test 3: Valid Callback', true, 'Callback was called successfully for expired timer');
+            } else if (!callbackCalled) {
+              addTestResult('Test 3: Valid Callback', false, 'Callback was not called');
+            } else {
+              addTestResult('Test 3: Valid Callback', false, 'Runtime error occurred');
+            }
+          }, 100);
+        } catch (err) {
+          log(`✗ Resume threw error: ${err.message}`, 'error');
+          addTestResult('Test 3: Valid Callback', false, err.message);
+        }
+      }, 50);
+    }
+
+    // Test 4: Expired timer with null callback (captured as null)
+    function testExpiredTimerNullCallback() {
+      log('=== Test 4: Expired Timer + Null Callback ===', 'info');
+      errorOccurred = false;
+      
+      // Setup: Timer that will expire, but callback is null
+      window.game.phase = 'eviction';
+      window.game.phaseEndsAt = Date.now() + 50; // Very short
+      window.game.phaseTimeoutCallback = null;
+      
+      // Pause immediately
+      window.PauseController.pause('test-expired');
+      log('Paused with null callback', 'info');
+      
+      // Wait for timer to definitely expire
+      setTimeout(() => {
+        log('Timer definitely expired while paused', 'warn');
+        
+        // Resume should NOT crash
+        setTimeout(() => {
+          try {
+            window.PauseController.resume('test-expired');
+            log('✓ Resume completed without crash', 'success');
+            
+            // Wait a bit for any async errors
+            setTimeout(() => {
+              if (!errorOccurred) {
+                addTestResult('Test 4: Expired Timer + Null Callback', true, 'No crash on expired timer with null callback');
+              } else {
+                addTestResult('Test 4: Expired Timer + Null Callback', false, 'Runtime error occurred');
+              }
+            }, 100);
+          } catch (err) {
+            log(`✗ Resume threw error: ${err.message}`, 'error');
+            addTestResult('Test 4: Expired Timer + Null Callback', false, err.message);
+          }
+        }, 50);
+      }, 200);
+    }
+
+    // Run all automated tests on load
+    window.addEventListener('load', () => {
+      log('Test page loaded', 'info');
+      
+      // Wait for PauseController to load
+      setTimeout(() => {
+        if (!window.PauseController) {
+          log('❌ PauseController not loaded!', 'error');
+          addTestResult('PauseController Availability', false, 'Module not loaded');
+          return;
+        }
+        
+        log('✓ PauseController loaded', 'success');
+        addTestResult('PauseController Availability', true);
+        
+        // Run automated tests sequentially
+        setTimeout(() => testMissingCallback(), 500);
+        setTimeout(() => testInvalidCallback(), 2000);
+        setTimeout(() => testValidCallback(), 4000);
+        setTimeout(() => testExpiredTimerNullCallback(), 6000);
+        
+        // Final summary
+        setTimeout(() => {
+          log('=== Test Summary ===', 'info');
+          const passCount = testResults.filter(r => r.passed).length;
+          const totalCount = testResults.length;
+          log(`Passed: ${passCount}/${totalCount}`, passCount === totalCount ? 'success' : 'error');
+          
+          if (passCount === totalCount) {
+            log('✓ ALL TESTS PASSED - Fix is working correctly!', 'success');
+          } else {
+            log('✗ SOME TESTS FAILED - Review the failures above', 'error');
+          }
+        }, 8500);
+      }, 500);
+    });
+
+    // Manual test buttons
+    document.getElementById('test-missing-callback').addEventListener('click', testMissingCallback);
+    document.getElementById('test-invalid-callback').addEventListener('click', testInvalidCallback);
+    document.getElementById('test-valid-callback').addEventListener('click', testValidCallback);
+    document.getElementById('test-expired-timer').addEventListener('click', testExpiredTimerNullCallback);
+
+    document.getElementById('clear-log').addEventListener('click', () => {
+      document.getElementById('event-log').innerHTML = '';
+    });
+  </script>
+
+  <!-- Load PauseController -->
+  <script defer src="js/flow/PauseController.js"></script>
+</body>
+</html>
