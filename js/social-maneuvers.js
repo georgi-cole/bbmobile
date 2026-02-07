@@ -1861,16 +1861,15 @@
             }
           }
           
-          // (c) Advance to nominations - must use setPhase to transition the phase first,
-          // because startNominations() only renders the panel when phase is already 'nominations'
-          if (typeof global.setPhase === 'function') {
+          // (c) Advance to nominations
+          if (typeof global.startNominations === 'function') {
+            global.startNominations();
+            console.info('[social-maneuvers] ✓ Advanced to nominations via startNominations');
+          } else if (typeof global.setPhase === 'function') {
             global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
               if (typeof global.startVeto === 'function') global.startVeto();
               else if (typeof global.startVetoComp === 'function') global.startVetoComp();
             });
-            if (typeof global.startNominations === 'function') {
-              global.startNominations();
-            }
             global.renderPanel?.();
             console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
           } else {
@@ -3775,18 +3774,15 @@
           // FALLBACK: advance phase directly if no callback stored
           console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
           try {
-            // Must use setPhase to transition the phase first,
-            // because startNominations() only renders the panel when phase is already 'nominations'
-            if (typeof global.setPhase === 'function') {
-              global.setPhase('nominations', global.game?.cfg?.tNoms || 25);
-              const startNoms = global.startNominations || global.startNomination || global.startNoms;
-              if(typeof startNoms === 'function') {
-                startNoms();
-              }
-              global.renderPanel?.();
-              console.info('[social-maneuvers] ✓ Advancing via setPhase fallback');
+            // Try multiple nomination starter candidates
+            const startNoms = global.startNominations || global.startNomination || global.startNoms;
+            if(typeof startNoms === 'function') {
+              console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
+              startNoms();
             } else {
-              console.error('[social-maneuvers] setPhase not available - cannot advance');
+              // Ultimate fallback: use setPhase directly
+              console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
+              global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
             }
           } catch(e) {
             console.error('[social-maneuvers] Fallback advancement failed:', e);
