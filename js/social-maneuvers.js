@@ -1818,31 +1818,98 @@
     const g = global.game;
     if (!g) return;
     
+    console.info(`[social-maneuvers] scheduleFastAdvance fallback - advancing in ${delayMs}ms`);
+    
     // Clear any existing timeout
     if (g.__socialFastAdvanceTimeout) {
       clearTimeout(g.__socialFastAdvanceTimeout);
       g.__socialFastAdvanceTimeout = null;
     }
     
-    console.info(`[social-maneuvers] scheduleFastAdvance - shortening timer by ${delayMs}ms`);
+    // Helper to try showing a summary method - returns true if successful
+    const tryShowSummaryMethod = (fn, successMsg, errorMsg) => {
+      try {
+        fn();
+        console.info(successMsg);
+        return true;
+      } catch (e) {
+        console.error(errorMsg, e);
+        return false;
+      }
+    };
     
-    g.__socialFastAdvanceTimeout = setTimeout(() => {
+    g.__socialFastAdvanceTimeout = setTimeout(async () => {
+      console.info('[social-maneuvers] ⏩ Fast-advance triggered (fallback)');
       g.__socialFastAdvanceTimeout = null;
-      console.info('[social-maneuvers] ⏩ Fast-advance: forcing phase timer to expire');
       
-      // Force the phase timer to expire almost immediately
-      // This triggers onDone() which handles summary + phase advancement
-      const now = Date.now();
-      if (typeof g.endAt === 'number') {
-        g.endAt = now + 100;
-      }
-      if (typeof g.phaseEndsAt === 'number') {
-        g.phaseEndsAt = now + 100;
-      }
-      
-      // Trigger manual timer check if available
-      if (typeof global.checkPhaseTimer === 'function') {
-        global.checkPhaseTimer();
+      try {
+        // (a) Render the Social Maneuvers summary
+        await global.cardQueueWaitIdle?.();
+        
+        let summaryShown = false;
+        
+        // Define phase advancement function
+        const advanceToNextPhase = () => {
+          console.info('[social-maneuvers] ⏩ Advancing to next phase after fast-advance');
+          // (b) Call onSocialPhaseEnd
+          if (typeof onSocialPhaseEnd === 'function') {
+            try {
+              onSocialPhaseEnd();
+              console.info('[social-maneuvers] ✓ onSocialPhaseEnd called');
+            } catch (e) {
+              console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
+            }
+          }
+          
+          // (c) Advance to nominations
+          if (typeof global.startNominations === 'function') {
+            global.startNominations();
+            console.info('[social-maneuvers] ✓ Advanced to nominations via startNominations');
+          } else if (typeof global.setPhase === 'function') {
+            global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
+              if (typeof global.startVeto === 'function') global.startVeto();
+              else if (typeof global.startVetoComp === 'function') global.startVetoComp();
+            });
+            global.renderPanel?.();
+            console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
+          } else {
+            console.error('[social-maneuvers] No method available to advance to nominations');
+          }
+        };
+        
+        // Store callback for summary OK button
+        g.__socialPhaseAdvanceCallback = advanceToNextPhase;
+        
+        if (typeof showSummaryPanel === 'function') {
+          summaryShown = tryShowSummaryMethod(
+            () => showSummaryPanel(generatePhaseSummary()),
+            '[social-maneuvers] ✓ Summary shown via showSummaryPanel',
+            '[social-maneuvers] showSummaryPanel failed:'
+          );
+        }
+        
+        if (!summaryShown && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
+          summaryShown = tryShowSummaryMethod(
+            () => global.SocialManeuvers.showEndOfPhaseSummary(),
+            '[social-maneuvers] ✓ Summary shown via showEndOfPhaseSummary',
+            '[social-maneuvers] showEndOfPhaseSummary failed:'
+          );
+        }
+        
+        if (!summaryShown && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
+          summaryShown = tryShowSummaryMethod(
+            () => global.SocialManeuvers.presentPhaseSummary(),
+            '[social-maneuvers] ✓ Summary shown via presentPhaseSummary',
+            '[social-maneuvers] presentPhaseSummary failed:'
+          );
+        }
+        
+        await global.cardQueueWaitIdle?.();
+        
+        // Summary shown, callback stored - phase will advance when OK clicked
+        console.info('[social-maneuvers] ✓ Summary shown, advancement callback stored for OK button');
+      } catch (e) {
+        console.error('[social-maneuvers] Fast-advance fallback failed:', e);
       }
     }, delayMs);
   }
@@ -3275,9 +3342,8 @@
     // Log to DevTools console
     logToConsole(summary);
     
-    // NOTE: showSummaryPanel is NOT called here anymore.
-    // Summary display is now the sole responsibility of onDone() in social.js
-    // to prevent duplicate summaries when fast-advance races with the phase timer.
+    // Show UI summary panel
+    showSummaryPanel(summary);
   }
 
   // ============================================================================
