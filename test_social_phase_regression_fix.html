@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Regression Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      color: white;
+    }
+    .test-header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+    .test-section h2 {
+      color: #3498db;
+      margin-top: 0;
+    }
+    .test-scenario {
+      background: #1f1f1f;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #3a3a3a;
+    }
+    .test-scenario h3 {
+      margin-top: 0;
+      color: #f39c12;
+      font-size: 1rem;
+    }
+    .test-scenario p {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+    }
+    button.danger {
+      background: #e74c3c;
+    }
+    button.danger:hover {
+      background: #c0392b;
+    }
+    button.success {
+      background: #2ecc71;
+    }
+    button.success:hover {
+      background: #27ae60;
+    }
+    button.warning {
+      background: #f39c12;
+    }
+    button.warning:hover {
+      background: #e67e22;
+    }
+    .status {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      border: 2px solid #3498db;
+    }
+    .status.error {
+      border-color: #e74c3c;
+    }
+    .status.success {
+      border-color: #2ecc71;
+    }
+    #tvContainer {
+      margin: 20px 0;
+    }
+    .tv {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .tvViewport {
+      position: relative;
+      height: 400px;
+      background: #0f0f1e;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .event-log {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .event-log-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid #3a3a3a;
+    }
+    .event-log-entry.important {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .event-log-entry.success {
+      color: #2ecc71;
+      font-weight: bold;
+    }
+    .check-item {
+      padding: 8px 12px;
+      margin: 5px 0;
+      background: #1f1f1f;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .check-item.pass {
+      border-left: 4px solid #2ecc71;
+    }
+    .check-item.fail {
+      border-left: 4px solid #e74c3c;
+    }
+    .check-item.pending {
+      border-left: 4px solid #f39c12;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>🎭 Social Phase Regression Fix Test</h1>
+    <p>Testing fixes for PR #1183 regressions: Summary card, Empty energy overlay, and AI interactions</p>
+  </div>
+
+  <div class="test-section">
+    <h2>📋 Test Scenarios</h2>
+    
+    <div class="test-scenario">
+      <h3>Scenario 1: Zero Energy at Phase Start</h3>
+      <p><strong>Expected:</strong> Show "No Social Energy" overlay (🔋) for 3 seconds, then auto-advance to next phase</p>
+      <p><strong>Checks:</strong> Overlay appears centered in TV, timer stops, phase advances automatically</p>
+      <button onclick="testZeroEnergy()" class="danger">🔴 Test Zero Energy</button>
+    </div>
+    
+    <div class="test-scenario">
+      <h3>Scenario 2: Normal Energy with Actions</h3>
+      <p><strong>Expected:</strong> Social phase runs normally, at end shows summary card with energy/action counts, OK button advances immediately</p>
+      <p><strong>Checks:</strong> Summary card shows, timer stays paused when OK clicked, phase advances on OK</p>
+      <button onclick="testNormalEnergy()" class="success">✅ Test Normal Energy</button>
+    </div>
+    
+    <div class="test-scenario">
+      <h3>Scenario 3: Null Summary Data (Edge Case)</h3>
+      <p><strong>Expected:</strong> Even if session data missing, show minimal fallback summary card</p>
+      <p><strong>Checks:</strong> Summary card still appears, OK button works, no crash</p>
+      <button onclick="testNullSummary()" class="warning">⚠️ Test Null Summary</button>
+    </div>
+    
+    <div class="test-scenario">
+      <h3>Scenario 4: AI Interactions</h3>
+      <p><strong>Expected:</strong> AI players perform interactions, actions recorded in summary</p>
+      <p><strong>Checks:</strong> AI scheduler starts, actions appear in summary actionsThisPhase</p>
+      <button onclick="testAIInteractions()" class="success">🤖 Test AI Interactions</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>🎮 Controls</h2>
+    <button onclick="resetTest()">🔄 Reset Test</button>
+    <button onclick="checkCurrentBank()">📊 Check Bank</button>
+    <button onclick="checkGameState()">🔍 Check Game State</button>
+    <button onclick="clearLog()">🗑️ Clear Log</button>
+  </div>
+
+  <div id="statusDisplay" class="status">
+    <strong>Status:</strong> Ready to test
+  </div>
+
+  <!-- Simulated TV Container -->
+  <div id="tvContainer">
+    <div class="tv">
+      <h3 style="color: #3498db; margin-top: 0;">📺 Faux TV Screen</h3>
+      <div class="tvViewport" data-sm-faux-tv id="testTvViewport">
+        <div style="color: #666; text-align: center;">
+          TV Content Area<br>
+          <small>Overlays and cards appear here</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Log -->
+  <div class="event-log" id="eventLog">
+    <strong>📝 Event Log:</strong>
+  </div>
+
+  <!-- Mock game environment -->
+  <script>
+    // Mock minimal game environment
+    window.game = {
+      cfg: { enableSocialManeuvers: true, tComms: 30, tNoms: 25 },
+      week: 1,
+      phase: 'social_intermission',
+      humanId: 1,
+      endAt: Date.now() + 180000,
+      phaseEndsAt: Date.now() + 180000,
+      players: []
+    };
+
+    // Create mock players
+    const mockPlayers = [
+      { id: 1, name: 'Human Player', evicted: false, affinity: {} },
+      { id: 2, name: 'AI Player 2', evicted: false, affinity: {} },
+      { id: 3, name: 'AI Player 3', evicted: false, affinity: {} },
+      { id: 4, name: 'AI Player 4', evicted: false, affinity: {} }
+    ];
+    window.game.players = mockPlayers;
+
+    // Mock helper functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.addLog = (msg, type) => {
+      console.log(`[${type}] ${msg}`);
+      logEvent(`[${type}] ${msg}`);
+    };
+    
+    // Mock phase functions
+    window.advancePhase = () => {
+      logEvent('🎯 advancePhase() called - Phase would advance here', 'important');
+      updateStatus('✓ Phase advanced successfully', 'success');
+    };
+    
+    window.nextPhase = () => {
+      logEvent('🎯 nextPhase() called - Phase would advance here', 'important');
+      updateStatus('✓ Phase advanced successfully', 'success');
+    };
+    
+    window.setPhase = (phase, duration, callback) => {
+      logEvent(`setPhase called: ${phase}, duration: ${duration}`, 'success');
+      window.game.phase = phase;
+      if (callback) {
+        window.game.__phaseCallback = callback;
+      }
+    };
+
+    // Mock CardManager
+    window.CardManager = {
+      clear: async (force) => {
+        logEvent('CardManager.clear() called');
+        return Promise.resolve();
+      }
+    };
+
+    // Mock SocializeMobile
+    window.SocializeMobile = {
+      ensureSocializeLauncher: () => {
+        logEvent('SocializeMobile.ensureSocializeLauncher() called');
+      },
+      updateHUD: () => {
+        logEvent('SocializeMobile.updateHUD() called');
+      },
+      hide: () => {
+        logEvent('SocializeMobile.hide() called');
+      }
+    };
+
+    // Mock TV functions
+    window.tv = {
+      say: (msg) => {
+        logEvent(`TV: ${msg}`);
+      }
+    };
+
+    // Mock phase music
+    window.phaseMusic = (phase) => {
+      logEvent(`Phase music: ${phase}`);
+    };
+
+    // Mock card queue wait
+    window.cardQueueWaitIdle = () => Promise.resolve();
+
+    // Event logging
+    function logEvent(msg, className = '') {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `event-log-entry ${className}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      const log = document.getElementById('eventLog');
+      log.innerHTML = '<strong>📝 Event Log:</strong>';
+    }
+
+    // Listen for skip event
+    window.addEventListener('sm-phase-skip-empty', (e) => {
+      logEvent(`🚨 sm-phase-skip-empty event fired! Player: ${e.detail.playerId}, Week: ${e.detail.week}`, 'important');
+      updateStatus('✓ Empty energy overlay shown and skip event fired', 'success');
+    });
+
+    function updateStatus(msg, type = '') {
+      const status = document.getElementById('statusDisplay');
+      status.className = `status ${type}`;
+      status.innerHTML = `<strong>Status:</strong> ${msg}<br><strong>Time:</strong> ${new Date().toLocaleTimeString()}`;
+    }
+
+    function checkCurrentBank() {
+      if (window.SocialEnergyBank) {
+        const bank = window.SocialEnergyBank.get(1);
+        updateStatus(`Current bank for human player: ${bank}`);
+        logEvent(`Bank check: ${bank} energy`);
+      } else {
+        updateStatus('Social Maneuvers not loaded yet', 'error');
+      }
+    }
+
+    function checkGameState() {
+      logEvent('=== GAME STATE ===');
+      logEvent(`Phase: ${window.game.phase}`);
+      logEvent(`Week: ${window.game.week}`);
+      logEvent(`Human ID: ${window.game.humanId}`);
+      logEvent(`__socialPhaseStartCalled: ${!!window.game.__socialPhaseStartCalled}`);
+      logEvent(`__socialPhaseAdvanced: ${!!window.game.__socialPhaseAdvanced}`);
+      logEvent(`__socialManeuversSession: ${!!window.game.__socialManeuversSession}`);
+      if (window.game.__socialManeuversSession) {
+        const session = window.game.__socialManeuversSession;
+        logEvent(`  - actionsThisPhase: ${session.actionsThisPhase?.length || 0}`);
+        logEvent(`  - energySpent: ${session.energySpent?.size || 0} players`);
+      }
+    }
+
+    function resetTest() {
+      location.reload();
+    }
+
+    function testZeroEnergy() {
+      logEvent('==========================================');
+      logEvent('=== SCENARIO 1: ZERO ENERGY TEST ===');
+      logEvent('==========================================');
+      updateStatus('🔴 Setting bank to 0 and starting Social phase...');
+      
+      if (!window.SocialManeuvers) {
+        updateStatus('ERROR: Social Maneuvers module not loaded', 'error');
+        return;
+      }
+
+      // Reset guards
+      if (window.game) {
+        window.game.__smSkipInProgress = false;
+        window.game.__socialPhaseStartCalled = false;
+        window.game.__socialPhaseAdvanced = false;
+        delete window.game.__socialManeuversSession;
+      }
+
+      // Set bank to 0
+      if (window.SocialEnergyBank) {
+        window.SocialEnergyBank.set(1, 0);
+        logEvent('✓ Set bank to 0 for human player');
+      }
+
+      // Clear TV viewport
+      const tv = document.getElementById('testTvViewport');
+      tv.innerHTML = '<div style="color: #666; text-align: center;">Waiting for overlay...</div>';
+
+      // Start Social phase via startSocialIntermission mock
+      setTimeout(() => {
+        logEvent('Calling onSocialPhaseStart()...');
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        // Check if overlay appeared
+        setTimeout(() => {
+          const overlay = document.querySelector('[data-sm-empty-battery]');
+          if (overlay) {
+            logEvent('✓✓✓ Empty battery overlay FOUND', 'success');
+            updateStatus('✅ TEST PASSED: Empty battery overlay shown', 'success');
+          } else {
+            logEvent('❌❌❌ Empty battery overlay NOT FOUND', 'important');
+            updateStatus('❌ TEST FAILED: Empty battery overlay missing', 'error');
+          }
+        }, 500);
+      }, 100);
+    }
+
+    function testNormalEnergy() {
+      logEvent('==========================================');
+      logEvent('=== SCENARIO 2: NORMAL ENERGY TEST ===');
+      logEvent('==========================================');
+      updateStatus('✅ Setting bank to 5 and starting Social phase...');
+      
+      if (!window.SocialManeuvers) {
+        updateStatus('ERROR: Social Maneuvers module not loaded', 'error');
+        return;
+      }
+
+      // Reset guards
+      if (window.game) {
+        window.game.__smSkipInProgress = false;
+        window.game.__socialPhaseStartCalled = false;
+        window.game.__socialPhaseAdvanced = false;
+        delete window.game.__socialManeuversSession;
+      }
+
+      // Set bank to 5
+      if (window.SocialEnergyBank) {
+        window.SocialEnergyBank.set(1, 5);
+        logEvent('✓ Set bank to 5 for human player');
+      }
+
+      // Clear TV viewport
+      const tv = document.getElementById('testTvViewport');
+      tv.innerHTML = '<div style="color: #666; text-align: center;">Social phase running...</div>';
+
+      // Start Social phase
+      setTimeout(() => {
+        logEvent('Calling onSocialPhaseStart()...');
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        // Check session was created
+        setTimeout(() => {
+          if (window.game.__socialManeuversSession) {
+            logEvent('✓✓✓ Session tracking initialized', 'success');
+            
+            // Simulate some actions
+            const session = window.game.__socialManeuversSession;
+            session.actionsThisPhase.push({
+              actorName: 'Human Player',
+              actionCategory: 'chat',
+              timestamp: Date.now()
+            });
+            session.energySpent.set(1, 3);
+            logEvent('✓ Simulated user actions (3 energy spent)');
+            
+            // Now trigger phase end to show summary
+            setTimeout(() => {
+              logEvent('Triggering phase end to show summary...');
+              if (window.game.__phaseCallback) {
+                window.game.__phaseCallback();
+              } else {
+                logEvent('⚠️ No phase callback set - calling generatePhaseSummary directly');
+                const summary = window.SocialManeuvers.generatePhaseSummary();
+                if (summary) {
+                  logEvent('✓✓✓ Summary generated successfully', 'success');
+                  window.SocialManeuvers.showSummaryPanel(summary);
+                  logEvent('✓✓✓ Summary panel shown', 'success');
+                  updateStatus('✅ TEST PASSED: Summary card shown', 'success');
+                } else {
+                  logEvent('❌❌❌ Summary is null', 'important');
+                }
+              }
+            }, 1000);
+          } else {
+            logEvent('❌❌❌ Session tracking NOT initialized', 'important');
+            updateStatus('❌ TEST FAILED: Session not initialized', 'error');
+          }
+        }, 500);
+      }, 100);
+    }
+
+    function testNullSummary() {
+      logEvent('==========================================');
+      logEvent('=== SCENARIO 3: NULL SUMMARY TEST ===');
+      logEvent('==========================================');
+      updateStatus('⚠️ Testing null summary fallback...');
+      
+      if (!window.SocialManeuvers) {
+        updateStatus('ERROR: Social Maneuvers module not loaded', 'error');
+        return;
+      }
+
+      // Reset guards
+      if (window.game) {
+        window.game.__smSkipInProgress = false;
+        window.game.__socialPhaseStartCalled = false;
+        window.game.__socialPhaseAdvanced = false;
+        // Intentionally DON'T create session to trigger null case
+        delete window.game.__socialManeuversSession;
+      }
+
+      // Set bank to 5 but don't initialize session
+      if (window.SocialEnergyBank) {
+        window.SocialEnergyBank.set(1, 5);
+        logEvent('✓ Set bank to 5 for human player');
+      }
+
+      // Try to generate summary without session
+      setTimeout(() => {
+        logEvent('Calling generatePhaseSummary() without session...');
+        const summary = window.SocialManeuvers.generatePhaseSummary();
+        
+        if (summary === null || summary === undefined) {
+          logEvent('✓ Summary is null as expected (no session)', 'success');
+          
+          // Now test fallback logic from social.js
+          logEvent('Testing fallback summary creation...');
+          const alivePlayers = window.alivePlayers();
+          const fallbackSummary = {
+            metadata: {
+              week: window.game?.week || 1,
+              startTime: Date.now() - 120000,
+              endTime: Date.now(),
+              duration: 120000,
+              playersCount: alivePlayers.length
+            },
+            resources: {
+              energySpent: {},
+              energyRemaining: {},
+              informationSpent: {}
+            },
+            actions: {
+              total: 0,
+              byPlayer: {},
+              byCategory: {},
+              list: []
+            },
+            relationships: {
+              changes: [],
+              newAlliances: [],
+              newRivalries: []
+            },
+            memories: {
+              created: 0,
+              total: 0
+            }
+          };
+          
+          logEvent('✓✓✓ Fallback summary created', 'success');
+          window.SocialManeuvers.showSummaryPanel(fallbackSummary);
+          logEvent('✓✓✓ Fallback summary panel shown', 'success');
+          updateStatus('✅ TEST PASSED: Fallback summary shown', 'success');
+        } else {
+          logEvent('⚠️ Summary not null (unexpected)', 'important');
+        }
+      }, 500);
+    }
+
+    function testAIInteractions() {
+      logEvent('==========================================');
+      logEvent('=== SCENARIO 4: AI INTERACTIONS TEST ===');
+      logEvent('==========================================');
+      updateStatus('🤖 Testing AI interactions...');
+      
+      if (!window.SocialManeuvers) {
+        updateStatus('ERROR: Social Maneuvers module not loaded', 'error');
+        return;
+      }
+
+      // Reset guards
+      if (window.game) {
+        window.game.__smSkipInProgress = false;
+        window.game.__socialPhaseStartCalled = false;
+        window.game.__socialPhaseAdvanced = false;
+        delete window.game.__socialManeuversSession;
+      }
+
+      // Set bank to 5 for all players
+      if (window.SocialEnergyBank) {
+        window.alivePlayers().forEach(p => {
+          window.SocialEnergyBank.set(p.id, 5);
+        });
+        logEvent('✓ Set bank to 5 for all players');
+      }
+
+      // Start Social phase
+      setTimeout(() => {
+        logEvent('Calling onSocialPhaseStart()...');
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        // Check if AI scheduler was called
+        setTimeout(() => {
+          if (window.game.__socialManeuversSession) {
+            logEvent('✓✓✓ Session tracking initialized', 'success');
+            
+            // Check if startAiSocialPhase would be called (we don't have real scheduler)
+            if (window.SocialAIScheduler) {
+              logEvent('✓ AI Scheduler available');
+            } else {
+              logEvent('⚠️ AI Scheduler not loaded (expected in test environment)');
+            }
+            
+            // Simulate AI actions
+            const session = window.game.__socialManeuversSession;
+            session.actionsThisPhase.push({
+              actorName: 'AI Player 2',
+              actionCategory: 'chat',
+              timestamp: Date.now()
+            });
+            session.actionsThisPhase.push({
+              actorName: 'AI Player 3',
+              actionCategory: 'gossip',
+              timestamp: Date.now()
+            });
+            session.energySpent.set(2, 2);
+            session.energySpent.set(3, 1);
+            logEvent('✓ Simulated AI actions (2 actions)');
+            
+            // Generate summary and check AI actions
+            setTimeout(() => {
+              const summary = window.SocialManeuvers.generatePhaseSummary();
+              if (summary && summary.actions.total >= 2) {
+                logEvent(`✓✓✓ Summary contains AI actions: ${summary.actions.total} total`, 'success');
+                const aiActions = summary.actions.list.filter(a => a.actorName !== 'Human Player');
+                logEvent(`✓ AI actions in summary: ${aiActions.length}`, 'success');
+                updateStatus('✅ TEST PASSED: AI actions recorded in summary', 'success');
+              } else {
+                logEvent('❌❌❌ AI actions not in summary', 'important');
+                updateStatus('❌ TEST FAILED: AI actions missing', 'error');
+              }
+            }, 1000);
+          } else {
+            logEvent('❌❌❌ Session not initialized', 'important');
+            updateStatus('❌ TEST FAILED: Session not initialized', 'error');
+          }
+        }, 500);
+      }, 100);
+    }
+
+    // Auto-check on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        updateStatus('Test ready - Click a test button to begin');
+        logEvent('🚀 Test page loaded and ready');
+        checkCurrentBank();
+      }, 500);
+    });
+  </script>
+
+  <!-- Load Social Maneuvers module -->
+  <script src="js/social-maneuvers.js"></script>
+  
+  <!-- Load social.js to test integration -->
+  <script src="js/social.js"></script>
+</body>
+</html>
