@@ -2265,8 +2265,14 @@
       if (previousPhase === 'social_intermission' && phase !== 'social_intermission') {
         console.info('[social-maneuvers] ✓ Leaving social_intermission');
         
-        // REMOVED: onSocialPhaseEnd call - let onDone in social.js handle phase end logic
-        // This prevents race conditions with the timer callback
+        // Call onSocialPhaseEnd
+        if (isEnabled()) {
+          try {
+            onSocialPhaseEnd();
+          } catch(e) {
+            console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
+          }
+        }
         
         // Close socialize modal if open
         if (global.SocializeMobile?.closeModal) {
@@ -2276,6 +2282,11 @@
         // Hide launcher
         if (global.SocializeMobile?.hide) {
           global.SocializeMobile.hide();
+        }
+        
+        // Resume timer if paused (safety)
+        if (timerPaused) {
+          resumePhaseTimer();
         }
       }
       
@@ -3755,22 +3766,7 @@
             console.error('[social-maneuvers] Error calling phase advancement callback:', e);
           }
         } else {
-          // FALLBACK: advance phase directly if no callback stored
-          console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
-          try {
-            // Try multiple nomination starter candidates
-            const startNoms = global.startNominations || global.startNomination || global.startNoms;
-            if(typeof startNoms === 'function') {
-              console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
-              startNoms();
-            } else {
-              // Ultimate fallback: use setPhase directly
-              console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
-              global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
-            }
-          } catch(e) {
-            console.error('[social-maneuvers] Fallback advancement failed:', e);
-          }
+          console.warn('[social-maneuvers] ⚠ No phase advancement callback found - phase may not advance');
         }
       }, 400);
     };
