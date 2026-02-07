@@ -25,7 +25,7 @@
   // MODULE-LEVEL GUARDS (Singleton Protection)
   // ============================================================================
   let socialPhaseEnded = false;
-  let socialSummaryShown = false;
+  let socialSummaryOpen = false;
 
   // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
@@ -3130,7 +3130,7 @@
     
     // Reset singleton guards for new phase
     socialPhaseEnded = false;
-    socialSummaryShown = false;
+    socialSummaryOpen = false;
     
     const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
@@ -3591,11 +3591,11 @@
     if(!summary) return;
 
     // Singleton guard: only show summary once per phase end
-    if (socialSummaryShown) {
-      console.info('[social-maneuvers] Summary already shown this phase - skipping duplicate');
+    if(socialSummaryOpen){
+      console.warn('[social-maneuvers] Summary already open - ignoring duplicate call');
       return;
     }
-    socialSummaryShown = true;
+    socialSummaryOpen = true;
 
     // PAUSE TIMER when summary modal opens (use PauseController with owner ID)
     try {
@@ -3726,6 +3726,8 @@
     continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
+      // Reset summary guard so it can be shown again next phase
+      socialSummaryOpen = false;
       
       // OK button behavior: Resume timer and advance phase
       try {
