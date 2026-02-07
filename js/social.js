@@ -606,9 +606,6 @@
             }
           }
           
-          // Cleanup phase state
-          endSocialPhaseCleanup();
-          
           // Wait for any pending UI operations
           await global.cardQueueWaitIdle?.();
           
@@ -628,11 +625,14 @@
               console.error('[social.js] showSummaryPanel failed:', e);
             }
           }else{
-            console.warn('[social.js] ⚠ showSummaryPanel or generatePhaseSummary not found');
+            console.warn('[social.js] ⚠ showSummaryPanel or generatePhaseSummary not found - advancing immediately');
           }
         }
         
       }catch(e){ console.error(e); }
+      
+      // Cleanup phase state before advancing
+      endSocialPhaseCleanup();
       
       // If we get here, no summary was shown - advance immediately
       console.info('[social.js] No summary shown - advancing immediately');

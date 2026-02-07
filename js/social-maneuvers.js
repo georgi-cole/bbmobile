@@ -3727,7 +3727,7 @@
           // FALLBACK: advance phase directly if no callback stored
           console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
           // Try multiple nomination starter candidates
-          const startNoms = global.startNominations || global.startNomination || global.startNoms;
+          const startNoms = global.startNominations || global.startNomination;
           if(typeof startNoms === 'function') {
             console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
             startNoms();
