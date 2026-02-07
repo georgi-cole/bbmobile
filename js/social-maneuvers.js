@@ -3310,30 +3310,8 @@
     SocialResources.clearPhaseRefunds();
     console.info('[social-maneuvers] Phase refunds cleared for new phase');
 
-    // Log bank-based seeding for human player
-    if(humanId) {
-      const bankBalance = SocialEnergyBank.get(humanId);
-      const phaseEnergy = SocialResources.get(humanId, 'energy');
-      console.info(`[sm-phase] seeded from bank=${bankBalance}, phase energy=${phaseEnergy}`);
-      
-      // AUTO-SKIP: If human has zero energy, show overlay and skip phase
-      if(phaseEnergy <= 0) {
-        console.info(`[sm-phase-skip] Human player has zero energy (${phaseEnergy}) - triggering auto-skip`);
-        
-        // Run AI burst during the 3s overlay before skip
-        if(typeof global.SocialAIScheduler?.runEmptyEnergyBurst === 'function'){
-          setTimeout(() => {
-            global.SocialAIScheduler.runEmptyEnergyBurst();
-          }, 100); // Start burst quickly, completes before 3s overlay ends
-        }
-        
-        showEmptyEnergyOverlayAndSkip(humanId);
-        return; // Exit early, don't set up normal phase
-      }
-    }
-
-    // Initialize phase session tracking (PR #266)
-    // Reuse g variable already declared above
+    // Initialize phase session tracking BEFORE auto-skip check
+    // This ensures AI interactions during auto-skip are properly tracked
     if(!g.__socialManeuversSession){
       g.__socialManeuversSession = {
         startTime: Date.now(),
@@ -3353,12 +3331,35 @@
       g.__socialManeuversSession.relationshipDeltas.clear();
     }
 
-    // Initialize energy spent tracking
+    // Initialize energy spent tracking for all players
     alivePlayers.forEach(p => {
       g.__socialManeuversSession.energySpent.set(p.id, 0);
       g.__socialManeuversSession.informationSpent.set(p.id, 0);
     });
     console.info(`[social-maneuvers] Session tracking initialized for end-of-phase summary`);
+
+    // Log bank-based seeding for human player
+    if(humanId) {
+      const bankBalance = SocialEnergyBank.get(humanId);
+      const phaseEnergy = SocialResources.get(humanId, 'energy');
+      console.info(`[sm-phase] seeded from bank=${bankBalance}, phase energy=${phaseEnergy}`);
+      
+      // AUTO-SKIP: If human has zero energy, show overlay and skip phase
+      if(phaseEnergy <= 0) {
+        console.info(`[sm-phase-skip] Human player has zero energy (${phaseEnergy}) - triggering auto-skip`);
+        
+        // Run AI burst during the 3s overlay before skip
+        // AI interactions will be tracked in the session we just initialized
+        if(typeof global.SocialAIScheduler?.runEmptyEnergyBurst === 'function'){
+          setTimeout(() => {
+            global.SocialAIScheduler.runEmptyEnergyBurst();
+          }, 100); // Start burst quickly, completes before 3s overlay ends
+        }
+        
+        showEmptyEnergyOverlayAndSkip(humanId);
+        return; // Exit early, don't set up normal phase
+      }
+    }
 
     // Clear any pending fast-advance timeout
     if(g.__socialFastAdvanceTimeout){
