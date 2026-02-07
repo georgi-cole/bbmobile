@@ -28,71 +28,6 @@
   let socialSummaryOpen = false;
 
   // ============================================================================
-  // PHASE ADVANCEMENT HELPER (Shared by OK button and empty-energy overlay)
-  // ============================================================================
-  /**
-   * Robust phase advancement helper that tries all available APIs in order.
-   * Used by both the summary OK button and the empty-energy overlay to ensure
-   * the game always advances reliably after social phase ends.
-   * 
-   * @param {string} reason - Why advancement is happening (e.g., 'ok-button', 'empty-energy')
-   * @returns {boolean} - True if advancement succeeded, false if all methods failed
-   */
-  function advanceToNextPhaseSafe(reason) {
-    console.info(`[sm-advance] 🎯 Attempting phase advancement (reason: ${reason})`);
-    
-    const g = global.game;
-    
-    try {
-      // Priority 1: Use stored callback if available (preferred method)
-      if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
-        console.info('[sm-advance] ✓ Using stored __socialPhaseAdvanceCallback');
-        g.__socialPhaseAdvanceCallback();
-        delete g.__socialPhaseAdvanceCallback; // Clean up to prevent double-calls
-        return true;
-      }
-      
-      // Priority 2: Try global.advancePhase() - generic phase advancement
-      if (typeof global.advancePhase === 'function') {
-        console.info('[sm-advance] ✓ Using global.advancePhase()');
-        global.advancePhase();
-        return true;
-      }
-      
-      // Priority 3: Try global.nextPhase() - alternative generic advancement
-      if (typeof global.nextPhase === 'function') {
-        console.info('[sm-advance] ✓ Using global.nextPhase()');
-        global.nextPhase();
-        return true;
-      }
-      
-      // Priority 4: Try starting nominations directly (social -> nominations transition)
-      const startNoms = global.startNominations || global.startNomination;
-      if (typeof startNoms === 'function') {
-        console.info('[sm-advance] ✓ Using startNominations/startNomination()');
-        startNoms();
-        return true;
-      }
-      
-      // Priority 5: Ultimate fallback - use setPhase if available
-      if (typeof global.setPhase === 'function') {
-        console.info('[sm-advance] ⚠️ Using setPhase() fallback');
-        const nomsTime = g?.cfg?.tNoms || 25;
-        global.setPhase('nominations', nomsTime);
-        return true;
-      }
-      
-      // All methods failed
-      console.error('[sm-advance] ❌ All advancement methods failed - no suitable API found');
-      return false;
-      
-    } catch (error) {
-      console.error('[sm-advance] ❌ Exception during phase advancement:', error);
-      return false;
-    }
-  }
-
-  // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
   // ============================================================================
   // Note: Information is scaled to 0..100 to support high-impact action costs.
@@ -3103,19 +3038,17 @@
       wrapper.remove();
       console.info(`[sm-phase-skip] Auto-advancing to next phase`);
       
-      // Use robust advancement helper with proper error handling
-      const advanced = advanceToNextPhaseSafe('empty-energy');
-      
-      if (!advanced) {
-        console.error('[sm-phase-skip] ❌ Phase advancement failed after empty energy overlay');
+      // Advance to next phase
+      if (typeof global.advancePhase === 'function') {
+        global.advancePhase();
+      } else if (typeof global.nextPhase === 'function') {
+        global.nextPhase();
+      } else {
+        console.warn('[sm-phase-skip] No advancePhase or nextPhase function available');
       }
       
-      // Clean up idempotency flag AFTER phase advance attempt (even if it fails)
-      // This prevents the skip from being permanently blocked
-      if(g) {
-        g.__smSkipInProgress = false;
-        console.info('[sm-phase-skip] ✓ Skip flag reset');
-      }
+      // Clean up idempotency flag after phase advance
+      if(g) g.__smSkipInProgress = false;
     }, 3000);
   }
   
@@ -3775,24 +3708,37 @@
     continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
-      // CRITICAL: Call advancement FIRST (synchronously), then cleanup (async)
+      // CRITICAL: Call advancement callback FIRST, then cleanup
       // Do NOT resume timer - phase is ending, timer should stay stopped
       
-      // Idempotency guard: prevent double-clicks
-      if (continueBtn.disabled) {
-        console.warn('[social-maneuvers] OK button already clicked - ignoring duplicate');
-        return;
-      }
-      continueBtn.disabled = true;
-      
-      // Call robust advancement helper immediately (synchronous)
-      const advanced = advanceToNextPhaseSafe('ok-button');
-      
-      if (!advanced) {
-        console.error('[social-maneuvers] ❌ Phase advancement failed - game may be stuck');
-        // Re-enable button so user can try again
-        continueBtn.disabled = false;
-        return;
+      try {
+        const g = global.game;
+        
+        // Call the stored phase advancement callback immediately
+        if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
+          console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
+          try {
+            g.__socialPhaseAdvanceCallback();
+            delete g.__socialPhaseAdvanceCallback; // Clean up after use
+          } catch(e) {
+            console.error('[social-maneuvers] Error calling phase advancement callback:', e);
+          }
+        } else {
+          // FALLBACK: advance phase directly if no callback stored
+          console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
+          // Try multiple nomination starter candidates
+          const startNoms = global.startNominations || global.startNomination;
+          if(typeof startNoms === 'function') {
+            console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
+            startNoms();
+          } else {
+            // Ultimate fallback: use setPhase directly
+            console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
+            global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
+          }
+        }
+      } catch(e) {
+        console.error('[social-maneuvers] Failed to advance phase on OK:', e);
       }
       
       // Now do UI cleanup - animate card removal (non-blocking)
