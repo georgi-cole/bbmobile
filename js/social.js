@@ -560,8 +560,7 @@
     try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* Ignore errors */ }
 
     const onDone = async ()=>{
-      // CRITICAL: Always store phase advancement callback FIRST, before any other logic
-      // This ensures the summary OK button can always advance the phase, regardless of race conditions
+      // CRITICAL: Store phase advancement callback in the controller FIRST
       const advanceToNextPhase = () => {
         // One-shot guard: prevent double advancement
         if(global.game?.__socialPhaseAdvanced) {
@@ -579,9 +578,15 @@
         }
       };
       
-      // Store callback immediately - this MUST happen before any guards or early returns
-      global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
-      console.info('[social.js] ✓ Phase advancement callback stored');
+      // Store callback in controller - controller owns phase lifecycle
+      if (global.SocialManeuvers?.SocialPhaseController) {
+        global.SocialManeuvers.SocialPhaseController.advanceCallback = advanceToNextPhase;
+        console.info('[social.js] ✓ Phase advancement callback stored in controller');
+      } else {
+        // CRITICAL: Controller should always exist if Social Maneuvers is enabled
+        console.error('[social.js] ❌ SocialPhaseController not found - this indicates an initialization error');
+        throw new Error('SocialPhaseController not available - cannot store phase advance callback');
+      }
 
       try{ 
         // Call onSocialPhaseEnd when Social Maneuvers is enabled
