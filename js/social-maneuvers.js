@@ -3108,11 +3108,26 @@
 
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
+    
+    // Guard: prevent duplicate calls within same phase
+    const g = global.game;
+    if(g?.__socialPhaseStartCalled){
+      console.warn('[social-maneuvers] onSocialPhaseStart already called - ignoring duplicate');
+      return;
+    }
+    if(g) g.__socialPhaseStartCalled = true;
+    
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
     
     // Reset singleton guards for new phase
     socialPhaseEnded = false;
     socialSummaryOpen = false;
+    
+    // Clear summary generation guard for new phase
+    if(g) {
+      g.__socialSummaryGenerated = false;
+      delete g.__socialPhaseAdvanced;
+    }
     
     const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
@@ -3336,10 +3351,19 @@
     const g = global.game;
     const session = g?.__socialManeuversSession;
     
+    // Guard: only generate summary once per phase
+    if(g?.__socialSummaryGenerated){
+      console.warn('[social-maneuvers] Summary already generated for this phase - returning cached version');
+      return g.__latestSocialSummary || null;
+    }
+    
     if(!session){
       console.warn('[social-maneuvers] No session data to summarize');
       return null;
     }
+    
+    // Mark summary as generated for this phase
+    if(g) g.__socialSummaryGenerated = true;
 
     const alivePlayers = global.alivePlayers?.() || [];
     const summary = {
@@ -3579,18 +3603,33 @@
     }
     socialSummaryOpen = true;
 
-    // PAUSE TIMER when summary modal opens (use PauseController with owner ID)
+    // CRITICAL: Cancel ALL timers when summary opens to prevent race conditions
+    const g = global.game;
+    
+    // 1. Stop phase timer completely (don't just pause - phase is ending)
     try {
       if (global.PauseController && typeof global.PauseController.pause === 'function') {
         global.PauseController.pause('social-summary');
         console.info('[social-maneuvers] ⏸️ Timer paused via PauseController (summary modal opened)');
-      } else {
-        // Fallback to legacy pause
-        pausePhaseTimer();
+      } else if (typeof global.pausePhaseTimer === 'function') {
+        global.pausePhaseTimer();
         console.info('[social-maneuvers] ⏸️ Timer paused (summary modal opened, legacy fallback)');
       }
     } catch(e) {
       console.error('[social-maneuvers] Failed to pause timer for summary:', e);
+    }
+    
+    // 2. Cancel fast-advance timeout
+    if(g?.__socialFastAdvanceTimeout){
+      clearTimeout(g.__socialFastAdvanceTimeout);
+      g.__socialFastAdvanceTimeout = null;
+      console.info('[social-maneuvers] ✓ Cancelled fast-advance timeout');
+    }
+    
+    // 3. Stop AI scheduler
+    if(typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function'){
+      global.SocialAIScheduler.stopAiSocialPhase('summary-opened');
+      console.info('[social-maneuvers] ✓ Stopped AI scheduler');
     }
 
     // HIDE SOCIAL LAUNCHER to prevent stacking/overlap on mobile
@@ -3708,40 +3747,51 @@
     continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
-      // CRITICAL: Call advancement callback FIRST, then cleanup
-      // Do NOT resume timer - phase is ending, timer should stay stopped
+      // CRITICAL FIX: Mark phase as ended to prevent duplicate processing
+      const g = global.game;
+      if(g?.__socialPhaseAdvanced) {
+        console.warn('[social-maneuvers] Phase already advanced - ignoring duplicate OK click');
+        return;
+      }
+      if(g) g.__socialPhaseAdvanced = true;
       
-      try {
-        const g = global.game;
-        
-        // Call the stored phase advancement callback immediately
-        if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
-          console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
-          try {
-            g.__socialPhaseAdvanceCallback();
-            delete g.__socialPhaseAdvanceCallback; // Clean up after use
-          } catch(e) {
-            console.error('[social-maneuvers] Error calling phase advancement callback:', e);
-          }
-        } else {
-          // FALLBACK: advance phase directly if no callback stored
-          console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
-          // Try multiple nomination starter candidates
-          const startNoms = global.startNominations || global.startNomination;
-          if(typeof startNoms === 'function') {
-            console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
-            startNoms();
-          } else {
-            // Ultimate fallback: use setPhase directly
-            console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
-            global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
-          }
-        }
-      } catch(e) {
-        console.error('[social-maneuvers] Failed to advance phase on OK:', e);
+      console.info('[social-maneuvers] ✓ OK clicked - advancing phase immediately');
+      
+      // 1. Stop scheduler immediately (if not already stopped)
+      if(typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function'){
+        global.SocialAIScheduler.stopAiSocialPhase('summary-ok-clicked');
       }
       
-      // Now do UI cleanup - animate card removal (non-blocking)
+      // 2. Cancel any remaining timers
+      if(g?.__socialFastAdvanceTimeout){
+        clearTimeout(g.__socialFastAdvanceTimeout);
+        g.__socialFastAdvanceTimeout = null;
+      }
+      
+      // 3. Call the stored phase advancement callback immediately
+      if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
+        console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
+        try {
+          g.__socialPhaseAdvanceCallback();
+          delete g.__socialPhaseAdvanceCallback; // Clean up after use
+        } catch(e) {
+          console.error('[social-maneuvers] Error calling phase advancement callback:', e);
+        }
+      } else {
+        // FALLBACK: advance phase directly if no callback stored
+        console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
+        const startNoms = global.startNominations || global.startNomination;
+        if(typeof startNoms === 'function') {
+          console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
+          startNoms();
+        } else {
+          // Ultimate fallback: use setPhase directly
+          console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
+          global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
+        }
+      }
+      
+      // 4. Now do UI cleanup - animate card removal (non-blocking)
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();

@@ -82,6 +82,12 @@
       const delay = SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS + Math.floor(Math.random() * SOCIAL_INTERMISSION_DELAYED_STOP_RANGE);
       debugLog(`Scheduling delayed stop in ${delay}ms`);
       setTimeout(() => {
+        // GUARD: Don't stop if summary is open or phase already ended
+        if (global.game?.__socialSummaryGenerated || global.game?.__socialPhaseAdvanced) {
+          debugLog('Summary generated or phase advanced - skipping delayed stop');
+          return;
+        }
+        
         if (typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function') {
           global.SocialAIScheduler.stopAiSocialPhase('phase-terminator:delayed');
           debugLog('Social AI Scheduler stopped (delayed)');
@@ -137,6 +143,13 @@
         // This allows AI scheduler to tick before cleanup completes
         if (nextPhase === 'social_intermission') {
           debugLog('Transitioning to social_intermission, using safe pause/delay');
+          
+          // GUARD: Skip delayed stop if summary is open or phase is ending
+          if (global.game?.__socialSummaryGenerated || global.game?.__socialPhaseAdvanced) {
+            debugLog('Summary generated or phase advancing - skipping delayed stop');
+            return 'skipped-phase-ending';
+          }
+          
           return this._safePauseOrDelayStop('phase-terminator');
         }
         
