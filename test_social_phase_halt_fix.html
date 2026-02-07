@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Halt Fix - Verification</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #3498db;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #0f3460;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+    .btn {
+      padding: 12px 24px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .btn.success {
+      background: #27ae60;
+    }
+    .btn.danger {
+      background: #e74c3c;
+    }
+    .status {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 16px;
+    }
+    .status.pending {
+      background: rgba(52, 152, 219, 0.2);
+      border: 2px solid #3498db;
+      color: #3498db;
+    }
+    .status.success {
+      background: rgba(39, 174, 96, 0.2);
+      border: 2px solid #27ae60;
+      color: #27ae60;
+    }
+    .status.error {
+      background: rgba(231, 76, 60, 0.2);
+      border: 2px solid #e74c3c;
+      color: #e74c3c;
+    }
+    .log {
+      background: #000;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 3px 0;
+    }
+    .log-info { color: #3498db; }
+    .log-success { color: #27ae60; }
+    .log-warn { color: #f39c12; }
+    .log-error { color: #e74c3c; }
+    .explanation {
+      background: rgba(52, 152, 219, 0.1);
+      padding: 15px;
+      border-radius: 4px;
+      margin: 10px 0;
+      border-left: 3px solid #3498db;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Social Phase Halt Fix - Verification</h1>
+  
+  <div class="explanation">
+    <h3>🐛 Bug Description</h3>
+    <p>The social phase flow was completely broken:</p>
+    <ol>
+      <li>Summary showed twice (after user clicked OK)</li>
+      <li>Timer continued running after phase should end</li>
+      <li>Game halted and never advanced to nominations</li>
+    </ol>
+    
+    <h3>✅ Fix Applied</h3>
+    <ul>
+      <li><strong>Simplified onDone():</strong> Removed complex fallback logic, single summary path</li>
+      <li><strong>Fixed OK handler:</strong> Removed timer resume, moved callback BEFORE animation</li>
+      <li><strong>Fixed handleSocialPhaseExit():</strong> Removed premature flag resets</li>
+      <li><strong>Proper guard management:</strong> Flags only reset at phase START, not during exit</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h2>📝 Manual Verification Steps</h2>
+    <p>Follow these steps to verify the fix:</p>
+    <ol>
+      <li>Open the console (F12) to monitor logs</li>
+      <li>Load the game and start a new game</li>
+      <li>Skip to social intermission phase (or wait for it)</li>
+      <li>Let the timer run out WITHOUT doing any actions</li>
+      <li><strong>Expected:</strong> Summary shows ONCE, click OK → advances to nominations immediately</li>
+      <li><strong>Verify:</strong> No duplicate summary, no timer continuation, game advances properly</li>
+    </ol>
+  </div>
+
+  <div class="test-section">
+    <h2>🔍 Key Changes Verification</h2>
+    
+    <div id="verificationResults"></div>
+    
+    <button class="btn" onclick="runVerification()">Run Code Verification</button>
+  </div>
+
+  <div class="test-section">
+    <h2>📊 Console Log Patterns to Watch</h2>
+    <div class="log" id="logPatterns">
+      <div class="log-entry log-success">✅ Expected: [social.js] ✓ Phase advancement callback stored</div>
+      <div class="log-entry log-success">✅ Expected: [social-maneuvers] ✓ Calling stored phase advancement callback</div>
+      <div class="log-entry log-success">✅ Expected: [social.js] ✓ Advancing to next phase</div>
+      <div class="log-entry log-success">✅ Expected: Summary shows ONCE, then dismisses</div>
+      <div class="log-entry log-success">✅ Expected: Game advances to nominations after OK</div>
+      <br>
+      <div class="log-entry log-error">❌ Should NOT see: onSocialPhaseEnd already called - ignoring duplicate</div>
+      <div class="log-entry log-error">❌ Should NOT see: Phase already advanced - ignoring duplicate call</div>
+      <div class="log-entry log-error">❌ Should NOT see: ▶️ Timer resumed (OK pressed)</div>
+      <div class="log-entry log-error">❌ Should NOT see: Summary showing twice</div>
+    </div>
+  </div>
+
+  <script>
+    function log(message, level = 'info') {
+      console.log(`[test] ${message}`);
+    }
+
+    async function runVerification() {
+      const results = document.getElementById('verificationResults');
+      results.innerHTML = '<p>Running verification checks...</p>';
+      
+      const checks = [];
+      
+      // Check 1: Verify onDone() simplification
+      checks.push({
+        name: 'onDone() simplified',
+        check: async () => {
+          const socialJs = await fetch('js/social.js').then(r => r.text());
+          const hasShowEndOfPhaseSummary = socialJs.includes('showEndOfPhaseSummary');
+          const hasPresentPhaseSummary = socialJs.includes('presentPhaseSummary');
+          const hasSummaryShownVar = /let\s+summaryShown\s*=\s*false/.test(socialJs);
+          
+          return !hasShowEndOfPhaseSummary && !hasPresentPhaseSummary && !hasSummaryShownVar;
+        },
+        expected: 'Removed fallback summary methods and summaryShown variable'
+      });
+      
+      // Check 2: Verify OK handler doesn't resume timer
+      checks.push({
+        name: 'OK handler no timer resume',
+        check: async () => {
+          const smJs = await fetch('js/social-maneuvers.js').then(r => r.text());
+          const okHandlerSection = smJs.substring(
+            smJs.indexOf("continueBtn.onclick = () => {"),
+            smJs.indexOf("};", smJs.indexOf("continueBtn.onclick = () => {"))
+          );
+          
+          const hasTimerResume = okHandlerSection.includes('PauseController.resume') || 
+                                 okHandlerSection.includes('resumePhaseTimer');
+          
+          return !hasTimerResume;
+        },
+        expected: 'OK handler does not resume timer'
+      });
+      
+      // Check 3: Verify callback called before animation
+      checks.push({
+        name: 'Callback called before setTimeout',
+        check: async () => {
+          const smJs = await fetch('js/social-maneuvers.js').then(r => r.text());
+          const okHandlerSection = smJs.substring(
+            smJs.indexOf("continueBtn.onclick = () => {"),
+            smJs.indexOf("};", smJs.indexOf("continueBtn.onclick = () => {"))
+          );
+          
+          const callbackIndex = okHandlerSection.indexOf('__socialPhaseAdvanceCallback()');
+          const setTimeoutIndex = okHandlerSection.indexOf('setTimeout(');
+          
+          return callbackIndex < setTimeoutIndex && callbackIndex !== -1 && setTimeoutIndex !== -1;
+        },
+        expected: 'Callback called synchronously before setTimeout'
+      });
+      
+      // Check 4: Verify handleSocialPhaseExit doesn't reset flags
+      checks.push({
+        name: 'handleSocialPhaseExit no flag resets',
+        check: async () => {
+          const socialJs = await fetch('js/social.js').then(r => r.text());
+          const exitHandlerSection = socialJs.substring(
+            socialJs.indexOf("function handleSocialPhaseExit()"),
+            socialJs.indexOf("}", socialJs.indexOf("function handleSocialPhaseExit()"))
+          );
+          
+          const hasDelete = exitHandlerSection.includes('delete game.__socialPhaseStartCalled') ||
+                           exitHandlerSection.includes('delete game.__socialPhaseEndCalled');
+          
+          return !hasDelete;
+        },
+        expected: 'handleSocialPhaseExit does not reset phase flags'
+      });
+      
+      // Run all checks
+      let html = '<div style="margin-top: 20px;">';
+      let allPassed = true;
+      
+      for (const check of checks) {
+        try {
+          const passed = await check.check();
+          allPassed = allPassed && passed;
+          
+          const icon = passed ? '✅' : '❌';
+          const statusClass = passed ? 'log-success' : 'log-error';
+          
+          html += `
+            <div class="log-entry ${statusClass}">
+              ${icon} <strong>${check.name}:</strong> ${passed ? 'PASS' : 'FAIL'} - ${check.expected}
+            </div>
+          `;
+        } catch (error) {
+          allPassed = false;
+          html += `
+            <div class="log-entry log-error">
+              ❌ <strong>${check.name}:</strong> ERROR - ${error.message}
+            </div>
+          `;
+        }
+      }
+      
+      html += '</div>';
+      
+      if (allPassed) {
+        html = `<div class="status success">✅ All verification checks passed!</div>` + html;
+      } else {
+        html = `<div class="status error">❌ Some verification checks failed</div>` + html;
+      }
+      
+      results.innerHTML = html;
+    }
+    
+    // Auto-run verification on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(runVerification, 500);
+    });
+  </script>
+</body>
+</html>
