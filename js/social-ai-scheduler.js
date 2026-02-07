@@ -1013,12 +1013,6 @@
       return;
     }
     
-    // Guard: Block if summary is open or phase is ending
-    if(global.game?.__socialSummaryGenerated || global.game?.__socialPhaseAdvanced){
-      infoLog('startAiSocialPhase blocked: summary generated or phase advancing');
-      return;
-    }
-    
     const config = getConfig();
     
     if (!config.enabled) {
