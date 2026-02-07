@@ -716,6 +716,13 @@
     
     watchdogTimer = setTimeout(() => {
       const timeSinceLastTick = Date.now() - lastTickTime;
+      
+      // Check controller state - don't restart if controller says phase is ending
+      if (global.SocialManeuvers?.SocialPhaseController?.shouldBlockSchedulerStart?.()) {
+        debugLog('Watchdog: Controller blocked restart - phase is summarizing or advanced');
+        return;
+      }
+      
       if (timeSinceLastTick > 2500 && isRunning && !isPaused) {
         warnLog('⚠️ Watchdog: No tick for >2.5s - restarting loop');
         infoLog('Watchdog restarting stalled loop', 'no_tick_detected');
@@ -1013,9 +1020,9 @@
       return;
     }
     
-    // Guard: Block if summary is open or phase is ending
-    if(global.game?.__socialSummaryGenerated || global.game?.__socialPhaseAdvanced){
-      infoLog('startAiSocialPhase blocked: summary generated or phase advancing');
+    // Guard: Block if controller says we shouldn't start (summarizing or advanced)
+    if(global.SocialManeuvers?.SocialPhaseController?.shouldBlockSchedulerStart?.()){
+      infoLog('startAiSocialPhase blocked: controller state prevents start');
       return;
     }
     
