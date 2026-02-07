@@ -483,12 +483,6 @@
   animation: sm-fade-in 0.3s ease-in;
   max-width: 90%;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-}
-
-.sm-empty-energy-overlay--fade-out {
-  opacity: 0;
-  transform: translateY(6px);
 }
 
 .sm-empty-energy-content {

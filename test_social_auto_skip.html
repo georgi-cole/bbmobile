@@ -235,13 +235,15 @@
         logEvent('Starting Social phase...');
         window.SocialManeuvers.onSocialPhaseStart();
         
-        // Check if timer is paused for empty-energy overlay
+        // Check if timer was stopped
         setTimeout(() => {
-          const isPaused = window.game?.timerPaused;
-          if (isPaused) {
-            logEvent('✅ Timer paused for empty-energy overlay', 'skip-event');
+          const endAt = window.game?.endAt || 0;
+          const now = Date.now();
+          const timeRemaining = endAt - now;
+          if (timeRemaining > 100000000) {
+            logEvent('✅ Timer stopped successfully (far future endAt)', 'skip-event');
           } else {
-            logEvent('⚠️ Timer pause state unexpected (not paused)', 'skip-event');
+            logEvent(`⚠️ Timer may still be running (${Math.round(timeRemaining/1000)}s remaining)`, 'skip-event');
           }
         }, 500);
       }, 100);

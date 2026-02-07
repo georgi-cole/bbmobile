@@ -2951,37 +2951,21 @@
   // ============================================================================
   
   /**
-   * Pause the Social phase timer to prevent countdown during auto-skip.
-   * Keeps the timer frozen until the empty-energy overlay is dismissed.
+   * Stop the Social phase timer to prevent countdown during auto-skip.
+   * Sets endAt to now to prevent "far future" timer values.
    */
-  function pauseSocialPhaseTimer() {
+  function stopSocialPhaseTimer() {
     const g = global.game;
     if(!g) return;
     
-    console.info('[sm-phase-skip] Pausing Social phase timer...');
-    const hasValidEndAt = typeof g.endAt === 'number';
-    const remainingMs = hasValidEndAt ? Math.max(0, g.endAt - Date.now()) : 0;
-    if (!hasValidEndAt) {
-      console.warn('[sm-phase-skip] No valid endAt found while pausing timer; defaulting remaining to 0');
-    }
-    g.timerPaused = true;
-    g.pausedTimeRemaining = remainingMs;
-    console.info('[sm-phase-skip] ✓ Timer paused during empty energy overlay:', remainingMs, 'ms remaining');
-  }
-
-  /**
-   * Exhaust the Social phase timer to 0:01 after the empty-energy overlay fades out.
-   */
-  function exhaustSocialPhaseTimerToOneSecond() {
-    const g = global.game;
-    if(!g) return;
-
+    console.info('[sm-phase-skip] Stopping Social phase timer...');
+    
+    // Set endAt to now to stop countdown and prevent far-future values
     const now = Date.now();
-    g.endAt = now + 1000;
-    g.phaseEndsAt = now + 1000;
-    g.timerPaused = false;
-    g.pausedTimeRemaining = null;
-    console.info('[sm-phase-skip] ⏱️ Timer exhausted to 0:01 after empty energy overlay');
+    g.endAt = now;
+    g.phaseEndsAt = now;
+    
+    console.info('[sm-phase-skip] ✓ Timer stopped (endAt set to now)');
   }
   
   function showEmptyEnergyOverlayAndSkip(playerId) {
@@ -2998,7 +2982,7 @@
     console.info(`[sm-phase-skip] Showing empty energy overlay for player ${playerId}, week ${week}`);
     
     // Stop the phase timer immediately
-    pauseSocialPhaseTimer();
+    stopSocialPhaseTimer();
     
     // HIDE SOCIAL LAUNCHER to prevent stacking/overlap on mobile
     const socialLauncher = document.getElementById('socializeLauncher');
@@ -3049,25 +3033,23 @@
     
     console.info(`[sm-phase-skip] Event dispatched: sm-phase-skip-empty`, { playerId, week });
     
-    const OVERLAY_DURATION_MS = 3000;
-    const FADE_OUT_MS = 300;
-    const PHASE_ADVANCE_BUFFER_MS = 1500;
-    const fadeDelayMs = OVERLAY_DURATION_MS - FADE_OUT_MS;
-
-    // Fade out then exhaust timer to 0:01 so the phase ends naturally
+    // Auto-advance after 3 seconds
     setTimeout(() => {
-      overlay.classList.add('sm-empty-energy-overlay--fade-out');
-      setTimeout(() => {
-        wrapper.remove();
-        console.info('[sm-phase-skip] Empty energy overlay dismissed');
-        exhaustSocialPhaseTimerToOneSecond();
-
-        // Clean up idempotency flag after expected phase advance
-        setTimeout(() => {
-          if(g) g.__smSkipInProgress = false;
-        }, PHASE_ADVANCE_BUFFER_MS);
-      }, FADE_OUT_MS);
-    }, fadeDelayMs);
+      wrapper.remove();
+      console.info(`[sm-phase-skip] Auto-advancing to next phase`);
+      
+      // Advance to next phase
+      if (typeof global.advancePhase === 'function') {
+        global.advancePhase();
+      } else if (typeof global.nextPhase === 'function') {
+        global.nextPhase();
+      } else {
+        console.warn('[sm-phase-skip] No advancePhase or nextPhase function available');
+      }
+      
+      // Clean up idempotency flag after phase advance
+      if(g) g.__smSkipInProgress = false;
+    }, 3000);
   }
   
   // ============================================================================
