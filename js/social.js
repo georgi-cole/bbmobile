@@ -514,21 +514,15 @@
 
     // Call onSocialPhaseStart when Social Maneuvers is enabled
     if(global.SocialManeuvers?.isEnabled?.()){
-      // Guard: prevent duplicate calls within same phase
-      if(g.__socialPhaseStartCalled){
-        console.warn('[social.js] onSocialPhaseStart already called this phase - skipping duplicate');
-      } else {
-        g.__socialPhaseStartCalled = true;
-        console.info('[social.js] ▶ Entering social_intermission - calling onSocialPhaseStart');
-        if(global.SocialManeuvers?.onSocialPhaseStart){
-          try{
-            global.SocialManeuvers.onSocialPhaseStart();
-          }catch(e){
-            console.error('[social.js] onSocialPhaseStart failed:', e);
-          }
-        }else{
-          console.warn('[social.js] SocialManeuvers.onSocialPhaseStart not found');
+      console.info('[social.js] ▶ Entering social_intermission - calling onSocialPhaseStart');
+      if(global.SocialManeuvers?.onSocialPhaseStart){
+        try{
+          global.SocialManeuvers.onSocialPhaseStart();
+        }catch(e){
+          console.error('[social.js] onSocialPhaseStart failed:', e);
         }
+      }else{
+        console.warn('[social.js] SocialManeuvers.onSocialPhaseStart not found');
       }
       
       // Dismiss stray legacy memory cards if any
@@ -619,47 +613,14 @@
           if(global.SocialManeuvers?.showSummaryPanel && global.SocialManeuvers?.generatePhaseSummary){
             try{
               // Generate summary data first
-              let summary = global.SocialManeuvers.generatePhaseSummary();
-              
-              // If summary is null/undefined, create a minimal fallback summary
-              if(!summary){
-                console.warn('[social.js] generatePhaseSummary returned null/undefined - using fallback summary');
-                const alivePlayers = global.alivePlayers?.() || [];
-                summary = {
-                  metadata: {
-                    week: global.game?.week || 1,
-                    startTime: Date.now() - 120000, // estimate 2 minutes ago
-                    endTime: Date.now(),
-                    duration: 120000,
-                    playersCount: alivePlayers.length
-                  },
-                  resources: {
-                    energySpent: {},
-                    energyRemaining: {},
-                    informationSpent: {}
-                  },
-                  actions: {
-                    total: 0,
-                    byPlayer: {},
-                    byCategory: {},
-                    list: []
-                  },
-                  relationships: {
-                    changes: [],
-                    newAlliances: [],
-                    newRivalries: []
-                  },
-                  memories: {
-                    created: 0,
-                    total: 0
-                  }
-                };
-                console.info('[social.js] ✓ Fallback summary created - will still show summary card');
+              const summary = global.SocialManeuvers.generatePhaseSummary();
+              if(summary){
+                global.SocialManeuvers.showSummaryPanel(summary);
+                console.info('[social.js] ✓ Showed summary via showSummaryPanel - phase will advance when user clicks OK');
+                return; // Exit early - phase will advance when user clicks OK
+              }else{
+                console.warn('[social.js] generatePhaseSummary returned null/undefined - advancing immediately');
               }
-              
-              global.SocialManeuvers.showSummaryPanel(summary);
-              console.info('[social.js] ✓ Showed summary via showSummaryPanel - phase will advance when user clicks OK');
-              return; // Exit early - phase will advance when user clicks OK
             }catch(e){
               console.error('[social.js] showSummaryPanel failed:', e);
             }
