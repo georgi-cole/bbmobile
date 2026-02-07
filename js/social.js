@@ -578,14 +578,14 @@
         }
       };
       
-      // Store callback in controller (not game object) - controller owns phase lifecycle
+      // Store callback in controller - controller owns phase lifecycle
       if (global.SocialManeuvers?.SocialPhaseController) {
         global.SocialManeuvers.SocialPhaseController.advanceCallback = advanceToNextPhase;
         console.info('[social.js] ✓ Phase advancement callback stored in controller');
       } else {
-        // Fallback: store in game object for backward compatibility
-        global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
-        console.warn('[social.js] ⚠ Controller not found - stored callback in game object (legacy)');
+        // CRITICAL: Controller should always exist if Social Maneuvers is enabled
+        console.error('[social.js] ❌ SocialPhaseController not found - this indicates an initialization error');
+        throw new Error('SocialPhaseController not available - cannot store phase advance callback');
       }
 
       try{ 

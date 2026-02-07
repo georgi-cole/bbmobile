@@ -146,11 +146,6 @@
       }
     },
     
-    clearAllTimers() {
-      // Alias for cancelAllTimers (for backward compat)
-      this.cancelAllTimers();
-    },
-    
     // State queries
     isRunning() {
       return this.state === 'running';
@@ -3268,13 +3263,6 @@
     
     const g = global.game;
     
-    // Guard: prevent duplicate calls within same phase (legacy guard, controller now handles this)
-    if(g?.__socialPhaseStartCalled){
-      console.warn('[social-maneuvers] onSocialPhaseStart already called - ignoring duplicate');
-      return;
-    }
-    if(g) g.__socialPhaseStartCalled = true;
-    
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
     
     // Reset singleton guards for new phase
@@ -3765,13 +3753,6 @@
       console.warn('[social-maneuvers] Controller rejected summary - wrong state');
       return;
     }
-
-    // Singleton guard: only show summary once per phase end (legacy guard, controller now handles this)
-    if(socialSummaryOpen){
-      console.warn('[social-maneuvers] Summary already open - ignoring duplicate call');
-      return;
-    }
-    socialSummaryOpen = true;
 
     // CRITICAL: Controller has already canceled ALL timers in beginSummarizing()
     // No need to manually pause/stop individual timers - controller handles it
