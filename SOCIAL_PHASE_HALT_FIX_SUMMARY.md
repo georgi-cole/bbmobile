@@ -1,457 +1,402 @@
-# Social Phase Flow Race Condition Fix - Complete Summary
+# Social Phase Halt Bug - Fix Summary
 
-## Problem
-The social phase flow was completely broken after the social summary appeared:
+## Problem Statement
 
-1. **Summary showed twice** - After clicking OK, the summary would reappear
-2. **Timer continued running** - Timer kept counting even after phase should have ended
-3. **Game halted** - Never advanced to nominations phase after timer ran out
-4. **Console errors** - Duplicate call warnings and race condition logs
+After PR #1164, the game still halted after the social phase with these console errors:
 
-### Console Logs (Bug Symptoms):
-```
-[social-maneuvers] ⚠ No callback found — advancing via fallback
-[social-maneuvers] onSocialPhaseEnd already called - ignoring duplicate
-[PhaseTimerBridge] ⚠ Manual resume called
-```
+1. `[PhaseTimerBridge] ⚠ Manual resume called` — repeating ~18 times in a loop
+2. `[social-maneuvers] onSocialPhaseEnd already called - ignoring duplicate` — repeating ~18 times  
+3. `[social-maneuvers] ⚠ No phase advancement callback found - phase may not advance` — **THE GAME-HALTING LINE**
 
-## Root Cause Analysis
+## Root Cause
 
-Multiple competing phase-end paths created race conditions:
+**THREE competing code paths** were all trying to end the social phase, using different guard flags that didn't coordinate:
 
-### The Race Condition Flow:
+### Path 1: `social.js` → `onDone()` (timer callback)
+- **Guard**: `game.__socialOnDoneFired`
+- **Behavior**: Should store `game.__socialPhaseAdvanceCallback` and show summary via `showSummaryPanel()`
+- **Problem**: When blocked by the guard (because Path 2 or 3 already set it), the callback was **never stored**
 
-1. **Timer expires** → `onDone()` fires → stores callback → calls `onSocialPhaseEnd()` → shows summary → returns early
-2. **User clicks OK** → OK handler sets `socialSummaryOpen = false` (resetting guard TOO EARLY) → **RESUMES TIMER** → starts 400ms animation
-3. **After 400ms**, OK handler calls `game.__socialPhaseAdvanceCallback()` → which calls `advanceToNextPhase()` → which calls the original `callback` or `startNominations()`
-4. **BUT**: `advanceToNextPhase()` calls the original `callback` from `setPhase`, which calls `setPhase('nominations', ...)`
-5. **The `setPhase` wrapper** detects leaving `social_intermission` → calls `handleSocialPhaseExit()` → **resets flags**
-6. **MEANWHILE**: The timer was RESUMED in step 2, so it's still counting down. When it hits 0 again, `defaultAdvance` fires
-7. **AND**: The `socialSummaryOpen` guard was reset in step 2, so if anything triggers `showSummaryPanel` again, it shows a SECOND time
-8. **The second OK click** tries to advance but `__socialPhaseAdvanced` is already true → ignored → **game halts**
+### Path 2: `social-maneuvers.js` → `endSocialPhaseNow(reason)`
+- **Guard**: module-level `socialPhaseEnded`
+- **Behavior**: Calls `onSocialPhaseEnd()` directly
+- **Problem**: Does NOT store `__socialPhaseAdvanceCallback`
 
-### Three Problem Areas:
+### Path 3: `social.js` → `handleSocialPhaseExit()` (setPhase wrapper)
+- **Guard**: `game.__socialPhaseEndCalled`
+- **Behavior**: Calls `SocialManeuvers.onSocialPhaseEnd()` when phase changes away from `social_intermission`
+- **Problem**: Does NOT store `__socialPhaseAdvanceCallback`
 
-#### Problem 1: Complex `onDone()` with Fallback Logic
-```javascript
-// OLD CODE - Multiple fallback paths
-let summaryShown = false;
-if(SocialManeuvers.showSummaryPanel) {
-  // try this
-  summaryShown = true;
-} else if(SocialManeuvers.showEndOfPhaseSummary) {
-  // or try this
-  summaryShown = true;
-} else if(SocialManeuvers.presentPhaseSummary) {
-  // or try this
-  summaryShown = true;
-}
-if(!summaryShown) {
-  // fallback advance
-}
-```
+### Path 4: `social-maneuvers.js` → setPhase wrapper (~line 2268)
+- **Behavior**: Also calls `onSocialPhaseEnd()` when leaving social phase
+- **Problem**: Creates another race condition with Path 1
 
-#### Problem 2: OK Button Handler Issues
-```javascript
-// OLD CODE - Timer resume + delayed callback
-socialSummaryOpen = false; // Reset guard TOO EARLY
+### The Race Condition
 
-// Resume timer when phase is ending (WRONG!)
-PauseController.resume('social-summary');
-
-// Wait 400ms before advancing (race condition window)
-setTimeout(() => {
-  g.__socialPhaseAdvanceCallback(); // Called too late
-}, 400);
-```
-
-#### Problem 3: Premature Flag Resets
-```javascript
-// OLD CODE - handleSocialPhaseExit()
-function handleSocialPhaseExit() {
-  // ... UI cleanup ...
-  
-  // WRONG: Reset flags during phase exit
-  delete global.game.__socialPhaseStartCalled;
-  delete global.game.__socialPhaseEndCalled;
-}
-```
+1. Social phase timer runs. Player does some actions.
+2. When energy depletes or timer nearly expires, `endSocialPhaseNow('energy')` fires (Path 2)
+3. Path 2 sets `socialPhaseEnded = true`, calls `onSocialPhaseEnd()` (which sets `game.__socialPhaseEndCalled = true`), and sets `game.__socialOnDoneFired = true`
+4. Timer expires → calls `onDone()` → sees `__socialOnDoneFired === true` → **returns immediately without storing callback**
+5. Meanwhile, the summary popup IS shown (either by `onSocialPhaseEnd` or `showSummaryPanel`)
+6. User clicks OK → `showSummaryPanel`'s OK handler looks for `game.__socialPhaseAdvanceCallback` → it's `undefined` → logs "No phase advancement callback found" → **GAME HALTS**
 
 ## Solution
 
-### 1. Simplified `onDone()` in js/social.js
+### Key Principle: Make `onDone()` the SINGLE authority for phase advancement
 
-**Removed:**
-- ❌ Complex fallback logic with multiple summary methods
-- ❌ `summaryShown` tracking variable
-- ❌ Multiple try-catch blocks for different methods
-- ❌ Cleanup before showing summary
+### Changes Made
 
-**Added:**
-- ✅ Single, clean summary path
-- ✅ Cleanup before advancement (proper timing)
-- ✅ Clear error messages (no duplicate warnings)
-- ✅ Immediate advancement if no summary
+#### 1. In `js/social.js` - Rewrote `onDone()` callback storage
 
-**New Flow:**
+**BEFORE:**
 ```javascript
-const onDone = async () => {
-  // 1. Store callback FIRST
+const onDone = async ()=>{
+  // Idempotency guard: prevent onDone from executing twice
+  if(global.game?.__socialOnDoneFired) {
+    console.warn('[social.js] onDone already fired this phase - ignoring duplicate call');
+    return; // ❌ CALLBACK NEVER STORED!
+  }
+  global.game.__socialOnDoneFired = true;
+  
+  // ... later, inside try blocks ...
+  const advanceToNextPhase = () => { /* ... */ };
   global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
+  // ❌ This line never runs if guard fires first!
+```
+
+**AFTER:**
+```javascript
+const onDone = async ()=>{
+  // CRITICAL: Always store phase advancement callback FIRST
+  const advanceToNextPhase = () => {
+    // One-shot guard: prevent double advancement
+    if(global.game?.__socialPhaseAdvanced) {
+      console.warn('[social.js] Phase already advanced - ignoring duplicate call');
+      return;
+    }
+    global.game.__socialPhaseAdvanced = true;
+    
+    console.info('[social.js] ✓ Advancing to next phase');
+    if(typeof callback === 'function'){
+      try{ callback(); }catch(e){ console.error(e); }
+    } else {
+      const startNoms = resolveStartNominations();
+      try{ startNoms(); }catch(e){ console.error(e); }
+    }
+  };
   
-  // 2. Call onSocialPhaseEnd (with idempotency guard)
-  SocialManeuvers.onSocialPhaseEnd();
+  // Store callback immediately - MUST happen before any guards
+  global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
+  console.info('[social.js] ✓ Phase advancement callback stored');
   
-  // 3. Hide launcher
-  SocializeMobile.hide();
+  // ... rest of cleanup and summary logic ...
+```
+
+**Key Changes:**
+- ✅ Callback stored at TOP of function, before any guards or logic
+- ✅ Guard moved INSIDE the callback itself (`__socialPhaseAdvanced`), not at onDone level
+- ✅ Removed `__socialOnDoneFired` guard entirely
+- ✅ Callback now always available for summary OK button
+
+#### 2. In `js/social.js` - Stripped `handleSocialPhaseExit()` of phase end logic
+
+**BEFORE:**
+```javascript
+function handleSocialPhaseExit() {
+  _inSocialPhase = false;
+  console.info('[social.js wrapper] ◼ Detected leaving social_intermission via setPhase');
   
-  // 4. Wait for pending UI operations
-  await cardQueueWaitIdle();
-  
-  // 5. Try to show summary (single method, no fallbacks)
-  const summary = SocialManeuvers.generatePhaseSummary();
-  if(summary) {
-    SocialManeuvers.showSummaryPanel(summary);
-    return; // Exit early - OK button handles advancement
+  if(global.SocialManeuvers?.isEnabled?.()){
+    // Call onSocialPhaseEnd if not already called
+    if(global.SocialManeuvers?.onSocialPhaseEnd && !global.game?.__socialPhaseEndCalled){
+      try{
+        global.game.__socialPhaseEndCalled = true;
+        global.SocialManeuvers.onSocialPhaseEnd(); // ❌ RACES WITH onDone!
+        console.info('[social.js wrapper] ✓ Called onSocialPhaseEnd');
+      }catch(e){ /* ... */ }
+    }
+    
+    // ... hide launcher, resume timer ...
   }
   
-  // 6. No summary? Cleanup and advance immediately
-  endSocialPhaseCleanup();
-  advanceToNextPhase();
-};
+  // Reset flags for next phase
+  // ...
+}
 ```
 
-### 2. Fixed OK Button Handler in js/social-maneuvers.js
+**AFTER:**
+```javascript
+function handleSocialPhaseExit() {
+  _inSocialPhase = false;
+  console.info('[social.js wrapper] ◼ Detected leaving social_intermission via setPhase');
+  
+  // Only do UI cleanup here - NOT phase end logic
+  // Phase end logic should only happen in onDone()
+  if(global.SocializeMobile?.hide){
+    try{
+      global.SocializeMobile.hide();
+    }catch(e){ /* Ignore errors */ }
+  }
+  
+  // Reset flags for next phase
+  if(global.game){
+    delete global.game.__socialPhaseStartCalled;
+    delete global.game.__socialPhaseEndCalled;
+  }
+}
+```
 
-**Removed:**
-- ❌ Timer resume logic (`PauseController.resume`)
-- ❌ Early guard reset (`socialSummaryOpen = false` before callback)
-- ❌ 400ms delay before calling advancement callback
-- ❌ Redundant fallback check
+**Key Changes:**
+- ✅ Removed `onSocialPhaseEnd()` call entirely
+- ✅ Only does UI cleanup (hide launcher, reset flags)
+- ✅ Lets `onDone()` be the sole authority for phase end logic
 
-**Added:**
-- ✅ Immediate callback execution (synchronous)
-- ✅ UI cleanup in background (non-blocking)
-- ✅ Guard reset AFTER callback (in setTimeout)
-- ✅ Clean separation of concerns
+#### 3. In `js/social-maneuvers.js` - Stripped setPhase wrapper of phase end logic
 
-**New Flow:**
+**BEFORE:**
+```javascript
+// Detect leaving social_intermission
+if (previousPhase === 'social_intermission' && phase !== 'social_intermission') {
+  console.info('[social-maneuvers] ✓ Leaving social_intermission');
+  
+  // Call onSocialPhaseEnd
+  if (isEnabled()) {
+    try {
+      onSocialPhaseEnd(); // ❌ RACES WITH onDone!
+    } catch(e) { /* ... */ }
+  }
+  
+  // Close socialize modal if open
+  // ... hide launcher, resume timer ...
+}
+```
+
+**AFTER:**
+```javascript
+// Detect leaving social_intermission
+if (previousPhase === 'social_intermission' && phase !== 'social_intermission') {
+  console.info('[social-maneuvers] ✓ Leaving social_intermission');
+  
+  // REMOVED: onSocialPhaseEnd call - let onDone in social.js handle phase end logic
+  // This prevents race conditions with the timer callback
+  
+  // Close socialize modal if open
+  if (global.SocializeMobile?.closeModal) {
+    global.SocializeMobile.closeModal();
+  }
+  
+  // Hide launcher
+  if (global.SocializeMobile?.hide) {
+    global.SocializeMobile.hide();
+  }
+}
+```
+
+**Key Changes:**
+- ✅ Removed `onSocialPhaseEnd()` call
+- ✅ Removed timer resume logic (handled by onDone)
+- ✅ Only UI cleanup remains
+
+#### 4. In `js/social-maneuvers.js` - Added fallback to summary OK button
+
+**BEFORE:**
 ```javascript
 continueBtn.onclick = () => {
-  // 1. Call advancement callback FIRST (synchronous)
-  g.__socialPhaseAdvanceCallback();
-  delete g.__socialPhaseAdvanceCallback;
+  // ... cleanup logic ...
   
-  // 2. Start UI animation (non-blocking)
-  card.style.animation = 'popOut 0.4s ease forwards';
-  
-  // 3. Cleanup after animation completes
-  setTimeout(() => {
-    card.remove();
-    backdrop.remove();
-    
-    // Reset guard AFTER everything is done
-    socialSummaryOpen = false;
-  }, 400);
+  // Call the stored phase advancement callback
+  const g = global.game;
+  if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
+    console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
+    try {
+      g.__socialPhaseAdvanceCallback();
+      delete g.__socialPhaseAdvanceCallback;
+    } catch(e) { /* ... */ }
+  } else {
+    console.warn('[social-maneuvers] ⚠ No phase advancement callback found - phase may not advance');
+    // ❌ GAME HALTS HERE!
+  }
 };
 ```
 
-### 3. Fixed `handleSocialPhaseExit()` in js/social.js
+**AFTER:**
+```javascript
+continueBtn.onclick = () => {
+  // ... cleanup logic ...
+  
+  // Call the stored phase advancement callback
+  const g = global.game;
+  if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
+    console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
+    try {
+      g.__socialPhaseAdvanceCallback();
+      delete g.__socialPhaseAdvanceCallback;
+    } catch(e) { /* ... */ }
+  } else {
+    // FALLBACK: advance phase directly if no callback stored
+    console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
+    try {
+      // Try multiple nomination starter candidates
+      const startNoms = global.startNominations || global.startNomination || global.startNoms;
+      if(typeof startNoms === 'function') {
+        console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
+        startNoms();
+      } else {
+        // Ultimate fallback: use setPhase directly
+        console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
+        global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
+      }
+    } catch(e) {
+      console.error('[social-maneuvers] Fallback advancement failed:', e);
+    }
+  }
+};
+```
 
-**Removed:**
-- ❌ Premature flag resets
-- ❌ Phase end logic in exit handler
+**Key Changes:**
+- ✅ Added fallback logic if callback not found
+- ✅ Tries multiple nomination starter function names
+- ✅ Ultimate fallback uses `setPhase` directly
+- ✅ Game will never halt, even in edge cases
 
-**Kept:**
-- ✅ Only UI cleanup (hiding launcher)
+#### 5. In `js/social.js` - Updated `startSocialIntermission()` flag reset
 
-**Flag Management:**
-- Flags NOW reset in `startSocialIntermission()` (phase start)
-- Flags stay set during phase exit
-- Proper lifecycle: reset → phase runs → end guard stays set → next phase resets
+**BEFORE:**
+```javascript
+global.startSocialIntermission = async function(source, callback){
+  const g=global.game; if(!g) return;
+  ensureSocialState();
+  g.__socialShown = 0;
+  g.__socialLogBudget = 6;
 
-## Files Modified
+  // Clear idempotency guard for new phase
+  if(g) g.__socialOnDoneFired = false;
+  
+  // ...
+```
 
-### js/social.js (3 changes)
-1. **Lines 562-640**: Simplified `onDone()` callback
-   - Removed complex fallback logic
-   - Single summary path
-   - Better error messages
-   - Cleanup timing fixed
+**AFTER:**
+```javascript
+global.startSocialIntermission = async function(source, callback){
+  const g=global.game; if(!g) return;
+  ensureSocialState();
+  g.__socialShown = 0;
+  g.__socialLogBudget = 6;
 
-2. **Lines 728-740**: Fixed `handleSocialPhaseExit()`
-   - Removed flag resets
-   - Only UI cleanup
+  // Clear phase advancement guards for new phase
+  if(g) {
+    g.__socialPhaseAdvanced = false;
+    delete g.__socialPhaseAdvanceCallback;
+    delete g.__socialPhaseStartCalled;
+    delete g.__socialPhaseEndCalled;
+  }
+  
+  // ...
+```
 
-3. **Lines 502-507**: Flag resets (already in `startSocialIntermission`)
-   - Verified proper reset timing
+**Key Changes:**
+- ✅ Replaced `__socialOnDoneFired` with `__socialPhaseAdvanced`
+- ✅ Cleans up all phase-start flags
+- ✅ Ensures clean slate for each new social phase
 
-### js/social-maneuvers.js (1 change)
-1. **Lines 3710-3762**: Fixed OK button handler
-   - Removed timer resume
-   - Callback before animation
-   - Guard reset timing fixed
-   - Removed redundant check
+## Flow Diagram
+
+### BEFORE (Buggy - Race Conditions)
+
+```
+Timer Expires          Energy Depletes
+     |                       |
+     v                       v
+  onDone()          endSocialPhaseNow()
+     |                       |
+  Check guard          Set guards ✓
+  Guard BLOCKED! ✗     Call onSocialPhaseEnd() ✓
+  RETURN EARLY         Show summary ✓
+  (no callback stored) 
+                            |
+                            v
+                     User clicks OK
+                            |
+                            v
+                   Look for callback
+                   Callback = undefined ✗
+                            |
+                            v
+                     ⚠️ GAME HALTS ⚠️
+```
+
+### AFTER (Fixed - No Race Conditions)
+
+```
+Timer Expires / Energy Depletes
+            |
+            v
+        onDone()
+            |
+  Store callback FIRST ✓
+            |
+  Call onSocialPhaseEnd() ✓
+            |
+      Show summary ✓
+            |
+            v
+     User clicks OK
+            |
+            v
+   Look for callback
+   Callback EXISTS ✓
+            |
+            v
+  advanceToNextPhase() ✓
+            |
+            v
+   Check __socialPhaseAdvanced guard
+   (prevents double advancement)
+            |
+            v
+    ✅ GAME ADVANCES ✅
+```
 
 ## Expected Behavior After Fix
 
-### Normal Flow:
-```
-1. Social phase timer runs
-2. Timer expires → onDone() fires ONCE
-3. Summary appears ONCE
-4. User clicks OK
-5. Callback executes immediately
-6. Game advances to nominations
-7. UI animates out in background
-```
+1. ✅ Social phase runs normally
+2. ✅ When timer expires or energy depletes, `onDone` fires
+3. ✅ `onDone` ALWAYS stores the `__socialPhaseAdvanceCallback` first
+4. ✅ Summary shows (if data exists) → user clicks OK → callback fires → game advances
+5. ✅ If no summary data → game advances immediately via `advanceToNextPhase()`
+6. ✅ If summary shows but callback somehow missing → fallback in OK handler advances game
+7. ✅ No infinite loops, no repeated `manualResume` calls, no game halts
 
-### Timeline:
-```
-T+0ms:   Timer expires
-T+0ms:   onDone() fires
-T+0ms:   Store callback
-T+0ms:   Call onSocialPhaseEnd() [guard set]
-T+0ms:   Show summary
-T+0ms:   Return (wait for user)
+## Testing
 
-T+Xms:   User clicks OK
-T+Xms:   Call callback immediately [phase advances]
-T+Xms:   Start card animation
-T+X+400: Remove card and backdrop
-T+X+400: Reset socialSummaryOpen
-```
-
-### Console Logs (Expected):
-```
-✅ [social.js] ✓ Phase advancement callback stored
-✅ [social.js] ✓ Showed summary via showSummaryPanel
-✅ [social-maneuvers] ✓ Calling stored phase advancement callback
-✅ [social.js] ✓ Advancing to next phase
-```
-
-### Console Logs (Should NOT See):
-```
-❌ onSocialPhaseEnd already called - ignoring duplicate
-❌ Phase already advanced - ignoring duplicate call
-❌ ▶️ Timer resumed (OK pressed)
-❌ No callback found — advancing via fallback
-```
-
-## Verification
-
-### Automated Checks (All Passing ✅)
+### Automated Tests
 ```bash
-# Verify code changes
-✅ Removed fallback summary methods (showEndOfPhaseSummary, presentPhaseSummary)
-✅ Removed summaryShown tracking variable
-✅ OK handler does not resume timer
-✅ Callback called before setTimeout (synchronous execution)
-✅ socialSummaryOpen reset moved to setTimeout callback
-✅ No flag resets in handleSocialPhaseExit
-✅ Flags properly reset in startSocialIntermission
-
-# Syntax and tests
-✅ JavaScript syntax valid (node -c)
-✅ Social phase requirements verified (npm run test:social)
-✅ No security vulnerabilities (CodeQL scan: 0 alerts)
+npm run test:social
 ```
+✅ All tests pass
 
-### Manual Testing Steps
-1. Load game and start new game
-2. Skip to social intermission phase
-3. Let timer run out without any actions
-4. **Verify:** Summary shows ONCE
-5. Click OK button
-6. **Verify:** Game advances to nominations immediately
-7. **Verify:** No duplicate summary
-8. **Verify:** No timer continuation
-9. **Verify:** Expected console logs appear
+### Manual Testing
+Open `test_social_summary_fix.html` or `test_social_phase_advancement_flows.html` in browser and verify:
 
-### Test Files
-- `test_social_phase_halt_fix.html` - Automated verification page
-- Run verification checks in browser
-- Includes manual testing guide
+1. Social phase completes normally
+2. Summary popup appears
+3. Clicking OK advances to nominations phase
+4. No console errors about missing callbacks
+5. Game continues without halting
 
-## Impact
+## Files Changed
 
-### Before Fix:
-- ❌ Game completely broken at social phase
-- ❌ Required page refresh to continue
-- ❌ Confusing duplicate summaries
-- ❌ Timer behavior unpredictable
-- ❌ Console flooded with warnings
+- `js/social.js` (45 lines changed)
+  - Rewrote `onDone()` to always store callback first
+  - Stripped `handleSocialPhaseExit()` of phase end logic
+  - Updated `startSocialIntermission()` flag reset
+  - Fixed linting issues
 
-### After Fix:
-- ✅ Smooth phase transition
-- ✅ Single summary display
-- ✅ Immediate advancement on OK
-- ✅ Predictable, debuggable flow
-- ✅ Proper idempotency guards
-- ✅ Clean console logs
+- `js/social-maneuvers.js` (23 lines changed)
+  - Removed `onSocialPhaseEnd()` call from setPhase wrapper
+  - Added fallback logic to summary OK button handler
+  - Fixed extra closing brace
 
-## Technical Details
+## Summary
 
-### Idempotency Guards - Proper Lifecycle
-
-1. **`__socialPhaseAdvanced`** (game-level)
-   - **Purpose**: Prevents double advancement to next phase
-   - **Set**: When `advanceToNextPhase()` is called
-   - **Reset**: At start of new social phase (`startSocialIntermission` line 503)
-   - **Scope**: Entire social phase lifecycle
-
-2. **`__socialPhaseEndCalled`** (game-level)
-   - **Purpose**: Prevents double execution of `onSocialPhaseEnd()`
-   - **Set**: When `onSocialPhaseEnd()` is called
-   - **Reset**: At start of new social phase (`startSocialIntermission` line 506)
-   - **NOT reset**: In `handleSocialPhaseExit()` anymore (critical fix!)
-
-3. **`socialPhaseEnded`** (module-level in social-maneuvers.js)
-   - **Purpose**: Prevents double execution of `endSocialPhaseNow()`
-   - **Set**: When `endSocialPhaseNow()` is called
-   - **Reset**: At start of new phase (`onSocialPhaseStart` line 3114)
-
-4. **`socialSummaryOpen`** (module-level in social-maneuvers.js)
-   - **Purpose**: Prevents double display of summary panel
-   - **Set**: When `showSummaryPanel()` is called
-   - **Reset**: AFTER OK button callback completes (in setTimeout, line 3760)
-   - **Critical**: Reset timing fixed - was too early, now properly delayed
-
-### Call Sequence (Successful Flow)
-```
-startSocialIntermission()
-  ├─ Reset flags (__socialPhaseAdvanced, __socialPhaseEndCalled)
-  └─ Call onSocialPhaseStart()
-
-setPhase('social_intermission', 30, onDone)
-  └─ Timer starts counting down
-
-[... user may do actions ...]
-
-Timer expires → onDone()
-  ├─ Store __socialPhaseAdvanceCallback
-  ├─ Call onSocialPhaseEnd() [sets __socialPhaseEndCalled]
-  ├─ Hide launcher
-  ├─ Generate summary
-  ├─ Show summary panel [sets socialSummaryOpen]
-  └─ Return (wait for user)
-
-User clicks OK → continueBtn.onclick
-  ├─ Call __socialPhaseAdvanceCallback() [sets __socialPhaseAdvanced]
-  │   └─ Advance to nominations (phase changes immediately)
-  ├─ Start card animation (400ms)
-  └─ setTimeout(400ms)
-      ├─ Remove card and backdrop
-      └─ Reset socialSummaryOpen
-
-handleSocialPhaseExit() [triggered by setPhase('nominations')]
-  └─ Hide launcher (UI cleanup only, no flag resets)
-
-Next social phase
-  └─ startSocialIntermission() resets all flags
-```
-
-### Timing is Critical
-
-**Old (Broken):**
-```
-Click OK
-  ↓
-Reset guard (TOO EARLY)
-  ↓
-Resume timer (WRONG)
-  ↓
-Wait 400ms
-  ↓
-Call callback (TOO LATE)
-  ↓
-Race condition window = 400ms
-```
-
-**New (Fixed):**
-```
-Click OK
-  ↓
-Call callback immediately (RIGHT)
-  ↓
-Phase advances (RIGHT)
-  ↓
-Start animation (background)
-  ↓
-Wait 400ms for UI
-  ↓
-Reset guard (RIGHT timing)
-  ↓
-No race condition
-```
-
-## Code Review Feedback Addressed
-
-1. ✅ **Improved error messages** - Removed duplicate warnings
-2. ✅ **Fixed cleanup timing** - Moved `endSocialPhaseCleanup()` to before advancement
-3. ✅ **Removed redundant check** - Cleaned up fallback logic
-4. ✅ **Better code structure** - Single responsibility, clear separation
-
-## Security
-
-**CodeQL Analysis**: 0 vulnerabilities found
-
-**Changes reviewed**:
-- No external API calls
-- No data exposure
-- No injection risks
-- Proper error handling maintained
-
-## Backward Compatibility
-
-✅ **Fully backward compatible**
-- No API changes
-- No data structure changes
-- Existing game saves work correctly
-- Internal phase transition logic only
-
-## Testing Recommendations
-
-### For Developers:
-1. Run `npm run test:social` - Verify social phase requirements
-2. Open `test_social_phase_halt_fix.html` - Run verification checks
-3. Play through social phase manually - Verify smooth flow
-
-### For QA:
-1. Test with timer expiring naturally (no user actions)
-2. Test with user doing actions before timer expires
-3. Test with depleting energy before timer expires
-4. Verify no duplicate summaries in all scenarios
-5. Verify smooth transition to nominations in all scenarios
-
-### For Users:
-The fix is transparent. Social phase should now:
-- Show summary once
-- Advance smoothly when you click OK
-- Never get stuck or require refresh
-
-## Related Issues
-
-This fix addresses the core problem described in the issue:
-- ✅ Summary no longer shows twice
-- ✅ Timer no longer continues after phase end
-- ✅ Game no longer halts
-- ✅ Proper phase advancement to nominations
-
-## Future Improvements
-
-While this fix resolves the race conditions, future enhancements could include:
-- Centralized phase transition manager
-- More robust guard system
-- Better debugging tools for phase transitions
-- Unit tests for phase transition logic
-
-## Conclusion
-
-The social phase flow is now:
-- ✅ **Reliable** - No race conditions
-- ✅ **Predictable** - Single execution path
-- ✅ **Debuggable** - Clear console logs
-- ✅ **Maintainable** - Simplified code structure
-
-The fix ensures proper idempotency guard management, correct timing of operations, and a smooth user experience transitioning from the social phase to nominations.
+This fix eliminates the race condition by making `onDone()` the **single source of truth** for phase advancement. The callback is now **always stored first**, before any other logic can interfere. The summary OK button has a fallback, and competing phase-end paths have been neutralized. The game will no longer halt after the social phase.

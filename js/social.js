@@ -583,6 +583,9 @@
       global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
       console.info('[social.js] ✓ Phase advancement callback stored');
 
+      // Track if summary was shown to determine fallback advancement
+      let summaryShown = false;
+
       try{ 
         // Call onSocialPhaseEnd when Social Maneuvers is enabled
         if(global.SocialManeuvers?.isEnabled?.()){
@@ -606,37 +609,65 @@
             }
           }
           
-          // Wait for any pending UI operations
+          // Show engine summary instead of legacy
           await global.cardQueueWaitIdle?.();
           
-          // Try to show summary via showSummaryPanel (single method, no fallbacks)
+          // Try to delegate to engine summary panel with advancement callback
           if(global.SocialManeuvers?.showSummaryPanel && global.SocialManeuvers?.generatePhaseSummary){
             try{
               // Generate summary data first
               const summary = global.SocialManeuvers.generatePhaseSummary();
               if(summary){
                 global.SocialManeuvers.showSummaryPanel(summary);
-                console.info('[social.js] ✓ Showed summary via showSummaryPanel - phase will advance when user clicks OK');
+                summaryShown = true;
+                console.info('[social.js] ✓ Showed engine summary via showSummaryPanel - phase will advance when user clicks OK');
+                endSocialPhaseCleanup();
                 return; // Exit early - phase will advance when user clicks OK
               }else{
-                console.warn('[social.js] generatePhaseSummary returned null/undefined - advancing immediately');
+                console.warn('[social.js] generatePhaseSummary returned null/undefined');
               }
             }catch(e){
               console.error('[social.js] showSummaryPanel failed:', e);
             }
-          }else{
-            console.warn('[social.js] ⚠ showSummaryPanel or generatePhaseSummary not found - advancing immediately');
+          }else if(global.SocialManeuvers?.showEndOfPhaseSummary){
+            try{
+              global.SocialManeuvers.showEndOfPhaseSummary();
+              summaryShown = true;
+              console.info('[social.js] ✓ Showed engine summary via showEndOfPhaseSummary - phase will advance when user clicks OK');
+              endSocialPhaseCleanup();
+              return; // Exit early - phase will advance when user clicks OK
+            }catch(e){
+              console.error('[social.js] showEndOfPhaseSummary failed:', e);
+            }
+          }else if(global.SocialManeuvers?.presentPhaseSummary){
+            try{
+              global.SocialManeuvers.presentPhaseSummary();
+              summaryShown = true;
+              console.info('[social.js] ✓ Showed engine summary via presentPhaseSummary - phase will advance when user clicks OK');
+              endSocialPhaseCleanup();
+              return; // Exit early - phase will advance when user clicks OK
+            }catch(e){
+              console.error('[social.js] presentPhaseSummary failed:', e);
+            }
           }
+          
+          if(!summaryShown){
+            console.warn('[social.js] ⚠ No engine summary method found (tried showSummaryPanel, showEndOfPhaseSummary, presentPhaseSummary)');
+          }
+          
+          await global.cardQueueWaitIdle?.();
         }
+        // REMOVED: Legacy summary generation - Social Maneuvers is now sole owner
         
+        endSocialPhaseCleanup(); 
       }catch(e){ console.error(e); }
       
-      // Cleanup phase state before advancing
-      endSocialPhaseCleanup();
-      
-      // If we get here, no summary was shown - advance immediately
-      console.info('[social.js] No summary shown - advancing immediately');
-      advanceToNextPhase();
+      // Fallback: Only advance phase if no summary was shown successfully
+      // (If summary was shown, phase advancement is handled by the OK button callback)
+      if(!summaryShown){
+        console.info('[social.js] No summary shown - advancing immediately');
+        advanceToNextPhase();
+      }
     };
     global.setPhase?.('social_intermission', g.cfg?.tComms||30, onDone);
     const panel=document.getElementById('panel'); if(panel) renderSocialPhase(panel);
@@ -698,13 +729,18 @@
       _inSocialPhase = false;
       console.info('[social.js wrapper] ◼ Detected leaving social_intermission via setPhase');
       
-      // Only do UI cleanup here - NOT phase end logic or flag resets
+      // Only do UI cleanup here - NOT phase end logic
       // Phase end logic should only happen in onDone()
-      // Flag resets should only happen at the START of the next social phase
       if(global.SocializeMobile?.hide){
         try{
           global.SocializeMobile.hide();
         }catch(e){ /* Ignore errors */ }
+      }
+      
+      // Reset flags for next phase
+      if(global.game){
+        delete global.game.__socialPhaseStartCalled;
+        delete global.game.__socialPhaseEndCalled;
       }
     }
     

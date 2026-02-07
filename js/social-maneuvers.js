@@ -3708,40 +3708,28 @@
     continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
-      // CRITICAL: Call advancement callback FIRST, then cleanup
-      // Do NOT resume timer - phase is ending, timer should stay stopped
+      // Reset summary guard so it can be shown again next phase
+      socialSummaryOpen = false;
       
+      // OK button behavior: Resume timer and advance phase
       try {
         const g = global.game;
         
-        // Call the stored phase advancement callback immediately
-        if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
-          console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
-          try {
-            g.__socialPhaseAdvanceCallback();
-            delete g.__socialPhaseAdvanceCallback; // Clean up after use
-          } catch(e) {
-            console.error('[social-maneuvers] Error calling phase advancement callback:', e);
-          }
+        // Resume timer with owner ID
+        if (global.PauseController && typeof global.PauseController.resume === 'function') {
+          global.PauseController.resume('social-summary');
+          console.info('[social-maneuvers] ▶️ Timer resumed via PauseController (OK pressed)');
         } else {
-          // FALLBACK: advance phase directly if no callback stored
-          console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
-          // Try multiple nomination starter candidates
-          const startNoms = global.startNominations || global.startNomination;
-          if(typeof startNoms === 'function') {
-            console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
-            startNoms();
-          } else {
-            // Ultimate fallback: use setPhase directly
-            console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
-            global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
+          // Fallback: resume via legacy method
+          if (typeof global.resumePhaseTimer === 'function') {
+            global.resumePhaseTimer();
           }
+          console.info('[social-maneuvers] ▶️ Timer resumed (OK pressed, legacy fallback)');
         }
       } catch(e) {
-        console.error('[social-maneuvers] Failed to advance phase on OK:', e);
+        console.error('[social-maneuvers] Failed to resume timer on OK:', e);
       }
       
-      // Now do UI cleanup - animate card removal (non-blocking)
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();
@@ -3756,8 +3744,34 @@
           console.info('[social-maneuvers] ✓ Summary backdrop removed');
         }
         
-        // Reset summary guard AFTER cleanup (allows summary to show again next phase)
-        socialSummaryOpen = false;
+        // Call the stored phase advancement callback
+        const g = global.game;
+        if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
+          console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
+          try {
+            g.__socialPhaseAdvanceCallback();
+            delete g.__socialPhaseAdvanceCallback; // Clean up after use
+          } catch(e) {
+            console.error('[social-maneuvers] Error calling phase advancement callback:', e);
+          }
+        } else {
+          // FALLBACK: advance phase directly if no callback stored
+          console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
+          try {
+            // Try multiple nomination starter candidates
+            const startNoms = global.startNominations || global.startNomination || global.startNoms;
+            if(typeof startNoms === 'function') {
+              console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
+              startNoms();
+            } else {
+              // Ultimate fallback: use setPhase directly
+              console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
+              global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
+            }
+          } catch(e) {
+            console.error('[social-maneuvers] Fallback advancement failed:', e);
+          }
+        }
       }, 400);
     };
     buttonBar.appendChild(continueBtn);
