@@ -246,12 +246,9 @@
       pauseState.timerState.remainingMs = Math.max(0, game.phaseEndsAt - now);
     }
 
-    // Capture phase timeout callback (defensive: only store if it's a function)
+    // Capture phase timeout callback
     if (typeof game.phaseTimeoutCallback === 'function') {
       pauseState.timerState.phaseTimeoutCallback = game.phaseTimeoutCallback;
-    } else {
-      // Clear any stale non-function value to prevent runtime errors on resume
-      pauseState.timerState.phaseTimeoutCallback = null;
     }
 
     // Set timer paused flag
@@ -263,11 +260,9 @@
     }
 
     console.info('[PauseController] Captured timer state:', {
-      phase: game.phase,
       remainingMs: pauseState.timerState.remainingMs,
       endAt: pauseState.timerState.endAt,
-      hasCallback: !!pauseState.timerState.phaseTimeoutCallback,
-      callbackType: typeof pauseState.timerState.phaseTimeoutCallback
+      hasCallback: !!pauseState.timerState.phaseTimeoutCallback
     });
   }
 
@@ -289,35 +284,15 @@
       if (pauseState.timerState.remainingMs <= 0) {
         console.info('[PauseController] Timer expired during pause, triggering immediate timeout');
         
-        // Defensive guard: Verify callback is a function before calling
-        const callback = pauseState.timerState.phaseTimeoutCallback;
-        const callbackType = typeof callback;
-        
-        if (callbackType === 'function') {
+        // Trigger phase timeout callback immediately
+        if (typeof pauseState.timerState.phaseTimeoutCallback === 'function') {
           try {
             // Use setTimeout to avoid blocking and allow UI updates
             setTimeout(() => {
-              callback();
+              pauseState.timerState.phaseTimeoutCallback();
             }, 10);
           } catch (err) {
             console.error('[PauseController] Error calling phase timeout callback:', err);
-          }
-        } else {
-          // Log diagnostic info for missing/invalid callback
-          console.warn(
-            `[PauseController] Timer expired but phaseTimeoutCallback is not a function ` +
-            `(type: ${callbackType}, phase: ${game.phase || 'unknown'}). ` +
-            `Phase timer may need manual intervention or will be handled by PhaseTimerBridge.`
-          );
-          
-          // Attempt graceful recovery via PhaseTimerBridge if available
-          if (global.PhaseTimerBridge && typeof global.PhaseTimerBridge.handleExpiredTimer === 'function') {
-            console.info('[PauseController] Attempting recovery via PhaseTimerBridge.handleExpiredTimer');
-            try {
-              global.PhaseTimerBridge.handleExpiredTimer();
-            } catch (err) {
-              console.error('[PauseController] PhaseTimerBridge recovery failed:', err);
-            }
           }
         }
       } else {
@@ -332,7 +307,6 @@
         }
 
         console.info('[PauseController] Restored timer:', {
-          phase: game.phase,
           remainingMs: pauseState.timerState.remainingMs,
           newEndAt
         });
