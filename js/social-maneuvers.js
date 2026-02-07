@@ -3310,8 +3310,30 @@
     SocialResources.clearPhaseRefunds();
     console.info('[social-maneuvers] Phase refunds cleared for new phase');
 
-    // Initialize phase session tracking BEFORE auto-skip check
-    // This ensures AI interactions during auto-skip are properly tracked
+    // Log bank-based seeding for human player
+    if(humanId) {
+      const bankBalance = SocialEnergyBank.get(humanId);
+      const phaseEnergy = SocialResources.get(humanId, 'energy');
+      console.info(`[sm-phase] seeded from bank=${bankBalance}, phase energy=${phaseEnergy}`);
+      
+      // AUTO-SKIP: If human has zero energy, show overlay and skip phase
+      if(phaseEnergy <= 0) {
+        console.info(`[sm-phase-skip] Human player has zero energy (${phaseEnergy}) - triggering auto-skip`);
+        
+        // Run AI burst during the 3s overlay before skip
+        if(typeof global.SocialAIScheduler?.runEmptyEnergyBurst === 'function'){
+          setTimeout(() => {
+            global.SocialAIScheduler.runEmptyEnergyBurst();
+          }, 100); // Start burst quickly, completes before 3s overlay ends
+        }
+        
+        showEmptyEnergyOverlayAndSkip(humanId);
+        return; // Exit early, don't set up normal phase
+      }
+    }
+
+    // Initialize phase session tracking (PR #266)
+    // Reuse g variable already declared above
     if(!g.__socialManeuversSession){
       g.__socialManeuversSession = {
         startTime: Date.now(),
@@ -3331,35 +3353,12 @@
       g.__socialManeuversSession.relationshipDeltas.clear();
     }
 
-    // Initialize energy spent tracking for all players
+    // Initialize energy spent tracking
     alivePlayers.forEach(p => {
       g.__socialManeuversSession.energySpent.set(p.id, 0);
       g.__socialManeuversSession.informationSpent.set(p.id, 0);
     });
     console.info(`[social-maneuvers] Session tracking initialized for end-of-phase summary`);
-
-    // Log bank-based seeding for human player
-    if(humanId) {
-      const bankBalance = SocialEnergyBank.get(humanId);
-      const phaseEnergy = SocialResources.get(humanId, 'energy');
-      console.info(`[sm-phase] seeded from bank=${bankBalance}, phase energy=${phaseEnergy}`);
-      
-      // AUTO-SKIP: If human has zero energy, show overlay and skip phase
-      if(phaseEnergy <= 0) {
-        console.info(`[sm-phase-skip] Human player has zero energy (${phaseEnergy}) - triggering auto-skip`);
-        
-        // Run AI burst during the 3s overlay before skip
-        // AI interactions will be tracked in the session we just initialized
-        if(typeof global.SocialAIScheduler?.runEmptyEnergyBurst === 'function'){
-          setTimeout(() => {
-            global.SocialAIScheduler.runEmptyEnergyBurst();
-          }, 100); // Start burst quickly, completes before 3s overlay ends
-        }
-        
-        showEmptyEnergyOverlayAndSkip(humanId);
-        return; // Exit early, don't set up normal phase
-      }
-    }
 
     // Clear any pending fast-advance timeout
     if(g.__socialFastAdvanceTimeout){
@@ -3747,18 +3746,7 @@
   }
 
   function showSummaryPanel(summary){
-    // DEFENSIVE: Handle null summary, but this should not happen in normal gameplay
-    // With session tracking initialized before auto-skip, AI interactions are always tracked
-    if(!summary){
-      console.error('[social-maneuvers] ⚠️ UNEXPECTED: No summary data - this indicates a bug in session tracking');
-      summary = {
-        metadata: { week: global.game?.week ?? 1 },
-        resources: { energySpent: {}, energyRemaining: {}, informationSpent: {} },
-        actions: { total: 0, byPlayer: {}, byCategory: {}, list: [] },
-        relationships: { changes: [], newAlliances: [], newRivalries: [] },
-        memories: { created: 0 }
-      };
-    }
+    if(!summary) return;
 
     // Use controller to transition to summarizing state
     if (!SocialPhaseController.beginSummarizing()) {
@@ -3770,7 +3758,6 @@
     // No need to manually pause/stop individual timers - controller handles it
     const g = global.game;
     console.info('[social-maneuvers] ✓ All timers cancelled by controller (summary opened)');
-    console.info('[social-maneuvers] 🎬 Rendering social summary card...');
     
     // Mark summary as generated
     if(g) g.__socialSummaryGenerated = true;
@@ -3810,78 +3797,59 @@
     const totalEnergySpent = Object.values(summary.resources.energySpent).reduce((a,b) => a+b, 0);
     const totalInfoSpent = Object.values(summary.resources.informationSpent || {}).reduce((a,b) => a+b, 0);
     
-    // Check if this is an empty summary (no actions and no resources spent)
-    // NOTE: This should NEVER happen in normal gameplay - AI players always interact
-    const isEmpty = summary.actions.total === 0 && totalEnergySpent === 0 && totalInfoSpent === 0;
-    
-    if(isEmpty){
-      // This is an error state - AI interactions should always be tracked
-      console.error('[social-maneuvers] ⚠️ UNEXPECTED: Empty summary detected - AI interactions may not be tracked');
-      console.error('[social-maneuvers] Session data:', global.game?.__socialManeuversSession);
+    if(totalEnergySpent > 0 || totalInfoSpent > 0){
+      const energyLine = document.createElement('div');
+      energyLine.innerHTML = `<strong>⚡ Energy:</strong> ${totalEnergySpent} spent`;
+      content.appendChild(energyLine);
       
-      // Show minimal summary instead of empty message
-      const errorMessage = document.createElement('div');
-      errorMessage.style.cssText = 'padding: 1.5em 0;';
-      errorMessage.innerHTML = '<strong>⚡ Energy:</strong> 0 spent<br><strong>🎯 Actions:</strong> 0 total';
-      content.appendChild(errorMessage);
-    } else {
-      // Normal summary content
-      console.info('[social-maneuvers] 📊 Showing summary card with data');
-      
-      if(totalEnergySpent > 0 || totalInfoSpent > 0){
-        const energyLine = document.createElement('div');
-        energyLine.innerHTML = `<strong>⚡ Energy:</strong> ${totalEnergySpent} spent`;
-        content.appendChild(energyLine);
-        
-        // Show information on separate line if present
-        if(totalInfoSpent > 0){
-          const infoLine = document.createElement('div');
-          infoLine.style.marginTop = '0.5em';
-          infoLine.innerHTML = `<strong>🔍 Information:</strong> ${totalInfoSpent} spent`;
-          content.appendChild(infoLine);
-        }
+      // Show information on separate line if present
+      if(totalInfoSpent > 0){
+        const infoLine = document.createElement('div');
+        infoLine.style.marginTop = '0.5em';
+        infoLine.innerHTML = `<strong>🔍 Information:</strong> ${totalInfoSpent} spent`;
+        content.appendChild(infoLine);
       }
-
-      // Actions summary - simplified to just show total
-      if(summary.actions.total > 0){
-        const actionsLine = document.createElement('div');
-        actionsLine.style.marginTop = '0.5em';
-        actionsLine.innerHTML = `<strong>🎯 Actions:</strong> ${summary.actions.total} total`;
-        content.appendChild(actionsLine);
-      }
-
-      // Relationship changes - simplified wording
-      if(summary.relationships.changes.length > 0){
-        const relLine = document.createElement('div');
-        relLine.style.marginTop = '0.5em';
-        const significantChanges = summary.relationships.changes.filter(c => Math.abs(c.delta) > 0.1);
-        const changeText = significantChanges.length === 1 ? 'big change' : 'big changes';
-        relLine.innerHTML = `<strong>💕 Relationships:</strong> ${significantChanges.length} ${changeText}`;
-        content.appendChild(relLine);
-      }
-
-      // New alliances - count only, names in details
-      if(summary.relationships.newAlliances.length > 0){
-        const allianceLine = document.createElement('div');
-        allianceLine.style.cssText = 'margin-top: 0.5em; color: #27ae60; font-weight: 600;';
-        allianceLine.innerHTML = `<strong>🤝 New alliances:</strong> ${summary.relationships.newAlliances.length}`;
-        content.appendChild(allianceLine);
-      }
-
-      // New rivalries - count only, names in details
-      if(summary.relationships.newRivalries.length > 0){
-        const rivalryLine = document.createElement('div');
-        rivalryLine.style.cssText = 'margin-top: 0.5em; color: #e74c3c; font-weight: 600;';
-        rivalryLine.innerHTML = `<strong>⚔️ New rivalries:</strong> ${summary.relationships.newRivalries.length}`;
-        content.appendChild(rivalryLine);
-      }
-
-      // Memories - simplified to show only new count
-      const memoryLine = document.createElement('div');
-      memoryLine.style.marginTop = '0.5em';
-      memoryLine.innerHTML = `<strong>💭 Memories:</strong> ${summary.memories.created} new`;
-      content.appendChild(memoryLine);
     }
+
+    // Actions summary - simplified to just show total
+    if(summary.actions.total > 0){
+      const actionsLine = document.createElement('div');
+      actionsLine.style.marginTop = '0.5em';
+      actionsLine.innerHTML = `<strong>🎯 Actions:</strong> ${summary.actions.total} total`;
+      content.appendChild(actionsLine);
+    }
+
+    // Relationship changes - simplified wording
+    if(summary.relationships.changes.length > 0){
+      const relLine = document.createElement('div');
+      relLine.style.marginTop = '0.5em';
+      const significantChanges = summary.relationships.changes.filter(c => Math.abs(c.delta) > 0.1);
+      const changeText = significantChanges.length === 1 ? 'big change' : 'big changes';
+      relLine.innerHTML = `<strong>💕 Relationships:</strong> ${significantChanges.length} ${changeText}`;
+      content.appendChild(relLine);
+    }
+
+    // New alliances - count only, names in details
+    if(summary.relationships.newAlliances.length > 0){
+      const allianceLine = document.createElement('div');
+      allianceLine.style.cssText = 'margin-top: 0.5em; color: #27ae60; font-weight: 600;';
+      allianceLine.innerHTML = `<strong>🤝 New alliances:</strong> ${summary.relationships.newAlliances.length}`;
+      content.appendChild(allianceLine);
+    }
+
+    // New rivalries - count only, names in details
+    if(summary.relationships.newRivalries.length > 0){
+      const rivalryLine = document.createElement('div');
+      rivalryLine.style.cssText = 'margin-top: 0.5em; color: #e74c3c; font-weight: 600;';
+      rivalryLine.innerHTML = `<strong>⚔️ New rivalries:</strong> ${summary.relationships.newRivalries.length}`;
+      content.appendChild(rivalryLine);
+    }
+
+    // Memories - simplified to show only new count
+    const memoryLine = document.createElement('div');
+    memoryLine.style.marginTop = '0.5em';
+    memoryLine.innerHTML = `<strong>💭 Memories:</strong> ${summary.memories.created} new`;
+    content.appendChild(memoryLine);
 
     card.appendChild(content);
 
@@ -3949,9 +3917,6 @@
     deck.innerHTML = '';
     deck.appendChild(card);
     card.style.animation = 'popIn 0.45s ease forwards';
-    
-    console.info('[social-maneuvers] ✅ Summary card rendered and added to DOM');
-    console.info('[social-maneuvers] 💡 Summary card is now visible - waiting for user to click OK');
   }
 
   function createSummaryDeck(){

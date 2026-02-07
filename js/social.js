@@ -595,11 +595,6 @@
           if(global.SocialManeuvers?.onSocialPhaseEnd){
             try{
               global.SocialManeuvers.onSocialPhaseEnd();
-              // onSocialPhaseEnd handles summary generation and display
-              // Phase will advance when user clicks OK on the summary card
-              // Controller will call the stored advance callback
-              console.info('[social.js] ✓ onSocialPhaseEnd called - summary will be shown, phase will advance when user clicks OK');
-              return; // Exit early - onSocialPhaseEnd handles everything
             }catch(e){
               console.error('[social.js] onSocialPhaseEnd failed:', e);
             }
@@ -614,6 +609,28 @@
             }catch(e){
               console.error('[social.js] Failed to hide launcher:', e);
             }
+          }
+          
+          // Wait for any pending UI operations
+          await global.cardQueueWaitIdle?.();
+          
+          // Try to show summary via showSummaryPanel (single method, no fallbacks)
+          if(global.SocialManeuvers?.showSummaryPanel && global.SocialManeuvers?.generatePhaseSummary){
+            try{
+              // Generate summary data first
+              const summary = global.SocialManeuvers.generatePhaseSummary();
+              if(summary){
+                global.SocialManeuvers.showSummaryPanel(summary);
+                console.info('[social.js] ✓ Showed summary via showSummaryPanel - phase will advance when user clicks OK');
+                return; // Exit early - phase will advance when user clicks OK
+              }else{
+                console.warn('[social.js] generatePhaseSummary returned null/undefined - advancing immediately');
+              }
+            }catch(e){
+              console.error('[social.js] showSummaryPanel failed:', e);
+            }
+          }else{
+            console.warn('[social.js] ⚠ showSummaryPanel or generatePhaseSummary not found - advancing immediately');
           }
         }
         
