@@ -3751,7 +3751,7 @@
     if(!summary){
       console.warn('[social-maneuvers] No summary data - showing empty state card');
       summary = {
-        metadata: { week: global.game?.week || 1 },
+        metadata: { week: global.game?.week ?? 1 },
         resources: { energySpent: {}, energyRemaining: {}, informationSpent: {} },
         actions: { total: 0, byPlayer: {}, byCategory: {}, list: [] },
         relationships: { changes: [], newAlliances: [], newRivalries: [] },
@@ -3809,8 +3809,8 @@
     const totalEnergySpent = Object.values(summary.resources.energySpent).reduce((a,b) => a+b, 0);
     const totalInfoSpent = Object.values(summary.resources.informationSpent || {}).reduce((a,b) => a+b, 0);
     
-    // Check if this is an empty summary
-    const isEmpty = summary.actions.total === 0 && totalEnergySpent === 0;
+    // Check if this is an empty summary (no actions and no resources spent)
+    const isEmpty = summary.actions.total === 0 && totalEnergySpent === 0 && totalInfoSpent === 0;
     
     if(isEmpty){
       // Empty state message
