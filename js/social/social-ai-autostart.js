@@ -148,6 +148,12 @@
         console.warn('[social-ai-autostart] Already running - ignoring duplicate start');
         return;
       }
+      
+      // GUARD: Don't start if summary is open (phase is ending)
+      if (window.game?.__socialSummaryGenerated || window.game?.__socialPhaseAdvanced) {
+        console.info('[social-ai-autostart] Summary generated or phase advancing - skipping start');
+        return;
+      }
 
       if (window.game?.cfg?.debugSocialAI) {
         console.info('[social-ai-autostart] 🎬 Detected social phase (autostart)');
