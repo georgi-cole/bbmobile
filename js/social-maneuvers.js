@@ -3187,7 +3187,7 @@
     }
 
     // Initialize phase session tracking (PR #266)
-    const g = global.game;
+    // Reuse g variable already declared above
     if(!g.__socialManeuversSession){
       g.__socialManeuversSession = {
         startTime: Date.now(),
@@ -3268,7 +3268,7 @@
     
     // Start AI social scheduler
     if(typeof global.SocialAIScheduler?.startAiSocialPhase === 'function'){
-      const g = global.game;
+      // Reuse g variable already declared above
       global.SocialAIScheduler.startAiSocialPhase({
         week: g?.week || 1,
         durationMs: defaultDurationMs,
