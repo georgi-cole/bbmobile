@@ -432,28 +432,14 @@
     populateActionMenu();
 
     // Attach event listeners
-    // X button closes the modal - show summary only if energy is depleted
+    // X button should ALWAYS close immediately (bypass energy check)
     $('.modal-close-btn')?.addEventListener('click', () => {
-      console.info('[socialize-mobile] ❌ X button clicked - closing modal');
-      
-      // Check energy before deciding to show summary
-      const res = getResourceState();
-      const energyRemaining = res.energy || 0;
-      
-      if (energyRemaining > 0) {
-        // Player still has energy - just close modal, don't show summary
-        console.info('[socialize-mobile] ✓ Closing module with energy remaining - phase continues');
-        closeSocializeModal(true); // skipEnergyCheck=true (we already checked above)
-        // Don't show summary - player can reopen to spend remaining energy
-      } else {
-        // Energy depleted - close and show summary (zero-energy flow)
-        console.info('[socialize-mobile] ⚡ Zero energy on close - triggering fast-advance');
-        closeSocializeModal(true); // skipEnergyCheck=true (we already checked above)
-        // Show summary after modal closes
-        setTimeout(() => {
-          showSocialSummary();
-        }, 350);
-      }
+      console.info('[socialize-mobile] ❌ X button clicked - forcing immediate close');
+      closeSocializeModal(true); // Skip energy check - always close on X
+      // Show summary after modal closes
+      setTimeout(() => {
+        showSocialSummary();
+      }, 350);
     });
     // Backdrop click still shows the prompt (original behavior)
     $('.socialize-modal-backdrop')?.addEventListener('click', () => closeSocializeModal());
