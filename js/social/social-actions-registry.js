@@ -424,11 +424,7 @@
       }
       
       if (action && canonicalId) {
-        // Gate debug log behind debugSocialAI flag
-        const debugEnabled = global.game?.cfg?.debugSocialAI;
-        if (debugEnabled) {
-          console.debug('[social-actions-registry] Resolved legacy id "' + id + '" -> "' + canonicalId + '"');
-        }
+        console.debug('[social-actions-registry] Resolved legacy id "' + id + '" -> "' + canonicalId + '"');
       }
     }
     
