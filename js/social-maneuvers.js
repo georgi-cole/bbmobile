@@ -3747,10 +3747,10 @@
   }
 
   function showSummaryPanel(summary){
-    // CRITICAL: Always show summary card, even if summary is null/empty
-    // This ensures phase advancement still works via OK button
+    // DEFENSIVE: Handle null summary, but this should not happen in normal gameplay
+    // With session tracking initialized before auto-skip, AI interactions are always tracked
     if(!summary){
-      console.warn('[social-maneuvers] No summary data - showing empty state card');
+      console.error('[social-maneuvers] ⚠️ UNEXPECTED: No summary data - this indicates a bug in session tracking');
       summary = {
         metadata: { week: global.game?.week ?? 1 },
         resources: { energySpent: {}, energyRemaining: {}, informationSpent: {} },
@@ -3811,15 +3811,19 @@
     const totalInfoSpent = Object.values(summary.resources.informationSpent || {}).reduce((a,b) => a+b, 0);
     
     // Check if this is an empty summary (no actions and no resources spent)
+    // NOTE: This should NEVER happen in normal gameplay - AI players always interact
     const isEmpty = summary.actions.total === 0 && totalEnergySpent === 0 && totalInfoSpent === 0;
     
     if(isEmpty){
-      // Empty state message
-      const emptyMessage = document.createElement('div');
-      emptyMessage.style.cssText = 'padding: 1.5em 0; color: var(--text-muted, #888); font-style: italic;';
-      emptyMessage.textContent = 'No social interactions this phase';
-      content.appendChild(emptyMessage);
-      console.info('[social-maneuvers] 📊 Showing empty state summary card');
+      // This is an error state - AI interactions should always be tracked
+      console.error('[social-maneuvers] ⚠️ UNEXPECTED: Empty summary detected - AI interactions may not be tracked');
+      console.error('[social-maneuvers] Session data:', global.game?.__socialManeuversSession);
+      
+      // Show minimal summary instead of empty message
+      const errorMessage = document.createElement('div');
+      errorMessage.style.cssText = 'padding: 1.5em 0;';
+      errorMessage.innerHTML = '<strong>⚡ Energy:</strong> 0 spent<br><strong>🎯 Actions:</strong> 0 total';
+      content.appendChild(errorMessage);
     } else {
       // Normal summary content
       console.info('[social-maneuvers] 📊 Showing summary card with data');
