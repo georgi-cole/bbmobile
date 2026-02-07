@@ -82,9 +82,9 @@
       const delay = SOCIAL_INTERMISSION_DELAYED_STOP_MIN_MS + Math.floor(Math.random() * SOCIAL_INTERMISSION_DELAYED_STOP_RANGE);
       debugLog(`Scheduling delayed stop in ${delay}ms`);
       setTimeout(() => {
-        // GUARD: Check controller state - don't stop if controller is summarizing or advanced
-        if (global.SocialManeuvers?.SocialPhaseController?.shouldBlockSchedulerStart?.()) {
-          debugLog('Controller blocked delayed stop - phase is summarizing or advanced');
+        // GUARD: Don't stop if summary is open or phase already ended
+        if (global.game?.__socialSummaryGenerated || global.game?.__socialPhaseAdvanced) {
+          debugLog('Summary generated or phase advanced - skipping delayed stop');
           return;
         }
         
@@ -144,10 +144,10 @@
         if (nextPhase === 'social_intermission') {
           debugLog('Transitioning to social_intermission, using safe pause/delay');
           
-          // GUARD: Check controller state - skip delayed stop if controller is summarizing or advanced
-          if (global.SocialManeuvers?.SocialPhaseController?.shouldBlockSchedulerStart?.()) {
-            debugLog('Controller blocked delayed stop - phase is summarizing or advanced');
-            return 'skipped-controller-blocked';
+          // GUARD: Skip delayed stop if summary is open or phase is ending
+          if (global.game?.__socialSummaryGenerated || global.game?.__socialPhaseAdvanced) {
+            debugLog('Summary generated or phase advancing - skipping delayed stop');
+            return 'skipped-phase-ending';
           }
           
           return this._safePauseOrDelayStop('phase-terminator');
