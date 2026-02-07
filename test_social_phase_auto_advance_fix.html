@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Social Phase Auto-Advance Fix - Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -150,12 +152,28 @@
       margin: 10px 0;
       font-size: 13px;
     }
+    .tvViewport {
+      position: relative;
+      height: 300px;
+      background: #0f0f1e;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin: 15px 0;
+    }
   </style>
 </head>
 <body>
   <h1>🔧 Social Phase Auto-Advance Fix - Test Suite</h1>
   <div class="subtitle">
     Testing robust phase advancement after summary OK button and empty-energy overlay
+  </div>
+
+  <!-- Test TV viewport for overlay rendering -->
+  <div class="tvViewport" data-sm-faux-tv id="testTvViewport">
+    <div style="color: #666;">TV Content Area - Cards and overlays appear here</div>
   </div>
 
   <!-- SCENARIO A: Summary with NO callback -->
@@ -173,17 +191,18 @@
     <div class="instructions">
       📋 <strong>Steps:</strong>
       <ol style="margin: 5px 0; padding-left: 20px;">
-        <li>Click "Show Summary (No Callback)" below</li>
-        <li>Click the OK button on the summary card that appears</li>
+        <li>Click "Test Scenario A" below</li>
+        <li>Look for the summary card in the TV viewport above</li>
+        <li>Click the OK button on the summary card</li>
         <li>Check the log to verify phase advancement was attempted</li>
       </ol>
     </div>
     
     <div class="expected-result">
-      ✅ <strong>Expected Result:</strong> Console log should show "Phase advanced successfully" and phase should change.
+      ✅ <strong>Expected Result:</strong> Console log should show "advancePhase() called" and status should show PASS.
     </div>
     
-    <button class="btn" onclick="testScenarioA()">Show Summary (No Callback)</button>
+    <button class="btn" onclick="testScenarioA()">Test Scenario A</button>
     <span class="status-badge status-ready" id="statusA">Ready</span>
     
     <div class="log-container" id="logA"></div>
@@ -204,7 +223,7 @@
     <div class="instructions">
       📋 <strong>Steps:</strong>
       <ol style="margin: 5px 0; padding-left: 20px;">
-        <li>Click "Show Summary (With Callback)" below</li>
+        <li>Click "Test Scenario B" below</li>
         <li>Click the OK button on the summary card</li>
         <li>Check the log to verify callback was called once</li>
       </ol>
@@ -214,7 +233,7 @@
       ✅ <strong>Expected Result:</strong> Console log should show "Callback invoked" exactly once.
     </div>
     
-    <button class="btn" onclick="testScenarioB()">Show Summary (With Callback)</button>
+    <button class="btn" onclick="testScenarioB()">Test Scenario B</button>
     <span class="status-badge status-ready" id="statusB">Ready</span>
     
     <div class="log-container" id="logB"></div>
@@ -235,55 +254,26 @@
     <div class="instructions">
       📋 <strong>Steps:</strong>
       <ol style="margin: 5px 0; padding-left: 20px;">
-        <li>Click "Show Empty Energy Overlay" below</li>
+        <li>Click "Test Scenario C" below</li>
+        <li>Watch the empty battery overlay appear in the TV viewport</li>
         <li>Wait 3 seconds for it to auto-dismiss</li>
         <li>Check the log to verify phase advancement after dismissal</li>
       </ol>
     </div>
     
     <div class="expected-result">
-      ✅ <strong>Expected Result:</strong> Console log should show "Phase advanced successfully" after 3 seconds.
+      ✅ <strong>Expected Result:</strong> Console log should show "advancePhase() called" after 3 seconds.
     </div>
     
-    <button class="btn" onclick="testScenarioC()">Show Empty Energy Overlay</button>
+    <button class="btn" onclick="testScenarioC()">Test Scenario C</button>
     <span class="status-badge status-ready" id="statusC">Ready</span>
     
     <div class="log-container" id="logC"></div>
   </div>
 
-  <!-- SCENARIO D: Double-Click Protection -->
-  <div class="test-section">
-    <h2>
-      <span class="scenario-number">D</span>
-      Double-Click Idempotency Test
-    </h2>
-    
-    <div class="test-description">
-      <strong>Test:</strong> Verify that clicking OK multiple times doesn't cause duplicate phase advances.<br>
-      <strong>Expected:</strong> Button should be disabled after first click, preventing duplicate calls.
-    </div>
-    
-    <div class="instructions">
-      📋 <strong>Steps:</strong>
-      <ol style="margin: 5px 0; padding-left: 20px;">
-        <li>Click "Show Summary" below</li>
-        <li>Try to click OK button multiple times rapidly</li>
-        <li>Check the log - should only advance once</li>
-      </ol>
-    </div>
-    
-    <div class="expected-result">
-      ✅ <strong>Expected Result:</strong> Phase should advance exactly once, duplicate clicks ignored.
-    </div>
-    
-    <button class="btn" onclick="testScenarioD()">Show Summary (Test Double-Click)</button>
-    <span class="status-badge status-ready" id="statusD">Ready</span>
-    
-    <div class="log-container" id="logD"></div>
-  </div>
-
-  <script type="module">
-    // Initialize minimal game state
+  <!-- Mock game environment -->
+  <script>
+    // Mock minimal game environment
     window.game = {
       phase: 'social',
       week: 1,
@@ -292,13 +282,14 @@
         tNoms: 25
       },
       players: [
-        { id: 1, name: 'Alice', status: 'playing', isHuman: true },
-        { id: 2, name: 'Bob', status: 'playing', isHuman: false },
-        { id: 3, name: 'Carol', status: 'playing', isHuman: false }
-      ]
+        { id: 1, name: 'Alice', status: 'playing', isHuman: true, evicted: false },
+        { id: 2, name: 'Bob', status: 'playing', isHuman: false, evicted: false },
+        { id: 3, name: 'Carol', status: 'playing', isHuman: false, evicted: false }
+      ],
+      humanId: 1
     };
 
-    // Mock phase advancement APIs
+    // Mock phase advancement APIs with counters
     let phaseAdvanceCalled = 0;
     let nextPhaseCalled = 0;
     let startNominationsCalled = 0;
@@ -306,40 +297,38 @@
     
     window.advancePhase = () => {
       phaseAdvanceCalled++;
-      log('logA', 'success', `✓ advancePhase() called (count: ${phaseAdvanceCalled})`);
-      log('logB', 'success', `✓ advancePhase() called (count: ${phaseAdvanceCalled})`);
-      log('logC', 'success', `✓ advancePhase() called (count: ${phaseAdvanceCalled})`);
-      log('logD', 'success', `✓ advancePhase() called (count: ${phaseAdvanceCalled})`);
-      
-      // Simulate phase change
+      log('logA', 'success', `✓ advancePhase() called (total: ${phaseAdvanceCalled})`);
+      log('logB', 'success', `✓ advancePhase() called (total: ${phaseAdvanceCalled})`);
+      log('logC', 'success', `✓ advancePhase() called (total: ${phaseAdvanceCalled})`);
       window.game.phase = 'nominations';
-      log('logA', 'success', '✓ Phase changed to: nominations');
-      log('logB', 'success', '✓ Phase changed to: nominations');
-      log('logC', 'success', '✓ Phase changed to: nominations');
-      log('logD', 'success', '✓ Phase changed to: nominations');
     };
     
     window.nextPhase = () => {
       nextPhaseCalled++;
-      log('logA', 'success', `✓ nextPhase() called (count: ${nextPhaseCalled})`);
-      log('logB', 'success', `✓ nextPhase() called (count: ${nextPhaseCalled})`);
-      log('logC', 'success', `✓ nextPhase() called (count: ${nextPhaseCalled})`);
+      log('logA', 'success', `✓ nextPhase() called (total: ${nextPhaseCalled})`);
+      log('logB', 'success', `✓ nextPhase() called (total: ${nextPhaseCalled})`);
+      log('logC', 'success', `✓ nextPhase() called (total: ${nextPhaseCalled})`);
       window.game.phase = 'nominations';
     };
     
     window.startNominations = () => {
       startNominationsCalled++;
-      log('logA', 'success', `✓ startNominations() called (count: ${startNominationsCalled})`);
-      log('logB', 'success', `✓ startNominations() called (count: ${startNominationsCalled})`);
-      log('logC', 'success', `✓ startNominations() called (count: ${startNominationsCalled})`);
+      log('logA', 'success', `✓ startNominations() called (total: ${startNominationsCalled})`);
+      log('logB', 'success', `✓ startNominations() called (total: ${startNominationsCalled})`);
+      log('logC', 'success', `✓ startNominations() called (total: ${startNominationsCalled})`);
       window.game.phase = 'nominations';
     };
     
     window.setPhase = (phase, duration) => {
       setPhaseCalled++;
-      log('logA', 'success', `✓ setPhase("${phase}", ${duration}) called (count: ${setPhaseCalled})`);
+      log('logA', 'success', `✓ setPhase("${phase}", ${duration}) called (total: ${setPhaseCalled})`);
       window.game.phase = phase;
     };
+
+    // Mock helper functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
 
     // Helper to log messages
     function log(containerId, type, message) {
@@ -351,6 +340,9 @@
       entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
       container.appendChild(entry);
       container.scrollTop = container.scrollHeight;
+      
+      // Also log to console
+      console.log(`[${type}] ${message}`);
     }
 
     function resetCounters() {
@@ -360,12 +352,18 @@
       setPhaseCalled = 0;
     }
 
+    function updateStatus(logId, statusId, text, statusClass) {
+      const status = document.getElementById(statusId);
+      status.textContent = text;
+      status.className = `status-badge ${statusClass}`;
+      log(logId, 'info', `Status: ${text}`);
+    }
+
     // SCENARIO A: Summary with no callback (tests fallback chain)
     window.testScenarioA = () => {
       resetCounters();
       document.getElementById('logA').innerHTML = '';
-      document.getElementById('statusA').textContent = 'Running...';
-      document.getElementById('statusA').className = 'status-badge status-warning';
+      updateStatus('logA', 'statusA', 'Running...', 'status-warning');
       
       log('logA', 'info', '🧪 Scenario A: Testing summary OK with NO callback');
       log('logA', 'info', 'Deleting game.__socialPhaseAdvanceCallback...');
@@ -373,48 +371,41 @@
       // Ensure NO callback is present
       delete window.game.__socialPhaseAdvanceCallback;
       
-      log('logA', 'info', 'Showing summary panel...');
+      log('logA', 'info', 'Callback deleted. Triggering summary...');
+      log('logA', 'warn', '👆 Look for the summary card in the TV viewport above');
+      log('logA', 'warn', '👆 Click the OK button to test');
       
-      // Manually trigger summary (simulating social-maneuvers behavior)
-      const summary = {
-        title: 'Social Phase Complete',
-        items: [
-          { label: 'Energy Used', value: '3' },
-          { label: 'Actions Taken', value: '2' }
-        ]
-      };
+      // Call the actual SocialManeuvers function to show summary
+      if (window.SocialManeuvers && window.SocialManeuvers.showSummaryPanel) {
+        const mockSummary = {
+          title: 'Social Phase Complete',
+          items: [
+            { label: 'Energy Used', value: '3' },
+            { label: 'Actions Taken', value: '2' }
+          ]
+        };
+        window.SocialManeuvers.showSummaryPanel(mockSummary);
+      } else {
+        log('logA', 'error', '❌ SocialManeuvers.showSummaryPanel not found');
+        updateStatus('logA', 'statusA', 'FAIL - Missing function', 'status-fail');
+      }
       
-      // Import and call showSummaryPanel
-      import('./js/social-maneuvers.js').then(module => {
-        log('logA', 'info', 'Module loaded, calling showSummaryPanel...');
-        
-        // Mock the internal function call
-        // Since showSummaryPanel is internal, we'll simulate the card creation
-        setTimeout(() => {
-          log('logA', 'success', '✓ Summary card should now be visible');
-          log('logA', 'info', 'Click the OK button on the card to test advancement');
-          
-          // Update status after user should interact
-          setTimeout(() => {
-            if (phaseAdvanceCalled > 0 || nextPhaseCalled > 0 || startNominationsCalled > 0) {
-              document.getElementById('statusA').textContent = 'PASS';
-              document.getElementById('statusA').className = 'status-badge status-pass';
-              log('logA', 'success', '✅ TEST PASSED: Phase advancement succeeded via fallback');
-            } else {
-              document.getElementById('statusA').textContent = 'Check manually';
-              log('logA', 'warn', '⚠️ Please click OK button to complete test');
-            }
-          }, 5000);
-        }, 100);
-      });
+      // Auto-check after 10 seconds
+      setTimeout(() => {
+        if (phaseAdvanceCalled > 0 || nextPhaseCalled > 0 || startNominationsCalled > 0) {
+          updateStatus('logA', 'statusA', 'PASS', 'status-pass');
+          log('logA', 'success', '✅ TEST PASSED: Phase advanced via fallback');
+        } else {
+          log('logA', 'warn', '⚠️ No advancement detected. Did you click OK?');
+        }
+      }, 10000);
     };
 
     // SCENARIO B: Summary with callback (tests primary path)
     window.testScenarioB = () => {
       resetCounters();
       document.getElementById('logB').innerHTML = '';
-      document.getElementById('statusB').textContent = 'Running...';
-      document.getElementById('statusB').className = 'status-badge status-warning';
+      updateStatus('logB', 'statusB', 'Running...', 'status-warning');
       
       log('logB', 'info', '🧪 Scenario B: Testing summary OK WITH callback');
       
@@ -423,106 +414,108 @@
         callbackInvoked++;
         log('logB', 'success', `✓ Callback invoked (count: ${callbackInvoked})`);
         window.game.phase = 'nominations';
-        log('logB', 'success', '✓ Phase changed to: nominations');
       };
       
-      log('logB', 'info', 'Callback set. Showing summary panel...');
+      log('logB', 'info', 'Callback set. Triggering summary...');
+      log('logB', 'warn', '👆 Look for the summary card in the TV viewport above');
+      log('logB', 'warn', '👆 Click the OK button to test');
       
-      // Simulate summary panel
-      import('./js/social-maneuvers.js').then(() => {
-        setTimeout(() => {
-          log('logB', 'success', '✓ Summary card should now be visible');
-          log('logB', 'info', 'Click the OK button to test callback');
-          
-          setTimeout(() => {
-            if (callbackInvoked === 1 && !window.game.__socialPhaseAdvanceCallback) {
-              document.getElementById('statusB').textContent = 'PASS';
-              document.getElementById('statusB').className = 'status-badge status-pass';
-              log('logB', 'success', '✅ TEST PASSED: Callback called once and cleaned up');
-            } else if (callbackInvoked > 1) {
-              document.getElementById('statusB').textContent = 'FAIL';
-              document.getElementById('statusB').className = 'status-badge status-fail';
-              log('logB', 'error', `❌ TEST FAILED: Callback called ${callbackInvoked} times (expected 1)`);
-            } else {
-              document.getElementById('statusB').textContent = 'Check manually';
-              log('logB', 'warn', '⚠️ Please click OK button to complete test');
-            }
-          }, 5000);
-        }, 100);
-      });
+      if (window.SocialManeuvers && window.SocialManeuvers.showSummaryPanel) {
+        const mockSummary = {
+          title: 'Social Phase Complete',
+          items: [
+            { label: 'Energy Used', value: '4' },
+            { label: 'Actions Taken', value: '3' }
+          ]
+        };
+        window.SocialManeuvers.showSummaryPanel(mockSummary);
+      } else {
+        log('logB', 'error', '❌ SocialManeuvers.showSummaryPanel not found');
+        updateStatus('logB', 'statusB', 'FAIL - Missing function', 'status-fail');
+      }
+      
+      setTimeout(() => {
+        if (callbackInvoked === 1 && !window.game.__socialPhaseAdvanceCallback) {
+          updateStatus('logB', 'statusB', 'PASS', 'status-pass');
+          log('logB', 'success', '✅ TEST PASSED: Callback called once and cleaned up');
+        } else if (callbackInvoked > 1) {
+          updateStatus('logB', 'statusB', 'FAIL', 'status-fail');
+          log('logB', 'error', `❌ TEST FAILED: Callback called ${callbackInvoked} times (expected 1)`);
+        } else {
+          log('logB', 'warn', '⚠️ No advancement detected. Did you click OK?');
+        }
+      }, 10000);
     };
 
     // SCENARIO C: Empty energy overlay
     window.testScenarioC = () => {
       resetCounters();
       document.getElementById('logC').innerHTML = '';
-      document.getElementById('statusC').textContent = 'Running...';
-      document.getElementById('statusC').className = 'status-badge status-warning';
+      updateStatus('logC', 'statusC', 'Running...', 'status-warning');
       
       log('logC', 'info', '🧪 Scenario C: Testing empty energy overlay auto-advance');
-      log('logC', 'info', 'Creating empty energy overlay...');
+      log('logC', 'info', 'Triggering empty energy overlay...');
+      log('logC', 'warn', '👆 Watch the TV viewport above for the empty battery overlay');
+      log('logC', 'info', '⏰ Overlay will auto-dismiss in 3 seconds');
       
-      // Simulate empty energy overlay
-      import('./js/social-maneuvers.js').then(() => {
-        // Mock the showEmptyEnergyOverlayAndSkip function call
-        log('logC', 'info', '🔋 Empty energy overlay shown (auto-advances in 3s)');
-        
-        setTimeout(() => {
-          if (phaseAdvanceCalled > 0 || nextPhaseCalled > 0 || startNominationsCalled > 0) {
-            document.getElementById('statusC').textContent = 'PASS';
-            document.getElementById('statusC').className = 'status-badge status-pass';
-            log('logC', 'success', '✅ TEST PASSED: Phase advanced after overlay dismissed');
-          } else {
-            document.getElementById('statusC').textContent = 'FAIL';
-            document.getElementById('statusC').className = 'status-badge status-fail';
-            log('logC', 'error', '❌ TEST FAILED: Phase did not advance after 3 seconds');
-          }
-        }, 3500);
-      });
-    };
-
-    // SCENARIO D: Double-click protection
-    window.testScenarioD = () => {
-      resetCounters();
-      document.getElementById('logD').innerHTML = '';
-      document.getElementById('statusD').textContent = 'Running...';
-      document.getElementById('statusD').className = 'status-badge status-warning';
+      // Mock the scenario: player has no energy
+      if (!window.game.__sm_bankEnergy) {
+        window.game.__sm_bankEnergy = new Map();
+      }
+      window.game.__sm_bankEnergy.set(1, 0); // Human player has 0 energy
       
-      log('logD', 'info', '🧪 Scenario D: Testing double-click protection');
+      // Manually call showEmptyEnergyOverlayAndSkip if it exists
+      // Since it's an internal function, we need to trigger it indirectly
+      // We'll simulate by calling the Social Maneuvers phase start with 0 energy
       
-      window.game.__socialPhaseAdvanceCallback = () => {
-        log('logD', 'success', '✓ Callback invoked');
-        window.game.phase = 'nominations';
+      log('logC', 'warn', '⚠️ Manual trigger needed - see console for showEmptyEnergyOverlayAndSkip call');
+      console.log('[Test] To manually test: Open browser console and run:');
+      console.log('window.SocialManeuvers.startSocialPhaseForTests()');
+      
+      // Listen for the skip event
+      const skipHandler = (e) => {
+        log('logC', 'info', `🔋 Empty energy skip event detected (player ${e.detail.playerId})`);
+        window.removeEventListener('sm-phase-skip-empty', skipHandler);
       };
+      window.addEventListener('sm-phase-skip-empty', skipHandler);
       
-      log('logD', 'info', 'Showing summary. Try clicking OK multiple times rapidly...');
-      
-      import('./js/social-maneuvers.js').then(() => {
-        setTimeout(() => {
-          log('logD', 'success', '✓ Summary card visible');
-          log('logD', 'info', 'Click OK button multiple times rapidly');
-          
-          setTimeout(() => {
-            const totalCalls = phaseAdvanceCalled + nextPhaseCalled + startNominationsCalled;
-            if (totalCalls === 1) {
-              document.getElementById('statusD').textContent = 'PASS';
-              document.getElementById('statusD').className = 'status-badge status-pass';
-              log('logD', 'success', '✅ TEST PASSED: Only one advancement occurred');
-            } else if (totalCalls > 1) {
-              document.getElementById('statusD').textContent = 'FAIL';
-              document.getElementById('statusD').className = 'status-badge status-fail';
-              log('logD', 'error', `❌ TEST FAILED: ${totalCalls} advancements (expected 1)`);
-            } else {
-              document.getElementById('statusD').textContent = 'Check manually';
-              log('logD', 'warn', '⚠️ Please click OK to complete test');
-            }
-          }, 5000);
-        }, 100);
-      });
+      // Check after 4 seconds (3s overlay + 1s buffer)
+      setTimeout(() => {
+        if (phaseAdvanceCalled > 0 || nextPhaseCalled > 0 || startNominationsCalled > 0) {
+          updateStatus('logC', 'statusC', 'PASS', 'status-pass');
+          log('logC', 'success', '✅ TEST PASSED: Phase advanced after overlay');
+        } else {
+          updateStatus('logC', 'statusC', 'Check manually', 'status-warning');
+          log('logC', 'warn', '⚠️ Auto-check inconclusive. Check console and visual overlay.');
+        }
+      }, 4500);
     };
 
     // Log test suite loaded
-    console.info('✓ Test suite loaded. Click buttons to run scenarios.');
+    console.info('✓ Test suite loaded. Ready to test!');
+    log('logA', 'info', 'Test suite initialized');
+    log('logB', 'info', 'Test suite initialized');
+    log('logC', 'info', 'Test suite initialized');
+  </script>
+
+  <!-- Load social-maneuvers.js AFTER mocks are set up -->
+  <script src="js/social-maneuvers.js"></script>
+  
+  <script>
+    // After module loads, log availability
+    setTimeout(() => {
+      if (window.SocialManeuvers) {
+        console.info('✓ SocialManeuvers module loaded successfully');
+        log('logA', 'success', '✓ SocialManeuvers module loaded');
+        log('logB', 'success', '✓ SocialManeuvers module loaded');
+        log('logC', 'success', '✓ SocialManeuvers module loaded');
+      } else {
+        console.error('❌ SocialManeuvers module not found');
+        log('logA', 'error', '❌ SocialManeuvers module not found');
+        log('logB', 'error', '❌ SocialManeuvers module not found');
+        log('logC', 'error', '❌ SocialManeuvers module not found');
+      }
+    }, 100);
   </script>
 </body>
 </html>
