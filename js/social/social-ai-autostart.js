@@ -92,6 +92,12 @@
       return;
     }
 
+    // Check controller state - block if controller says we shouldn't start
+    if (global.SocialManeuvers?.SocialPhaseController?.shouldBlockSchedulerStart?.()) {
+      console.info('[social-ai-autostart] Controller blocked start - phase is summarizing or advanced');
+      return;
+    }
+
     if (isRunning) {
       console.warn('[social-ai-autostart] Already running - ignoring duplicate start');
       return;
@@ -149,9 +155,9 @@
         return;
       }
       
-      // GUARD: Don't start if summary is open (phase is ending)
-      if (window.game?.__socialSummaryGenerated || window.game?.__socialPhaseAdvanced) {
-        console.info('[social-ai-autostart] Summary generated or phase advancing - skipping start');
+      // GUARD: Check controller state - don't start if controller says no
+      if (global.SocialManeuvers?.SocialPhaseController?.shouldBlockSchedulerStart?.()) {
+        console.info('[social-ai-autostart] Controller blocked start - phase is summarizing or advanced');
         return;
       }
 
@@ -178,7 +184,7 @@
           console.info('[social-ai-autostart] Phase transition:', previousPhase, '->', nextPhase);
         }
         
-        // Stop the scheduler first
+        // Stop the scheduler first (only if not already stopped by controller)
         if (window.SocialAIScheduler?.stopAiSocialPhase) {
           window.SocialAIScheduler.stopAiSocialPhase('phase_ended');
         }
