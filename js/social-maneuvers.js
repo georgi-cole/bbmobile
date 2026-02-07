@@ -26,6 +26,7 @@
   // ============================================================================
   let socialPhaseEnded = false;
   let socialSummaryOpen = false;
+  let socialSummaryShown = false;
 
   // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
@@ -3131,6 +3132,7 @@
     // Reset singleton guards for new phase
     socialPhaseEnded = false;
     socialSummaryOpen = false;
+    socialSummaryShown = false;
     
     const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
@@ -3595,7 +3597,12 @@
       console.warn('[social-maneuvers] Summary already open - ignoring duplicate call');
       return;
     }
+    if(socialSummaryShown){
+      console.info('[social-maneuvers] Summary already shown this phase - skipping duplicate');
+      return;
+    }
     socialSummaryOpen = true;
+    socialSummaryShown = true;
 
     // PAUSE TIMER when summary modal opens (use PauseController with owner ID)
     try {
