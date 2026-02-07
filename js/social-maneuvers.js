@@ -3711,23 +3711,30 @@
       // Reset summary guard so it can be shown again next phase
       socialSummaryOpen = false;
       
-      // OK button behavior: Resume timer and advance phase
+      // OK button behavior: Set timer to 1 second remaining and resume
       try {
         const g = global.game;
+        const now = Date.now();
         
-        // Resume timer with owner ID
+        // Fast advance: Set timer to 1 second from now
+        const PHASE_ADVANCE_DELAY_MS = 1000; // 1 second - fast advance to next phase
+        g.endAt = now + PHASE_ADVANCE_DELAY_MS;
+        if (typeof g.phaseEndsAt === 'number') {
+          g.phaseEndsAt = now + PHASE_ADVANCE_DELAY_MS;
+        }
+        console.info('[social-maneuvers] ⏱️ OK pressed - timer set to 1 second remaining (endAt:', g.endAt, ')');
+        
+        // Resume timer with owner ID to allow phase to advance
         if (global.PauseController && typeof global.PauseController.resume === 'function') {
           global.PauseController.resume('social-summary');
           console.info('[social-maneuvers] ▶️ Timer resumed via PauseController (OK pressed)');
         } else {
           // Fallback: resume via legacy method
-          if (typeof global.resumePhaseTimer === 'function') {
-            global.resumePhaseTimer();
-          }
+          resumePhaseTimer();
           console.info('[social-maneuvers] ▶️ Timer resumed (OK pressed, legacy fallback)');
         }
       } catch(e) {
-        console.error('[social-maneuvers] Failed to resume timer on OK:', e);
+        console.error('[social-maneuvers] Failed to handle timer on OK:', e);
       }
       
       card.style.animation = 'popOut 0.4s ease forwards';
@@ -3744,19 +3751,26 @@
           console.info('[social-maneuvers] ✓ Summary backdrop removed');
         }
         
-        // Call the stored phase advancement callback
+        // TASK 1: Restore social launcher if phase is still active and energy/time remain
         const g = global.game;
-        if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
-          console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
-          try {
-            g.__socialPhaseAdvanceCallback();
-            delete g.__socialPhaseAdvanceCallback; // Clean up after use
-          } catch(e) {
-            console.error('[social-maneuvers] Error calling phase advancement callback:', e);
+        const isPhaseStillActive = g?.phase === 'social_intermission';
+        const hasTimeRemaining = g?.endAt > Date.now();
+        const humanId = g?.humanId;
+        const humanEnergy = humanId ? SocialResources.get(humanId, 'energy') : 0;
+        
+        if (isPhaseStillActive && hasTimeRemaining && humanEnergy > 0) {
+          const socialLauncher = document.getElementById('socializeLauncher');
+          if (socialLauncher) {
+            socialLauncher.style.display = '';
+            console.info('[social-maneuvers] ✓ Social launcher restored (phase active, time/energy remain)');
           }
         } else {
-          console.warn('[social-maneuvers] ⚠ No phase advancement callback found - phase may not advance');
+          console.info('[social-maneuvers] Social launcher not restored (phase ended or no energy/time)');
         }
+        
+        // Let the phase timer callback handle phase advance naturally
+        // Don't try to advance manually here - it will happen via timer or explicit call
+        console.info('[social-maneuvers] ✓ Summary dismissed - phase will advance via timer callback');
       }, 400);
     };
     buttonBar.appendChild(continueBtn);
