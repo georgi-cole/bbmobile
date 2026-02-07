@@ -26,6 +26,9 @@
   // ============================================================================
   let socialPhaseEnded = false;
   let socialSummaryOpen = false;
+  
+  // Timing constants for guard resets
+  const GUARD_RESET_DELAY = 100; // ms - delay before resetting guards to ensure pending dismissals complete
 
   // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
@@ -3134,7 +3137,7 @@
       // DO NOT reset socialSummaryOpen here - it's reset when OK is clicked in showSummaryPanel
       // This prevents duplicate summaries if phase changes while summary is still visible
       console.info('[social-maneuvers] ✓ Phase guards reset (socialPhaseEnded only)');
-    }, 100);
+    }, GUARD_RESET_DELAY);
     
     const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
@@ -3782,7 +3785,7 @@
           } catch(e) {
             console.error('[social-maneuvers] Error calling phase advancement callback:', e);
             // Still try fallback on error
-            advancePhaseFallback(g);
+            advancePhaseFallback(g, e);
           }
         } else {
           // FALLBACK: advance phase directly if no callback stored
@@ -3793,12 +3796,16 @@
     };
     
     // Helper function for fallback phase advancement
-    function advancePhaseFallback(g) {
+    function advancePhaseFallback(g, error = null) {
       if(g?.__socialPhaseAdvanced) {
         console.info('[social-maneuvers] Phase already advanced - skipping fallback');
         return;
       }
       if(g) g.__socialPhaseAdvanced = true;
+      
+      if(error) {
+        console.warn('[social-maneuvers] Fallback triggered due to error:', error.message);
+      }
       
       try {
         // Try multiple nomination starter candidates
