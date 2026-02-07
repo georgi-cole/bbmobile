@@ -28,152 +28,6 @@
   let socialSummaryOpen = false;
 
   // ============================================================================
-  // SOCIAL PHASE CONTROLLER (Centralized Phase Lifecycle Management)
-  // ============================================================================
-  // Single-owner controller for social phase lifecycle with explicit states
-  const SocialPhaseController = {
-    // Phase states: idle -> running -> summarizing -> advanced
-    state: 'idle',
-    
-    // Timer handles
-    phaseTimerHandle: null,        // Main phase timer from setPhase
-    schedulerTimerHandle: null,    // AI scheduler tick timeout
-    schedulerRAFHandle: null,      // AI scheduler RAF pump
-    watchdogTimerHandle: null,     // AI scheduler watchdog
-    fastAdvanceHandle: null,       // Fast-advance timeout
-    
-    // Callbacks
-    advanceCallback: null,         // Phase advancement callback
-    
-    // State transitions
-    startPhase() {
-      if (this.state !== 'idle') {
-        console.warn(`[SocialPhaseController] Cannot start - current state: ${this.state}`);
-        return false;
-      }
-      
-      console.info('[SocialPhaseController] ▶️ Starting phase (idle -> running)');
-      this.state = 'running';
-      this.clearAllTimers();
-      return true;
-    },
-    
-    beginSummarizing() {
-      if (this.state !== 'running') {
-        console.warn(`[SocialPhaseController] Cannot summarize - current state: ${this.state}`);
-        return false;
-      }
-      
-      console.info('[SocialPhaseController] 📊 Begin summarizing (running -> summarizing)');
-      this.state = 'summarizing';
-      this.cancelAllTimers(); // Cancel ALL timers when summary begins
-      return true;
-    },
-    
-    advancePhase() {
-      if (this.state === 'advanced') {
-        console.warn('[SocialPhaseController] Already advanced - ignoring duplicate');
-        return false;
-      }
-      
-      console.info(`[SocialPhaseController] ✅ Advancing phase (${this.state} -> advanced)`);
-      this.state = 'advanced';
-      this.cancelAllTimers(); // Ensure all timers are cancelled
-      
-      // Call the stored advance callback
-      if (typeof this.advanceCallback === 'function') {
-        try {
-          this.advanceCallback();
-          this.advanceCallback = null; // Clear after use
-        } catch (e) {
-          console.error('[SocialPhaseController] Error calling advance callback:', e);
-        }
-      } else {
-        console.warn('[SocialPhaseController] No advance callback stored');
-      }
-      
-      return true;
-    },
-    
-    reset() {
-      console.info('[SocialPhaseController] 🔄 Resetting to idle');
-      this.state = 'idle';
-      this.clearAllTimers();
-      this.advanceCallback = null;
-    },
-    
-    // Timer management
-    cancelAllTimers() {
-      console.info('[SocialPhaseController] ❌ Canceling all timers');
-      
-      // Clear phase timer
-      if (this.phaseTimerHandle) {
-        clearTimeout(this.phaseTimerHandle);
-        this.phaseTimerHandle = null;
-      }
-      
-      // Clear AI scheduler timers
-      if (this.schedulerTimerHandle) {
-        clearTimeout(this.schedulerTimerHandle);
-        this.schedulerTimerHandle = null;
-      }
-      
-      if (this.schedulerRAFHandle) {
-        cancelAnimationFrame(this.schedulerRAFHandle);
-        this.schedulerRAFHandle = null;
-      }
-      
-      if (this.watchdogTimerHandle) {
-        clearTimeout(this.watchdogTimerHandle);
-        this.watchdogTimerHandle = null;
-      }
-      
-      if (this.fastAdvanceHandle) {
-        clearTimeout(this.fastAdvanceHandle);
-        this.fastAdvanceHandle = null;
-      }
-      
-      // Also clear game-level timers
-      const g = global.game;
-      if (g?.__socialFastAdvanceTimeout) {
-        clearTimeout(g.__socialFastAdvanceTimeout);
-        g.__socialFastAdvanceTimeout = null;
-      }
-      
-      // Stop AI scheduler via its API
-      if (typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function') {
-        global.SocialAIScheduler.stopAiSocialPhase('controller-cancel');
-      }
-    },
-    
-    // State queries
-    isRunning() {
-      return this.state === 'running';
-    },
-    
-    isSummarizing() {
-      return this.state === 'summarizing';
-    },
-    
-    isAdvanced() {
-      return this.state === 'advanced';
-    },
-    
-    canStart() {
-      return this.state === 'idle';
-    },
-    
-    shouldBlockSchedulerStart() {
-      // Block scheduler start if we're summarizing or advanced
-      return this.state === 'summarizing' || this.state === 'advanced';
-    },
-    
-    getState() {
-      return this.state;
-    }
-  };
-
-  // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
   // ============================================================================
   // Note: Information is scaled to 0..100 to support high-impact action costs.
@@ -3255,13 +3109,13 @@
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     
-    // Use controller to manage phase start
-    if (!SocialPhaseController.startPhase()) {
-      console.warn('[social-maneuvers] Controller rejected phase start');
+    // Guard: prevent duplicate calls within same phase
+    const g = global.game;
+    if(g?.__socialPhaseStartCalled){
+      console.warn('[social-maneuvers] onSocialPhaseStart already called - ignoring duplicate');
       return;
     }
-    
-    const g = global.game;
+    if(g) g.__socialPhaseStartCalled = true;
     
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
     
@@ -3497,13 +3351,7 @@
     const g = global.game;
     const session = g?.__socialManeuversSession;
     
-    // Guard: only generate summary once per phase - check controller state
-    if (SocialPhaseController.isSummarizing() || SocialPhaseController.isAdvanced()) {
-      // Controller already transitioned to summarizing/advanced, return cached summary
-      console.warn('[social-maneuvers] Controller in summarizing/advanced state - returning cached summary');
-      return g.__latestSocialSummary || null;
-    }
-    
+    // Guard: only generate summary once per phase
     if(g?.__socialSummaryGenerated){
       console.warn('[social-maneuvers] Summary already generated for this phase - returning cached version');
       return g.__latestSocialSummary || null;
@@ -3748,19 +3596,41 @@
   function showSummaryPanel(summary){
     if(!summary) return;
 
-    // Use controller to transition to summarizing state
-    if (!SocialPhaseController.beginSummarizing()) {
-      console.warn('[social-maneuvers] Controller rejected summary - wrong state');
+    // Singleton guard: only show summary once per phase end
+    if(socialSummaryOpen){
+      console.warn('[social-maneuvers] Summary already open - ignoring duplicate call');
       return;
     }
+    socialSummaryOpen = true;
 
-    // CRITICAL: Controller has already canceled ALL timers in beginSummarizing()
-    // No need to manually pause/stop individual timers - controller handles it
+    // CRITICAL: Cancel ALL timers when summary opens to prevent race conditions
     const g = global.game;
-    console.info('[social-maneuvers] ✓ All timers cancelled by controller (summary opened)');
     
-    // Mark summary as generated
-    if(g) g.__socialSummaryGenerated = true;
+    // 1. Stop phase timer completely (don't just pause - phase is ending)
+    try {
+      if (global.PauseController && typeof global.PauseController.pause === 'function') {
+        global.PauseController.pause('social-summary');
+        console.info('[social-maneuvers] ⏸️ Timer paused via PauseController (summary modal opened)');
+      } else if (typeof global.pausePhaseTimer === 'function') {
+        global.pausePhaseTimer();
+        console.info('[social-maneuvers] ⏸️ Timer paused (summary modal opened, legacy fallback)');
+      }
+    } catch(e) {
+      console.error('[social-maneuvers] Failed to pause timer for summary:', e);
+    }
+    
+    // 2. Cancel fast-advance timeout
+    if(g?.__socialFastAdvanceTimeout){
+      clearTimeout(g.__socialFastAdvanceTimeout);
+      g.__socialFastAdvanceTimeout = null;
+      console.info('[social-maneuvers] ✓ Cancelled fast-advance timeout');
+    }
+    
+    // 3. Stop AI scheduler
+    if(typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function'){
+      global.SocialAIScheduler.stopAiSocialPhase('summary-opened');
+      console.info('[social-maneuvers] ✓ Stopped AI scheduler');
+    }
 
     // HIDE SOCIAL LAUNCHER to prevent stacking/overlap on mobile
     const socialLauncher = document.getElementById('socializeLauncher');
@@ -3877,20 +3747,51 @@
     continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
-      // Use controller to advance phase
-      if (!SocialPhaseController.advancePhase()) {
-        console.warn('[social-maneuvers] Controller rejected phase advance');
+      // CRITICAL FIX: Mark phase as ended to prevent duplicate processing
+      const g = global.game;
+      if(g?.__socialPhaseAdvanced) {
+        console.warn('[social-maneuvers] Phase already advanced - ignoring duplicate OK click');
         return;
       }
+      if(g) g.__socialPhaseAdvanced = true;
       
-      console.info('[social-maneuvers] ✓ OK clicked - controller is advancing phase');
+      console.info('[social-maneuvers] ✓ OK clicked - advancing phase immediately');
       
-      // Controller has already:
-      // 1. Called the stored advance callback
-      // 2. Cancelled all remaining timers
-      // 3. Transitioned to 'advanced' state
+      // 1. Stop scheduler immediately (if not already stopped)
+      if(typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function'){
+        global.SocialAIScheduler.stopAiSocialPhase('summary-ok-clicked');
+      }
       
-      // Now do UI cleanup - animate card removal (non-blocking)
+      // 2. Cancel any remaining timers
+      if(g?.__socialFastAdvanceTimeout){
+        clearTimeout(g.__socialFastAdvanceTimeout);
+        g.__socialFastAdvanceTimeout = null;
+      }
+      
+      // 3. Call the stored phase advancement callback immediately
+      if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
+        console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
+        try {
+          g.__socialPhaseAdvanceCallback();
+          delete g.__socialPhaseAdvanceCallback; // Clean up after use
+        } catch(e) {
+          console.error('[social-maneuvers] Error calling phase advancement callback:', e);
+        }
+      } else {
+        // FALLBACK: advance phase directly if no callback stored
+        console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
+        const startNoms = global.startNominations || global.startNomination;
+        if(typeof startNoms === 'function') {
+          console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
+          startNoms();
+        } else {
+          // Ultimate fallback: use setPhase directly
+          console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
+          global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
+        }
+      }
+      
+      // 4. Now do UI cleanup - animate card removal (non-blocking)
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();
@@ -4118,7 +4019,6 @@
   // ============================================================================
   global.SocialManeuvers = {
     isEnabled, SocialResources, SocialEnergyBank, // New uncapped energy storage system
-    SocialPhaseController, // Centralized phase lifecycle controller
     getActionById, getAvailableActions, executeAction,
     computeActionCost, // Unified cost calculator (single source of truth)
     recordActionInMemory, getPlayerMemory,
