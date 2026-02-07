@@ -26,9 +26,6 @@
   // ============================================================================
   let socialPhaseEnded = false;
   let socialSummaryOpen = false;
-  
-  // Timing constants for guard resets
-  const GUARD_RESET_DELAY = 100; // ms - delay before resetting guards to ensure pending dismissals complete
 
   // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
@@ -3131,13 +3128,9 @@
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
     
-    // Reset singleton guards for new phase - but delay to ensure any pending summary dismissals complete first
-    setTimeout(() => {
-      socialPhaseEnded = false;
-      // DO NOT reset socialSummaryOpen here - it's reset when OK is clicked in showSummaryPanel
-      // This prevents duplicate summaries if phase changes while summary is still visible
-      console.info('[social-maneuvers] ✓ Phase guards reset (socialPhaseEnded only)');
-    }, GUARD_RESET_DELAY);
+    // Reset singleton guards for new phase
+    socialPhaseEnded = false;
+    socialSummaryOpen = false;
     
     const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
@@ -3733,16 +3726,13 @@
     continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
-      // Clear safety timeout if it exists
-      const g = global.game;
-      if(g?.__socialPhaseAdvanceTimeout) {
-        clearTimeout(g.__socialPhaseAdvanceTimeout);
-        g.__socialPhaseAdvanceTimeout = null;
-        console.info('[social-maneuvers] ✓ Cleared safety timeout');
-      }
+      // Reset summary guard so it can be shown again next phase
+      socialSummaryOpen = false;
       
       // OK button behavior: Resume timer and advance phase
       try {
+        const g = global.game;
+        
         // Resume timer with owner ID
         if (global.PauseController && typeof global.PauseController.resume === 'function') {
           global.PauseController.resume('social-summary');
@@ -3772,11 +3762,8 @@
           console.info('[social-maneuvers] ✓ Summary backdrop removed');
         }
         
-        // Reset summary guard AFTER animation completes - prevents duplicate display during transition
-        socialSummaryOpen = false;
-        console.info('[social-maneuvers] ✓ Summary guard reset after dismissal');
-        
         // Call the stored phase advancement callback
+        const g = global.game;
         if (typeof g?.__socialPhaseAdvanceCallback === 'function') {
           console.info('[social-maneuvers] ✓ Calling stored phase advancement callback');
           try {
@@ -3784,45 +3771,27 @@
             delete g.__socialPhaseAdvanceCallback; // Clean up after use
           } catch(e) {
             console.error('[social-maneuvers] Error calling phase advancement callback:', e);
-            // Still try fallback on error
-            advancePhaseFallback(g, e);
           }
         } else {
           // FALLBACK: advance phase directly if no callback stored
           console.warn('[social-maneuvers] ⚠ No callback found — advancing via fallback');
-          advancePhaseFallback(g);
+          try {
+            // Try multiple nomination starter candidates
+            const startNoms = global.startNominations || global.startNomination || global.startNoms;
+            if(typeof startNoms === 'function') {
+              console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
+              startNoms();
+            } else {
+              // Ultimate fallback: use setPhase directly
+              console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
+              global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
+            }
+          } catch(e) {
+            console.error('[social-maneuvers] Fallback advancement failed:', e);
+          }
         }
       }, 400);
     };
-    
-    // Helper function for fallback phase advancement
-    function advancePhaseFallback(g, error = null) {
-      if(g?.__socialPhaseAdvanced) {
-        console.info('[social-maneuvers] Phase already advanced - skipping fallback');
-        return;
-      }
-      if(g) g.__socialPhaseAdvanced = true;
-      
-      if(error) {
-        console.warn('[social-maneuvers] Fallback triggered due to error:', error.message);
-      }
-      
-      try {
-        // Try multiple nomination starter candidates
-        const startNoms = global.startNominations || global.startNomination || global.startNoms;
-        if(typeof startNoms === 'function') {
-          console.info('[social-maneuvers] ✓ Advancing via startNominations fallback');
-          startNoms();
-        } else {
-          // Ultimate fallback: use setPhase directly
-          console.warn('[social-maneuvers] No startNominations found - using setPhase fallback');
-          global.setPhase?.('nominations', global.game?.cfg?.tNoms || 25);
-          global.renderPanel?.();
-        }
-      } catch(e) {
-        console.error('[social-maneuvers] Fallback advancement failed:', e);
-      }
-    }
     buttonBar.appendChild(continueBtn);
 
     card.appendChild(buttonBar);
