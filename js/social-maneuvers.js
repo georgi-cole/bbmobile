@@ -1479,7 +1479,7 @@
       historySection.innerHTML = '';
       if(selectedPlayers.length === 0){ historySection.style.display = 'none'; return; }
       historySection.style.display = 'block';
-      const historyContent = (typeof createHistoryUI === 'function') ? createHistoryUI(playerId, selectedPlayers[0].id) : document.createElement('div');
+      const historyContent = createHistoryUI ? createHistoryUI(playerId, selectedPlayers[0].id) : document.createElement('div');
       if(!historyContent || !historyContent.classList){ // fallback text
         const d = document.createElement('div'); d.textContent = 'History unavailable'; historySection.appendChild(d);
       } else {
@@ -1826,18 +1826,6 @@
       g.__socialFastAdvanceTimeout = null;
     }
     
-    // Helper to try showing a summary method - returns true if successful
-    const tryShowSummaryMethod = (fn, successMsg, errorMsg) => {
-      try {
-        fn();
-        console.info(successMsg);
-        return true;
-      } catch (e) {
-        console.error(errorMsg, e);
-        return false;
-      }
-    };
-    
     g.__socialFastAdvanceTimeout = setTimeout(async () => {
       console.info('[social-maneuvers] ⏩ Fast-advance triggered (fallback)');
       g.__socialFastAdvanceTimeout = null;
@@ -1848,40 +1836,19 @@
         
         let summaryShown = false;
         
-        // Define phase advancement function
-        const advanceToNextPhase = () => {
-          console.info('[social-maneuvers] ⏩ Advancing to next phase after fast-advance');
-          // (b) Call onSocialPhaseEnd
-          if (typeof onSocialPhaseEnd === 'function') {
-            try {
-              onSocialPhaseEnd();
-              console.info('[social-maneuvers] ✓ onSocialPhaseEnd called');
-            } catch (e) {
-              console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
-            }
+        // Helper to try showing a summary method
+        function tryShowSummaryMethod(fn, successMsg, errorMsg) {
+          try {
+            fn();
+            summaryShown = true;
+            console.info(successMsg);
+          } catch (e) {
+            console.error(errorMsg, e);
           }
-          
-          // (c) Advance to nominations
-          if (typeof global.startNominations === 'function') {
-            global.startNominations();
-            console.info('[social-maneuvers] ✓ Advanced to nominations via startNominations');
-          } else if (typeof global.setPhase === 'function') {
-            global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
-              if (typeof global.startVeto === 'function') global.startVeto();
-              else if (typeof global.startVetoComp === 'function') global.startVetoComp();
-            });
-            global.renderPanel?.();
-            console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
-          } else {
-            console.error('[social-maneuvers] No method available to advance to nominations');
-          }
-        };
-        
-        // Store callback for summary OK button
-        g.__socialPhaseAdvanceCallback = advanceToNextPhase;
+        }
         
         if (typeof showSummaryPanel === 'function') {
-          summaryShown = tryShowSummaryMethod(
+          tryShowSummaryMethod(
             () => showSummaryPanel(generatePhaseSummary()),
             '[social-maneuvers] ✓ Summary shown via showSummaryPanel',
             '[social-maneuvers] showSummaryPanel failed:'
@@ -1889,7 +1856,7 @@
         }
         
         if (!summaryShown && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
-          summaryShown = tryShowSummaryMethod(
+          tryShowSummaryMethod(
             () => global.SocialManeuvers.showEndOfPhaseSummary(),
             '[social-maneuvers] ✓ Summary shown via showEndOfPhaseSummary',
             '[social-maneuvers] showEndOfPhaseSummary failed:'
@@ -1897,7 +1864,7 @@
         }
         
         if (!summaryShown && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
-          summaryShown = tryShowSummaryMethod(
+          tryShowSummaryMethod(
             () => global.SocialManeuvers.presentPhaseSummary(),
             '[social-maneuvers] ✓ Summary shown via presentPhaseSummary',
             '[social-maneuvers] presentPhaseSummary failed:'
@@ -1906,8 +1873,30 @@
         
         await global.cardQueueWaitIdle?.();
         
-        // Summary shown, callback stored - phase will advance when OK clicked
-        console.info('[social-maneuvers] ✓ Summary shown, advancement callback stored for OK button');
+        // (b) Call onSocialPhaseEnd
+        if (typeof onSocialPhaseEnd === 'function') {
+          try {
+            onSocialPhaseEnd();
+            console.info('[social-maneuvers] ✓ onSocialPhaseEnd called');
+          } catch (e) {
+            console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
+          }
+        }
+        
+        // (c) Advance to nominations
+        if (typeof global.startNominations === 'function') {
+          global.startNominations();
+          console.info('[social-maneuvers] ✓ Advanced to nominations via startNominations');
+        } else if (typeof global.setPhase === 'function') {
+          global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
+            if (typeof global.startVeto === 'function') global.startVeto();
+            else if (typeof global.startVetoComp === 'function') global.startVetoComp();
+          });
+          global.renderPanel?.();
+          console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
+        } else {
+          console.error('[social-maneuvers] No method available to advance to nominations');
+        }
       } catch (e) {
         console.error('[social-maneuvers] Fast-advance fallback failed:', e);
       }
