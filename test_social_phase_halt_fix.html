@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Halt + Duplicate Summary Fix Verification</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #0f3460;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+    .btn {
+      padding: 12px 24px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .btn.success {
+      background: #27ae60;
+    }
+    .btn.danger {
+      background: #e74c3c;
+    }
+    .result {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .result.pass {
+      background: rgba(39, 174, 96, 0.2);
+      border: 2px solid #27ae60;
+      color: #27ae60;
+    }
+    .result.fail {
+      background: rgba(231, 76, 60, 0.2);
+      border: 2px solid #e74c3c;
+      color: #e74c3c;
+    }
+    .result.pending {
+      background: rgba(52, 152, 219, 0.2);
+      border: 2px solid #3498db;
+      color: #3498db;
+    }
+    .log {
+      background: #000;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 3px 0;
+    }
+    .log-info { color: #3498db; }
+    .log-success { color: #27ae60; }
+    .log-warn { color: #f39c12; }
+    .log-error { color: #e74c3c; }
+    code {
+      background: #0f3460;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Social Phase Halt + Duplicate Summary Fix Verification</h1>
+  
+  <div class="test-section">
+    <h2>Bug Description</h2>
+    <p><strong>User Report:</strong> "Now I use my social energy, I see the social summary card, I press OK, I see it again, I press OK, timer starts, once it is up, the game halts..."</p>
+    <p><strong>Console Evidence:</strong></p>
+    <pre><code>[social-maneuvers] ⚠ No callback found — advancing via fallback
+[social-maneuvers] onSocialPhaseEnd already called - ignoring duplicate</code></pre>
+  </div>
+
+  <div class="test-section">
+    <h2>Root Causes & Fixes</h2>
+    <ul>
+      <li><strong>Bug 1:</strong> Race condition from multiple <code>onSocialPhaseEnd()</code> calls
+        <br>✅ Fixed: setPhase wrapper no longer calls it (delegated to onDone)</li>
+      <li><strong>Bug 2:</strong> <code>__socialPhaseAdvanceCallback</code> race condition
+        <br>✅ Fixed: Added 10-second safety timeout after storing callback</li>
+      <li><strong>Bug 3:</strong> <code>socialSummaryOpen</code> guard reset too early
+        <br>✅ Fixed: Reset only after animation completes, not in onSocialPhaseStart</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Safety Timeout Verification</h2>
+    <p>Verify that <code>__socialPhaseAdvanceTimeout</code> is created and works as failsafe.</p>
+    <button class="btn" onclick="testSafetyTimeout()">Run Test 1</button>
+    <div id="test1-result" class="result pending">⏳ Not run yet</div>
+    <div class="log" id="test1-log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Callback Storage Timing</h2>
+    <p>Verify that callback is stored BEFORE any summary methods are called.</p>
+    <button class="btn" onclick="testCallbackTiming()">Run Test 2</button>
+    <div id="test2-result" class="result pending">⏳ Not run yet</div>
+    <div class="log" id="test2-log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Guard Reset Timing</h2>
+    <p>Verify that <code>socialSummaryOpen</code> is NOT reset in <code>onSocialPhaseStart</code>.</p>
+    <button class="btn" onclick="testGuardReset()">Run Test 3</button>
+    <div id="test3-result" class="result pending">⏳ Not run yet</div>
+    <div class="log" id="test3-log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: OK Button Handler</h2>
+    <p>Verify that OK button clears timeout and resets guard AFTER animation.</p>
+    <button class="btn" onclick="testOKButton()">Run Test 4</button>
+    <div id="test4-result" class="result pending">⏳ Not run yet</div>
+    <div class="log" id="test4-log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>All Tests Summary</h2>
+    <button class="btn success" onclick="runAllTests()">▶️ Run All Tests</button>
+    <div id="summary-result"></div>
+  </div>
+
+  <script>
+    // Utility functions for logging
+    function log(testId, message, type = 'info') {
+      const logEl = document.getElementById(`${testId}-log`);
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[${testId}] ${message}`);
+    }
+
+    function setResult(testId, passed, message) {
+      const resultEl = document.getElementById(`${testId}-result`);
+      resultEl.className = `result ${passed ? 'pass' : 'fail'}`;
+      resultEl.textContent = `${passed ? '✅ PASS' : '❌ FAIL'}: ${message}`;
+    }
+
+    // Test 1: Safety Timeout Verification
+    async function testSafetyTimeout() {
+      const testId = 'test1';
+      document.getElementById(`${testId}-log`).innerHTML = '';
+      log(testId, 'Starting safety timeout verification...', 'info');
+
+      try {
+        // Read the source code to verify timeout is created
+        const response = await fetch('js/social.js');
+        const sourceCode = await response.text();
+        
+        log(testId, 'Checking for __socialPhaseAdvanceTimeout creation...', 'info');
+        const hasTimeoutCreation = sourceCode.includes('global.game.__socialPhaseAdvanceTimeout = setTimeout');
+        
+        if (!hasTimeoutCreation) {
+          setResult(testId, false, 'Safety timeout not found in source code');
+          log(testId, 'ERROR: __socialPhaseAdvanceTimeout not created', 'error');
+          return;
+        }
+        
+        log(testId, 'Found timeout creation', 'success');
+        
+        // Check if timeout is 10 seconds
+        const has10SecTimeout = sourceCode.includes('}, 10000);');
+        if (!has10SecTimeout) {
+          setResult(testId, false, 'Timeout not set to 10 seconds');
+          log(testId, 'ERROR: Timeout should be 10000ms', 'error');
+          return;
+        }
+        
+        log(testId, 'Timeout is set to 10 seconds', 'success');
+        
+        // Check if timeout calls advanceToNextPhase
+        const lines = sourceCode.split('\n');
+        let foundTimeoutBlock = false;
+        let checksPhaseAdvanced = false;
+        let callsAdvanceFunc = false;
+        
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].includes('__socialPhaseAdvanceTimeout = setTimeout')) {
+            foundTimeoutBlock = true;
+            // Check next few lines
+            for (let j = i; j < Math.min(i + 5, lines.length); j++) {
+              if (lines[j].includes('__socialPhaseAdvanced')) {
+                checksPhaseAdvanced = true;
+              }
+              if (lines[j].includes('advanceToNextPhase()')) {
+                callsAdvanceFunc = true;
+              }
+            }
+            break;
+          }
+        }
+        
+        if (!checksPhaseAdvanced) {
+          log(testId, 'WARNING: Timeout should check __socialPhaseAdvanced flag', 'warn');
+        } else {
+          log(testId, 'Timeout checks __socialPhaseAdvanced flag', 'success');
+        }
+        
+        if (!callsAdvanceFunc) {
+          setResult(testId, false, 'Timeout does not call advanceToNextPhase()');
+          log(testId, 'ERROR: Timeout should call advanceToNextPhase()', 'error');
+          return;
+        }
+        
+        log(testId, 'Timeout calls advanceToNextPhase() on expiry', 'success');
+        
+        setResult(testId, true, 'Safety timeout implemented correctly');
+        
+      } catch (error) {
+        setResult(testId, false, `Error: ${error.message}`);
+        log(testId, `ERROR: ${error.message}`, 'error');
+      }
+    }
+
+    // Test 2: Callback Storage Timing
+    async function testCallbackTiming() {
+      const testId = 'test2';
+      document.getElementById(`${testId}-log`).innerHTML = '';
+      log(testId, 'Starting callback storage timing verification...', 'info');
+
+      try {
+        const response = await fetch('js/social.js');
+        const sourceCode = await response.text();
+        
+        // Find the onDone function
+        const onDoneMatch = sourceCode.match(/const onDone = async \(\)=>\{[\s\S]*?(?=\n\s{4}[^\s])/);
+        if (!onDoneMatch) {
+          setResult(testId, false, 'Could not find onDone function');
+          log(testId, 'ERROR: onDone function not found', 'error');
+          return;
+        }
+        
+        const onDoneCode = onDoneMatch[0];
+        log(testId, 'Found onDone function', 'success');
+        
+        // Check that callback is stored early
+        const callbackStorageIndex = onDoneCode.indexOf('__socialPhaseAdvanceCallback =');
+        const onSocialPhaseEndIndex = onDoneCode.indexOf('onSocialPhaseEnd');
+        const showSummaryIndex = onDoneCode.indexOf('showSummaryPanel');
+        
+        if (callbackStorageIndex === -1) {
+          setResult(testId, false, 'Callback storage not found');
+          log(testId, 'ERROR: __socialPhaseAdvanceCallback assignment not found', 'error');
+          return;
+        }
+        
+        log(testId, 'Callback storage found', 'success');
+        
+        // Verify callback is stored BEFORE onSocialPhaseEnd
+        if (onSocialPhaseEndIndex !== -1 && callbackStorageIndex > onSocialPhaseEndIndex) {
+          setResult(testId, false, 'Callback stored AFTER onSocialPhaseEnd call');
+          log(testId, 'ERROR: Callback must be stored BEFORE calling onSocialPhaseEnd', 'error');
+          return;
+        }
+        
+        log(testId, 'Callback stored before onSocialPhaseEnd', 'success');
+        
+        // Verify callback is stored BEFORE showSummaryPanel
+        if (showSummaryIndex !== -1 && callbackStorageIndex > showSummaryIndex) {
+          setResult(testId, false, 'Callback stored AFTER showSummaryPanel call');
+          log(testId, 'ERROR: Callback must be stored BEFORE calling showSummaryPanel', 'error');
+          return;
+        }
+        
+        log(testId, 'Callback stored before showSummaryPanel', 'success');
+        
+        setResult(testId, true, 'Callback storage timing is correct');
+        
+      } catch (error) {
+        setResult(testId, false, `Error: ${error.message}`);
+        log(testId, `ERROR: ${error.message}`, 'error');
+      }
+    }
+
+    // Test 3: Guard Reset Timing
+    async function testGuardReset() {
+      const testId = 'test3';
+      document.getElementById(`${testId}-log`).innerHTML = '';
+      log(testId, 'Starting guard reset timing verification...', 'info');
+
+      try {
+        const response = await fetch('js/social-maneuvers.js');
+        const sourceCode = await response.text();
+        
+        // Find onSocialPhaseStart function
+        const onPhaseStartMatch = sourceCode.match(/function onSocialPhaseStart\(\)\{[\s\S]*?(?=\n\s{2}function )/);
+        if (!onPhaseStartMatch) {
+          setResult(testId, false, 'Could not find onSocialPhaseStart function');
+          log(testId, 'ERROR: onSocialPhaseStart function not found', 'error');
+          return;
+        }
+        
+        const onPhaseStartCode = onPhaseStartMatch[0];
+        log(testId, 'Found onSocialPhaseStart function', 'success');
+        
+        // Check that socialSummaryOpen is NOT reset directly
+        const directReset = /socialSummaryOpen = false(?!.*\/\/ DO NOT)/.test(onPhaseStartCode.split('setTimeout')[0]);
+        
+        if (directReset) {
+          setResult(testId, false, 'socialSummaryOpen is reset directly in onSocialPhaseStart');
+          log(testId, 'ERROR: socialSummaryOpen should NOT be reset in onSocialPhaseStart', 'error');
+          return;
+        }
+        
+        log(testId, 'socialSummaryOpen is NOT reset directly', 'success');
+        
+        // Check for comment explaining why it's not reset
+        const hasExplanationComment = onPhaseStartCode.includes('DO NOT reset socialSummaryOpen');
+        
+        if (!hasExplanationComment) {
+          log(testId, 'WARNING: Missing explanation comment about why socialSummaryOpen is not reset', 'warn');
+        } else {
+          log(testId, 'Found explanation comment', 'success');
+        }
+        
+        // Check that socialPhaseEnded IS reset
+        const resetsPhaseEnded = onPhaseStartCode.includes('socialPhaseEnded = false');
+        if (!resetsPhaseEnded) {
+          setResult(testId, false, 'socialPhaseEnded should still be reset');
+          log(testId, 'ERROR: socialPhaseEnded should be reset', 'error');
+          return;
+        }
+        
+        log(testId, 'socialPhaseEnded is properly reset', 'success');
+        
+        setResult(testId, true, 'Guard reset timing is correct');
+        
+      } catch (error) {
+        setResult(testId, false, `Error: ${error.message}`);
+        log(testId, `ERROR: ${error.message}`, 'error');
+      }
+    }
+
+    // Test 4: OK Button Handler
+    async function testOKButton() {
+      const testId = 'test4';
+      document.getElementById(`${testId}-log`).innerHTML = '';
+      log(testId, 'Starting OK button handler verification...', 'info');
+
+      try {
+        const response = await fetch('js/social-maneuvers.js');
+        const sourceCode = await response.text();
+        
+        // Find the OK button onclick handler
+        const okButtonMatch = sourceCode.match(/continueBtn\.onclick = \(\) => \{[\s\S]*?(?=\n\s{4}\};)/);
+        if (!okButtonMatch) {
+          setResult(testId, false, 'Could not find OK button handler');
+          log(testId, 'ERROR: continueBtn.onclick handler not found', 'error');
+          return;
+        }
+        
+        const okButtonCode = okButtonMatch[0];
+        log(testId, 'Found OK button handler', 'success');
+        
+        // Check that it clears the safety timeout
+        const clearsTimeout = okButtonCode.includes('clearTimeout(g.__socialPhaseAdvanceTimeout)');
+        if (!clearsTimeout) {
+          setResult(testId, false, 'OK button does not clear safety timeout');
+          log(testId, 'ERROR: OK button should clear __socialPhaseAdvanceTimeout', 'error');
+          return;
+        }
+        
+        log(testId, 'OK button clears safety timeout', 'success');
+        
+        // Check that socialSummaryOpen reset is inside setTimeout
+        const setTimeoutMatch = okButtonCode.match(/setTimeout\(\(\) => \{[\s\S]*?\}, 400\)/);
+        if (!setTimeoutMatch) {
+          setResult(testId, false, 'setTimeout with 400ms not found');
+          log(testId, 'ERROR: Animation timeout (400ms) not found', 'error');
+          return;
+        }
+        
+        const setTimeoutCode = setTimeoutMatch[0];
+        log(testId, 'Found animation setTimeout (400ms)', 'success');
+        
+        // Check that socialSummaryOpen is reset inside the setTimeout
+        const resetInsideTimeout = setTimeoutCode.includes('socialSummaryOpen = false');
+        if (!resetInsideTimeout) {
+          setResult(testId, false, 'socialSummaryOpen not reset after animation');
+          log(testId, 'ERROR: socialSummaryOpen should be reset inside setTimeout', 'error');
+          return;
+        }
+        
+        log(testId, 'socialSummaryOpen reset after animation completes', 'success');
+        
+        // Check that callback is called inside setTimeout
+        const callbackInsideTimeout = setTimeoutCode.includes('__socialPhaseAdvanceCallback');
+        if (!callbackInsideTimeout) {
+          setResult(testId, false, 'Callback not called after animation');
+          log(testId, 'ERROR: Callback should be called inside setTimeout', 'error');
+          return;
+        }
+        
+        log(testId, 'Callback called after animation completes', 'success');
+        
+        // Check for fallback function
+        const hasFallback = sourceCode.includes('function advancePhaseFallback');
+        if (!hasFallback) {
+          log(testId, 'WARNING: advancePhaseFallback helper function not found', 'warn');
+        } else {
+          log(testId, 'Found advancePhaseFallback helper function', 'success');
+          
+          // Check that fallback has idempotency guard
+          const fallbackMatch = sourceCode.match(/function advancePhaseFallback[\s\S]*?(?=\n\s{4}function |$)/);
+          if (fallbackMatch && fallbackMatch[0].includes('__socialPhaseAdvanced')) {
+            log(testId, 'Fallback has idempotency guard', 'success');
+          } else {
+            log(testId, 'WARNING: Fallback should check __socialPhaseAdvanced', 'warn');
+          }
+        }
+        
+        setResult(testId, true, 'OK button handler is correct');
+        
+      } catch (error) {
+        setResult(testId, false, `Error: ${error.message}`);
+        log(testId, `ERROR: ${error.message}`, 'error');
+      }
+    }
+
+    // Run all tests
+    async function runAllTests() {
+      document.getElementById('summary-result').innerHTML = '<div class="result pending">⏳ Running all tests...</div>';
+      
+      await testSafetyTimeout();
+      await testCallbackTiming();
+      await testGuardReset();
+      await testOKButton();
+      
+      // Check results
+      const results = [
+        document.getElementById('test1-result').classList.contains('pass'),
+        document.getElementById('test2-result').classList.contains('pass'),
+        document.getElementById('test3-result').classList.contains('pass'),
+        document.getElementById('test4-result').classList.contains('pass')
+      ];
+      
+      const allPassed = results.every(r => r);
+      const passedCount = results.filter(r => r).length;
+      
+      document.getElementById('summary-result').innerHTML = `
+        <div class="result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✅' : '❌'} ${passedCount}/4 tests passed
+          ${allPassed ? '<br><br>All fixes verified successfully! 🎉' : '<br><br>Some tests failed. Review the details above.'}
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

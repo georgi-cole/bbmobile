@@ -582,6 +582,14 @@
       // Store callback immediately - this MUST happen before any guards or early returns
       global.game.__socialPhaseAdvanceCallback = advanceToNextPhase;
       console.info('[social.js] ✓ Phase advancement callback stored');
+      
+      // SAFETY NET: Set timeout to advance phase if nothing else does within 10 seconds
+      global.game.__socialPhaseAdvanceTimeout = setTimeout(() => {
+        if(!global.game?.__socialPhaseAdvanced) {
+          console.warn('[social.js] Safety timeout triggered - forcing phase advancement');
+          advanceToNextPhase();
+        }
+      }, 10000);
 
       // Track if summary was shown to determine fallback advancement
       let summaryShown = false;
