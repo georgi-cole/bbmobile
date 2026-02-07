@@ -3597,7 +3597,7 @@
       console.warn('[social-maneuvers] Summary already open - ignoring duplicate call');
       return;
     }
-    if(socialSummaryShown){
+    if (socialSummaryShown) {
       console.info('[social-maneuvers] Summary already shown this phase - skipping duplicate');
       return;
     }
