@@ -1450,7 +1450,7 @@
       console.log(LOG_PREFIX, '✓ Nominations committed successfully');
       
     } catch (err) {
-      console.error(LOG_PREFIX, 'Error committing nominations:', err, ' – clearing awaiting flags and falling back');
+      console.error(LOG_PREFIX, 'Error committing nominations:', err, ' – clearing awaiting flags');
       if (global.__awaitingHumanNominations) global.__awaitingHumanNominations = false;
       g._pendingNoms = null;
       // Even on commit error, don't fall back - nominations may be partially committed

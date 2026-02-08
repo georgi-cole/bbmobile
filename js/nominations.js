@@ -48,7 +48,7 @@
 
     // Defensive: reset a stale commit-in-progress when we have no pending selections.
     // This prevents showing a "Locked" overlay when the human HOH flow was aborted.
-    if (g.__nomsCommitInProgress && !Array.isArray(g._pendingNoms) && (!hoh || hoh.human)) {
+    if (g.__nomsCommitInProgress && (g._pendingNoms == null || !Array.isArray(g._pendingNoms)) && (!hoh || hoh.human)) {
       console.warn('[noms] Detected stale __nomsCommitInProgress without _pendingNoms – resetting flags');
       g.__nomsCommitInProgress = false;
       g.__nomsCommitted = false;
