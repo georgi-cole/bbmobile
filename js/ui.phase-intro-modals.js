@@ -376,6 +376,8 @@
         if (dismissed) return;
         dismissed = true;
 
+        console.info('[phase-intro] Nomination modal dismissed, resolving immediately');
+
         // Animate out
         overlay.style.opacity = '0';
         if (!prefersReducedMotion) {
@@ -386,7 +388,44 @@
           if (overlay.parentNode) {
             overlay.parentNode.removeChild(overlay);
           }
+          
+          // Resolve immediately (tap-anywhere dismisses and resolves immediately)
           resolve();
+          
+          // Schedule safety watchdog after dismissal
+          // This fires 3 seconds after modal is dismissed to ensure game progresses
+          setTimeout(() => {
+            // Check if game has progressed
+            const currentPhase = g?.phase;
+            const pleaActive = g?.__nominationPleaActive;
+            
+            // Only fire watchdog if still on nominations phase and no plea active
+            if (currentPhase === 'nominations' && !pleaActive) {
+              console.info('[phase-intro] Safety watchdog: nominations phase not started after 3s, forcing start');
+              
+              // Try to force nominations to start
+              try {
+                if (typeof global.startNominations === 'function') {
+                  console.info('[phase-intro] Safety watchdog: calling startNominations directly');
+                  global.startNominations();
+                } else if (typeof global.setPhase === 'function') {
+                  console.info('[phase-intro] Safety watchdog: falling back to setPhase');
+                  const tNoms = g.cfg?.tNoms || 25;
+                  const callback = () => global.lockNominationsAndProceed?.();
+                  global.setPhase('nominations', tNoms, callback);
+                } else {
+                  console.warn('[phase-intro] Safety watchdog: no recovery methods available');
+                }
+              } catch (err) {
+                console.error('[phase-intro] Safety watchdog error:', err);
+              }
+            } else {
+              console.info('[phase-intro] Safety watchdog: game progressed normally or plea active, no action needed', {
+                currentPhase,
+                pleaActive
+              });
+            }
+          }, 3000);
         }, 300);
       };
 
