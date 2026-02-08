@@ -210,13 +210,19 @@
       // Create card
       const card = document.createElement('div');
       card.className = 'results-card';
+      
+      // Reduce padding for inline TV rendering to fit better
+      const cardPadding = renderInlineTV ? '20px 16px' : '32px 28px';
+      const cardMaxWidth = renderInlineTV ? 'min(450px, 90vw)' : 'min(500px, 92vw)';
+      const titleMarginBottom = renderInlineTV ? '18px' : '26px';
+      
       card.style.cssText = `
         background: linear-gradient(135deg, #1a2937 0%, #0f1a28 100%);
         border: 1px solid rgba(120,180,240,0.35);
         border-radius: 20px;
-        padding: 32px 28px;
+        padding: ${cardPadding};
         box-shadow: 0 20px 60px -20px rgba(0,0,0,0.95);
-        max-width: min(500px, 92vw);
+        max-width: ${cardMaxWidth};
         width: 100%;
         animation: resultsCardSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         position: relative;
@@ -248,25 +254,144 @@
         letter-spacing: 0.6px;
         color: #ffd96b;
         text-align: center;
-        margin-bottom: 26px;
+        margin-bottom: ${titleMarginBottom};
         text-shadow: 0 2px 10px rgba(0,0,0,0.6);
       `;
       card.appendChild(titleEl);
       
-      // Winner section (large, centered)
-      const winnerData = getPlayerData(topThree[0]);
-      const winnerAvatar = loadedAvatars[0] || winnerData.avatarUrl;
+      // Determine layout: horizontal for inline TV, vertical for fullscreen
+      const useHorizontalLayout = renderInlineTV && tvContainer;
       
-      const winnerSection = document.createElement('div');
-      winnerSection.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 22px;
-        padding-bottom: 22px;
-        border-bottom: 1px solid rgba(120,180,240,0.25);
-      `;
+      if (useHorizontalLayout) {
+        // HORIZONTAL LAYOUT: All 3 players in a single row (for inline TV rendering)
+        const horizontalContainer = document.createElement('div');
+        horizontalContainer.style.cssText = `
+          display: flex;
+          justify-content: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        `;
+        
+        topThree.forEach((entry, idx) => {
+          if (!entry) return;
+          
+          const player = getPlayerData(entry);
+          const avatarUrl = loadedAvatars[idx] || player.avatarUrl;
+          const isWinner = idx === 0;
+          
+          const playerCard = document.createElement('div');
+          playerCard.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex: 0 1 auto;
+            min-width: 90px;
+            max-width: 120px;
+          `;
+          
+          // Avatar with container div for proper aspect ratio handling
+          const avatarContainer = document.createElement('div');
+          avatarContainer.style.cssText = `
+            width: ${isWinner ? '90px' : '75px'};
+            height: ${isWinner ? '90px' : '75px'};
+            border-radius: 50%;
+            border: ${isWinner ? '3px solid #ffd96b' : '2px solid #7cffad'};
+            box-shadow: ${isWinner ? '0 4px 20px rgba(255,217,107,0.4)' : '0 2px 12px rgba(124,255,173,0.3)'};
+            overflow: hidden;
+            background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite;
+            flex-shrink: 0;
+          `;
+          
+          const avatarEl = document.createElement('img');
+          avatarEl.src = avatarUrl;
+          avatarEl.alt = player.name;
+          avatarEl.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          `;
+          // Remove shimmer when image loads
+          avatarEl.onload = () => {
+            avatarContainer.style.background = '';
+            avatarContainer.style.animation = '';
+          };
+          // Handle avatar load failure
+          avatarEl.onerror = function(){
+            console.info(`[results-popup] avatar fallback used for player=${player.id || player.name}`);
+            this.onerror = null;
+            if(global.getAvatarFallback){
+              this.src = global.getAvatarFallback(player.name, this.src);
+            } else {
+              this.src = getDicebearUrl(player.name);
+            }
+          };
+          avatarContainer.appendChild(avatarEl);
+          playerCard.appendChild(avatarContainer);
+          
+          // Place badge (1st, 2nd, 3rd)
+          const placeBadge = document.createElement('div');
+          const placeText = idx === 0 ? '1st' : (idx === 1 ? '2nd' : '3rd');
+          placeBadge.textContent = `${placeText} ${isWinner ? '👑' : ''}`;
+          placeBadge.style.cssText = `
+            font-size: ${isWinner ? '0.85rem' : '0.75rem'};
+            font-weight: 700;
+            color: ${isWinner ? '#ffd96b' : '#96cfff'};
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+          `;
+          playerCard.appendChild(placeBadge);
+          
+          const playerName = document.createElement('div');
+          playerName.textContent = player.name;
+          playerName.style.cssText = `
+            font-size: ${isWinner ? '1rem' : '0.9rem'};
+            font-weight: ${isWinner ? '700' : '600'};
+            color: ${isWinner ? '#ffffff' : '#cedbeb'};
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+          `;
+          playerCard.appendChild(playerName);
+          
+          if(player.scoreFormatted !== undefined && player.scoreFormatted !== null && player.scoreFormatted !== ''){
+            const playerScore = document.createElement('div');
+            playerScore.textContent = player.scoreFormatted;
+            playerScore.style.cssText = `
+              font-size: ${isWinner ? '0.95rem' : '0.85rem'};
+              color: #88e6a0;
+              font-weight: ${isWinner ? '600' : '500'};
+              text-align: center;
+            `;
+            playerCard.appendChild(playerScore);
+          }
+          
+          horizontalContainer.appendChild(playerCard);
+        });
+        
+        card.appendChild(horizontalContainer);
+      } else {
+        // VERTICAL LAYOUT: Winner on top, runners-up horizontal below (for fullscreen rendering)
+        // Winner section (large, centered)
+        const winnerData = getPlayerData(topThree[0]);
+        const winnerAvatar = loadedAvatars[0] || winnerData.avatarUrl;
+        
+        const winnerSection = document.createElement('div');
+        winnerSection.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 22px;
+          padding-bottom: 22px;
+          border-bottom: 1px solid rgba(120,180,240,0.25);
+        `;
       
       // Winner avatar with container div for proper aspect ratio handling
       const winnerAvatarContainer = document.createElement('div');
@@ -320,7 +445,7 @@
       `;
       winnerSection.appendChild(winnerName);
       
-      if(winnerData.scoreFormatted !== ''){
+      if(winnerData.scoreFormatted !== undefined && winnerData.scoreFormatted !== null && winnerData.scoreFormatted !== ''){
         const winnerScore = document.createElement('div');
         
         // For raw scores, don't add "Score:" prefix as the display is self-descriptive
@@ -442,7 +567,7 @@
           `;
           runnerUp.appendChild(runnerName);
           
-          if(player.scoreFormatted !== ''){
+          if(player.scoreFormatted !== undefined && player.scoreFormatted !== null && player.scoreFormatted !== ''){
             const runnerScore = document.createElement('div');
             runnerScore.textContent = player.scoreFormatted;
             runnerScore.style.cssText = `
@@ -458,6 +583,7 @@
         
         card.appendChild(runnersUpSection);
       }
+      } // End of vertical layout else block
       
       modal.appendChild(card);
       

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOH Winner Modal Layout Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0d151f;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-header {
+      background: rgba(120, 180, 240, 0.1);
+      border: 1px solid rgba(120, 180, 240, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      font-size: 1.8rem;
+      color: #78b4f0;
+    }
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    button {
+      padding: 12px 24px;
+      border: 1px solid rgba(120, 180, 240, 0.5);
+      border-radius: 6px;
+      background: linear-gradient(135deg, rgba(40, 60, 80, 0.8) 0%, rgba(25, 40, 55, 0.8) 100%);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    button:hover {
+      background: linear-gradient(135deg, rgba(45, 68, 90, 0.9) 0%, rgba(30, 48, 65, 0.9) 100%);
+      border-color: rgba(120, 180, 240, 0.8);
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(91, 214, 138, 0.8) 0%, rgba(77, 184, 120, 0.8) 100%);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(91, 214, 138, 0.9) 0%, rgba(77, 184, 120, 0.9) 100%);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, rgba(255, 107, 157, 0.8) 0%, rgba(238, 90, 138, 0.8) 100%);
+    }
+    .test-section {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .test-viewport {
+      flex: 1;
+      min-width: 300px;
+      background: #1a2937;
+      border: 2px solid rgba(120, 180, 240, 0.3);
+      border-radius: 12px;
+      padding: 15px;
+    }
+    .test-viewport h3 {
+      margin: 0 0 10px 0;
+      color: #78b4f0;
+      font-size: 1.1rem;
+    }
+    .test-tv {
+      position: relative;
+      width: 100%;
+      height: 500px;
+      background: linear-gradient(135deg, #1a2a3a 0%, #0f1a28 100%);
+      border: 1px solid rgba(120, 180, 240, 0.2);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .viewport-label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      z-index: 1;
+    }
+    @media (max-width: 768px) {
+      .test-section {
+        flex-direction: column;
+      }
+      .test-tv {
+        height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🏆 HOH Winner Modal Layout Test</h1>
+      <p>Test the new horizontal layout for HOH competition results when displayed inline in the TV viewport (skip/fast-forward mode).</p>
+      <p><strong>Issue:</strong> Modal was too tall for faux TV area. <strong>Solution:</strong> Show all 3 players horizontally when in inline TV mode.</p>
+      <div class="test-controls">
+        <button class="btn-primary" onclick="testInlineTV()">Test Inline TV (Horizontal Layout)</button>
+        <button class="btn-primary" onclick="testFullscreen()">Test Fullscreen (Vertical Layout)</button>
+        <button class="btn-danger" onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <div class="test-viewport">
+        <h3>📺 Inline TV Mode (Skip/FFWD)</h3>
+        <div id="inlineTV" class="test-tv" data-faux-tv>
+          <div class="viewport-label">Faux TV Viewport</div>
+        </div>
+      </div>
+
+      <div class="test-viewport">
+        <h3>🖥️ Fullscreen Mode (Normal)</h3>
+        <div id="fullscreenTV" class="test-tv">
+          <div class="viewport-label">Fullscreen Overlay</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load game dependencies -->
+  <script src="js/global.js"></script>
+  <script src="js/avatar-resolver.js"></script>
+  <script src="js/results-popup.js"></script>
+
+  <script>
+    // Mock game state
+    window.game = {
+      cfg: {
+        fastForwardPreserveResultsModal: true
+      },
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' }
+      ]
+    };
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : 'Unknown';
+    };
+
+    const mockResults = [
+      { id: 1, name: 'Alice', score: 95.3 },
+      { id: 2, name: 'Bob', score: 87.1 },
+      { id: 3, name: 'Charlie', score: 72.8 }
+    ];
+
+    async function testInlineTV() {
+      const container = document.getElementById('inlineTV');
+      clearContainer(container);
+      
+      // Enable fast-forward mode to trigger inline TV rendering
+      window.game.__ffActive = true;
+      
+      await window.showResultsPopup({
+        title: 'HOH Competition',
+        phase: 'hoh',
+        topThree: mockResults,
+        winnerEmoji: '👑',
+        duration: 5000,
+        minDisplayTime: 3000
+      });
+      
+      console.log('[Test] Inline TV mode - horizontal layout');
+    }
+
+    async function testFullscreen() {
+      const container = document.getElementById('fullscreenTV');
+      clearContainer(container);
+      
+      // Disable fast-forward mode to trigger fullscreen rendering
+      window.game.__ffActive = false;
+      
+      // Temporarily override the append behavior to render in our test container
+      const originalAppend = document.body.appendChild;
+      document.body.appendChild = function(modal) {
+        if (modal.className === 'results-modal-overlay') {
+          container.appendChild(modal);
+          // Adjust modal styles for test container
+          modal.style.position = 'absolute';
+          modal.style.inset = '0';
+        } else {
+          originalAppend.call(document.body, modal);
+        }
+      };
+      
+      await window.showResultsPopup({
+        title: 'HOH Competition',
+        phase: 'hoh',
+        topThree: mockResults,
+        winnerEmoji: '👑',
+        duration: 5000,
+        minDisplayTime: 3000
+      });
+      
+      // Restore original append
+      document.body.appendChild = originalAppend;
+      
+      console.log('[Test] Fullscreen mode - vertical layout');
+    }
+
+    function clearContainer(container) {
+      const modalOverlay = container.querySelector('.results-modal-overlay');
+      if (modalOverlay) {
+        modalOverlay.remove();
+      }
+    }
+
+    function clearAll() {
+      clearContainer(document.getElementById('inlineTV'));
+      clearContainer(document.getElementById('fullscreenTV'));
+      console.log('[Test] Cleared all modals');
+    }
+
+    console.log('[Test] HOH Winner Modal Layout Test loaded');
+    console.log('[Test] Click buttons to test different layouts');
+  </script>
+</body>
+</html>
