@@ -147,6 +147,8 @@
         buzzer.addEventListener('touchend', (e) => {
           e.preventDefault();
           buzzer.style.transform = 'scale(1)';
+          // Call handleBuzzerClick directly since preventDefault blocks the synthesized click
+          handleBuzzerClick(i);
         });
         
         buzzerGrid.appendChild(buzzer);
