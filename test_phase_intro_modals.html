@@ -103,6 +103,12 @@
     button.eviction:hover {
       background: #9a6a6a;
     }
+    button.nomination {
+      background: #d5a53a;
+    }
+    button.nomination:hover {
+      background: #e5b54a;
+    }
     button.all-three {
       background: #5aa575;
     }
@@ -240,14 +246,38 @@
       <div class="status" id="eviction-status">Ready to test. Click the button above.</div>
     </div>
 
+    <!-- Nomination Ceremony Modal Test -->
+    <div class="test-section">
+      <h2>🔑 Nomination Ceremony Modal</h2>
+      <div class="modal-description">
+        The Nomination Ceremony modal features a key theme with floating key icons and a conditional "Check risk" feature.
+      </div>
+      <div class="modal-features">
+        <strong>Features:</strong>
+        <ul style="margin: 8px 0 0 20px; padding: 0;">
+          <li><strong>Title:</strong> "Nomination Ceremony"</li>
+          <li><strong>Icon:</strong> Key emoji (🔑) with golden glow effect</li>
+          <li><strong>Background:</strong> Floating key icons and golden particles</li>
+          <li><strong>Risk Check:</strong> Conditional button (visible when eligible: not HOH, not veto holder, not evicted, >4 players)</li>
+          <li><strong>Risk Display:</strong> Deterministic percentage with explanation</li>
+          <li><strong>Make a Deal:</strong> Uses FinalPlea API or safe fallback</li>
+          <li><strong>Dismissal:</strong> Click anywhere or press Escape</li>
+        </ul>
+      </div>
+      <div class="test-buttons">
+        <button class="nomination" onclick="testNominationModal()">Show Nomination Modal</button>
+      </div>
+      <div class="status" id="nomination-status">Ready to test. Click the button above.</div>
+    </div>
+
     <!-- Sequence Test -->
     <div class="test-section">
       <h2>🔄 Sequential Test</h2>
       <div class="modal-description">
-        Test all three modals in sequence to verify proper queueing and transitions.
+        Test all four modals in sequence to verify proper queueing and transitions.
       </div>
       <div class="test-buttons">
-        <button class="all-three" onclick="testAllModalsSequence()">Show All Three Modals</button>
+        <button class="all-three" onclick="testAllModalsSequence()">Show All Four Modals</button>
       </div>
       <div class="status" id="sequence-status">Ready to test sequential display.</div>
     </div>
@@ -350,24 +380,106 @@
       }
     }
 
+    async function testNominationModal() {
+      updateStatus('nomination-status', 'Opening Nomination Ceremony modal...');
+      
+      // Set up minimal game context for testing
+      if (!window.game) window.game = {};
+      window.game.humanId = 'player1';
+      window.game.hohId = 'player2';
+      window.game.phase = 'nominations';
+      
+      // Mock functions if not available
+      if (!window.getP) {
+        window.getP = function(id) {
+          return {
+            id: id,
+            name: id === 'player1' ? 'You' : 'HOH',
+            affinity: {},
+            reputation: 0.5,
+            threat: 0.5,
+            evicted: false
+          };
+        };
+      }
+      
+      if (!window.alivePlayers) {
+        window.alivePlayers = function() {
+          return [
+            { id: 'player1', name: 'You', evicted: false },
+            { id: 'player2', name: 'HOH', evicted: false },
+            { id: 'player3', name: 'Player 3', evicted: false },
+            { id: 'player4', name: 'Player 4', evicted: false },
+            { id: 'player5', name: 'Player 5', evicted: false },
+            { id: 'player6', name: 'Player 6', evicted: false }
+          ];
+        };
+      }
+      
+      try {
+        await window.showNominationIntroModal();
+        updateStatus('nomination-status', '✓ Nomination modal dismissed successfully', true);
+      } catch (e) {
+        updateStatus('nomination-status', '✗ Error: ' + e.message, false);
+        console.error(e);
+      }
+    }
+
     async function testAllModalsSequence() {
       updateStatus('sequence-status', 'Starting sequential test...');
       
+      // Set up minimal game context for nomination modal
+      if (!window.game) window.game = {};
+      window.game.humanId = 'player1';
+      window.game.hohId = 'player2';
+      window.game.phase = 'nominations';
+      
+      if (!window.getP) {
+        window.getP = function(id) {
+          return {
+            id: id,
+            name: id === 'player1' ? 'You' : 'HOH',
+            affinity: {},
+            reputation: 0.5,
+            threat: 0.5,
+            evicted: false
+          };
+        };
+      }
+      
+      if (!window.alivePlayers) {
+        window.alivePlayers = function() {
+          return [
+            { id: 'player1', name: 'You', evicted: false },
+            { id: 'player2', name: 'HOH', evicted: false },
+            { id: 'player3', name: 'Player 3', evicted: false },
+            { id: 'player4', name: 'Player 4', evicted: false },
+            { id: 'player5', name: 'Player 5', evicted: false },
+            { id: 'player6', name: 'Player 6', evicted: false }
+          ];
+        };
+      }
+      
       try {
-        updateStatus('sequence-status', '1/3: Showing Veto modal...');
+        updateStatus('sequence-status', '1/4: Showing Veto modal...');
         await window.showVetoIntroModal();
         
         await sleep(500);
         
-        updateStatus('sequence-status', '2/3: Showing Social Phase modal...');
+        updateStatus('sequence-status', '2/4: Showing Social Phase modal...');
         await window.showSocialPhaseIntroModal();
         
         await sleep(500);
         
-        updateStatus('sequence-status', '3/3: Showing Eviction modal...');
+        updateStatus('sequence-status', '3/4: Showing Eviction modal...');
         await window.showEvictionVoteIntroModal();
         
-        updateStatus('sequence-status', '✓ All three modals completed successfully!', true);
+        await sleep(500);
+        
+        updateStatus('sequence-status', '4/4: Showing Nomination modal...');
+        await window.showNominationIntroModal();
+        
+        updateStatus('sequence-status', '✓ All four modals completed successfully!', true);
       } catch (e) {
         updateStatus('sequence-status', '✗ Error during sequence: ' + e.message, false);
         console.error(e);
@@ -383,7 +495,8 @@
     console.log('Available functions:', {
       showVetoIntroModal: typeof window.showVetoIntroModal,
       showSocialPhaseIntroModal: typeof window.showSocialPhaseIntroModal,
-      showEvictionVoteIntroModal: typeof window.showEvictionVoteIntroModal
+      showEvictionVoteIntroModal: typeof window.showEvictionVoteIntroModal,
+      showNominationIntroModal: typeof window.showNominationIntroModal
     });
   </script>
 </body>

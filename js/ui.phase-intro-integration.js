@@ -110,6 +110,40 @@
   }
 
   /**
+   * Wrap startNominations to show intro modal first
+   */
+  function wrapStartNominations() {
+    const origStartNominations = global.startNominations;
+    
+    if (typeof origStartNominations === 'function' && !origStartNominations.__wrappedForPhaseIntro) {
+      global.startNominations = async function wrappedStartNominations() {
+        const g = global.game || {};
+        
+        // Check if we should show the intro modal
+        // Only show once per nominations phase
+        if (!g.__nominationsIntroShownThisPhase) {
+          g.__nominationsIntroShownThisPhase = true;
+          
+          // Show nominations intro modal if available
+          if (typeof global.showNominationIntroModal === 'function') {
+            try {
+              await global.showNominationIntroModal();
+            } catch (e) {
+              console.error('[phase-intro-integration] Error showing nominations intro modal:', e);
+            }
+          }
+        }
+        
+        // Call original function
+        return origStartNominations.apply(this, arguments);
+      };
+      
+      global.startNominations.__wrappedForPhaseIntro = true;
+      console.info('[phase-intro-integration] startNominations wrapped for intro modal');
+    }
+  }
+
+  /**
    * Reset phase intro flags when a new week starts
    */
   function resetPhaseIntroFlags() {
@@ -119,6 +153,7 @@
     g.__vetoIntroShownThisPhase = false;
     g.__socialIntroShownThisPhase = false;
     g.__evictionIntroShownThisPhase = false;
+    g.__nominationsIntroShownThisPhase = false;
     
     console.info('[phase-intro-integration] Phase intro flags reset for new week');
   }
@@ -132,6 +167,7 @@
       wrapStartVetoComp();
       wrapStartSocialIntermission();
       wrapStartLiveVote();
+      wrapStartNominations();
       
       // Hook into week reset if available
       const origOnNewWeek = global.socialOnNewWeek;
