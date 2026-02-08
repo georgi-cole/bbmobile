@@ -1589,22 +1589,10 @@
       // Check for fast-forward mode
       const ffActive = g.__ffActive || false;
 
-      // Show top-3 reveal card (condensed if fast-forward, full otherwise)
-      if (ffActive && g.__humanPlayedHOH) {
-        // Condensed reveal for fast-forward: brief status update
-        const scoredParticipants = participantIds.map(id => [id, g.lastCompScores.get(id)]);
-        const sortedByScore = scoredParticipants.sort((a, b) => b[1] - a[1]);
-        const winner = sortedByScore[0][0];
-        console.info(`[hoh] Fast-forward condensed reveal: Winner ${global.safeName(winner)}`);
-        if (window.TvStatus?.set) {
-          window.TvStatus.set(`HOH Winner: ${global.safeName(winner)}`, 'ok');
-        }
-        await new Promise(r => setTimeout(r, 600)); // Brief pause
-      } else {
-        // Full reveal sequence
-        await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
-        await waitCardsIdle();
-      }
+      // Always show full reveal sequence, even during fast-forward
+      // Users should see the winner and results when they skip
+      await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
+      await waitCardsIdle();
 
       // Determine winner from eligible participants
       // Filter out any players with score of 0 - they cannot win
