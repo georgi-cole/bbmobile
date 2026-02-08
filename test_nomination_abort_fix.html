@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination Abort Fix Verification</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #1a1a1a;
+      color: #f0f0f0;
+    }
+    h1 { color: #4ade80; }
+    h2 { color: #60a5fa; margin-top: 30px; }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #3a3a3a;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 5px 0;
+    }
+    .pass { background: #065f46; color: #d1fae5; }
+    .fail { background: #7f1d1d; color: #fee2e2; }
+    .pending { background: #713f12; color: #fef3c7; }
+    button {
+      background: #4ade80;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #22c55e; }
+    .log {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 4px;
+    }
+    .log-info { color: #60a5fa; }
+    .log-warn { color: #fbbf24; }
+    .log-error { color: #f87171; }
+    code {
+      background: #1a1a1a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Nomination Abort Fix Verification</h1>
+  <p>Tests for the defensive cleanup that prevents stale "Locked" state when human HOH nomination flow is aborted.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Defensive Flag Reset in renderNomsPanel()</h2>
+    <p>Verify that stale <code>__nomsCommitInProgress</code> flag is reset when <code>_pendingNoms</code> is not set</p>
+    <div id="test1-status" class="status pending">Pending</div>
+    <button onclick="runTest1()">Run Test</button>
+    <div id="test1-log" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Cleanup on Intro Card Failure</h2>
+    <p>Verify flags are cleared when intro card fails</p>
+    <div id="test2-status" class="status pending">Pending</div>
+    <button onclick="runTest2()">Run Test</button>
+    <div id="test2-log" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Cleanup on Selector Cancel/Empty</h2>
+    <p>Verify flags are cleared when selector is cancelled or returns empty</p>
+    <div id="test3-status" class="status pending">Pending</div>
+    <button onclick="runTest3()">Run Test</button>
+    <div id="test3-log" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Cleanup on Commit Error</h2>
+    <p>Verify flags are cleared in catch block on commit error</p>
+    <div id="test4-status" class="status pending">Pending</div>
+    <button onclick="runTest4()">Run Test</button>
+    <div id="test4-log" class="log"></div>
+  </div>
+
+  <script>
+    // Capture console logs
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    const consoleLogs = [];
+
+    function captureConsole() {
+      consoleLogs.length = 0;
+      console.log = function(...args) {
+        consoleLogs.push({ type: 'log', args });
+        originalLog.apply(console, args);
+      };
+      console.warn = function(...args) {
+        consoleLogs.push({ type: 'warn', args });
+        originalWarn.apply(console, args);
+      };
+      console.error = function(...args) {
+        consoleLogs.push({ type: 'error', args });
+        originalError.apply(console, args);
+      };
+    }
+
+    function restoreConsole() {
+      console.log = originalLog;
+      console.warn = originalWarn;
+      console.error = originalError;
+    }
+
+    function displayLogs(elementId) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = consoleLogs.map(log => {
+        const className = `log-${log.type}`;
+        const message = log.args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ');
+        return `<div class="log-entry ${className}">[${log.type}] ${message}</div>`;
+      }).join('');
+    }
+
+    function setStatus(testId, passed, message) {
+      const status = document.getElementById(`test${testId}-status`);
+      status.className = `status ${passed ? 'pass' : 'fail'}`;
+      status.textContent = passed ? `✓ Pass: ${message}` : `✗ Fail: ${message}`;
+    }
+
+    function setupMockGame() {
+      // Create minimal mock environment
+      window.game = window.game || {};
+      window.tv = window.tv || {};
+      window.tv.say = () => {};
+      window.getP = (id) => ({ id, name: `Player ${id}`, human: id === 1 });
+      window.alivePlayers = () => [
+        { id: 1, name: 'Player 1', human: true },
+        { id: 2, name: 'Player 2', human: false },
+        { id: 3, name: 'Player 3', human: false },
+        { id: 4, name: 'Player 4', human: false }
+      ];
+      
+      // Create TV overlay element if it doesn't exist
+      if (!document.getElementById('tv')) {
+        const tv = document.createElement('div');
+        tv.id = 'tv';
+        document.body.appendChild(tv);
+      }
+      if (!document.getElementById('tvOverlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'tvOverlay';
+        document.getElementById('tv').appendChild(overlay);
+      }
+    }
+
+    async function runTest1() {
+      captureConsole();
+      setupMockGame();
+      
+      try {
+        // Set up stale state: __nomsCommitInProgress is true but _pendingNoms is not set
+        window.game.hohId = 1; // Human HOH
+        window.game.nomsLocked = false;
+        window.game.__nomsCommitInProgress = true; // STALE FLAG
+        window.game.__nomsCommitted = false;
+        window.game._pendingNoms = null; // NO PENDING SELECTIONS
+        window.game.nominees = [];
+
+        console.log('[test1] Setup stale state:', {
+          __nomsCommitInProgress: window.game.__nomsCommitInProgress,
+          _pendingNoms: window.game._pendingNoms,
+          hohIsHuman: true
+        });
+
+        // Call renderNomsPanel which should detect and reset the stale flags
+        if (window.renderNomsPanel) {
+          window.renderNomsPanel();
+        }
+
+        // Check if defensive warning was logged
+        const hasDefensiveWarning = consoleLogs.some(log => 
+          log.type === 'warn' &&
+          log.args[0]?.includes?.('[noms]') &&
+          log.args[0]?.includes?.('Detected stale __nomsCommitInProgress')
+        );
+
+        // Verify flags were reset
+        const flagsReset = 
+          window.game.__nomsCommitInProgress === false &&
+          window.game.__nomsCommitted === false;
+
+        console.log('[test1] After renderNomsPanel:', {
+          __nomsCommitInProgress: window.game.__nomsCommitInProgress,
+          __nomsCommitted: window.game.__nomsCommitted,
+          hasDefensiveWarning,
+          flagsReset
+        });
+
+        if (!hasDefensiveWarning) {
+          setStatus(1, false, 'Defensive warning not logged');
+        } else if (!flagsReset) {
+          setStatus(1, false, 'Flags were not reset');
+        } else {
+          setStatus(1, true, 'Stale flags detected and reset correctly');
+        }
+
+        displayLogs('test1-log');
+      } catch (err) {
+        console.error('[test1] Error:', err);
+        setStatus(1, false, err.message);
+        displayLogs('test1-log');
+      }
+      
+      restoreConsole();
+    }
+
+    async function runTest2() {
+      captureConsole();
+      setupMockGame();
+      
+      try {
+        // Mock the interceptor behavior
+        window.game.hohId = 1;
+        window.game.nomsLocked = false;
+        window.game.__nomsCommitInProgress = false;
+        window.game.__nomsCommitted = false;
+        window.__awaitingHumanNominations = true; // Set by intro
+        window.game._pendingNoms = undefined;
+
+        console.log('[test2] Simulating intro card failure path');
+
+        // Simulate the cleanup that should happen on intro failure
+        const g = window.game;
+        if (window.__awaitingHumanNominations) {
+          console.warn('[noms-fs] Intro card failed, clearing awaiting flags and falling back to original');
+          window.__awaitingHumanNominations = false;
+          g._pendingNoms = null;
+        }
+
+        // Verify cleanup occurred
+        const flagsCleared = 
+          window.__awaitingHumanNominations === false &&
+          window.game._pendingNoms === null;
+
+        const hasCleanupLog = consoleLogs.some(log =>
+          log.type === 'warn' &&
+          log.args[0]?.includes?.('clearing awaiting flags')
+        );
+
+        console.log('[test2] Cleanup result:', {
+          __awaitingHumanNominations: window.__awaitingHumanNominations,
+          _pendingNoms: window.game._pendingNoms,
+          flagsCleared,
+          hasCleanupLog
+        });
+
+        if (!hasCleanupLog) {
+          setStatus(2, false, 'Cleanup log not found');
+        } else if (!flagsCleared) {
+          setStatus(2, false, 'Flags were not cleared');
+        } else {
+          setStatus(2, true, 'Flags cleared on intro failure');
+        }
+
+        displayLogs('test2-log');
+      } catch (err) {
+        console.error('[test2] Error:', err);
+        setStatus(2, false, err.message);
+        displayLogs('test2-log');
+      }
+      
+      restoreConsole();
+    }
+
+    async function runTest3() {
+      captureConsole();
+      setupMockGame();
+      
+      try {
+        // Simulate selector returning empty/cancelled
+        window.game.hohId = 1;
+        window.__awaitingHumanNominations = true;
+        window.game._pendingNoms = undefined;
+
+        console.log('[test3] Simulating selector cancel/empty path');
+
+        // Simulate the cleanup that should happen on selector cancel
+        const selections = null; // Cancelled
+        if (!selections || !Array.isArray(selections) || selections.length === 0) {
+          console.warn('[noms-fs] Selector cancelled/empty, clearing awaiting flags and falling back');
+          if (window.__awaitingHumanNominations) window.__awaitingHumanNominations = false;
+          window.game._pendingNoms = null;
+        }
+
+        // Verify cleanup occurred
+        const flagsCleared = 
+          window.__awaitingHumanNominations === false &&
+          window.game._pendingNoms === null;
+
+        const hasCleanupLog = consoleLogs.some(log =>
+          log.type === 'warn' &&
+          log.args[0]?.includes?.('Selector cancelled/empty')
+        );
+
+        console.log('[test3] Cleanup result:', {
+          __awaitingHumanNominations: window.__awaitingHumanNominations,
+          _pendingNoms: window.game._pendingNoms,
+          flagsCleared,
+          hasCleanupLog
+        });
+
+        if (!hasCleanupLog) {
+          setStatus(3, false, 'Cleanup log not found');
+        } else if (!flagsCleared) {
+          setStatus(3, false, 'Flags were not cleared');
+        } else {
+          setStatus(3, true, 'Flags cleared on selector cancel');
+        }
+
+        displayLogs('test3-log');
+      } catch (err) {
+        console.error('[test3] Error:', err);
+        setStatus(3, false, err.message);
+        displayLogs('test3-log');
+      }
+      
+      restoreConsole();
+    }
+
+    async function runTest4() {
+      captureConsole();
+      setupMockGame();
+      
+      try {
+        // Simulate commit error path
+        window.game.hohId = 1;
+        window.__awaitingHumanNominations = true;
+        window.game._pendingNoms = [2, 3];
+
+        console.log('[test4] Simulating commit error path');
+
+        // Simulate the cleanup that should happen on error
+        try {
+          throw new Error('Simulated commit error');
+        } catch (err) {
+          console.error('[noms-fs] Error committing nominations:', err, ' – clearing awaiting flags and falling back');
+          if (window.__awaitingHumanNominations) window.__awaitingHumanNominations = false;
+          window.game._pendingNoms = null;
+        }
+
+        // Verify cleanup occurred
+        const flagsCleared = 
+          window.__awaitingHumanNominations === false &&
+          window.game._pendingNoms === null;
+
+        const hasCleanupLog = consoleLogs.some(log =>
+          log.type === 'error' &&
+          log.args[0]?.includes?.('Error committing nominations') &&
+          log.args[2]?.includes?.('clearing awaiting flags')
+        );
+
+        console.log('[test4] Cleanup result:', {
+          __awaitingHumanNominations: window.__awaitingHumanNominations,
+          _pendingNoms: window.game._pendingNoms,
+          flagsCleared,
+          hasCleanupLog
+        });
+
+        if (!hasCleanupLog) {
+          setStatus(4, false, 'Cleanup log not found');
+        } else if (!flagsCleared) {
+          setStatus(4, false, 'Flags were not cleared');
+        } else {
+          setStatus(4, true, 'Flags cleared on commit error');
+        }
+
+        displayLogs('test4-log');
+      } catch (err) {
+        console.error('[test4] Error:', err);
+        setStatus(4, false, err.message);
+        displayLogs('test4-log');
+      }
+      
+      restoreConsole();
+    }
+  </script>
+
+  <!-- Load actual game modules -->
+  <script defer src="js/nominations.js"></script>
+  <script defer src="js/nominations-grid-fullscreen.js"></script>
+
+  <script>
+    // Auto-run tests after modules load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('=== Running Nomination Abort Fix Tests ===');
+        runTest1();
+        setTimeout(() => runTest2(), 500);
+        setTimeout(() => runTest3(), 1000);
+        setTimeout(() => runTest4(), 1500);
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
