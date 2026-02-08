@@ -180,7 +180,9 @@
           try {
             if (typeof global.setPhase === 'function') {
               console.info('[phase-intro-integration] Falling back to setPhase');
-              global.setPhase('nominations', { source: 'integration-fallback' });
+              const tNoms = g.cfg?.tNoms || 25;
+              const callback = () => global.lockNominationsAndProceed?.();
+              global.setPhase('nominations', tNoms, callback);
             }
           } catch (fallbackErr) {
             console.error('[phase-intro-integration] Fallback also failed:', fallbackErr);

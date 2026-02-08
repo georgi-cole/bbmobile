@@ -204,7 +204,7 @@
         customTextArea = document.createElement('textarea');
         customTextArea.placeholder = 'Or write your own custom message...';
         customTextArea.setAttribute('aria-label', 'Custom plea message to the Head of Household');
-        customTextArea.maxLength = 200;
+        customTextArea.maxLength = 300;
         customTextArea.rows = 3;
         customTextArea.style.cssText = `
           width: 100%;

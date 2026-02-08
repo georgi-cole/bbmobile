@@ -571,32 +571,9 @@
         } catch (err) {
           console.error('[phase-intro] NominationPlea error:', err);
           
-          // On error, use safe fallback
-          const message = prompt('What would you like to say to the Head of Household?');
-          
-          if (message && message.trim()) {
-            // Apply a small, bounded affinity increase
-            if (!hoh.affinity) hoh.affinity = {};
-            const currentAffinity = hoh.affinity[player.id] || 0.5;
-            const newAffinity = Math.min(1, currentAffinity + 0.08);
-            hoh.affinity[player.id] = newAffinity;
-            
-            // Small reputation penalty to avoid exploit
-            player.reputation = Math.max(0, (player.reputation || 0.5) - 0.03);
-            
-            // Store influence in game state
-            if (!g.__nomsPleaInfluence) {
-              g.__nomsPleaInfluence = {};
-            }
-            g.__nomsPleaInfluence[player.id] = 0.08;
-            
-            console.info('[phase-intro] Fallback plea accepted, affinity adjusted');
-            
-            alert("You've made your case to the HOH. Your relationship has improved slightly, but this move may affect how others perceive you.");
-          }
-          
+          // On error, skip plea (no native prompt fallback)
           const pleaCloseTime = Date.now();
-          console.info(`[phase-intro] Nomination plea closed (fallback) at ${new Date(pleaCloseTime).toISOString()} (duration: ${pleaCloseTime - pleaOpenTime}ms)`);
+          console.info(`[phase-intro] Nomination plea failed/skipped at ${new Date(pleaCloseTime).toISOString()} (duration: ${pleaCloseTime - pleaOpenTime}ms)`);
           
           dismiss();
         } finally {
