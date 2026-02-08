@@ -887,21 +887,15 @@
       // Build final standings
       const finalStandings = buildFinalStandings(totalTime);
       
-      // Winner-takes-all: raw score 100 for endurance winner
-      const rawScore = 100;
-      const winningScore = g.MinigameScoring ? 
-        g.MinigameScoring.calculateFinalScore({
-          rawScore: rawScore,
-          minScore: 0,
-          maxScore: 100,
-          compBeast: 0.5
-        }) :
-        rawScore * 10; // Fallback: scale to 0-1000
+      // Winner-takes-all: exact score 100 for endurance winner
+      // Hold Wall uses special scoring: 100 for winner, 0 for everyone else
+      // This bypasses the standard scoring system (0-1000 scale) per game requirements
+      const winningScore = 100;
       
-      console.log(`[HoldWall] Player wins! Duration: ${(totalTime/1000).toFixed(1)}s, Final score: ${Math.round(winningScore)}`);
+      console.log(`[HoldWall] Player wins! Duration: ${(totalTime/1000).toFixed(1)}s, Final score: ${winningScore}`);
       
       // Show results popup
-      showResults(finalStandings, Math.round(winningScore));
+      showResults(finalStandings, winningScore);
     }
     
     /**
@@ -1110,21 +1104,12 @@
       // Check if during deal window
       const duringDealWindow = isInDealWindow && rivalName;
       
-      // Player loses in endurance game (raw score = 0 for non-winners)
-      const rawScore = 0;
+      // Player loses in endurance game (exact score = 0 for non-winners)
+      // Hold Wall uses special scoring: 100 for winner, 0 for everyone else
+      // This bypasses the standard scoring system (0-1000 scale) per game requirements
+      const finalScore = 0;
       
-      // Use centralized scoring system (SCALE=1000)
-      // For endurance games, non-winners get 0
-      const finalScore = g.MinigameScoring ? 
-        g.MinigameScoring.calculateFinalScore({
-          rawScore: rawScore,
-          minScore: 0,
-          maxScore: 100,
-          compBeast: 0.5
-        }) :
-        0; // Fallback: 0 for loss
-      
-      console.log(`[HoldWall] Player dropped at ${(holdDuration/1000).toFixed(1)}s, Final score: ${Math.round(finalScore)}`);
+      console.log(`[HoldWall] Player dropped at ${(holdDuration/1000).toFixed(1)}s, Final score: ${finalScore}`);
       
       if(moved){
         // Player moved
@@ -1212,7 +1197,7 @@
       }
       
       // Show results popup
-      showResults(finalStandings, Math.round(finalScore));
+      showResults(finalStandings, finalScore);
     }
     
     // Global mouse/touch release handlers
