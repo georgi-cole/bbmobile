@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold Wall Fix - Simple Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 30px;
+    }
+    
+    .minigame-container {
+      margin: 20px auto;
+      max-width: 800px;
+    }
+    
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 3px solid #83bfff;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .success {
+      background: rgba(102, 255, 102, 0.1);
+      border-left: 3px solid #66ff66;
+      color: #66ff66;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .error {
+      background: rgba(255, 107, 107, 0.1);
+      border-left: 3px solid #ff6b6b;
+      color: #ff6b6b;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Hold Wall Fix - Simple Test</h1>
+    
+    <div class="info">
+      <strong>Instructions:</strong><br>
+      1. Click "Start Game" to load the Hold Wall minigame<br>
+      2. Click and hold on the WALL button to start<br>
+      3. Release after 2-3 seconds (before any AI drops)<br>
+      4. Check the results popup - the winner should be one of the AI players who are still holding, NOT a player who dropped early<br>
+      5. Check the console for the debug log: <code>[HoldWall] Final standings (lose path): ...</code>
+    </div>
+    
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn" onclick="startGame()">▶ Start Game</button>
+    </div>
+    
+    <div id="minigame" class="minigame-container"></div>
+    
+    <div id="result"></div>
+  </div>
+
+  <script>
+    // Mock global objects needed by hold-wall.js
+    window.game = {
+      players: [
+        { id: 'p1', name: 'You', human: true, evicted: false },
+        { id: 'p2', name: 'Ivy', human: false, evicted: false },
+        { id: 'p3', name: 'Finn', human: false, evicted: false },
+        { id: 'p4', name: 'Mimi', human: false, evicted: false },
+        { id: 'p5', name: 'Rune', human: false, evicted: false },
+        { id: 'p6', name: 'Alex', human: false, evicted: false }
+      ],
+      povPlayers: ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
+      phase: 'pov',
+      cfg: {}
+    };
+    
+    // Mock avatar resolver
+    window.resolveAvatar = function(player) {
+      const name = typeof player === 'string' ? player : (player?.name || 'Player');
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+    };
+    
+    // Intercept showResultsPopup to verify winner
+    const originalShowResultsPopup = window.showResultsPopup;
+    window.showResultsPopup = function(options) {
+      console.log('[TEST] Results popup called with:', options);
+      
+      const topThree = options.topThree || [];
+      const resultDiv = document.getElementById('result');
+      
+      if (topThree.length > 0) {
+        const winner = topThree[0];
+        const winnerName = winner.name || winner;
+        
+        let html = '<div style="margin: 20px 0;">';
+        html += '<h2 style="color: #83bfff;">Results:</h2>';
+        html += '<p><strong>Winner:</strong> ' + winnerName + '</p>';
+        html += '<p><strong>Top 3:</strong></p>';
+        html += '<ol>';
+        topThree.forEach(p => {
+          const name = p.name || p;
+          const time = p.timeMs ? `(${(p.timeMs/1000).toFixed(1)}s)` : '';
+          html += '<li>' + name + ' ' + time + '</li>';
+        });
+        html += '</ol>';
+        
+        // Check if winner is correct (should be one of the still-holding players)
+        const playerNames = ['Ivy', 'Finn', 'Mimi', 'Rune', 'Alex'];
+        if (playerNames.includes(winnerName) && winnerName !== 'You') {
+          html += '<div class="success">✓ TEST PASSED: ' + winnerName + ' is shown as winner (an AI who was still holding)</div>';
+        } else if (winnerName === 'You') {
+          html += '<div class="error">✗ TEST FAILED: "You" should not be the winner (player dropped first)</div>';
+        } else {
+          html += '<div class="error">✗ TEST FAILED: Unexpected winner</div>';
+        }
+        html += '</div>';
+        
+        resultDiv.innerHTML = html;
+      }
+      
+      // Call original if it exists
+      if (originalShowResultsPopup) {
+        return originalShowResultsPopup(options);
+      }
+      return Promise.resolve();
+    };
+    
+    function startGame() {
+      const container = document.getElementById('minigame');
+      container.innerHTML = '';
+      document.getElementById('result').innerHTML = '';
+      
+      // Load hold-wall.js
+      const script = document.createElement('script');
+      script.src = 'js/minigames/hold-wall.js';
+      script.onload = function() {
+        console.log('[TEST] hold-wall.js loaded');
+        
+        setTimeout(function() {
+          if (!window.MiniGames || !window.MiniGames.holdWall) {
+            document.getElementById('result').innerHTML = '<div class="error">✗ Failed to load MiniGames.holdWall</div>';
+            return;
+          }
+          
+          // Render the game
+          window.MiniGames.holdWall.render(container, function(score) {
+            console.log('[TEST] Game completed with score:', score);
+          }, { 
+            seed: 12345,
+            competitionType: 'pov'
+          });
+          
+          console.log('[TEST] Game rendered. Click and hold the WALL, then release.');
+        }, 100);
+      };
+      
+      script.onerror = function() {
+        document.getElementById('result').innerHTML = '<div class="error">✗ Failed to load hold-wall.js</div>';
+      };
+      
+      document.head.appendChild(script);
+    }
+  </script>
+</body>
+</html>

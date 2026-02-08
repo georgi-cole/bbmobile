@@ -1104,7 +1104,7 @@
       // BUGFIX: Set dropTimeMs on the player's participant object
       // This ensures the player is properly excluded from stillHolding participants
       const playerParticipant = participants.find(p => p.isPlayer);
-      if(playerParticipant){
+      if (playerParticipant) {
         playerParticipant.dropTimeMs = holdDuration;
       }
       
