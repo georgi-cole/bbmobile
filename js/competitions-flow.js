@@ -1764,7 +1764,7 @@
     // This flag is checked in veto.js finishVetoComp to skip duplicate reveal
     if(phase === 'pov' || phase === 'veto_comp' || phase === 'veto'){
       g.__vetoResultsShown = true;
-      console.info('[ImmediateResults] Marked POV results as shown to prevent redundant display');
+      console.info(`[ImmediateResults][${phase}] Marked POV results as shown to prevent redundant display`);
     }
     
     // Build scores map and IDs for inline reveal
@@ -1780,33 +1780,43 @@
     // Determine competition title
     const title = (phase === 'hoh') ? 'HOH Competition'
                 : (phase === 'pov' || phase === 'veto_comp' || phase === 'veto') ? 'Veto Competition'
+                : (phase?.startsWith('final3_comp1')) ? 'Final 3 Part 1'
+                : (phase?.startsWith('final3_comp2')) ? 'Final 3 Part 2'
+                : (phase?.startsWith('final3_comp3')) ? 'Final HOH Competition'
                 : (phase?.startsWith('final3')) ? 'Final 3 Competition'
                 : 'Competition';
     
+    console.info(`[ImmediateResults][${phase}] Starting results display for: ${title}`);
+    
     shortenPhaseToOneSecond();
     
-    // Try inline reveal API first (preferred)
+    // Check for feature flag override to force inline results
+    const forceInline = g.cfg?.forceInlineResults === true;
+    
+    // Try inline reveal API first (preferred, or forced)
     const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
-    if(inlineRevealAvailable && ids.length > 0){
-      console.info('[ImmediateResults] Using inline reveal API:', title);
+    if(inlineRevealAvailable && (ids.length > 0 || forceInline)){
+      console.info(`[ImmediateResults][${phase}] Using inline reveal API (forced: ${forceInline}):`, title);
       try{
         const promise = global.showCompetitionReveal(title, scores, ids);
         if(promise && typeof promise.then === 'function'){
           await promise;
-          console.info('[ImmediateResults] Inline reveal finished – resolving phase');
+          console.info(`[ImmediateResults][${phase}] Inline reveal finished – resolving phase`);
         }
         resolveCompetitionPhaseIfNeeded();
         return;
       }catch(err){
-        console.warn('[ImmediateResults] Inline reveal error, falling back to popup:', err);
+        console.warn(`[ImmediateResults][${phase}] Inline reveal error, falling back to popup:`, err);
         // Fall through to popup fallback
       }
+    } else if (!inlineRevealAvailable) {
+      console.warn(`[ImmediateResults][${phase}] Inline reveal API not available`);
     }
     
     // Fallback to popup API if inline reveal unavailable or failed
     const popupAvailable = typeof global.showResultsPopup === 'function';
     if(!popupAvailable){
-      console.warn('[ImmediateResults] Neither inline reveal nor popup available – advancing without display');
+      console.warn(`[ImmediateResults][${phase}] Neither inline reveal nor popup available – advancing without display`);
       resolveCompetitionPhaseIfNeeded();
       return;
     }
@@ -1825,25 +1835,25 @@
       }
     }
     
-    console.info('[ImmediateResults] Using popup fallback:', title, topThree);
+    console.info(`[ImmediateResults][${phase}] Using popup fallback:`, title, topThree);
     try{
       const promise = global.showResultsPopup({ title, topThree, winnerEmoji: '🏆', duration: RESULTS_POPUP_DURATION });
       if(promise && typeof promise.then === 'function'){
         promise.then(() => {
-          console.info('[ImmediateResults] Results popup finished – resolving phase');
+          console.info(`[ImmediateResults][${phase}] Results popup finished – resolving phase`);
           resolveCompetitionPhaseIfNeeded();
         }).catch(err => {
-          console.warn('[ImmediateResults] Popup promise error, resolving anyway:', err);
+          console.warn(`[ImmediateResults][${phase}] Popup promise error, resolving anyway:`, err);
           resolveCompetitionPhaseIfNeeded();
         });
       } else {
         setTimeout(() => {
-          console.info('[ImmediateResults] Popup duration elapsed – resolving phase');
+          console.info(`[ImmediateResults][${phase}] Popup duration elapsed – resolving phase`);
           resolveCompetitionPhaseIfNeeded();
         }, RESULTS_POPUP_DURATION);
       }
     }catch(err){
-      console.warn('[ImmediateResults] Failed to show popup – resolving immediately:', err);
+      console.warn(`[ImmediateResults][${phase}] Failed to show popup – resolving immediately:`, err);
       resolveCompetitionPhaseIfNeeded();
     }
   }
