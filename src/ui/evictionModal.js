@@ -34,17 +34,13 @@
       // Store current focus to restore later
       previousFocus = document.activeElement;
 
-      // Create modal root if it doesn't exist
-      let modalRoot = document.getElementById('eviction-modal-root');
-      if (!modalRoot) {
-        modalRoot = document.createElement('div');
-        modalRoot.id = 'eviction-modal-root';
-        document.body.appendChild(modalRoot);
-      }
+      // Get TV viewport container for inline mounting
+      const tvViewport = document.querySelector('.tvViewport') || document.querySelector('#tv');
+      const container = tvViewport || document.body;
 
-      // Create modal layer
+      // Create modal layer (inline within TV if available)
       const layer = document.createElement('div');
-      layer.className = 'eviction-modal-layer';
+      layer.className = tvViewport ? 'eviction-modal-overlay eviction-modal-inline' : 'eviction-modal-layer';
       layer.setAttribute('role', 'dialog');
       layer.setAttribute('aria-modal', 'true');
       layer.setAttribute('aria-labelledby', 'eviction-modal-title');
@@ -94,7 +90,7 @@
       card.appendChild(closeBtn);
 
       layer.appendChild(card);
-      modalRoot.appendChild(layer);
+      container.appendChild(layer);
 
       currentModal = layer;
 
@@ -135,7 +131,7 @@
     if (!currentModal) return;
 
     const layer = currentModal;
-    layer.classList.add('fade-out');
+    layer.classList.add('leaving');
 
     setTimeout(() => {
       if (layer.parentNode) {
@@ -152,7 +148,7 @@
         }
       }
       previousFocus = null;
-    }, 200); // Match CSS fade-out duration
+    }, 300); // Match CSS fade-out duration
   }
 
   /**
