@@ -421,9 +421,18 @@
     currentModal = null;
   }
 
+  /**
+   * Check if plea is currently active
+   * @returns {boolean}
+   */
+  function isActive() {
+    return currentModal !== null;
+  }
+
   // Public API
   NominationPlea.show = show;
   NominationPlea.cleanup = cleanup;
+  NominationPlea.isActive = isActive;
 
   // Export to global
   global.NominationPlea = NominationPlea;

@@ -558,8 +558,8 @@
             
             // Show result feedback to user
             const resultMsg = pleaResult.successful 
-              ? "Your plea resonated with the HOH. Your relationship has improved slightly."
-              : "You've made your case, but the HOH seems unmoved.";
+              ? 'Your plea resonated with the HOH. Your relationship has improved slightly.'
+              : 'You\'ve made your case, but the HOH seems unmoved.';
             
             alert(resultMsg);
           } else {
@@ -1099,7 +1099,6 @@
   global.showSocialPhaseIntroModal = showSocialPhaseIntroModal;
   global.showEvictionVoteIntroModal = showEvictionVoteIntroModal;
   global.showNominationIntroModal = showNominationIntroModal;
-  global.NominationPlea = NominationPlea;
 
   console.info('[ui.phase-intro-modals] Phase intro modal system initialized');
 
