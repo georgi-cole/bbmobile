@@ -184,6 +184,10 @@
         }
         
         // Safety watchdog: ensure nominations start even if modal/wrap path gets stuck
+        // Note: Checking phase==='nominations' is sufficient because:
+        // 1. If flow started normally and progressed, phase would have changed
+        // 2. Original startNominations has guard: if(phase==='nominations') renderPanel()
+        // 3. Multiple calls are safe - function is idempotent when phase is correct
         setTimeout(() => {
           try {
             const g2 = global.game || {};
