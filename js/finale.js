@@ -175,8 +175,55 @@
   // Helper: Start new season flow without full reload
   function startNewSeasonFlow() {
     console.info('[new-season] starting new season flow');
-    
-    // Clear all competition locks to ensure Week 1 is available in the new season
+
+    // 1) Attempt to abort any active TV sequences / overlays
+    try {
+      if (g.TVSequence && typeof g.TVSequence.abort === 'function') {
+        g.TVSequence.abort();
+        console.info('[new-season] TVSequence aborted');
+      }
+      if (g.TVCards && typeof g.TVCards.clearAll === 'function') {
+        try { g.TVCards.clearAll(); console.info('[new-season] TVCards cleared'); } catch(e){/*ignore*/ }
+      }
+    } catch (e) {
+      console.warn('[new-season] failed to abort TVSequence/TVCards:', e);
+    }
+
+    // 2) Destroy finale-related singletons (FinalFaceoff, etc.)
+    try {
+      if (typeof window.FinalFaceoff?.destroy === 'function') {
+        window.FinalFaceoff.destroy();
+        console.info('[new-season] FinalFaceoff destroyed');
+      }
+    } catch (e) {
+      console.warn('[new-season] failed to destroy FinalFaceoff:', e);
+    }
+
+    // 3) Clear persistent winner / tv area and remove ephemeral DOM nodes
+    try {
+      const tv = document.getElementById('tv');
+      if (tv) {
+        tv.innerHTML = '';
+        tv.classList.remove('tvTall');
+        console.info('[new-season] tv content cleared');
+      }
+
+      // Remove any ephemeral cards left in DOM (defensive)
+      document.querySelectorAll('[data-ephemeral], [data-ui-card]').forEach(el => {
+        try { el.remove(); } catch (e) { /* ignore individual failures */ }
+      });
+      console.info('[new-season] ephemeral UI removed');
+    } catch (e) {
+      console.warn('[new-season] failed during DOM cleanup:', e);
+    }
+
+    // 4) Hide the finale modal
+    const dim = document.querySelector('.cinDim');
+    if (dim) {
+      try { dim.remove(); } catch(e) { console.warn('[new-season] failed to remove finale modal:', e); }
+    }
+
+    // 5) Clear competition locks + logs (existing behavior)
     try {
       if (g.CompLocks && typeof g.CompLocks.clearAllLocks === 'function') {
         g.CompLocks.clearAllLocks();
@@ -185,23 +232,15 @@
     } catch(e) {
       console.warn('[new-season] failed to clear competition locks:', e);
     }
-    
-    // Hide the finale modal
-    const dim = document.querySelector('.cinDim');
-    if (dim) {
-      try { dim.remove(); } catch(e) { console.warn('[new-season] failed to remove finale modal:', e); }
-    }
-    
-    // Clear logs for fresh season
+
     ['log','logGame','logSocial','logVote','logJury'].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.innerHTML='';
     });
-    
-    // Try to use modern API for smooth restart
+
+    // 6) Rebuild game (same as before) but with a short, deliberate delay
     const API = g.Game || g;
-    
-    // Rebuild game (false = don't preserve players, create new cast)
+
     if (typeof API.rebuildGame === 'function') {
       console.info('[new-season] calling rebuildGame(false) to build new cast');
       API.rebuildGame(false);
@@ -219,8 +258,8 @@
       }
       return;
     }
-    
-    // Start the game immediately with the new roster
+
+    // 7) Start the new season only after giving rebuild a moment to finish
     setTimeout(() => {
       console.info('[new-season] Starting new season directly');
       if (typeof API.startOpeningSequence === 'function') {
@@ -228,7 +267,7 @@
       } else {
         console.warn('[new-season] startOpeningSequence not available');
       }
-    }, 200);
+    }, 300);
   }
 
   function showFinaleCinematic(winnerId){
