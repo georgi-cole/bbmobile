@@ -98,7 +98,7 @@
   }
   
   // Expose diagnostic function for runtime queries
-  global.ResultsGuard = {
+  global.__resultsGuard = {
     getAvailability: function() {
       return {
         showCompetitionReveal: typeof global.showCompetitionReveal === 'function',
@@ -109,13 +109,18 @@
       };
     },
     
-    logDiagnostics: function() {
+    logStatus: function() {
       const availability = this.getAvailability();
+      console.group('[ResultsGuard] Results API Diagnostics');
       console.table(availability);
+      console.groupEnd();
       return availability;
     }
   };
   
-  console.info('[ResultsGuard] Initialization complete. Use ResultsGuard.logDiagnostics() for details.');
+  // Also expose as ResultsGuard for backward compatibility
+  global.ResultsGuard = global.__resultsGuard;
+  
+  console.info('[ResultsGuard] Initialization complete. Use __resultsGuard.logStatus() or ResultsGuard.logStatus() for details.');
   
 })(window);

@@ -2215,87 +2215,62 @@
     g.__f3p1Winner = winner;
     global.addLog(`Final 3 Part 1: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
     
-    // Try inline reveal first (preferred)
+    // Primary path: Try inline reveal first (preferred)
     const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
     if (inlineRevealAvailable) {
-      console.info('[F3P1] Using inline reveal API for Final 3 Part 1 results');
+      console.info('[F3P1] 🎯 PRIMARY PATH: Using inline reveal API for Final 3 Part 1 results');
       try {
         await global.showCompetitionReveal('Final 3 Part 1', g.lastCompScores, ids);
         await waitCardsIdle();
-        console.info('[F3P1] Inline reveal completed successfully');
+        console.info('[F3P1] ✅ Inline reveal completed successfully');
         // Auto-advance to Part 2
         startF3P2(losers);
         return;
       } catch (e) {
-        console.warn('[F3P1] Inline reveal error, falling back to cinematics:', e);
-        // Fall through to cinematic fallback
+        console.warn('[F3P1] ⚠️ Inline reveal error, falling back to popup shim:', e);
+        // Fall through to popup fallback
       }
     }
     
-    // Fallback to cinematics if inline reveal unavailable or failed
-    console.info('[F3P1] Using cinematic fallback for Final 3 Part 1 results');
-    
-    // Check if optimized pacing is enabled
-    const useOptimizedPacing = isF3OptimizedPacingEnabled();
-    
-    if (useOptimizedPacing) {
-      // Get all scores for fullscreen modal (winner + 2nd + 3rd)
-      const scoreboard = buildScoreboardArray(g.lastCompScores, ids);
-      const skipRequested = g.__skipRequested;
-      const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
-      
-      // Prepare scores for cinematic display
-      const scoresForDisplay = [];
-      if (scoreboard[0]) {
-        scoresForDisplay.push({
-          name: scoreboard[0].name,
-          score: (g.lastCompScores?.get(scoreboard[0].id) || 0).toFixed(1),
-          medal: '🏆'
+    // Fallback to showResultsPopup shim if inline reveal unavailable or failed
+    // Do NOT use FinaleCinematics as primary path
+    console.info('[F3P1] 🔄 FALLBACK PATH: Using showResultsPopup shim for Final 3 Part 1 results');
+    const popupAvailable = typeof global.showResultsPopup === 'function';
+    if (popupAvailable) {
+      try {
+        // Build topThree array from scores
+        const scoreboard = buildScoreboardArray(g.lastCompScores, ids);
+        const topThree = scoreboard.slice(0, 3).map(entry => ({
+          id: entry.id,
+          name: entry.name,
+          score: g.lastCompScores?.get(entry.id) || 0,
+          rawScoreDisplay: g.lastCompScoresMeta?.get(entry.id)?.rawScoreDisplay,
+          isNewPersonalBest: g.lastCompScoresMeta?.get(entry.id)?.isNewPersonalBest
+        }));
+        
+        await global.showResultsPopup({
+          title: 'Final 3 Part 1',
+          phase: 'final3_comp1',
+          topThree: topThree,
+          winnerEmoji: '👑',
+          duration: 5000,
+          rawScoreMode: topThree[0]?.rawScoreDisplay ? true : false,
+          isNewPersonalBest: topThree[0]?.isNewPersonalBest || false
         });
+        await waitCardsIdle();
+        console.info('[F3P1] ✅ Popup fallback completed');
+        // Auto-advance to Part 2
+        startF3P2(losers);
+        return;
+      } catch (e) {
+        console.warn('[F3P1] ⚠️ Popup fallback error:', e);
+        // Continue with flow even if display failed
       }
-      if (scoreboard[1]) {
-        scoresForDisplay.push({
-          name: scoreboard[1].name,
-          score: (g.lastCompScores?.get(scoreboard[1].id) || 0).toFixed(1),
-          medal: '🥈'
-        });
-      }
-      if (scoreboard[2]) {
-        scoresForDisplay.push({
-          name: scoreboard[2].name,
-          score: (g.lastCompScores?.get(scoreboard[2].id) || 0).toFixed(1),
-          medal: '🥉'
-        });
-      }
-      
-      // Show fullscreen results modal with all scores
-      if (global.FinaleCinematics?.showPart1ResultsWithScores) {
-        try {
-          await global.FinaleCinematics.showPart1ResultsWithScores(winner, scoresForDisplay);
-        } catch (e) {
-          console.warn('[F3P1] Cinematic error:', e);
-        }
-      }
-      
-      // Auto-advance to Part 2 (no idle wait)
-      startF3P2(losers);
-    } else {
-      // Legacy flow: show cinematic with longer delays
-      if (global.FinaleCinematics?.showPart1WinnerCinematic) {
-        try {
-          await global.FinaleCinematics.showPart1WinnerCinematic(winner);
-        } catch (e) {
-          console.warn('[F3P1] Cinematic error:', e);
-          safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', 4500, true);
-          await new Promise(resolve => setTimeout(resolve, 4600));
-        }
-      } else {
-        safeShowCard('🏆 F3 Part 1 Winner', [global.safeName(winner), 'Advances directly to Part 3!'], 'hoh', 4500, true);
-        await new Promise(resolve => setTimeout(resolve, 4600));
-      }
-      
-      startF3P2(losers);
     }
+    
+    // Last resort: Continue without displaying results (avoid FinaleCinematics as primary)
+    console.warn('[F3P1] ⚠️ No results display available - continuing without visual feedback');
+    startF3P2(losers);
   }
 
   function renderF3P2(panel) {
@@ -2527,81 +2502,62 @@
     g.__f3p2Winner = winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
     
-    // Try inline reveal first (preferred)
+    // Primary path: Try inline reveal first (preferred)
     const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
     if (inlineRevealAvailable) {
-      console.info('[F3P2] Using inline reveal API for Final 3 Part 2 results');
+      console.info('[F3P2] 🎯 PRIMARY PATH: Using inline reveal API for Final 3 Part 2 results');
       try {
         await global.showCompetitionReveal('Final 3 Part 2', g.lastCompScores, duo);
         await waitCardsIdle();
-        console.info('[F3P2] Inline reveal completed successfully');
+        console.info('[F3P2] ✅ Inline reveal completed successfully');
         // Auto-advance to Part 3
         startF3P3();
         return;
       } catch (e) {
-        console.warn('[F3P2] Inline reveal error, falling back to cinematics:', e);
-        // Fall through to cinematic fallback
+        console.warn('[F3P2] ⚠️ Inline reveal error, falling back to popup shim:', e);
+        // Fall through to popup fallback
       }
     }
     
-    // Fallback to cinematics if inline reveal unavailable or failed
-    console.info('[F3P2] Using cinematic fallback for Final 3 Part 2 results');
-    
-    // Check if optimized pacing is enabled
-    const useOptimizedPacing = isF3OptimizedPacingEnabled();
-    
-    if (useOptimizedPacing) {
-      // Get both scores for fullscreen modal (winner + 2nd)
-      const scoreboard = buildScoreboardArray(g.lastCompScores, duo);
-      const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
-      
-      // Prepare scores for cinematic display
-      const scoresForDisplay = [];
-      if (scoreboard[0]) {
-        scoresForDisplay.push({
-          name: scoreboard[0].name,
-          score: (g.lastCompScores?.get(scoreboard[0].id) || 0).toFixed(1),
-          medal: '🏆'
+    // Fallback to showResultsPopup shim if inline reveal unavailable or failed
+    // Do NOT use FinaleCinematics as primary path
+    console.info('[F3P2] 🔄 FALLBACK PATH: Using showResultsPopup shim for Final 3 Part 2 results');
+    const popupAvailable = typeof global.showResultsPopup === 'function';
+    if (popupAvailable) {
+      try {
+        // Build topThree array from scores
+        const scoreboard = buildScoreboardArray(g.lastCompScores, duo);
+        const topThree = scoreboard.slice(0, 2).map(entry => ({
+          id: entry.id,
+          name: entry.name,
+          score: g.lastCompScores?.get(entry.id) || 0,
+          rawScoreDisplay: g.lastCompScoresMeta?.get(entry.id)?.rawScoreDisplay,
+          isNewPersonalBest: g.lastCompScoresMeta?.get(entry.id)?.isNewPersonalBest
+        }));
+        
+        await global.showResultsPopup({
+          title: 'Final 3 Part 2',
+          phase: 'final3_comp2',
+          topThree: topThree,
+          winnerEmoji: '👑',
+          duration: 5000,
+          rawScoreMode: topThree[0]?.rawScoreDisplay ? true : false,
+          isNewPersonalBest: topThree[0]?.isNewPersonalBest || false
         });
+        await waitCardsIdle();
+        console.info('[F3P2] ✅ Popup fallback completed');
+        // Auto-advance to Part 3
+        startF3P3();
+        return;
+      } catch (e) {
+        console.warn('[F3P2] ⚠️ Popup fallback error:', e);
+        // Continue with flow even if display failed
       }
-      if (scoreboard[1]) {
-        scoresForDisplay.push({
-          name: scoreboard[1].name,
-          score: (g.lastCompScores?.get(scoreboard[1].id) || 0).toFixed(1),
-          medal: '🥈'
-        });
-      }
-      
-      // Show fullscreen results modal with both scores
-      if (global.FinaleCinematics?.showPart2ResultsWithScores) {
-        try {
-          await global.FinaleCinematics.showPart2ResultsWithScores(winner, scoresForDisplay);
-        } catch (e) {
-          console.warn('[F3P2] Cinematic error:', e);
-        }
-      }
-      
-      // Auto-advance to Part 3 (no idle wait)
-      startF3P3();
-    } else {
-      // Legacy flow: show cinematic with longer delays
-      if (global.FinaleCinematics?.showPart2WinnerCinematic) {
-        try {
-          await global.FinaleCinematics.showPart2WinnerCinematic(winner);
-        } catch (e) {
-          console.warn('[F3P2] Cinematic error:', e);
-          const delay = skipRequested ? 1500 : 4500;
-          safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
-          await new Promise(resolve => setTimeout(resolve, delay + 100));
-        }
-      } else {
-        const delay = skipRequested ? 1500 : 4500;
-        safeShowCard('🏆 F3 Part 2 Winner', [global.safeName(winner), 'Advances to Part 3!'], 'hoh', delay);
-        await new Promise(resolve => setTimeout(resolve, delay + 100));
-      }
-      
-      startF3P3();
     }
+    
+    // Last resort: Continue without displaying results (avoid FinaleCinematics as primary)
+    console.warn('[F3P2] ⚠️ No results display available - continuing without visual feedback');
+    startF3P3();
   }
 
   function renderF3P3(panel) {
@@ -2911,14 +2867,14 @@
 
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`, 'ok');
     
-    // Try inline reveal first (preferred)
+    // Primary path: Try inline reveal first (preferred)
     const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
     if (inlineRevealAvailable) {
-      console.info('[F3P3] Using inline reveal API for Final HOH results');
+      console.info('[F3P3] 🎯 PRIMARY PATH: Using inline reveal API for Final HOH results');
       try {
         await global.showCompetitionReveal('Final HOH Competition', g.lastCompScores, finalists);
         await waitCardsIdle();
-        console.info('[F3P3] Inline reveal completed successfully');
+        console.info('[F3P3] ✅ Inline reveal completed successfully');
         
         // Check if optimized pacing is enabled for next phase decision
         const useOptimizedPacing = isF3OptimizedPacingEnabled();
@@ -2940,75 +2896,77 @@
         }
         return;
       } catch (e) {
-        console.warn('[F3P3] Inline reveal error, falling back to cinematics:', e);
-        // Fall through to cinematic fallback
+        console.warn('[F3P3] ⚠️ Inline reveal error, falling back to popup shim:', e);
+        // Fall through to popup fallback
       }
     }
     
-    // Fallback to cinematics if inline reveal unavailable or failed
-    console.info('[F3P3] Using cinematic fallback for Final HOH results');
-    
-    // Check if optimized pacing is enabled
-    const useOptimizedPacing = isF3OptimizedPacingEnabled();
-    
-    if (useOptimizedPacing) {
-      // Get both finalist scores for fullscreen modal
-      const scoreboard = buildScoreboardArray(g.lastCompScores, finalists);
-      const revealDuration = skipRequested ? F3_UI_TIMING.revealCardShortMs : F3_UI_TIMING.revealCardMs;
-      
-      // Prepare scores for cinematic display
-      const scoresForDisplay = [];
-      if (scoreboard[0]) {
-        scoresForDisplay.push({
-          name: scoreboard[0].name,
-          score: (g.lastCompScores?.get(scoreboard[0].id) || 0).toFixed(1),
-          medal: '🏆'
+    // Fallback to showResultsPopup shim if inline reveal unavailable or failed
+    // Do NOT use FinaleCinematics as primary path
+    console.info('[F3P3] 🔄 FALLBACK PATH: Using showResultsPopup shim for Final HOH results');
+    const popupAvailable = typeof global.showResultsPopup === 'function';
+    if (popupAvailable) {
+      try {
+        // Build topThree array from scores
+        const scoreboard = buildScoreboardArray(g.lastCompScores, finalists);
+        const topThree = scoreboard.slice(0, 2).map(entry => ({
+          id: entry.id,
+          name: entry.name,
+          score: g.lastCompScores?.get(entry.id) || 0,
+          rawScoreDisplay: g.lastCompScoresMeta?.get(entry.id)?.rawScoreDisplay,
+          isNewPersonalBest: g.lastCompScoresMeta?.get(entry.id)?.isNewPersonalBest
+        }));
+        
+        await global.showResultsPopup({
+          title: 'Final HOH Competition',
+          phase: 'final3_comp3',
+          topThree: topThree,
+          winnerEmoji: '👑',
+          duration: 5000,
+          rawScoreMode: topThree[0]?.rawScoreDisplay ? true : false,
+          isNewPersonalBest: topThree[0]?.isNewPersonalBest || false
         });
-      }
-      if (scoreboard[1]) {
-        scoresForDisplay.push({
-          name: scoreboard[1].name,
-          score: (g.lastCompScores?.get(scoreboard[1].id) || 0).toFixed(1),
-          medal: '🥈'
-        });
-      }
-      
-      // Show fullscreen Final HOH results modal with both scores
-      if (global.FinaleCinematics?.showPart3ResultsWithScores) {
-        try {
-          await global.FinaleCinematics.showPart3ResultsWithScores(winner, scoresForDisplay);
-        } catch (e) {
-          console.warn('[F3P3] Cinematic error:', e);
+        await waitCardsIdle();
+        console.info('[F3P3] ✅ Popup fallback completed');
+        
+        // Check if optimized pacing is enabled for next phase decision
+        const useOptimizedPacing = isF3OptimizedPacingEnabled();
+        if (useOptimizedPacing) {
+          // Transition to plea phase (no idle wait)
+          global.tv.say('Final 3 Pleas');
+          global.setPhase('final3_plea', Math.max(10, Math.floor(g.cfg.tVote * 0.5)), () => {
+            // After plea time expires, proceed to decision
+            global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
+            global.renderFinal3DecisionPanel?.();
+          });
+          global.renderFinal3PleaPanel?.();
+        } else {
+          // Legacy flow: skip plea phase, go directly to decision
+          global.tv.say('Final 3 Eviction Ceremony');
+          try { global.FinalPlea?.cleanup?.(); } catch (e) { /* non-critical cleanup error */ }
+          global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
+          global.renderFinal3DecisionPanel?.();
         }
+        return;
+      } catch (e) {
+        console.warn('[F3P3] ⚠️ Popup fallback error:', e);
+        // Continue with flow even if display failed
       }
-      
-      // Transition to plea phase (no idle wait)
+    }
+    
+    // Last resort: Continue without displaying results (avoid FinaleCinematics as primary)
+    console.warn('[F3P3] ⚠️ No results display available - continuing without visual feedback');
+    // Still proceed to next phase
+    const useOptimizedPacing = isF3OptimizedPacingEnabled();
+    if (useOptimizedPacing) {
       global.tv.say('Final 3 Pleas');
       global.setPhase('final3_plea', Math.max(10, Math.floor(g.cfg.tVote * 0.5)), () => {
-        // After plea time expires, proceed to decision
         global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
         global.renderFinal3DecisionPanel?.();
       });
       global.renderFinal3PleaPanel?.();
     } else {
-      // Legacy flow: show Final HOH cinematic, then go directly to decision
-      if (global.FinaleCinematics?.showFinalHOHCinematic) {
-        try {
-          await global.FinaleCinematics.showFinalHOHCinematic(winner);
-        } catch (e) {
-          console.warn('[F3P3] Cinematic error:', e);
-          const delay = skipRequested ? 2000 : 5000;
-          safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
-          await new Promise(resolve => setTimeout(resolve, delay + 50));
-        }
-      } else {
-        const delay = skipRequested ? 2000 : 5000;
-        safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', delay);
-        await new Promise(resolve => setTimeout(resolve, delay + 50));
-      }
-      
       global.tv.say('Final 3 Eviction Ceremony');
-      // Cleanup FinalPlea modal before advancing (defensive, in case it was shown)
       try { global.FinalPlea?.cleanup?.(); } catch (e) { /* non-critical cleanup error */ }
       global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
       global.renderFinal3DecisionPanel?.();
