@@ -319,8 +319,49 @@
    */
   function startNewSeasonFlow() {
     console.info('[game-over] starting new season flow');
-    
-    // Clear all competition locks
+
+    // 1) Attempt to abort any active TV sequences / overlays
+    try {
+      if (global.TVSequence && typeof global.TVSequence.abort === 'function') {
+        global.TVSequence.abort();
+        console.info('[game-over] TVSequence aborted');
+      }
+      if (global.TVCards && typeof global.TVCards.clearAll === 'function') {
+        try { global.TVCards.clearAll(); console.info('[game-over] TVCards cleared'); } catch(e){/*ignore*/ }
+      }
+    } catch (e) {
+      console.warn('[game-over] failed to abort TVSequence/TVCards:', e);
+    }
+
+    // 2) Destroy finale-related singletons (FinalFaceoff, etc.)
+    try {
+      if (typeof window.FinalFaceoff?.destroy === 'function') {
+        window.FinalFaceoff.destroy();
+        console.info('[game-over] FinalFaceoff destroyed');
+      }
+    } catch (e) {
+      console.warn('[game-over] failed to destroy FinalFaceoff:', e);
+    }
+
+    // 3) Clear persistent winner / tv area and remove ephemeral DOM nodes
+    try {
+      const tv = document.getElementById('tv');
+      if (tv) {
+        tv.innerHTML = '';
+        tv.classList.remove('tvTall');
+        console.info('[game-over] tv content cleared');
+      }
+
+      // Remove any ephemeral cards left in DOM (defensive)
+      document.querySelectorAll('[data-ephemeral], [data-ui-card]').forEach(el => {
+        try { el.remove(); } catch (e) { /* ignore individual failures */ }
+      });
+      console.info('[game-over] ephemeral UI removed');
+    } catch (e) {
+      console.warn('[game-over] failed during DOM cleanup:', e);
+    }
+
+    // 4) Clear competition locks + logs (existing behavior)
     try {
       if (global.CompLocks && typeof global.CompLocks.clearAllLocks === 'function') {
         global.CompLocks.clearAllLocks();
@@ -329,17 +370,15 @@
     } catch(e) {
       console.warn('[game-over] failed to clear competition locks:', e);
     }
-    
-    // Clear logs for fresh season
+
     ['log','logGame','logSocial','logVote','logJury'].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.innerHTML='';
     });
-    
-    // Try to use modern API for smooth restart
+
+    // 5) Rebuild game (same as before) but with a short, deliberate delay
     const API = global.Game || global;
-    
-    // Rebuild game (false = don't preserve players, create new cast)
+
     if (typeof API.rebuildGame === 'function') {
       console.info('[game-over] calling rebuildGame(false) to build new cast');
       API.rebuildGame(false);
@@ -351,8 +390,8 @@
       location.reload();
       return;
     }
-    
-    // Start the game immediately with the new roster
+
+    // 6) Start the new season only after giving rebuild a moment to finish
     setTimeout(() => {
       console.info('[game-over] Starting new season directly');
       if (typeof API.startOpeningSequence === 'function') {
@@ -360,7 +399,7 @@
       } else {
         console.warn('[game-over] startOpeningSequence not available');
       }
-    }, 200);
+    }, 300);
   }
 
   /**
