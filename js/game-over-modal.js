@@ -285,6 +285,12 @@
           document.body.classList.remove('main-screen-built');
           console.info('[game-over] Removed main-screen-built class to hide game UI');
           
+          // Reset IntroScreen state to allow Play button to work again
+          if (global.IntroScreen && typeof global.IntroScreen.reset === 'function') {
+            console.info('[game-over] Resetting IntroScreen state');
+            global.IntroScreen.reset();
+          }
+          
           // Try to close the tab/app where supported (fallback will still run if the call is ignored)
           try {
             if (typeof navigator !== 'undefined' && navigator.app && typeof navigator.app.exitApp === 'function') {
