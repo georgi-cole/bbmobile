@@ -517,6 +517,21 @@
         console.warn('[social.js] SocialManeuvers.onSocialPhaseStart not found');
       }
       
+      // Auto-skip if human player is evicted
+      const humanPlayer = global.getP?.(g.humanId);
+      if(humanPlayer && humanPlayer.evicted){
+        console.info('[social.js] Human player is evicted - auto-skipping social phase');
+        if(global.SocialManeuvers?.endSocialPhaseNow){
+          try{
+            global.SocialManeuvers.endSocialPhaseNow('evicted-player-auto-skip');
+            console.info('[social.js] ✓ Social phase auto-skipped for evicted player');
+            return;
+          }catch(e){
+            console.error('[social.js] Failed to auto-skip social phase:', e);
+          }
+        }
+      }
+      
       // Dismiss stray legacy memory cards if any
       try{
         const deck = document.getElementById('decisionDeck');
