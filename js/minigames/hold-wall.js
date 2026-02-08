@@ -1101,6 +1101,13 @@
       // Add player to elimination log
       eliminationLog.push({ name: playerName, timeMs: holdDuration });
       
+      // BUGFIX: Set dropTimeMs on the player's participant object
+      // This ensures the player is properly excluded from stillHolding participants
+      const playerParticipant = participants.find(p => p.isPlayer);
+      if(playerParticipant){
+        playerParticipant.dropTimeMs = holdDuration;
+      }
+      
       // Check if during deal window
       const duringDealWindow = isInDealWindow && rivalName;
       
@@ -1175,7 +1182,17 @@
       // Build final standings with player not as winner
       // Winners are those still holding (haven't dropped yet)
       // Get all participants who are still holding (dropTimeMs === null or undefined)
-      const stillHolding = participants.filter(p => p.dropTimeMs == null);
+      // BUGFIX: Explicitly exclude player participants (isPlayer === true) from stillHolding
+      const stillHolding = participants.filter(p => p.dropTimeMs == null && !p.isPlayer);
+      
+      // BUGFIX: Sort stillHolding deterministically by participant array index
+      // Since all still-holding players effectively tied (game ended when player dropped),
+      // we sort them by their original index to ensure consistent winner selection
+      stillHolding.sort((a, b) => {
+        const indexA = participants.indexOf(a);
+        const indexB = participants.indexOf(b);
+        return indexA - indexB;
+      });
       
       // Still-holding players get credited with the time when the game ended
       // They outlasted all dropped players, so they get the same time (game ended when player dropped)
@@ -1190,6 +1207,9 @@
       
       // Combine: winners first, then eliminated players
       const finalStandings = [...holdingStandings, ...eliminatedStandings];
+      
+      // BUGFIX: Debug log for final standings
+      console.log('[HoldWall] Final standings (lose path):', finalStandings.map(s => `${s.name}: ${(s.timeMs/1000).toFixed(1)}s`).join(', '));
       
       // Emit final standings event
       if(g.bbGameBus && typeof g.bbGameBus.emit === 'function'){
