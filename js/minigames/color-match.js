@@ -36,7 +36,7 @@
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
     const roundDiv = document.createElement('div');
-    roundDiv.textContent = 'Round 1/4';
+    roundDiv.textContent = 'Round 1/3';
     roundDiv.style.cssText = 'font-size:1rem;color:#83bfff;';
     
     // Target color display
@@ -55,6 +55,10 @@
     playerLabel.textContent = 'Your Color';
     playerLabel.style.cssText = 'font-size:0.85rem;color:#95a9c0;text-align:center;margin-top:-5px;';
     
+    // Similarity feedback
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.style.cssText = 'font-size:1.2rem;color:#4ade80;font-weight:bold;min-height:30px;text-align:center;margin:10px 0;';
+    
     // Color controls
     const controlsDiv = document.createElement('div');
     controlsDiv.style.cssText = 'display:flex;flex-direction:column;gap:12px;margin:15px 0;width:100%;max-width:300px;';
@@ -70,6 +74,7 @@
     wrapper.appendChild(targetLabel);
     wrapper.appendChild(playerDiv);
     wrapper.appendChild(playerLabel);
+    wrapper.appendChild(feedbackDiv);
     wrapper.appendChild(controlsDiv);
     wrapper.appendChild(submitBtn);
     container.appendChild(wrapper);
@@ -77,7 +82,7 @@
     let targetColor = {r:0, g:0, b:0};
     let playerColor = {r:128, g:128, b:128};
     let currentRound = 1;
-    const maxRounds = 4;
+    const maxRounds = 3;
     let totalScore = 0;
     
     // Create controls
@@ -148,6 +153,9 @@
     }
     
     function startRound(){
+      // Clear feedback from previous round
+      feedbackDiv.textContent = '';
+      
       // Generate random target color
       targetColor = {
         r: Math.floor(Math.random() * 256),
@@ -190,6 +198,10 @@
       const roundScore = Math.round(accuracy);
       
       totalScore += roundScore;
+      
+      // Display similarity percentage
+      feedbackDiv.textContent = `${roundScore}% Similarity`;
+      feedbackDiv.style.color = roundScore >= 90 ? '#4ade80' : roundScore >= 70 ? '#fbbf24' : '#f87171';
       
       setTimeout(() => {
         if(currentRound < maxRounds){
