@@ -74,8 +74,53 @@
       wrapper.appendChild(debugInfo);
     }
     
-    // Color palette (for card mode)
-    const colors = ['#ff6b6b', '#6fd3ff', '#74e48b', '#f7b955', '#b074ff', '#ff9cf1', '#9bdc82'];
+    // Color palette (for card mode) - Expanded with more colors
+    const colors = [
+      '#ff6b6b', // Coral Red
+      '#6fd3ff', // Sky Blue
+      '#74e48b', // Mint Green
+      '#f7b955', // Golden Yellow
+      '#b074ff', // Lavender Purple
+      '#ff9cf1', // Cotton Candy
+      '#9bdc82', // Lime Green
+      '#ff8c42', // Tangerine Orange
+      '#4ecdc4', // Turquoise
+      '#a8e6cf', // Seafoam Green
+      '#ffd166', // Honey Gold
+      '#e63946', // Crimson Red
+      '#457b9d', // Ocean Blue
+      '#f1a7b5', // Baby Pink
+      '#c77dff', // Amethyst
+      '#e76f51', // Terracotta
+      '#2a9d8f', // Teal
+      '#ffafcc', // Rose Pink
+      '#bde0fe', // Powder Blue
+      '#ffc8dd'  // Blush Pink
+    ];
+    
+    // Color names mapping (fancy names)
+    const colorNames = {
+      '#ff6b6b': 'Coral Red',
+      '#6fd3ff': 'Sky Blue',
+      '#74e48b': 'Mint Green',
+      '#f7b955': 'Golden Yellow',
+      '#b074ff': 'Lavender Purple',
+      '#ff9cf1': 'Cotton Candy',
+      '#9bdc82': 'Lime Green',
+      '#ff8c42': 'Tangerine',
+      '#4ecdc4': 'Turquoise',
+      '#a8e6cf': 'Seafoam',
+      '#ffd166': 'Honey Gold',
+      '#e63946': 'Crimson',
+      '#457b9d': 'Ocean Blue',
+      '#f1a7b5': 'Baby Pink',
+      '#c77dff': 'Amethyst',
+      '#e76f51': 'Terracotta',
+      '#2a9d8f': 'Teal',
+      '#ffafcc': 'Rose Pink',
+      '#bde0fe': 'Powder Blue',
+      '#ffc8dd': 'Blush Pink'
+    };
     
     // Shape options (for pattern mode)
     const shapes = ['▲', '■', '●', '◆', '★', '✚', '♦', '▼'];
@@ -89,6 +134,7 @@
     let inputIndex = 0;
     let acceptingInput = false;
     let correctMatches = 0;
+    let mistakesMade = 0; // Track mistakes for score reduction
     let gameStarted = false;
     let sequenceDiv = null;
     let protectCleanup = null;
@@ -190,6 +236,7 @@
       sequenceIndex = 0;
       inputIndex = 0;
       correctMatches = 0;
+      mistakesMade = 0; // Reset mistakes counter
       acceptingInput = false;
       
       // Start anti-cheat monitoring
@@ -345,6 +392,7 @@
     
     /**
      * Create color input buttons (for card mode)
+     * Shows only the colors from the sequence + 1 extra color
      */
     function createColorButtons(){
       buttonDiv.innerHTML = '';
@@ -354,7 +402,29 @@
       buttonDiv.style.flexWrap = 'wrap';
       buttonDiv.style.justifyContent = 'center';
       
-      colors.forEach(color => {
+      // Get unique colors from the sequence
+      const uniqueSequenceColors = [...new Set(sequence)];
+      
+      // Add one extra random color not in the sequence (if available)
+      const availableColors = colors.filter(c => !uniqueSequenceColors.includes(c));
+      const rng = g.rng || Math.random;
+      
+      const displayColors = [...uniqueSequenceColors];
+      
+      // Only add extra color if available colors exist
+      if(availableColors.length > 0){
+        const extraColor = availableColors[Math.floor(rng() * availableColors.length)];
+        displayColors.push(extraColor);
+      }
+      
+      // Shuffle the display colors using Fisher-Yates
+      for(let i = displayColors.length - 1; i > 0; i--){
+        const j = Math.floor(rng() * (i + 1));
+        [displayColors[i], displayColors[j]] = [displayColors[j], displayColors[i]];
+      }
+      
+      // Create buttons for the selected colors
+      displayColors.forEach(color => {
         const btn = document.createElement('button');
         btn.style.cssText = `width:40px;height:40px;border-radius:8px;background:${color};border:2px solid #2c3a4d;cursor:pointer;transition:transform 0.1s;`;
         btn.addEventListener('mousedown', () => {
@@ -378,12 +448,17 @@
         correctMatches++;
         inputIndex++;
         
-        // Visual feedback - highlight the sequence box
+        // Visual feedback - highlight the sequence box with color name
         const boxes = Array.from(sequenceDiv.children);
         if(boxes[inputIndex - 1]){
           boxes[inputIndex - 1].style.opacity = '1';
           boxes[inputIndex - 1].style.background = color;
         }
+        
+        // Show color name feedback
+        const colorName = colorNames[color] || 'Unknown';
+        status.textContent = `✅ Correct: ${colorName}`;
+        status.style.color = '#22c55e';
         
         if(inputIndex === sequence.length){
           // Sequence complete!
@@ -398,12 +473,15 @@
           }
         }
       } else {
-        // Wrong color - but allow continuing up to allowed mistakes
-        const mistakesMade = inputIndex - correctMatches + 1;
+        // Wrong color - track mistake and show color names
+        mistakesMade++;
+        
+        const chosenColorName = colorNames[color] || 'Unknown';
+        const correctColorName = colorNames[sequence[inputIndex]] || 'Unknown';
         
         if(mistakesMade >= diffSettings.allowedMistakes){
           acceptingInput = false;
-          status.textContent = `❌ Mistakes exceeded! (${mistakesMade})`;
+          status.textContent = `❌ Game Over! You chose ${chosenColorName} but it was ${correctColorName}`;
           status.style.color = '#dc2626';
           submitBtn.disabled = false;
           
@@ -412,7 +490,7 @@
             antiCheat.stopMonitoring();
           }
         } else {
-          status.textContent = `Mistake ${mistakesMade}/${diffSettings.allowedMistakes} - Keep going!`;
+          status.textContent = `❌ Incorrect: You chose ${chosenColorName}, it was ${correctColorName} (Mistake ${mistakesMade}/${diffSettings.allowedMistakes})`;
           status.style.color = '#f59e0b';
         }
         
@@ -473,7 +551,12 @@
       }
       
       const accuracy = correctCount / sequence.length;
-      const rawScore = Math.round(accuracy * 100);
+      let rawScore = Math.round(accuracy * 100);
+      
+      // Apply mistake penalty - each mistake reduces score by 15 points
+      const mistakePenalty = 15;
+      const penaltyAmount = mistakesMade * mistakePenalty;
+      rawScore = Math.max(0, rawScore - penaltyAmount);
       
       // Use MinigameScoring to calculate final score (SCALE=1000)
           const finalScore = g.MinigameScoring ? 
@@ -486,7 +569,7 @@
             rawScore * 10; // Fallback: scale to 0-1000
       
       if(debugMode){
-        console.log(`[Memory${mode === 'pattern' ? 'Pattern' : 'Match'}] Debug - Correct:`, correctCount, '/', sequence.length, 'Raw score:', rawScore);
+        console.log(`[Memory${mode === 'pattern' ? 'Pattern' : 'Match'}] Debug - Correct:`, correctCount, '/', sequence.length, 'Mistakes:', mistakesMade, 'Raw score:', rawScore, 'Final score:', finalScore);
       }
       
       onComplete(finalScore);
