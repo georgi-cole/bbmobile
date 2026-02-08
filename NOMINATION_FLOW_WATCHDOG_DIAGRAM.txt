@@ -1,0 +1,177 @@
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    NOMINATIONS FLOW SAFETY WATCHDOG                         │
+│                          Implementation Flow                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 1. ENTRY: wrappedStartNominations() called                               │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 2. CHECK: Should show intro modal?                                       │
+│    if (!game.__nominationsIntroShownThisPhase)                           │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                ┌────────────┴────────────┐
+                │                         │
+                ▼ YES                     ▼ NO (skip to step 5)
+┌──────────────────────────────────┐
+│ 3. SHOW MODAL with 30s timeout  │
+│    - await showNominationIntro   │
+│    - Respect plea flag           │
+│    - Wait for plea if active     │
+└────────────────┬─────────────────┘
+                 │
+                 ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 4. MARK: game.__nominationsIntroShownThisPhase = true                    │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 5. CALL ORIGINAL: result = await origStartNominations()                  │
+│    ✓ With error handling and fallback to setPhase                        │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 6. SETUP WATCHDOG: setTimeout(..., 3000)                                 │
+│    ⏱️  Scheduled to fire in 3 seconds                                     │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 7. RETURN: return result                                                 │
+│    Function completes, but watchdog is still pending                     │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                             │ (3 seconds later)
+                             ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 8. WATCHDOG FIRES                                                         │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 9. CHECK CONDITIONS:                                                      │
+│    - Is game.phase === 'nominations'?                                     │
+│    - Is !game.__nominationPleaActive?                                     │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │
+                ┌────────────┴────────────┐
+                │                         │
+                ▼ NO (both conditions)    ▼ YES (both conditions)
+┌──────────────────────────┐   ┌────────────────────────────────────────┐
+│ 10a. SKIP WATCHDOG       │   │ 10b. EXECUTE SAFETY RECOVERY           │
+│      Flow already        │   │      Three-tier fallback:              │
+│      progressed or       │   │                                        │
+│      plea is active      │   │   1️⃣  origStartNominations.call()     │
+│                          │   │       ↓ (if not available)            │
+│      ✓ Safe to skip      │   │   2️⃣  global.startNominations()       │
+└──────────────────────────┘   │       ↓ (if not available)            │
+                               │   3️⃣  global.setPhase(...)            │
+                               │                                        │
+                               │   ✓ Ensures flow continues            │
+                               └────────────────────────────────────────┘
+
+
+════════════════════════════════════════════════════════════════════════════
+                              SAFETY GUARANTEES
+════════════════════════════════════════════════════════════════════════════
+
+✓ NO DOUBLE-START:
+  - Original startNominations has phase guard: if(phase==='nominations')
+  - Multiple calls are idempotent when phase is correct
+  - If flow progressed, phase would no longer be 'nominations'
+
+✓ NO RECURSION:
+  - Watchdog prefers calling origStartNominations (unwrapped version)
+  - Avoids calling wrapped version that could re-trigger watchdog
+
+✓ RESPECTS USER INTERACTION:
+  - Watchdog checks __nominationPleaActive flag
+  - Won't interrupt user making a deal or viewing risk
+
+✓ COMPREHENSIVE ERROR HANDLING:
+  - try/catch around original function call
+  - try/catch around watchdog logic
+  - Fallback to setPhase if everything else fails
+
+✓ EXISTING FEATURES PRESERVED:
+  - 30-second modal timeout unchanged
+  - Plea handling logic intact
+  - All other phase intro wrappers unmodified
+
+
+════════════════════════════════════════════════════════════════════════════
+                              TIMING DIAGRAM
+════════════════════════════════════════════════════════════════════════════
+
+Time (s) │ Action
+─────────┼───────────────────────────────────────────────────────────────
+   0.0   │ wrappedStartNominations() called
+   0.0   │ Show intro modal (if first time)
+   0.0   │ await modal resolution (up to 30s timeout)
+  ~2.0   │ User dismisses modal
+  ~2.0   │ await origStartNominations() completes
+  ~2.0   │ Setup 3s watchdog timer
+  ~2.0   │ return result
+  ~5.0   │ ⏰ WATCHDOG FIRES (3s after step 2.0)
+  ~5.0   │ Check: phase='nominations' && !pleaActive
+  ~5.0   │ ✓ If stuck: Force nominations start
+─────────┴───────────────────────────────────────────────────────────────
+
+
+════════════════════════════════════════════════════════════════════════════
+                           EDGE CASE HANDLING
+════════════════════════════════════════════════════════════════════════════
+
+CASE 1: Modal never resolves
+  ├─ 30s timeout kicks in
+  ├─ Flow proceeds to origStartNominations()
+  ├─ Watchdog fires 3s later
+  └─ ✓ Ensures nominations start even if stuck
+
+CASE 2: origStartNominations() throws error
+  ├─ Catch block executes
+  ├─ Fallback to setPhase()
+  ├─ Watchdog still fires
+  └─ ✓ Double-safety ensures recovery
+
+CASE 3: Flow starts normally and progresses
+  ├─ Phase changes from 'nominations' to next phase
+  ├─ Watchdog fires but checks phase
+  ├─ phase !== 'nominations' → watchdog skips
+  └─ ✓ No interference with normal flow
+
+CASE 4: User opens "Make a Deal" plea
+  ├─ __nominationPleaActive flag set to true
+  ├─ Modal waits for plea to complete
+  ├─ Watchdog fires but checks plea flag
+  ├─ pleaActive === true → watchdog skips
+  └─ ✓ No interference with user interaction
+
+CASE 5: Watchdog itself fails
+  ├─ try/catch around watchdog logic
+  ├─ Error logged with console.warn
+  ├─ Game continues (no hard stop)
+  └─ ✓ Defensive programming prevents crash
+
+
+════════════════════════════════════════════════════════════════════════════
+                         VERIFICATION CHECKLIST
+════════════════════════════════════════════════════════════════════════════
+
+[✓] Syntax check passed (Node.js -c)
+[✓] ESLint validation passed
+[✓] Unit test simulation passed
+[✓] CodeQL security scan passed (0 alerts)
+[✓] Code review feedback addressed
+[✓] No breaking changes
+[✓] Backward compatible
+[✓] Documentation complete
+[✓] Ready for merge
+
+```
