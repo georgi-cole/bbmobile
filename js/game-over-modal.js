@@ -268,6 +268,16 @@
         
         // Navigate back to intro hub after modal is closed
         setTimeout(() => {
+          // CRITICAL: Stop Social AI Scheduler first to prevent background ticks
+          try {
+            if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
+              global.SocialAIScheduler.stopAiSocialPhase('game-over-exit');
+              console.info('[game-over] Social AI Scheduler stopped');
+            }
+          } catch (e) {
+            console.warn('[game-over] failed to stop Social AI Scheduler', e);
+          }
+          
           // Pause/stop any running game loops to avoid background activity
           try {
             if (global.PauseController && typeof global.PauseController.pause === 'function') {
@@ -278,6 +288,22 @@
             }
           } catch (e) {
             console.warn('[game-over] failed to pause game on exit', e);
+          }
+          
+          // CRITICAL: Clear game state to allow fresh restart
+          try {
+            if (global.game) {
+              global.game.players = [];
+              global.game.phase = 'lobby';
+              global.game.week = 1;
+              global.game.humanId = null;
+              global.game.hohId = null;
+              global.game.nominees = [];
+              global.game.vetoHolder = null;
+              global.game.juryHouse = [];
+            }
+          } catch (e) {
+            console.warn('[game-over] failed to clear game state', e);
           }
           
           // Hide main game UI by removing the 'main-screen-built' class
@@ -291,29 +317,36 @@
             global.IntroScreen.reset();
           }
           
-          // Try to close the tab/app where supported (fallback will still run if the call is ignored)
-          try {
-            if (typeof navigator !== 'undefined' && navigator.app && typeof navigator.app.exitApp === 'function') {
-              navigator.app.exitApp();
-            }
-            if (typeof global.close === 'function') {
-              global.close();
-            } else if (typeof window !== 'undefined' && typeof window.close === 'function') {
-              window.close();
-            }
-          } catch (e) {
-            console.warn('[game-over] window close failed, showing intro instead', e);
-          }
-          
-          if (global.IntroScreen && typeof global.IntroScreen.showWithPreload === 'function') {
-            console.info('[game-over] Showing intro hub after exit');
-            global.IntroScreen.showWithPreload();
-          } else if (global.IntroScreen && typeof global.IntroScreen.show === 'function') {
-            console.info('[game-over] Showing intro hub after exit (without preload)');
-            global.IntroScreen.show();
+          // Use restartToHub for proper cleanup if available
+          if (global.StartupFlow && typeof global.StartupFlow.restartToHub === 'function') {
+            console.info('[game-over] Using StartupFlow.restartToHub()');
+            global.StartupFlow.restartToHub();
           } else {
-            console.warn('[game-over] IntroScreen not available, reloading page');
-            location.reload();
+            // Fallback: original behavior
+            // Try to close the tab/app where supported (fallback will still run if the call is ignored)
+            try {
+              if (typeof navigator !== 'undefined' && navigator.app && typeof navigator.app.exitApp === 'function') {
+                navigator.app.exitApp();
+              }
+              if (typeof global.close === 'function') {
+                global.close();
+              } else if (typeof window !== 'undefined' && typeof window.close === 'function') {
+                window.close();
+              }
+            } catch (e) {
+              console.warn('[game-over] window close failed, showing intro instead', e);
+            }
+            
+            if (global.IntroScreen && typeof global.IntroScreen.showWithPreload === 'function') {
+              console.info('[game-over] Showing intro hub after exit');
+              global.IntroScreen.showWithPreload();
+            } else if (global.IntroScreen && typeof global.IntroScreen.show === 'function') {
+              console.info('[game-over] Showing intro hub after exit (without preload)');
+              global.IntroScreen.show();
+            } else {
+              console.warn('[game-over] IntroScreen not available, reloading page');
+              location.reload();
+            }
           }
         }, 500);
       });
@@ -325,6 +358,21 @@
    */
   function startNewSeasonFlow() {
     console.info('[game-over] starting new season flow');
+
+    // 0) CRITICAL: Stop Social AI Scheduler FIRST to prevent background ticks
+    try {
+      if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
+        global.SocialAIScheduler.stopAiSocialPhase('game-over-new-season');
+        console.info('[game-over] Social AI Scheduler stopped');
+      }
+      // Also stop the auto-driver if it exists
+      if (global.__smAutoDriver && typeof global.__smAutoDriver.stop === 'function') {
+        global.__smAutoDriver.stop();
+        console.info('[game-over] Social AI auto-driver stopped');
+      }
+    } catch (e) {
+      console.warn('[game-over] failed to stop Social AI systems:', e);
+    }
 
     // 1) Attempt to abort any active TV sequences / overlays
     try {
@@ -382,7 +430,35 @@
       if(el) el.innerHTML='';
     });
 
-    // 5) Rebuild game (same as before) but with a short, deliberate delay
+    // 5) CRITICAL: Clear game.players array BEFORE rebuilding to prevent merging
+    try {
+      if (global.game && Array.isArray(global.game.players)) {
+        global.game.players = [];
+        global.game.humanId = null;
+        global.game.hohId = null;
+        global.game.nominees = [];
+        global.game.vetoHolder = null;
+        global.game.juryHouse = [];
+        global.game.week = 1;
+        global.game.phase = 'lobby';
+        console.info('[game-over] game state cleared for new season');
+      }
+    } catch(e) {
+      console.warn('[game-over] failed to clear game state:', e);
+    }
+
+    // 6) Clear minigame pool for fresh selection
+    try {
+      if (global.game) {
+        global.game.__minigamePool = null;
+        global.game.__minigameIndex = 0;
+        global.game.__minigameHistory = [];
+      }
+    } catch(e) {
+      console.warn('[game-over] failed to clear minigame pool:', e);
+    }
+
+    // 7) Rebuild game (same as before) but with a short, deliberate delay
     const API = global.Game || global;
 
     if (typeof API.rebuildGame === 'function') {
@@ -397,7 +473,7 @@
       return;
     }
 
-    // 6) Start the new season only after giving rebuild a moment to finish
+    // 8) Start the new season only after giving rebuild a moment to finish
     setTimeout(() => {
       console.info('[game-over] Starting new season directly');
       if (typeof API.startOpeningSequence === 'function') {
