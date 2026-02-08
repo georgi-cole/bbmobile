@@ -76,10 +76,12 @@
         const content = document.createElement('div');
         content.style.cssText = `
           background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
-          border-radius: 16px;
-          padding: 32px;
-          max-width: 500px;
-          width: 90%;
+          border-radius: 12px;
+          padding: 20px;
+          max-width: 480px;
+          width: 92%;
+          max-height: 90vh;
+          overflow-y: auto;
           box-shadow: 0 20px 60px rgba(0,0,0,0.8);
           position: relative;
           border: 2px solid rgba(255, 215, 0, 0.3);
@@ -89,34 +91,34 @@
         const header = document.createElement('div');
         header.style.cssText = `
           text-align: center;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
         `;
 
         const icon = document.createElement('div');
         icon.textContent = '🔑';
         icon.style.cssText = `
-          font-size: 3rem;
-          margin-bottom: 12px;
+          font-size: 2.5rem;
+          margin-bottom: 8px;
         `;
         header.appendChild(icon);
 
         const title = document.createElement('h2');
         title.textContent = 'Make Your Plea to the HOH';
         title.style.cssText = `
-          font-size: 1.5rem;
+          font-size: 1.3rem;
           font-weight: 700;
           color: #ffffff;
-          margin: 0 0 8px 0;
+          margin: 0 0 6px 0;
         `;
         header.appendChild(title);
 
         const bodyText = document.createElement('p');
         bodyText.textContent = 'Offer the Head of Household a deal or appeal for safety this week.';
         bodyText.style.cssText = `
-          font-size: 0.95rem;
+          font-size: 0.85rem;
           color: #b2c2d5;
           margin: 0;
-          line-height: 1.5;
+          line-height: 1.4;
         `;
         header.appendChild(bodyText);
 
@@ -127,8 +129,8 @@
         optionsContainer.style.cssText = `
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          margin-bottom: 20px;
+          gap: 8px;
+          margin-bottom: 14px;
         `;
 
         // Create option buttons
@@ -139,13 +141,13 @@
           const optionBtn = document.createElement('button');
           optionBtn.className = 'plea-option-btn';
           optionBtn.style.cssText = `
-            padding: 14px 20px;
+            padding: 10px 14px;
             background: rgba(58, 123, 213, 0.2);
             border: 2px solid rgba(58, 123, 213, 0.4);
-            border-radius: 8px;
+            border-radius: 6px;
             color: #ffffff;
             cursor: pointer;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 500;
             transition: all 0.2s;
             text-align: left;
@@ -154,14 +156,14 @@
           const optionText = document.createElement('div');
           optionText.style.cssText = `
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           `;
           optionText.textContent = option.text;
           optionBtn.appendChild(optionText);
 
           const optionDesc = document.createElement('div');
           optionDesc.style.cssText = `
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             color: #8a9fb5;
             font-style: italic;
           `;
@@ -205,14 +207,14 @@
         customTextArea.placeholder = 'Or write your own custom message...';
         customTextArea.setAttribute('aria-label', 'Custom plea message to the Head of Household');
         customTextArea.maxLength = 300;
-        customTextArea.rows = 3;
+        customTextArea.rows = 2;
         customTextArea.style.cssText = `
           width: 100%;
-          padding: 12px;
-          margin-bottom: 20px;
-          font-size: 0.95rem;
+          padding: 10px;
+          margin-bottom: 14px;
+          font-size: 0.88rem;
           border: 2px solid rgba(58, 123, 213, 0.4);
-          border-radius: 8px;
+          border-radius: 6px;
           background: rgba(20,20,40,0.6);
           color: #cedbeb;
           font-family: inherit;
@@ -225,7 +227,7 @@
         const buttonsContainer = document.createElement('div');
         buttonsContainer.style.cssText = `
           display: flex;
-          gap: 12px;
+          gap: 10px;
           justify-content: center;
         `;
 
@@ -235,13 +237,13 @@
         submitBtn.textContent = 'Submit';
         submitBtn.setAttribute('aria-label', 'Submit your plea to the Head of Household');
         submitBtn.style.cssText = `
-          padding: 12px 32px;
+          padding: 10px 28px;
           background: #5aa575;
           border: none;
           border-radius: 6px;
           color: white;
           cursor: pointer;
-          font-size: 1rem;
+          font-size: 0.92rem;
           font-weight: 600;
           transition: all 0.2s;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -263,13 +265,13 @@
         skipBtn.textContent = 'Skip';
         skipBtn.setAttribute('aria-label', 'Skip making a plea and continue without offering a deal');
         skipBtn.style.cssText = `
-          padding: 12px 32px;
+          padding: 10px 28px;
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.3);
           border-radius: 6px;
           color: rgba(255, 255, 255, 0.8);
           cursor: pointer;
-          font-size: 1rem;
+          font-size: 0.92rem;
           font-weight: 600;
           transition: all 0.2s;
         `;
