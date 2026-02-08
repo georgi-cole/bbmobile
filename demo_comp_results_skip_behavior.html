@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: Competition Results Skip Mode - Before & After</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { color: #83bfff; text-align: center; margin-bottom: 10px; }
+    .subtitle { text-align: center; color: #96cfff; margin-bottom: 30px; }
+    
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin: 30px 0;
+    }
+    
+    .comparison-column {
+      background: #132132;
+      border: 2px solid #24364b;
+      border-radius: 12px;
+      padding: 25px;
+    }
+    
+    .comparison-column.before {
+      border-color: #c74040;
+    }
+    
+    .comparison-column.after {
+      border-color: #2d8659;
+    }
+    
+    .column-header {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid;
+    }
+    
+    .before .column-header {
+      color: #ff6d6d;
+      border-color: #c74040;
+    }
+    
+    .after .column-header {
+      color: #77d58d;
+      border-color: #2d8659;
+    }
+    
+    .scenario {
+      background: #0a0f16;
+      border: 1px solid #1a2a3c;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 15px 0;
+    }
+    
+    .scenario-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #ffd96b;
+      margin-bottom: 12px;
+    }
+    
+    .scenario-detail {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .scenario-detail:last-child {
+      border-bottom: none;
+    }
+    
+    .detail-label {
+      color: #96cfff;
+      font-size: 0.9rem;
+    }
+    
+    .detail-value {
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .detail-value.shown {
+      background: rgba(45, 134, 89, 0.2);
+      color: #77d58d;
+    }
+    
+    .detail-value.hidden {
+      background: rgba(199, 64, 64, 0.2);
+      color: #ff6d6d;
+    }
+    
+    .detail-value.skip-on {
+      background: rgba(216, 150, 20, 0.2);
+      color: #ffa940;
+    }
+    
+    .detail-value.skip-off {
+      background: rgba(131, 191, 255, 0.1);
+      color: #83bfff;
+    }
+    
+    .key-change {
+      background: linear-gradient(135deg, rgba(45, 134, 89, 0.1) 0%, rgba(45, 134, 89, 0.05) 100%);
+      border: 2px solid #2d8659;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 30px 0;
+    }
+    
+    .key-change-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #77d58d;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .key-change-content {
+      line-height: 1.8;
+      color: #e3ecf5;
+    }
+    
+    .key-change-content strong {
+      color: #ffd96b;
+    }
+    
+    .emoji {
+      font-size: 1.5rem;
+    }
+    
+    @media (max-width: 900px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Competition Results Skip Mode Behavior</h1>
+    <p class="subtitle">Before & After Comparison</p>
+
+    <div class="key-change">
+      <div class="key-change-title">
+        <span class="emoji">✨</span>
+        <span>Key Change</span>
+      </div>
+      <div class="key-change-content">
+        <strong>Before:</strong> When skip mode was active, ALL competition results modals (HOH, POV, and Final 3) were suppressed.<br>
+        <strong>After:</strong> HOH and POV competition results now <strong>ALWAYS</strong> display in the new modal format, regardless of skip mode. Only Final 3 competitions suppress results in skip mode.
+      </div>
+    </div>
+
+    <div class="comparison">
+      <!-- BEFORE Column -->
+      <div class="comparison-column before">
+        <div class="column-header">❌ Before (Original Behavior)</div>
+        
+        <div class="scenario">
+          <div class="scenario-title">HOH Competition</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">POV Competition</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Final 3 Part 1</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Final 3 Part 2</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Final 3 Part 3</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AFTER Column -->
+      <div class="comparison-column after">
+        <div class="column-header">✅ After (New Behavior)</div>
+        
+        <div class="scenario">
+          <div class="scenario-title">HOH Competition</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value shown">Modal Shown ✓ (CHANGED)</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">POV Competition</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value shown">Modal Shown ✓ (CHANGED)</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Final 3 Part 1</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗ (Unchanged)</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Final 3 Part 2</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗ (Unchanged)</span>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Final 3 Part 3</div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: OFF</span>
+            <span class="detail-value shown">Modal Shown ✓</span>
+          </div>
+          <div class="scenario-detail">
+            <span class="detail-label">Skip Mode: ON</span>
+            <span class="detail-value hidden">Modal Hidden ✗ (Unchanged)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 40px; padding: 20px; background: rgba(131, 191, 255, 0.05); border-radius: 10px;">
+      <p style="font-size: 1.1rem; color: #96cfff; margin: 0;">
+        <strong style="color: #ffd96b;">Result:</strong> Players will now consistently see HOH and POV competition results, 
+        providing better feedback and engagement regardless of skip mode settings.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
