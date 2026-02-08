@@ -392,6 +392,7 @@
     
     /**
      * Create color input buttons (for card mode)
+     * Shows only the colors from the sequence + 1 extra color
      */
     function createColorButtons(){
       buttonDiv.innerHTML = '';
@@ -401,7 +402,25 @@
       buttonDiv.style.flexWrap = 'wrap';
       buttonDiv.style.justifyContent = 'center';
       
-      colors.forEach(color => {
+      // Get unique colors from the sequence
+      const uniqueSequenceColors = [...new Set(sequence)];
+      
+      // Add one extra random color not in the sequence
+      const availableColors = colors.filter(c => !uniqueSequenceColors.includes(c));
+      const rng = g.rng || Math.random;
+      const extraColor = availableColors[Math.floor(rng() * availableColors.length)];
+      
+      // Combine and shuffle the colors to display
+      const displayColors = [...uniqueSequenceColors, extraColor];
+      
+      // Shuffle the display colors using Fisher-Yates
+      for(let i = displayColors.length - 1; i > 0; i--){
+        const j = Math.floor(rng() * (i + 1));
+        [displayColors[i], displayColors[j]] = [displayColors[j], displayColors[i]];
+      }
+      
+      // Create buttons for the selected colors
+      displayColors.forEach(color => {
         const btn = document.createElement('button');
         btn.style.cssText = `width:40px;height:40px;border-radius:8px;background:${color};border:2px solid #2c3a4d;cursor:pointer;transition:transform 0.1s;`;
         btn.addEventListener('mousedown', () => {
