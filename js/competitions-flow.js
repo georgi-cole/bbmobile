@@ -1753,7 +1753,7 @@
     }
   }
 
-  async function showCompetitionResultsAndFastForward(humanScore){
+  async function showCompetitionResultsAndFastForward(_humanScore){
     if(!g.cfg?.autoFastAdvanceCompetitions){
       console.info('[ImmediateResults] autoFastAdvanceCompetitions flag disabled – skipping');
       return;
@@ -1786,7 +1786,8 @@
                 : (phase?.startsWith('final3')) ? 'Final 3 Competition'
                 : 'Competition';
     
-    console.info(`[ImmediateResults][${phase}] Starting results display for: ${title}`);
+    console.info(`[ImmediateResults][${phase}][ResultsPath] Starting results display for: ${title}`);
+    console.info(`[ImmediateResults][${phase}][ResultsPath] Scores count: ${scores?.size || 0}, IDs count: ${ids.length}`);
     
     shortenPhaseToOneSecond();
     
@@ -1795,67 +1796,37 @@
     
     // Try inline reveal API first (preferred, or forced)
     const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
+    console.info(`[ImmediateResults][${phase}][ResultsPath] Inline reveal available: ${inlineRevealAvailable}, forceInline: ${forceInline}`);
+    
     if(inlineRevealAvailable && (ids.length > 0 || forceInline)){
-      console.info(`[ImmediateResults][${phase}] Using inline reveal API (forced: ${forceInline}):`, title);
+      console.info(`[ImmediateResults][${phase}][ResultsPath] Using inline reveal API (primary path) - forced: ${forceInline}:`, title);
       try{
         const promise = global.showCompetitionReveal(title, scores, ids);
         if(promise && typeof promise.then === 'function'){
           await promise;
-          console.info(`[ImmediateResults][${phase}] Inline reveal finished – resolving phase`);
+          console.info(`[ImmediateResults][${phase}][ResultsPath] Inline reveal finished – resolving phase`);
         }
         resolveCompetitionPhaseIfNeeded();
         return;
       }catch(err){
-        console.warn(`[ImmediateResults][${phase}] Inline reveal error, falling back to popup:`, err);
-        // Fall through to popup fallback
+        console.warn(`[ImmediateResults][${phase}][ResultsPath] Inline reveal error:`, err);
+        console.info(`[ImmediateResults][${phase}][ResultsPath] Resolving phase without results display due to error`);
+        resolveCompetitionPhaseIfNeeded();
+        return;
       }
     } else if (!inlineRevealAvailable) {
-      console.warn(`[ImmediateResults][${phase}] Inline reveal API not available`);
-    }
-    
-    // Fallback to popup API if inline reveal unavailable or failed
-    const popupAvailable = typeof global.showResultsPopup === 'function';
-    if(!popupAvailable){
-      console.warn(`[ImmediateResults][${phase}] Neither inline reveal nor popup available – advancing without display`);
+      console.warn(`[ImmediateResults][${phase}][ResultsPath] Inline reveal API not available - resolving phase without results display`);
+      resolveCompetitionPhaseIfNeeded();
+      return;
+    } else if (ids.length === 0 && !forceInline) {
+      console.warn(`[ImmediateResults][${phase}][ResultsPath] No valid IDs to display - resolving phase`);
       resolveCompetitionPhaseIfNeeded();
       return;
     }
     
-    // Build topThree for popup
-    let topThree = buildTopThree();
-    if(topThree.length === 0){
-      const humanId = g.humanId;
-      if(humanId !== null && humanId !== undefined){
-        topThree = [{
-          id: humanId,
-          score: humanScore,
-          name: global.safeName ? global.safeName(humanId) : 'You',
-          avatar: typeof global.getAvatarUrl === 'function' ? global.getAvatarUrl(humanId) : null
-        }];
-      }
-    }
-    
-    console.info(`[ImmediateResults][${phase}] Using popup fallback:`, title, topThree);
-    try{
-      const promise = global.showResultsPopup({ title, topThree, winnerEmoji: '🏆', duration: RESULTS_POPUP_DURATION });
-      if(promise && typeof promise.then === 'function'){
-        promise.then(() => {
-          console.info(`[ImmediateResults][${phase}] Results popup finished – resolving phase`);
-          resolveCompetitionPhaseIfNeeded();
-        }).catch(err => {
-          console.warn(`[ImmediateResults][${phase}] Popup promise error, resolving anyway:`, err);
-          resolveCompetitionPhaseIfNeeded();
-        });
-      } else {
-        setTimeout(() => {
-          console.info(`[ImmediateResults][${phase}] Popup duration elapsed – resolving phase`);
-          resolveCompetitionPhaseIfNeeded();
-        }, RESULTS_POPUP_DURATION);
-      }
-    }catch(err){
-      console.warn(`[ImmediateResults][${phase}] Failed to show popup – resolving immediately:`, err);
-      resolveCompetitionPhaseIfNeeded();
-    }
+    // Should never reach here if inline reveal is available
+    console.error(`[ImmediateResults][${phase}][ResultsPath] Unexpected code path - resolving phase`);
+    resolveCompetitionPhaseIfNeeded();
   }
 
   global.CompetitionFlow.showCompetitionResultsAndFastForward = showCompetitionResultsAndFastForward;
