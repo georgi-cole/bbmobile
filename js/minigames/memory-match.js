@@ -405,13 +405,17 @@
       // Get unique colors from the sequence
       const uniqueSequenceColors = [...new Set(sequence)];
       
-      // Add one extra random color not in the sequence
+      // Add one extra random color not in the sequence (if available)
       const availableColors = colors.filter(c => !uniqueSequenceColors.includes(c));
       const rng = g.rng || Math.random;
-      const extraColor = availableColors[Math.floor(rng() * availableColors.length)];
       
-      // Combine and shuffle the colors to display
-      const displayColors = [...uniqueSequenceColors, extraColor];
+      const displayColors = [...uniqueSequenceColors];
+      
+      // Only add extra color if available colors exist
+      if(availableColors.length > 0){
+        const extraColor = availableColors[Math.floor(rng() * availableColors.length)];
+        displayColors.push(extraColor);
+      }
       
       // Shuffle the display colors using Fisher-Yates
       for(let i = displayColors.length - 1; i > 0; i--){
