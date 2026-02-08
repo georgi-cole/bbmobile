@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Regression Test: No Locked Overlay & Phase Progression</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: #0f1419; color: #cbd5e1; }
+    .status { margin: 8px 0; padding: 6px 10px; border-radius: 6px; }
+    .ok { background: #123524; color: #9ae6b4; }
+    .err { background: #3b1d1d; color: #feb2b2; }
+  </style>
+</head>
+<body>
+  <h1>Regression Test: No Locked Overlay & Phase Progression</h1>
+  <div id="results"></div>
+  <div id="tv" class="tv"><div class="tvViewport"></div></div>
+
+  <script src="js/nominations.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+  <script>
+    (function(){
+      const results = document.getElementById('results');
+      function logOk(msg){ const d=document.createElement('div'); d.className='status ok'; d.textContent='✓ '+msg; results.appendChild(d); }
+      function logErr(msg){ const d=document.createElement('div'); d.className='status err'; d.textContent='✗ '+msg; results.appendChild(d); }
+
+      // Minimal game scaffolding
+      window.game = { 
+        phase: 'nominations', 
+        hohId: 1, 
+        cfg: { tNoms: 10 },
+        nomsLocked: true,  // Already locked to simulate the regression scenario
+        nominees: [2, 3]    // Nominations already made
+      };
+      window.getP = (id) => ({ id, name: id===1? 'HOH' : 'Player '+id, human: id===1, affinity: {}, threat: 0.5 });
+      window.alivePlayers = () => [ {id:1,hoh:true,human:true}, {id:2}, {id:3}, {id:4} ];
+      window.safeName = (id) => (id===1? 'HOH' : 'Player '+id);
+      window.tv = { say: function(msg) { console.log('[tv]', msg); } };
+      window.updateHud = function() {};
+      window.addLog = function() {};
+
+      let vetoStarted = false;
+      window.startVetoComp = function(){ 
+        vetoStarted = true; 
+        logOk('startVetoComp() called - game progressed to veto'); 
+      };
+
+      // No TVCards or NomsFS needed for this test - we're testing the locked state path
+
+      logOk('Test setup complete - nominations already locked');
+
+      // Run renderNomsPanel with nominations already locked
+      // This simulates the regression: returning to main screen after nominations complete
+      try {
+        window.renderNomsPanel();
+        logOk('renderNomsPanel completed without errors');
+      } catch(e){ 
+        logErr('renderNomsPanel threw: '+e.message); 
+      }
+
+      // Immediately verify conditions (no delay needed since locked path returns immediately)
+      setTimeout(() => {
+        const ov = document.getElementById('tvOverlay');
+        
+        // Check if "Locked. Nominees:" message is present
+        const text = ov ? (ov.textContent||'') : '';
+        const lockedMsgPresent = /Locked\. Nominees:/i.test(text);
+        if (lockedMsgPresent) {
+          logErr('Locked message still present in overlay - REGRESSION DETECTED');
+        } else {
+          logOk('No locked nominees message rendered - regression fixed');
+        }
+        
+        // Check if overlay is neutralized
+        const pe = ov && ov.style ? ov.style.pointerEvents : '';
+        if (!ov) {
+          logOk('Overlay does not exist (no blocking UI elements)');
+        } else if (pe === 'none') {
+          logOk('Overlay neutralized with pointer-events: none');
+        } else {
+          logErr('Overlay exists but not neutralized (pointer-events: ' + pe + ')');
+        }
+        
+        // Check if TV overlay content is cleared
+        const content = ov ? ov.querySelector('.tvOverlayContent') : null;
+        const contentEmpty = !content || content.innerHTML === '';
+        if (contentEmpty) {
+          logOk('Overlay content cleared');
+        } else {
+          logErr('Overlay content not cleared');
+        }
+
+        // Check if tvTall class is removed
+        const tv = document.getElementById('tv');
+        const hasTvTall = tv && tv.classList.contains('tvTall');
+        if (!hasTvTall) {
+          logOk('tvTall class removed from #tv');
+        } else {
+          logErr('tvTall class still present on #tv');
+        }
+      }, 100);
+    })();
+  </script>
+</body>
+</html>
