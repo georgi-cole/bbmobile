@@ -27,6 +27,8 @@
       // Test constants
       const LOCKED_OVERLAY_PATTERN = /Locked\. Nominees:/i;
       const NOMINATION_TIME_SECONDS = 10;
+      const OVERLAY_CHECK_DELAY_MS = 1500;
+      const PROGRESSION_CHECK_DELAY_MS = 6000;
 
       // Minimal game scaffolding
       window.game = { 
@@ -69,12 +71,12 @@
         const ov = document.getElementById('tvOverlay');
         const hasLockedMsg = ov && LOCKED_OVERLAY_PATTERN.test(ov.textContent || '');
         if (hasLockedMsg) err('Locked message present'); else ok('No locked overlay message');
-      }, 1500);
+      }, OVERLAY_CHECK_DELAY_MS);
 
       // Check progression after 6s
       setTimeout(() => {
         if (vetoStarted) ok('Game progressed to veto'); else err('Game did not progress to veto');
-      }, 6000);
+      }, PROGRESSION_CHECK_DELAY_MS);
     })();
   </script>
 </body>

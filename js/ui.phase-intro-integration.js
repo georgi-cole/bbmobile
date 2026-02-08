@@ -23,6 +23,21 @@
   }
 
   /**
+   * Helper: Attempt to start nominations using fallback chain
+   */
+  function attemptNominationsStart(origStartNominations) {
+    if (typeof global.renderNomsPanel === 'function') {
+      global.renderNomsPanel();
+    } else if (typeof origStartNominations === 'function') {
+      origStartNominations.call(global);
+    } else if (typeof global.setPhase === 'function') {
+      const tNoms = (global.game?.cfg?.tNoms) || 25;
+      const callback = () => global.lockNominationsAndProceed?.();
+      global.setPhase('nominations', tNoms, callback);
+    }
+  }
+
+  /**
    * Wrap startVetoComp to show intro modal first
    */
   function wrapStartVetoComp() {
@@ -214,15 +229,7 @@
             
             if (currentPhase === 'nominations' && !pleaActive) {
               console.info('[phase-intro-integration] Watchdog(2s): ensuring nominations start');
-              if (typeof global.renderNomsPanel === 'function') {
-                global.renderNomsPanel();
-              } else if (typeof origStartNominations === 'function') {
-                origStartNominations.call(global);
-              } else if (typeof global.setPhase === 'function') {
-                const tNoms = (global.game?.cfg?.tNoms) || 25;
-                const callback = () => global.lockNominationsAndProceed?.();
-                global.setPhase('nominations', tNoms, callback);
-              }
+              attemptNominationsStart(origStartNominations);
             }
           } catch (watchErr) {
             console.warn('[phase-intro-integration] Watchdog(2s) failed:', watchErr);
@@ -239,16 +246,7 @@
               console.info('[phase-intro-integration] Watchdog(5s): hard kick nominations start');
               // Re-neutralize empty overlay
               ensureOverlayNotBlocking();
-              
-              if (typeof global.renderNomsPanel === 'function') {
-                global.renderNomsPanel();
-              } else if (typeof origStartNominations === 'function') {
-                origStartNominations.call(global);
-              } else if (typeof global.setPhase === 'function') {
-                const tNoms = (global.game?.cfg?.tNoms) || 25;
-                const callback = () => global.lockNominationsAndProceed?.();
-                global.setPhase('nominations', tNoms, callback);
-              }
+              attemptNominationsStart(origStartNominations);
             }
           } catch (watchErr) {
             console.warn('[phase-intro-integration] Watchdog(5s) failed:', watchErr);
