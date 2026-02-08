@@ -3096,13 +3096,24 @@
       console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
     }
 
-    // 3. If reason is 'continue', advance to next phase
+    // 3. If reason is 'continue', advance to next phase immediately
     if(reason === 'continue'){
-      // Give time for summary to be dismissed, then advance
-      console.info('[social-maneuvers] ⏩ Advancing to next phase after OK');
+      console.info('[social-maneuvers] ⏩ Advancing to next phase immediately after OK');
       
-      // Phase advance will be handled by the timer callback or explicit call
-      // Don't double-advance here - let the normal flow handle it
+      // Immediately advance the phase by calling global phase advancement functions
+      try {
+        if (typeof global.advancePhase === 'function') {
+          global.advancePhase();
+          console.info('[social-maneuvers] ✓ Phase advanced via global.advancePhase()');
+        } else if (typeof global.nextPhase === 'function') {
+          global.nextPhase();
+          console.info('[social-maneuvers] ✓ Phase advanced via global.nextPhase()');
+        } else {
+          console.warn('[social-maneuvers] No advancePhase or nextPhase function available - phase advance may not occur');
+        }
+      } catch(e) {
+        console.error('[social-maneuvers] Failed to advance phase:', e);
+      }
     }
   }
 
@@ -3708,23 +3719,11 @@
     continueBtn.textContent = 'OK';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
-      // Reset summary guard so it can be shown again next phase
+      // Clear summary guard so it can be shown again next phase
       socialSummaryOpen = false;
       
-      // OK button behavior: Set timer to 1 second remaining and resume
+      // Resume/pause controller cleanup
       try {
-        const g = global.game;
-        const now = Date.now();
-        
-        // Fast advance: Set timer to 1 second from now
-        const PHASE_ADVANCE_DELAY_MS = 1000; // 1 second - fast advance to next phase
-        g.endAt = now + PHASE_ADVANCE_DELAY_MS;
-        if (typeof g.phaseEndsAt === 'number') {
-          g.phaseEndsAt = now + PHASE_ADVANCE_DELAY_MS;
-        }
-        console.info('[social-maneuvers] ⏱️ OK pressed - timer set to 1 second remaining (endAt:', g.endAt, ')');
-        
-        // Resume timer with owner ID to allow phase to advance
         if (global.PauseController && typeof global.PauseController.resume === 'function') {
           global.PauseController.resume('social-summary');
           console.info('[social-maneuvers] ▶️ Timer resumed via PauseController (OK pressed)');
@@ -3734,9 +3733,18 @@
           console.info('[social-maneuvers] ▶️ Timer resumed (OK pressed, legacy fallback)');
         }
       } catch(e) {
-        console.error('[social-maneuvers] Failed to handle timer on OK:', e);
+        console.error('[social-maneuvers] Failed to resume timer on OK:', e);
       }
       
+      // Call endSocialPhaseNow to run unified phase completion and advance immediately
+      try {
+        endSocialPhaseNow('continue');
+        console.info('[social-maneuvers] ✓ endSocialPhaseNow(continue) called - phase will advance immediately');
+      } catch(e) {
+        console.error('[social-maneuvers] Failed to call endSocialPhaseNow:', e);
+      }
+      
+      // Perform UI dismissal
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();
@@ -3751,26 +3759,8 @@
           console.info('[social-maneuvers] ✓ Summary backdrop removed');
         }
         
-        // TASK 1: Restore social launcher if phase is still active and energy/time remain
-        const g = global.game;
-        const isPhaseStillActive = g?.phase === 'social_intermission';
-        const hasTimeRemaining = g?.endAt > Date.now();
-        const humanId = g?.humanId;
-        const humanEnergy = humanId ? SocialResources.get(humanId, 'energy') : 0;
-        
-        if (isPhaseStillActive && hasTimeRemaining && humanEnergy > 0) {
-          const socialLauncher = document.getElementById('socializeLauncher');
-          if (socialLauncher) {
-            socialLauncher.style.display = '';
-            console.info('[social-maneuvers] ✓ Social launcher restored (phase active, time/energy remain)');
-          }
-        } else {
-          console.info('[social-maneuvers] Social launcher not restored (phase ended or no energy/time)');
-        }
-        
-        // Let the phase timer callback handle phase advance naturally
-        // Don't try to advance manually here - it will happen via timer or explicit call
-        console.info('[social-maneuvers] ✓ Summary dismissed - phase will advance via timer callback');
+        // Don't restore social launcher if phase is advancing
+        console.info('[social-maneuvers] ✓ Summary dismissed - phase advancing immediately');
       }, 400);
     };
     buttonBar.appendChild(continueBtn);
