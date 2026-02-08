@@ -63,6 +63,9 @@
       isNewPersonalBest = false       // If true, show personal best indicator
     } = options;
     
+    // Log that this function is being used (potentially as fallback)
+    console.info(`[results-popup][${phase || 'unknown'}] showResultsPopup called (may be fallback from inline reveal):`, title);
+    
     if(!topThree || topThree.length === 0) return;
     
     // Check for fast-forward mode and legacy skip mode
@@ -77,12 +80,13 @@
       const winner = topThree[0];
       const winnerId = (typeof winner === 'object') ? winner.id : null;
       const winnerName = (typeof winner === 'object') ? winner.name : winner;
-      console.info(`[results] Suppressed under legacy skip - winner=${winnerId || winnerName}`);
+      console.info(`[results-popup][${phase || 'unknown'}] Suppressed under legacy skip - winner=${winnerId || winnerName}`);
       return; // Do not render popup
     }
     
     // Determine rendering mode: inline TV (FFWD) vs fullscreen overlay (normal)
     let renderInlineTV = ffActive && preserveModal;
+    console.info(`[results-popup][${phase || 'unknown'}] Render mode: ${renderInlineTV ? 'inline TV' : 'fullscreen overlay'}`);
     
     const startTime = Date.now();
     let dismissible = false;
@@ -615,7 +619,14 @@
       }, 500);
       
       // Click/tap to dismiss (after 500ms)
-      const dismissHandler = (e) => {
+      let dismissHandler;
+      
+      // ESC to dismiss
+      const keyHandler = (e) => {
+        if(e.key === 'Escape') dismissHandler(e);
+      };
+      
+      dismissHandler = (_e) => {
         if(!dismissible || dismissed) return;
         const elapsed = Date.now() - startTime;
         if(elapsed < effectiveMinDisplay) return; // Force minimum display time
@@ -626,11 +637,6 @@
         setTimeout(() => {
           if(modal.parentNode) modal.remove();
         }, 250);
-      };
-      
-      // ESC to dismiss
-      const keyHandler = (e) => {
-        if(e.key === 'Escape') dismissHandler(e);
       };
       
       modal.addEventListener('click', dismissHandler);
