@@ -1,16 +1,16 @@
 /* ============================================================================
    EVICTION RESULT MODAL
    
-   Purpose: Provides an inline modal for eviction results that appears within
-            the TV viewport for dramatic, centered presentation.
+   Purpose: Provides an absolutely positioned modal for eviction results that
+            appears within the TV viewport for dramatic, centered presentation.
    
    Features:
-   - Positioned inline within TV viewport (.tvViewport) instead of viewport-level
+   - Absolutely positioned within TV viewport (.tvViewport) instead of viewport-level
    - High z-index (100) to appear above TV content
    - Centered with flexbox
    - Dramatic backdrop effects with enhanced blur and vignette
    - Smooth fade-in/fade-out animations
-   - Reduced motion support
+   - Reduced motion support (disables all animations)
    - Mobile responsive
    - Enhanced visual drama with glowing effects and particles
    ============================================================================ */
@@ -153,11 +153,20 @@
   .eviction-modal-vote-count,
   .eviction-modal-name,
   .eviction-modal-spotlight,
+  .eviction-modal-backdrop,
   .eviction-particle {
     animation: none;
   }
   .eviction-modal-name-reveal.revealed {
     animation: none;
+  }
+  
+  /* Reduce font sizes for users who prefer less visual emphasis */
+  .eviction-modal-vote-count {
+    font-size: 2rem; /* Reduced from 2.5rem */
+  }
+  .eviction-modal-name {
+    font-size: 1.5rem; /* Reduced from 2rem */
   }
 }
 

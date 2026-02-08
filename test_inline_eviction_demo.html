@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inline Eviction Modal Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/eviction-modal.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .demo-container {
+      max-width: 900px;
+      width: 100%;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #e2edf8;
+      margin-bottom: 20px;
+    }
+    
+    .test-btn {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      margin: 20px auto;
+      padding: 16px 24px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1a2937, #0f1a28);
+      color: #e2edf8;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .test-btn:hover {
+      background: linear-gradient(135deg, #253442, #1a2635);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    /* TV structure simulation */
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      height: 520px;
+      margin: 0 auto;
+      background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
+      background-color: #0e1730;
+      border: 2px solid rgba(0,0,0,0.35);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .tvHead {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(120,210,255,.07);
+      background: linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+    }
+    
+    .tvTitle {
+      font-weight: 600;
+      letter-spacing: .6px;
+      font-size: .75rem;
+      color: #c7d7eb;
+    }
+    
+    .tvViewport {
+      position: relative;
+      flex: 1 0 auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .tvNow {
+      position: absolute;
+      z-index: 13;
+      left: 12px;
+      right: 12px;
+      bottom: 8px;
+      min-height: 28px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: .82rem;
+      background: linear-gradient(180deg, rgba(9,24,40,.85), rgba(6,14,24,.85)),
+                  linear-gradient(90deg, rgba(111,211,255,.18), rgba(103,255,168,.12));
+      border: 1px solid rgba(120,210,255,.22);
+      box-shadow: 0 4px 18px -12px rgba(0,0,0,.8);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>📺 Inline Eviction Modal Demo</h1>
+    
+    <button class="test-btn" onclick="showEvictionModal()">
+      Show Eviction Result (Inline in TV)
+    </button>
+    
+    <div id="tv" class="tv tv-screen">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div></div>
+        <div>DR</div>
+      </div>
+      <div class="tvViewport">
+        <div class="tvNow">TV Viewport - Modal will appear inline here</div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="src/ui/evictionModal.js"></script>
+  <script>
+    async function showEvictionModal() {
+      console.log('Showing inline eviction modal...');
+      await window.EvictionModal.show({
+        title: 'Eviction Result',
+        lines: ['By a vote of 7 to 2, Alice, you have been evicted from the Big Brother house.'],
+        tone: 'evict',
+        duration: 4000
+      });
+      console.log('Modal dismissed');
+    }
+  </script>
+</body>
+</html>
