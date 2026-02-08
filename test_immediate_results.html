@@ -123,17 +123,6 @@
 </head>
 <body>
   <h1>🏆 Test: Immediate Competition Results & Fast-Forward</h1>
-  
-  <div class="test-section" style="background: rgba(91, 214, 138, 0.1); border-color: #5bd68a;">
-    <h2 style="color: #5bd68a; margin-top: 0;">✨ Unified Results Path Active</h2>
-    <p><strong>This test now uses the unified inline "faux TV" reveal system.</strong></p>
-    <ul>
-      <li>✅ Primary renderer: <code>global.showCompetitionReveal()</code> (inline tri-slot reveal)</li>
-      <li>✅ NO fallback to cinematics/fullscreen modals as primary path</li>
-      <li>✅ Runtime guard provides shim if showCompetitionReveal is missing</li>
-      <li>✅ Check console for <code>[ResultsPath]</code> diagnostic logs</li>
-    </ul>
-  </div>
 
   <div class="test-section">
     <h2>Feature Flag Control</h2>
@@ -340,8 +329,7 @@
     });
   </script>
 
-  <!-- Load necessary modules -->
-  <script src="js/results-runtime-guard.js"></script>
+  <!-- Load the competitions-flow.js module -->
   <script src="js/competitions-flow.js"></script>
 
   <script>
