@@ -267,8 +267,31 @@
       </div>
       <div class="test-buttons">
         <button class="nomination" onclick="testNominationModal()">Show Nomination Modal</button>
+        <button class="nomination" onclick="testNominationModalPause()">Open Nomination Modal (pause test)</button>
       </div>
       <div class="status" id="nomination-status">Ready to test. Click the button above.</div>
+    </div>
+
+    <!-- Pause Test Section -->
+    <div class="test-section">
+      <h2>⏸️ Pause Functionality Test</h2>
+      <div class="modal-description">
+        Test that the Nomination Ceremony modal correctly pauses the game timer when open and resumes when closed.
+      </div>
+      <div class="modal-features">
+        <strong>What to verify:</strong>
+        <ul style="margin: 8px 0 0 20px; padding: 0;">
+          <li>Timer should pause when modal opens (g.timerPaused = true or PauseController shows paused)</li>
+          <li>Modal open flag should be set (g.__nominationIntroModalOpen = true)</li>
+          <li>Timer should resume when modal is dismissed</li>
+          <li>Modal open flag should be cleared (g.__nominationIntroModalOpen = false)</li>
+          <li>Safety watchdog should respect the modal open flag</li>
+        </ul>
+      </div>
+      <div class="test-buttons">
+        <button class="nomination" onclick="testNominationModalPause()">Open Nomination Modal (pause test)</button>
+      </div>
+      <div class="status" id="pause-status">Ready to test pause functionality.</div>
     </div>
 
     <!-- Sequence Test -->
@@ -424,6 +447,92 @@
         updateStatus('nomination-status', '✓ Nomination modal dismissed successfully', true);
       } catch (e) {
         updateStatus('nomination-status', '✗ Error: ' + e.message, false);
+        console.error(e);
+      }
+    }
+
+    async function testNominationModalPause() {
+      updateStatus('pause-status', 'Opening Nomination Ceremony modal (testing pause)...');
+      
+      // Set up minimal game context for testing
+      if (!window.game) window.game = {};
+      window.game.humanId = 'player1';
+      window.game.hohId = 'player2';
+      window.game.phase = 'nominations';
+      
+      // Set up a mock timer to test pause functionality
+      window.game.endAt = Date.now() + 60000; // 60 seconds from now
+      window.game.timerPaused = false;
+      
+      // Mock functions if not available
+      if (!window.getP) {
+        window.getP = function(id) {
+          return {
+            id: id,
+            name: id === 'player1' ? 'You' : 'HOH',
+            affinity: {},
+            reputation: 0.5,
+            threat: 0.5,
+            evicted: false
+          };
+        };
+      }
+      
+      if (!window.alivePlayers) {
+        window.alivePlayers = function() {
+          return [
+            { id: 'player1', name: 'You', evicted: false },
+            { id: 'player2', name: 'HOH', evicted: false },
+            { id: 'player3', name: 'Player 3', evicted: false },
+            { id: 'player4', name: 'Player 4', evicted: false },
+            { id: 'player5', name: 'Player 5', evicted: false },
+            { id: 'player6', name: 'Player 6', evicted: false }
+          ];
+        };
+      }
+      
+      try {
+        // Check pause state before opening modal
+        const pausedBefore = window.game.timerPaused || 
+          (window.PauseController && window.PauseController.isPaused && window.PauseController.isPaused());
+        
+        // Open modal (should pause timer)
+        const modalPromise = window.showNominationIntroModal();
+        
+        // Wait a bit for modal to fully open and pause to take effect
+        await sleep(100);
+        
+        // Check pause state while modal is open
+        const pausedDuring = window.game.timerPaused || 
+          (window.PauseController && window.PauseController.isPaused && window.PauseController.isPaused());
+        const modalOpen = window.game.__nominationIntroModalOpen;
+        
+        let statusMsg = `Before: paused=${pausedBefore}, During: paused=${pausedDuring}, modalOpen=${modalOpen}`;
+        
+        if (pausedDuring && modalOpen) {
+          updateStatus('pause-status', `✓ Modal opened and game paused correctly! ${statusMsg}`, true);
+        } else {
+          updateStatus('pause-status', `⚠ Modal opened but pause may not be working. ${statusMsg}`, false);
+        }
+        
+        // Wait for modal to be dismissed
+        await modalPromise;
+        
+        // Check pause state after modal is closed
+        await sleep(100);
+        const pausedAfter = window.game.timerPaused || 
+          (window.PauseController && window.PauseController.isPaused && window.PauseController.isPaused());
+        const modalOpenAfter = window.game.__nominationIntroModalOpen;
+        
+        statusMsg += `, After: paused=${pausedAfter}, modalOpen=${modalOpenAfter}`;
+        
+        if (!pausedAfter && !modalOpenAfter) {
+          updateStatus('pause-status', `✓ Pause test passed! ${statusMsg}`, true);
+        } else {
+          updateStatus('pause-status', `⚠ Modal dismissed but timer may not have resumed. ${statusMsg}`, false);
+        }
+      } catch (e) {
+        updateStatus('pause-status', '✗ Error: ' + e.message, false);
         console.error(e);
       }
     }
