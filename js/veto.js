@@ -88,6 +88,10 @@
   const POV_FAST_PATH_DELAY_MS = 50;           // 50ms - minimal delay for human winner fast-path
   const POV_ANIMATION_BUFFER_MS = 100;         // 100ms - animation completion buffer
 
+  // Module-level guard to prevent duplicate finalizeFinal4Eviction execution
+  // This ensures idempotent behavior when the function is called multiple times
+  var _finalizeFinal4EvictionInProgress = false;
+
   function getP(id){ return (global.getP ? global.getP(id) : null); }
   function alivePlayers(){ return (global.alivePlayers ? global.alivePlayers() : []); }
   function safeName(id){
@@ -1753,100 +1757,119 @@
   global.renderFinal4EvictionPanel = renderFinal4EvictionPanel;
   
   async function finalizeFinal4Eviction(targetId){
+    console.debug('[F4] finalizeFinal4Eviction called with targetId:', targetId);
+    
     var g = global.game;
+    
+    // Module-level guard: prevent duplicate execution of async flow
+    // Return resolved Promise immediately if already in progress (idempotent behavior)
+    if(_finalizeFinal4EvictionInProgress) {
+      console.warn('[F4] finalizeFinal4Eviction blocked: already in progress (module-level guard), returning resolved Promise');
+      return Promise.resolve();
+    }
+    
+    // Legacy guards for additional safety (check game-level flags)
     if(g.__f4EvictionResolved) {
-      console.warn('[F4] finalizeFinal4Eviction blocked: eviction already resolved');
-      return;
+      console.warn('[F4] finalizeFinal4Eviction blocked: eviction already resolved, returning resolved Promise');
+      return Promise.resolve();
     }
     if(g.__f4EvictionInProgress) {
-      console.warn('[F4] finalizeFinal4Eviction blocked: eviction in progress');
-      return;
+      console.warn('[F4] finalizeFinal4Eviction blocked: eviction in progress, returning resolved Promise');
+      return Promise.resolve();
     }
     if(g.__f4ToF3TransitionStarted) {
-      console.warn('[F4] finalizeFinal4Eviction blocked: transition to Final 3 already started');
-      return;
+      console.warn('[F4] finalizeFinal4Eviction blocked: transition to Final 3 already started, returning resolved Promise');
+      return Promise.resolve();
     }
     
+    // Set guards
+    _finalizeFinal4EvictionInProgress = true;
     g.__f4EvictionInProgress = true;
     
-    var holder = getP(g.vetoHolder);
-    if(!holder){
-      console.error('[Final4] Invalid veto holder ID:', g.vetoHolder);
-      return;
-    }
-    var target = targetId;
-    
-    // AI decision if not provided or invalid
-    // Check if targetId is null, undefined, or not a valid number
-    if(target == null || isNaN(Number(target))){
-      console.info('[Final4] No valid target provided, using AI decision');
-      target = aiFinal4EvictionChoice();
-    } else {
-      // Normalize to number for consistent handling
-      target = Number(target);
-    }
-    
-    var evictee = getP(target);
-    if(!evictee) {
-      console.error('[Final4] Invalid evictee ID:', target);
-      return;
-    }
-    
-    g.__f4EvictionResolved = true;
-    evictee.evicted = true;
-    evictee.weekEvicted = g.week;
-    evictee.finalRank = 4; // Final 4 eviction = 4th place
-    
-    global.addLog('Final 4 eviction: <b>' + holder.name + '</b> has chosen to evict <b>' + evictee.name + '</b>.', 'danger');
-    
-    // Show diary room vote card before eviction result (skipping social phase and live vote modal)
-    // This provides the "diary eviction vote" experience without triggering unnecessary phases
-    try{
-      await showTVCardWithAvatars({
-        title: 'Final 4 Vote',
-        lines: [holder.name + ': I vote to evict ' + evictee.name + '.'],
-        tone: 'live',
-        duration: 3500,
-        actorIds: holder.id,
-        subjectIds: target
-      });
-    }catch(e){
-      console.error('[final4] diary vote card failed:', e);
-    }
-    
-    // Show eviction card with generous duration
-    try{ 
-      if(typeof global.showCard === 'function') 
-        global.showCard('Evicted', [evictee.name + ' has been evicted.', 'Three remain.'], 'evict', 4500, true); 
-    }catch(e){}
-    
-    // Wait for card to display
-    if(typeof global.cardQueueWaitIdle === 'function'){
-      try{ await global.cardQueueWaitIdle(); }catch(e){}
-    }
-    
-    // Run eviction visual enhancement (avatar animation + roster badge update)
-    if(typeof global.runEvictionVisual === 'function'){
+    try {
+      var holder = getP(g.vetoHolder);
+      if(!holder){
+        console.error('[Final4] Invalid veto holder ID:', g.vetoHolder);
+        return;
+      }
+      var target = targetId;
+      
+      // AI decision if not provided or invalid
+      // Check if targetId is null, undefined, or not a valid number
+      if(target == null || isNaN(Number(target))){
+        console.info('[Final4] No valid target provided, using AI decision');
+        target = aiFinal4EvictionChoice();
+      } else {
+        // Normalize to number for consistent handling
+        target = Number(target);
+      }
+      
+      var evictee = getP(target);
+      if(!evictee) {
+        console.error('[Final4] Invalid evictee ID:', target);
+        return;
+      }
+      
+      g.__f4EvictionResolved = true;
+      evictee.evicted = true;
+      evictee.weekEvicted = g.week;
+      evictee.finalRank = 4; // Final 4 eviction = 4th place
+      
+      global.addLog('Final 4 eviction: <b>' + holder.name + '</b> has chosen to evict <b>' + evictee.name + '</b>.', 'danger');
+      
+      // Show diary room vote card before eviction result (skipping social phase and live vote modal)
+      // This provides the "diary eviction vote" experience without triggering unnecessary phases
       try{
-        await global.runEvictionVisual(target, { reason: 'final4' });
+        await showTVCardWithAvatars({
+          title: 'Final 4 Vote',
+          lines: [holder.name + ': I vote to evict ' + evictee.name + '.'],
+          tone: 'live',
+          duration: 3500,
+          actorIds: holder.id,
+          subjectIds: target
+        });
       }catch(e){
-        console.error('[final4] visual enhancement failed:', e);
+        console.error('[final4] diary vote card failed:', e);
       }
-    }
-    
-    // Add to jury if enabled (exclude self-evicted players)
-    const targetPlayer = getP(target);
-    if(global.alivePlayers().length <= 9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target) && !targetPlayer?.selfEvicted){
-      g.juryHouse.push(target);
-    }
-    
-    // Proceed to next phase
-    setTimeout(function(){ 
-      // Guard: Only proceed if still in final4_eviction phase and resolved
-      if(global.game && global.game.phase === 'final4_eviction' && global.game.__f4EvictionResolved){
-        proceedAfterFinal4Eviction(); 
+      
+      // Show eviction card with generous duration
+      try{ 
+        if(typeof global.showCard === 'function') 
+          global.showCard('Evicted', [evictee.name + ' has been evicted.', 'Three remain.'], 'evict', 4500, true); 
+      }catch(e){}
+      
+      // Wait for card to display
+      if(typeof global.cardQueueWaitIdle === 'function'){
+        try{ await global.cardQueueWaitIdle(); }catch(e){}
       }
-    }, 700);
+      
+      // Run eviction visual enhancement (avatar animation + roster badge update)
+      if(typeof global.runEvictionVisual === 'function'){
+        try{
+          await global.runEvictionVisual(target, { reason: 'final4' });
+        }catch(e){
+          console.error('[final4] visual enhancement failed:', e);
+        }
+      }
+      
+      // Add to jury if enabled (exclude self-evicted players)
+      const targetPlayer = getP(target);
+      if(global.alivePlayers().length <= 9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target) && !targetPlayer?.selfEvicted){
+        g.juryHouse.push(target);
+      }
+      
+      // Proceed to next phase
+      setTimeout(function(){ 
+        // Guard: Only proceed if still in final4_eviction phase and resolved
+        if(global.game && global.game.phase === 'final4_eviction' && global.game.__f4EvictionResolved){
+          proceedAfterFinal4Eviction(); 
+        }
+      }, 700);
+    } finally {
+      // Clear module-level guard to allow future calls (if needed for new game/reset)
+      _finalizeFinal4EvictionInProgress = false;
+      console.debug('[F4] finalizeFinal4Eviction completed');
+    }
   }
   global.finalizeFinal4Eviction = finalizeFinal4Eviction;
   
