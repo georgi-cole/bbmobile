@@ -127,15 +127,65 @@
           // Show nominations intro modal if available
           if (typeof global.showNominationIntroModal === 'function') {
             try {
-              await global.showNominationIntroModal();
+              // Set up safety timeout (30 seconds)
+              const TIMEOUT_MS = 30000;
+              let modalResolved = false;
+              
+              const modalPromise = global.showNominationIntroModal().then(() => {
+                modalResolved = true;
+              });
+              
+              const timeoutPromise = new Promise((resolve) => {
+                setTimeout(() => {
+                  // Only resume if modal hasn't resolved and no plea is active
+                  if (!modalResolved && !g.__nominationPleaActive) {
+                    console.warn('[phase-intro-integration] Modal timeout reached (30s), resuming flow');
+                    resolve();
+                  }
+                }, TIMEOUT_MS);
+              });
+              
+              // Wait for either modal or timeout
+              await Promise.race([modalPromise, timeoutPromise]);
+              
+              // Additional wait if plea is still active after timeout
+              if (g.__nominationPleaActive) {
+                console.info('[phase-intro-integration] Waiting for plea to complete...');
+                // Wait up to another 10 seconds for plea to complete
+                const pleaTimeout = new Promise((resolve) => setTimeout(resolve, 10000));
+                const pleaWait = new Promise((resolve) => {
+                  const checkInterval = setInterval(() => {
+                    if (!g.__nominationPleaActive) {
+                      clearInterval(checkInterval);
+                      resolve();
+                    }
+                  }, 100);
+                });
+                await Promise.race([pleaWait, pleaTimeout]);
+              }
+              
             } catch (e) {
               console.error('[phase-intro-integration] Error showing nominations intro modal:', e);
             }
           }
         }
         
-        // Call original function
-        return origStartNominations.apply(this, arguments);
+        // Call original function with error handling
+        try {
+          return origStartNominations.apply(this, arguments);
+        } catch (e) {
+          console.error('[phase-intro-integration] Error calling original startNominations:', e);
+          
+          // Fallback: try to set phase directly
+          try {
+            if (typeof global.setPhase === 'function') {
+              console.info('[phase-intro-integration] Falling back to setPhase');
+              global.setPhase('nominations', { source: 'integration-fallback' });
+            }
+          } catch (fallbackErr) {
+            console.error('[phase-intro-integration] Fallback also failed:', fallbackErr);
+          }
+        }
       };
       
       global.startNominations.__wrappedForPhaseIntro = true;
