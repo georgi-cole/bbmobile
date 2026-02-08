@@ -1794,29 +1794,31 @@
     const forceInline = g.cfg?.forceInlineResults === true;
     
     // Try inline reveal API first (preferred, or forced)
+    // Primary path: global.showCompetitionReveal (inline faux-TV reveal)
     const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
     if(inlineRevealAvailable && (ids.length > 0 || forceInline)){
-      console.info(`[ImmediateResults][${phase}] Using inline reveal API (forced: ${forceInline}):`, title);
+      console.info(`[ImmediateResults][${phase}] 🎯 PRIMARY PATH: Using inline reveal API (forced: ${forceInline}):`, title);
       try{
         const promise = global.showCompetitionReveal(title, scores, ids);
         if(promise && typeof promise.then === 'function'){
           await promise;
-          console.info(`[ImmediateResults][${phase}] Inline reveal finished – resolving phase`);
+          console.info(`[ImmediateResults][${phase}] ✅ Inline reveal completed successfully – resolving phase`);
         }
         resolveCompetitionPhaseIfNeeded();
         return;
       }catch(err){
-        console.warn(`[ImmediateResults][${phase}] Inline reveal error, falling back to popup:`, err);
+        console.warn(`[ImmediateResults][${phase}] ⚠️ Inline reveal error, falling back to popup:`, err);
         // Fall through to popup fallback
       }
     } else if (!inlineRevealAvailable) {
-      console.warn(`[ImmediateResults][${phase}] Inline reveal API not available`);
+      console.warn(`[ImmediateResults][${phase}] ⚠️ Inline reveal API not available - will use fallback`);
     }
     
     // Fallback to popup API if inline reveal unavailable or failed
+    // Fallback shim: global.showResultsPopup (runtime guard compatibility)
     const popupAvailable = typeof global.showResultsPopup === 'function';
     if(!popupAvailable){
-      console.warn(`[ImmediateResults][${phase}] Neither inline reveal nor popup available – advancing without display`);
+      console.warn(`[ImmediateResults][${phase}] ❌ Neither inline reveal nor popup available – advancing without display`);
       resolveCompetitionPhaseIfNeeded();
       return;
     }
@@ -1835,7 +1837,7 @@
       }
     }
     
-    console.info(`[ImmediateResults][${phase}] Using popup fallback:`, title, topThree);
+    console.info(`[ImmediateResults][${phase}] 🔄 FALLBACK PATH: Using showResultsPopup shim:`, title, topThree);
     try{
       const promise = global.showResultsPopup({ title, topThree, winnerEmoji: '🏆', duration: RESULTS_POPUP_DURATION });
       if(promise && typeof promise.then === 'function'){

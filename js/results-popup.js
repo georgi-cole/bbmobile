@@ -51,6 +51,9 @@
   }
 
   // Main results popup function
+  // NOTE: This function is now primarily used as a fallback shim via results-runtime-guard.js
+  // when the native showCompetitionReveal inline API is not available.
+  // Primary results rendering should use showCompetitionReveal (inline faux-TV reveal).
   async function showResultsPopup(options){
     const {
       title = 'Results',
@@ -64,7 +67,7 @@
     } = options;
     
     // Log that this function is being used (potentially as fallback)
-    console.info(`[results-popup][${phase || 'unknown'}] showResultsPopup called (may be fallback from inline reveal):`, title);
+    console.info(`[results-popup][${phase || 'unknown'}] 🔄 FALLBACK SHIM: showResultsPopup called (inline reveal unavailable or failed):`, title);
     
     if(!topThree || topThree.length === 0) return;
     
