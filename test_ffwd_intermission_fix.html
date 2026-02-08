@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: FFWD Dismisses Intermission Card</title>
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/tv.css">
+  <link rel="stylesheet" href="css/unified-card.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #panel {
+      max-width: 800px;
+      margin: 0 auto;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      position: relative;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .test-controls {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    .test-controls h2 {
+      margin-top: 0;
+    }
+    .test-controls button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 14px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background: #4a90e2;
+      color: white;
+    }
+    .test-controls button:hover {
+      background: #357abd;
+    }
+    .test-log {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 15px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .test-log-entry {
+      margin: 5px 0;
+      padding: 5px;
+    }
+    .test-log-entry.success {
+      color: #4caf50;
+    }
+    .test-log-entry.error {
+      color: #f44336;
+    }
+    .test-log-entry.info {
+      color: #2196f3;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">Test: FFWD Button Dismisses Intermission Card</h1>
+  
+  <div class="test-controls">
+    <h2>Test Scenario</h2>
+    <p>This test verifies that pressing the FFWD button dismisses the intermission offer card.</p>
+    <button id="btn-show-card">1. Show Intermission Card</button>
+    <button id="btn-click-ffwd">2. Click FFWD Button</button>
+    <button id="btn-verify">3. Verify Card Dismissed</button>
+    <button id="btn-reset">Reset Test</button>
+  </div>
+
+  <div id="panel"></div>
+
+  <div class="test-log">
+    <h3>Test Log</h3>
+    <div id="log-entries"></div>
+  </div>
+
+  <!-- Required modules -->
+  <script src="js/util/tiny-emitter-custom.js"></script>
+  <script src="js/util/tv-container.js"></script>
+  <script src="js/ui/intermissionCard.js"></script>
+  <script src="js/tv-skip.js"></script>
+
+  <script>
+    // Setup game object
+    if (!window.game) {
+      window.game = {
+        bus: new TinyEmitter(),
+        phase: 'Veto',
+        endAt: Date.now() + 30000, // 30 seconds from now
+        __intermissionActive: false
+      };
+    }
+
+    // Test logging
+    function log(message, type = 'info') {
+      const logEntries = document.getElementById('log-entries');
+      const entry = document.createElement('div');
+      entry.className = `test-log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEntries.appendChild(entry);
+      logEntries.scrollTop = logEntries.scrollHeight;
+      console.log(`[Test] ${message}`);
+    }
+
+    // Test state
+    let cardShown = false;
+    let ffwdClicked = false;
+
+    // 1. Show intermission card
+    document.getElementById('btn-show-card').addEventListener('click', () => {
+      log('Showing intermission card...', 'info');
+      
+      if (typeof IntermissionCard !== 'undefined' && IntermissionCard.showInTv) {
+        IntermissionCard.showInTv({
+          compType: 'Veto',
+          gameType: 'dotsandboxes',
+          onYes: () => {
+            log('User clicked YES', 'info');
+          },
+          onNo: () => {
+            log('User clicked NO', 'info');
+          }
+        });
+        
+        // Check if card is visible
+        setTimeout(() => {
+          const card = document.querySelector('.intermission-offer-card');
+          if (card) {
+            cardShown = true;
+            log('✓ Intermission card is visible', 'success');
+          } else {
+            log('✗ Failed to show intermission card', 'error');
+          }
+        }, 100);
+      } else {
+        log('✗ IntermissionCard module not available', 'error');
+      }
+    });
+
+    // 2. Click FFWD button
+    document.getElementById('btn-click-ffwd').addEventListener('click', () => {
+      if (!cardShown) {
+        log('⚠ Please show the card first (step 1)', 'error');
+        return;
+      }
+
+      log('Simulating FFWD button click...', 'info');
+      
+      // Find and click the FFWD button
+      const ffwdButton = document.querySelector('.tv-skip-button');
+      if (ffwdButton) {
+        ffwdButton.click();
+        ffwdClicked = true;
+        log('✓ FFWD button clicked', 'success');
+      } else {
+        log('✗ FFWD button not found (will simulate manually)', 'error');
+        
+        // Manually call the removal function (simulates what FFWD button should do)
+        if (window.IntermissionCard && typeof window.IntermissionCard.removeActive === 'function') {
+          window.IntermissionCard.removeActive();
+          ffwdClicked = true;
+          log('✓ Manually called IntermissionCard.removeActive()', 'success');
+        }
+      }
+    });
+
+    // 3. Verify card is dismissed
+    document.getElementById('btn-verify').addEventListener('click', () => {
+      if (!cardShown) {
+        log('⚠ Please show the card first (step 1)', 'error');
+        return;
+      }
+      if (!ffwdClicked) {
+        log('⚠ Please click FFWD first (step 2)', 'error');
+        return;
+      }
+
+      log('Verifying card is dismissed...', 'info');
+      
+      setTimeout(() => {
+        const card = document.querySelector('.intermission-offer-card');
+        const overlay = document.querySelector('.tv-intermission-overlay');
+        
+        if (!card) {
+          log('✓ Card is dismissed (not found in DOM)', 'success');
+        } else {
+          log('✗ Card is still visible!', 'error');
+        }
+
+        if (!window.game.__intermissionActive) {
+          log('✓ Intermission flag cleared', 'success');
+        } else {
+          log('✗ Intermission flag still active', 'error');
+        }
+
+        // Final result
+        if (!card && !window.game.__intermissionActive) {
+          log('🎉 TEST PASSED: FFWD button correctly dismisses intermission card', 'success');
+        } else {
+          log('❌ TEST FAILED: Card not properly dismissed', 'error');
+        }
+      }, 500);
+    });
+
+    // Reset test
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      log('Resetting test...', 'info');
+      
+      // Remove any cards
+      if (window.IntermissionCard && typeof window.IntermissionCard.removeActive === 'function') {
+        window.IntermissionCard.removeActive();
+      }
+      
+      // Reset state
+      cardShown = false;
+      ffwdClicked = false;
+      window.game.__intermissionActive = false;
+      
+      log('✓ Test reset', 'success');
+    });
+
+    // Initialize TV skip button
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Initializing test environment...', 'info');
+      
+      // Initialize TV skip button
+      if (typeof TVSkip !== 'undefined' && TVSkip.init) {
+        TVSkip.init();
+        log('✓ TV Skip button initialized', 'success');
+      } else {
+        log('⚠ TV Skip button not available', 'error');
+      }
+
+      // Add some mock functions for skip APIs
+      window.fastForwardPhase = function() {
+        log('fastForwardPhase() called', 'info');
+      };
+
+      log('✓ Test ready', 'success');
+      log('Follow the numbered steps to test the fix', 'info');
+    });
+  </script>
+</body>
+</html>

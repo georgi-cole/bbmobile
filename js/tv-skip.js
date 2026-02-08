@@ -190,6 +190,11 @@
       skipButton.classList.add('pressed');
       setTimeout(() => skipButton.classList.remove('pressed'), 200);
 
+      // Dismiss any active intermission card (e.g., "Play Dots and Boxes while you wait?")
+      if (g.IntermissionCard && typeof g.IntermissionCard.removeActive === 'function') {
+        g.IntermissionCard.removeActive();
+      }
+
       // Try skip APIs in order: fastForwardPhase → skipPhase → advancePhase
       if(typeof g.fastForwardPhase === 'function'){
         console.info('Handler: fastForwardPhase()');
