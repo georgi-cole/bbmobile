@@ -548,11 +548,15 @@
               const currentAffinity = hoh.affinity[player.id] || 0.5;
               hoh.affinity[player.id] = Math.min(1, currentAffinity + pleaResult.influence * 0.5);
               
-              console.info('[phase-intro] Applied affinity adjustment', {
+              // Small reputation penalty (making a plea is seen as desperation)
+              player.reputation = Math.max(0, (player.reputation || 0.5) - 0.03);
+              
+              console.info('[phase-intro] Applied affinity and reputation adjustments', {
                 playerId: player.id,
                 hohId: hoh.id,
                 influence: pleaResult.influence,
-                newAffinity: hoh.affinity[player.id]
+                newAffinity: hoh.affinity[player.id],
+                newReputation: player.reputation
               });
             }
             
