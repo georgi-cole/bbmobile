@@ -5,93 +5,6 @@
 (function(global) {
   'use strict';
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PAUSE/RESUME HELPERS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Pause the phase timer for a modal
-   * Prefers PauseController, falls back to global pause functions or manual timer handling
-   * @param {string} owner - Unique identifier for the pause owner
-   */
-  function pauseForModal(owner) {
-    const g = global.game;
-    if (!g) {
-      console.warn('[phase-intro] Cannot pause - game object not available');
-      return;
-    }
-
-    console.info(`[phase-intro] Pausing game for ${owner}`);
-
-    // Try PauseController first (preferred method with owner-based pause)
-    if (global.PauseController && typeof global.PauseController.pause === 'function') {
-      console.info(`[phase-intro] Using PauseController.pause('${owner}')`);
-      global.PauseController.pause(owner);
-      return;
-    }
-
-    // Fall back to global.pausePhaseTimer() if available
-    if (typeof global.pausePhaseTimer === 'function') {
-      console.info('[phase-intro] Using global.pausePhaseTimer()');
-      global.pausePhaseTimer();
-      return;
-    }
-
-    // Last resort: manual timer handling
-    if (!g.timerPaused) {
-      console.info('[phase-intro] Using manual timer pause');
-      g.timerPaused = true;
-      if (g.endAt && typeof g.endAt === 'number') {
-        g.pausedTimeRemaining = g.endAt - Date.now();
-        console.info('[phase-intro] Captured pausedTimeRemaining:', g.pausedTimeRemaining);
-      }
-    }
-  }
-
-  /**
-   * Resume the phase timer after modal dismissal
-   * Prefers PauseController, falls back to global resume functions or manual timer restoration
-   * @param {string} owner - Unique identifier for the pause owner
-   */
-  function resumeForModal(owner) {
-    const g = global.game;
-    if (!g) {
-      console.warn('[phase-intro] Cannot resume - game object not available');
-      return;
-    }
-
-    console.info(`[phase-intro] Resuming game for ${owner}`);
-
-    // Try PauseController first (preferred method with owner-based resume)
-    if (global.PauseController && typeof global.PauseController.resume === 'function') {
-      console.info(`[phase-intro] Using PauseController.resume('${owner}')`);
-      global.PauseController.resume(owner);
-      return;
-    }
-
-    // Fall back to global.resumePhaseTimer() if available
-    if (typeof global.resumePhaseTimer === 'function') {
-      console.info('[phase-intro] Using global.resumePhaseTimer()');
-      global.resumePhaseTimer();
-      return;
-    }
-
-    // Last resort: manual timer restoration
-    if (g.timerPaused) {
-      console.info('[phase-intro] Using manual timer resume');
-      g.timerPaused = false;
-      if (g.pausedTimeRemaining && typeof g.pausedTimeRemaining === 'number') {
-        g.endAt = Date.now() + g.pausedTimeRemaining;
-        console.info('[phase-intro] Restored endAt:', g.endAt);
-        delete g.pausedTimeRemaining;
-      }
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // MODAL FUNCTIONS
-  // ═══════════════════════════════════════════════════════════════════════════
-
   /**
    * Show Power of Veto Competition intro modal
    * @returns {Promise} Resolves when modal is dismissed
@@ -234,13 +147,6 @@
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       console.info('[phase-intro] Showing nominations intro modal');
-
-      // Set modal-open flag IMMEDIATELY to prevent watchdog from firing
-      g.__nominationIntroModalOpen = true;
-      console.info('[phase-intro] Set __nominationIntroModalOpen = true');
-
-      // Pause the game timer
-      pauseForModal('nomination-intro-modal');
 
       // Create overlay
       const overlay = document.createElement('div');
@@ -465,12 +371,12 @@
         }
       });
 
-      // Unified dismiss handler (defined early so nested functions can use it)
-      const doDismiss = () => {
+      // Dismiss handler (defined early so nested functions can use it)
+      const dismiss = () => {
         if (dismissed) return;
         dismissed = true;
 
-        console.info('[phase-intro] Nomination modal dismissed, starting cleanup');
+        console.info('[phase-intro] Nomination modal dismissed, resolving immediately');
 
         // Animate out
         overlay.style.opacity = '0';
@@ -479,19 +385,11 @@
         }
 
         setTimeout(() => {
-          // Remove DOM elements
           if (overlay.parentNode) {
             overlay.parentNode.removeChild(overlay);
           }
-
-          // Clear modal-open flag BEFORE resuming timer
-          g.__nominationIntroModalOpen = false;
-          console.info('[phase-intro] Set __nominationIntroModalOpen = false');
-
-          // Resume the game timer
-          resumeForModal('nomination-intro-modal');
           
-          // Resolve the promise
+          // Resolve immediately (tap-anywhere dismisses and resolves immediately)
           resolve();
           
           // Schedule safety watchdog after dismissal
@@ -500,10 +398,9 @@
             // Check if game has progressed
             const currentPhase = g?.phase;
             const pleaActive = g?.__nominationPleaActive;
-            const modalOpen = g?.__nominationIntroModalOpen;
             
-            // Only fire watchdog if still on nominations phase, no plea active, and modal not re-opened
-            if (currentPhase === 'nominations' && !pleaActive && !modalOpen) {
+            // Only fire watchdog if still on nominations phase and no plea active
+            if (currentPhase === 'nominations' && !pleaActive) {
               console.info('[phase-intro] Safety watchdog: nominations phase not started after 3s, forcing start');
               
               // Try to force nominations to start
@@ -523,10 +420,9 @@
                 console.error('[phase-intro] Safety watchdog error:', err);
               }
             } else {
-              console.info('[phase-intro] Safety watchdog: game progressed normally, plea active, or modal re-opened, no action needed', {
+              console.info('[phase-intro] Safety watchdog: game progressed normally or plea active, no action needed', {
                 currentPhase,
-                pleaActive,
-                modalOpen
+                pleaActive
               });
             }
           }, 3000);
@@ -637,7 +533,7 @@
         
         okButton.addEventListener('click', (e) => {
           e.stopPropagation();
-          doDismiss();
+          dismiss();
         });
         
         buttonsContainer.appendChild(okButton);
@@ -710,7 +606,7 @@
           }
           
           // Now dismiss the nomination modal
-          doDismiss();
+          dismiss();
         } catch (err) {
           console.error('[phase-intro] NominationPlea error:', err);
           
@@ -718,7 +614,7 @@
           const pleaCloseTime = Date.now();
           console.info(`[phase-intro] Nomination plea failed/skipped at ${new Date(pleaCloseTime).toISOString()} (duration: ${pleaCloseTime - pleaOpenTime}ms)`);
           
-          doDismiss();
+          dismiss();
         } finally {
           // Clear plea active flag
           g.__nominationPleaActive = false;
@@ -728,7 +624,7 @@
       // Click outside or on overlay to dismiss
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-          doDismiss();
+          dismiss();
         }
       });
 
@@ -739,7 +635,7 @@
           // Don't dismiss if risk result is showing (has buttons that stop propagation)
           const hasButtons = modal.querySelector('button');
           if (!hasButtons || e.target === modal) {
-            doDismiss();
+            dismiss();
           }
         }
       });
@@ -747,7 +643,7 @@
       // Escape key to dismiss
       const keyHandler = (e) => {
         if (e.key === 'Escape') {
-          doDismiss();
+          dismiss();
         }
       };
       document.addEventListener('keydown', keyHandler);
