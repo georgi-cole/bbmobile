@@ -2215,6 +2215,26 @@
     g.__f3p1Winner = winner;
     global.addLog(`Final 3 Part 1: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
     
+    // Try inline reveal first (preferred)
+    const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
+    if (inlineRevealAvailable) {
+      console.info('[F3P1] Using inline reveal API for Final 3 Part 1 results');
+      try {
+        await global.showCompetitionReveal('Final 3 Part 1', g.lastCompScores, ids);
+        await waitCardsIdle();
+        console.info('[F3P1] Inline reveal completed successfully');
+        // Auto-advance to Part 2
+        startF3P2(losers);
+        return;
+      } catch (e) {
+        console.warn('[F3P1] Inline reveal error, falling back to cinematics:', e);
+        // Fall through to cinematic fallback
+      }
+    }
+    
+    // Fallback to cinematics if inline reveal unavailable or failed
+    console.info('[F3P1] Using cinematic fallback for Final 3 Part 1 results');
+    
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
     
@@ -2506,6 +2526,26 @@
     const winner = sorted[0][0];
     g.__f3p2Winner = winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`, 'ok');
+    
+    // Try inline reveal first (preferred)
+    const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
+    if (inlineRevealAvailable) {
+      console.info('[F3P2] Using inline reveal API for Final 3 Part 2 results');
+      try {
+        await global.showCompetitionReveal('Final 3 Part 2', g.lastCompScores, duo);
+        await waitCardsIdle();
+        console.info('[F3P2] Inline reveal completed successfully');
+        // Auto-advance to Part 3
+        startF3P3();
+        return;
+      } catch (e) {
+        console.warn('[F3P2] Inline reveal error, falling back to cinematics:', e);
+        // Fall through to cinematic fallback
+      }
+    }
+    
+    // Fallback to cinematics if inline reveal unavailable or failed
+    console.info('[F3P2] Using cinematic fallback for Final 3 Part 2 results');
     
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();
@@ -2870,6 +2910,43 @@
     if (typeof global.updateHud === 'function') global.updateHud();
 
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`, 'ok');
+    
+    // Try inline reveal first (preferred)
+    const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
+    if (inlineRevealAvailable) {
+      console.info('[F3P3] Using inline reveal API for Final HOH results');
+      try {
+        await global.showCompetitionReveal('Final HOH Competition', g.lastCompScores, finalists);
+        await waitCardsIdle();
+        console.info('[F3P3] Inline reveal completed successfully');
+        
+        // Check if optimized pacing is enabled for next phase decision
+        const useOptimizedPacing = isF3OptimizedPacingEnabled();
+        if (useOptimizedPacing) {
+          // Transition to plea phase (no idle wait)
+          global.tv.say('Final 3 Pleas');
+          global.setPhase('final3_plea', Math.max(10, Math.floor(g.cfg.tVote * 0.5)), () => {
+            // After plea time expires, proceed to decision
+            global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
+            global.renderFinal3DecisionPanel?.();
+          });
+          global.renderFinal3PleaPanel?.();
+        } else {
+          // Legacy flow: skip plea phase, go directly to decision
+          global.tv.say('Final 3 Eviction Ceremony');
+          try { global.FinalPlea?.cleanup?.(); } catch (e) { /* non-critical cleanup error */ }
+          global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote * 0.8)), () => global.finalizeFinal3Decision?.());
+          global.renderFinal3DecisionPanel?.();
+        }
+        return;
+      } catch (e) {
+        console.warn('[F3P3] Inline reveal error, falling back to cinematics:', e);
+        // Fall through to cinematic fallback
+      }
+    }
+    
+    // Fallback to cinematics if inline reveal unavailable or failed
+    console.info('[F3P3] Using cinematic fallback for Final HOH results');
     
     // Check if optimized pacing is enabled
     const useOptimizedPacing = isF3OptimizedPacingEnabled();

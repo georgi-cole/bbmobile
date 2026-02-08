@@ -1753,25 +1753,12 @@
     }
   }
 
-  function showCompetitionResultsAndFastForward(humanScore){
+  async function showCompetitionResultsAndFastForward(humanScore){
     if(!g.cfg?.autoFastAdvanceCompetitions){
       console.info('[ImmediateResults] autoFastAdvanceCompetitions flag disabled – skipping');
       return;
     }
     const phase = g.phase;
-    
-    // Final Week: skip inline popup but still fast-resolve the phase
-    // This allows the finish functions (finishF3P1/P2/P3) to run and show fullscreen results
-    if (typeof phase === 'string' && phase.startsWith('final3')) {
-      console.info('[ImmediateResults] Fast-resolving Final 3 phase without inline popup:', phase);
-      try {
-        shortenPhaseToOneSecond();
-        resolveCompetitionPhaseIfNeeded();
-      } catch(e) {
-        console.warn('[ImmediateResults] Final 3 fast-resolve error:', e);
-      }
-      return;
-    }
     
     // Mark that results have been shown for POV competitions to prevent redundant display
     // This flag is checked in veto.js finishVetoComp to skip duplicate reveal
@@ -1780,6 +1767,51 @@
       console.info('[ImmediateResults] Marked POV results as shown to prevent redundant display');
     }
     
+    // Build scores map and IDs for inline reveal
+    const scores = g.lastCompScores;
+    let ids = [];
+    if(scores instanceof Map && scores.size > 0){
+      ids = [...scores.keys()].filter(pid => {
+        const p = global.getP ? global.getP(pid) : null;
+        return p && !p.evicted;
+      });
+    }
+    
+    // Determine competition title
+    const title = (phase === 'hoh') ? 'HOH Competition'
+                : (phase === 'pov' || phase === 'veto_comp' || phase === 'veto') ? 'Veto Competition'
+                : (phase?.startsWith('final3')) ? 'Final 3 Competition'
+                : 'Competition';
+    
+    shortenPhaseToOneSecond();
+    
+    // Try inline reveal API first (preferred)
+    const inlineRevealAvailable = typeof global.showCompetitionReveal === 'function';
+    if(inlineRevealAvailable && ids.length > 0){
+      console.info('[ImmediateResults] Using inline reveal API:', title);
+      try{
+        const promise = global.showCompetitionReveal(title, scores, ids);
+        if(promise && typeof promise.then === 'function'){
+          await promise;
+          console.info('[ImmediateResults] Inline reveal finished – resolving phase');
+        }
+        resolveCompetitionPhaseIfNeeded();
+        return;
+      }catch(err){
+        console.warn('[ImmediateResults] Inline reveal error, falling back to popup:', err);
+        // Fall through to popup fallback
+      }
+    }
+    
+    // Fallback to popup API if inline reveal unavailable or failed
+    const popupAvailable = typeof global.showResultsPopup === 'function';
+    if(!popupAvailable){
+      console.warn('[ImmediateResults] Neither inline reveal nor popup available – advancing without display');
+      resolveCompetitionPhaseIfNeeded();
+      return;
+    }
+    
+    // Build topThree for popup
     let topThree = buildTopThree();
     if(topThree.length === 0){
       const humanId = g.humanId;
@@ -1792,18 +1824,8 @@
         }];
       }
     }
-    const title = (phase === 'hoh') ? 'HOH Results'
-                : (phase === 'pov' || phase === 'veto_comp' || phase === 'veto') ? 'Veto Results'
-                : (phase?.startsWith('final3')) ? 'Final 3 Results'
-                : 'Competition Results';
-    const popupAvailable = typeof global.showResultsPopup === 'function';
-    shortenPhaseToOneSecond();
-    if(!popupAvailable){
-      console.warn('[ImmediateResults] showResultsPopup not available – advancing without popup');
-      resolveCompetitionPhaseIfNeeded();
-      return;
-    }
-    console.info('[ImmediateResults] Showing competition results popup:', title, topThree);
+    
+    console.info('[ImmediateResults] Using popup fallback:', title, topThree);
     try{
       const promise = global.showResultsPopup({ title, topThree, winnerEmoji: '🏆', duration: RESULTS_POPUP_DURATION });
       if(promise && typeof promise.then === 'function'){
