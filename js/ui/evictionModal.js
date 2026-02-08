@@ -189,12 +189,13 @@
       // Store previous focus
       previousFocus = document.activeElement;
 
-      // Lock body scroll
-      lockBodyScroll();
+      // Get TV viewport container for inline mounting
+      const tvViewport = document.querySelector('.tvViewport') || document.querySelector('#tv');
+      const container = tvViewport || document.body;
 
       // Create modal overlay
       const overlay = document.createElement('div');
-      overlay.className = 'eviction-modal-overlay';
+      overlay.className = 'eviction-modal-overlay eviction-modal-inline';
       overlay.setAttribute('role', 'dialog');
       overlay.setAttribute('aria-modal', 'true');
       overlay.setAttribute('aria-labelledby', 'eviction-modal-title');
@@ -269,7 +270,7 @@
       card.appendChild(liveRegion);
 
       overlay.appendChild(card);
-      document.body.appendChild(overlay);
+      container.appendChild(overlay);
 
       currentModal = overlay;
 
