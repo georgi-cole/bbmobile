@@ -209,6 +209,10 @@
       global.game.cfg.humanName = profile.displayName;
     }
 
+    // Update game.season to sync with profile
+    // This ensures the season/week pill displays the correct season number
+    global.game.season = profile.season || 1;
+
     // Find and update human player
     if (global.game.players && global.game.players.length > 0) {
       const humanPlayer = global.game.players.find(p => 

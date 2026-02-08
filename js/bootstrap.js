@@ -114,7 +114,7 @@
   function resetRoundState(){
     const g=global.game;
     Object.assign(g,{
-      week:1, phase:'lobby', endAt:0,
+      week:1, season:g.season || 1, phase:'lobby', endAt:0,
       hohId:null, lastHOHId:null,
       nominees:[], vetoHolder:null,
       jury:[], juryHouse:g.juryHouse || [], votingJury:[],

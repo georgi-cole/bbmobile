@@ -40,7 +40,7 @@
       fastForwardPreserveResultsModal:true,
       fastForwardResultsMinMs:1500
     },
-    week:1,phase:'lobby',endAt:0,
+    week:1,season:1,phase:'lobby',endAt:0,
     players:[],humanId:null,
     hohId:null,lastHOHId:null,
     nominees:[],vetoHolder:null,
