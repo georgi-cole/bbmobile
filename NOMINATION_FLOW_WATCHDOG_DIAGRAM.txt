@@ -1,177 +1,147 @@
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    NOMINATIONS FLOW SAFETY WATCHDOG                         │
-│                          Implementation Flow                                 │
-└─────────────────────────────────────────────────────────────────────────────┘
+╔══════════════════════════════════════════════════════════════════════════════╗
+║             NOMINATION PHASE FLOW WITH WATCHDOG PROTECTION                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 1. ENTRY: wrappedStartNominations() called                               │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 2. CHECK: Should show intro modal?                                       │
-│    if (!game.__nominationsIntroShownThisPhase)                           │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                ┌────────────┴────────────┐
-                │                         │
-                ▼ YES                     ▼ NO (skip to step 5)
-┌──────────────────────────────────┐
-│ 3. SHOW MODAL with 30s timeout  │
-│    - await showNominationIntro   │
-│    - Respect plea flag           │
-│    - Wait for plea if active     │
-└────────────────┬─────────────────┘
-                 │
-                 ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 4. MARK: game.__nominationsIntroShownThisPhase = true                    │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 5. CALL ORIGINAL: result = await origStartNominations()                  │
-│    ✓ With error handling and fallback to setPhase                        │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 6. SETUP WATCHDOG: setTimeout(..., 3000)                                 │
-│    ⏱️  Scheduled to fire in 3 seconds                                     │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 7. RETURN: return result                                                 │
-│    Function completes, but watchdog is still pending                     │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                             │ (3 seconds later)
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 8. WATCHDOG FIRES                                                         │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 9. CHECK CONDITIONS:                                                      │
-│    - Is game.phase === 'nominations'?                                     │
-│    - Is !game.__nominationPleaActive?                                     │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │
-                ┌────────────┴────────────┐
-                │                         │
-                ▼ NO (both conditions)    ▼ YES (both conditions)
-┌──────────────────────────┐   ┌────────────────────────────────────────┐
-│ 10a. SKIP WATCHDOG       │   │ 10b. EXECUTE SAFETY RECOVERY           │
-│      Flow already        │   │      Three-tier fallback:              │
-│      progressed or       │   │                                        │
-│      plea is active      │   │   1️⃣  origStartNominations.call()     │
-│                          │   │       ↓ (if not available)            │
-│      ✓ Safe to skip      │   │   2️⃣  global.startNominations()       │
-└──────────────────────────┘   │       ↓ (if not available)            │
-                               │   3️⃣  global.setPhase(...)            │
-                               │                                        │
-                               │   ✓ Ensures flow continues            │
-                               └────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│  startNominations() Called                                                  │
+└─────────────────────────────────────┬──────────────────────────────────────┘
+                                      │
+                                      ▼
+              ┌───────────────────────────────────────┐
+              │ Should show intro modal?              │
+              │ (!__nominationsIntroShownThisPhase)   │
+              └────────────┬──────────────────────────┘
+                           │
+                    ┌──────┴───────┐
+                    │              │
+                  YES             NO
+                    │              │
+                    ▼              └──────────────┐
+    ┌──────────────────────────────┐             │
+    │ showNominationIntroModal()   │             │
+    │ • 30s timeout                │             │
+    │ • Wait for plea (10s)        │             │
+    └──────────────┬───────────────┘             │
+                   │                              │
+                   ▼                              │
+    ┌──────────────────────────────┐             │
+    │ ensureOverlayNotBlocking()   │◄────────────┘
+    │ • pointer-events: none       │
+    │ • remove tvTall              │
+    └──────────────┬───────────────┘
+                   │
+                   ▼
+    ┌──────────────────────────────────────────────────────┐
+    │ Try: origStartNominations()                          │
+    │   ✓ Success: Mark __nominationsIntroShownThisPhase   │
+    │   ✗ Error:   Fallback to setPhase()                  │
+    └──────────────┬───────────────────────────────────────┘
+                   │
+                   ├────────────────┬────────────────┐
+                   │                │                │
+                   ▼                ▼                ▼
+         ┌─────────────────┐  ┌─────────────┐  ┌──────────────┐
+         │  WATCHDOG #1    │  │ WATCHDOG #2 │  │ Normal Flow  │
+         │  Fires @ 2s     │  │ Fires @ 5s  │  │  Continues   │
+         └────────┬────────┘  └──────┬──────┘  └──────┬───────┘
+                  │                  │                 │
+    ┌─────────────▼──────────────────▼─────────────────▼──────────────┐
+    │                                                                   │
+    │  IF (phase === 'nominations' && !__nominationPleaActive)         │
+    │                                                                   │
+    └───────────────────────────────┬───────────────────────────────────┘
+                                    │
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │ Watchdog #2 ONLY:             │
+                    │ ensureOverlayNotBlocking()    │
+                    └───────────────┬───────────────┘
+                                    │
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │ attemptNominationsStart()     │
+                    │ 1. renderNomsPanel()          │
+                    │ 2. origStartNominations()     │
+                    │ 3. setPhase('nominations')    │
+                    └───────────────┬───────────────┘
+                                    │
+                                    ▼
+                        ╔═══════════════════════╗
+                        ║ Nominations Active!   ║
+                        ║ User can interact     ║
+                        ╚═══════════════════════╝
 
 
-════════════════════════════════════════════════════════════════════════════
-                              SAFETY GUARANTEES
-════════════════════════════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          HELPER FUNCTIONS                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-✓ NO DOUBLE-START:
-  - Original startNominations has phase guard: if(phase==='nominations')
-  - Multiple calls are idempotent when phase is correct
-  - If flow progressed, phase would no longer be 'nominations'
+┌────────────────────────────────────────────────────────────────────────────┐
+│ ensureOverlayNotBlocking()                                                  │
+├────────────────────────────────────────────────────────────────────────────┤
+│  1. Get #tvOverlay element                                                  │
+│  2. Check .tvOverlayContent for children                                    │
+│  3. If empty:                                                               │
+│     • Set style.pointerEvents = 'none'                                      │
+│     • Remove 'tvTall' class from #tv                                        │
+│  4. Try-catch for safety                                                    │
+└────────────────────────────────────────────────────────────────────────────┘
 
-✓ NO RECURSION:
-  - Watchdog prefers calling origStartNominations (unwrapped version)
-  - Avoids calling wrapped version that could re-trigger watchdog
-
-✓ RESPECTS USER INTERACTION:
-  - Watchdog checks __nominationPleaActive flag
-  - Won't interrupt user making a deal or viewing risk
-
-✓ COMPREHENSIVE ERROR HANDLING:
-  - try/catch around original function call
-  - try/catch around watchdog logic
-  - Fallback to setPhase if everything else fails
-
-✓ EXISTING FEATURES PRESERVED:
-  - 30-second modal timeout unchanged
-  - Plea handling logic intact
-  - All other phase intro wrappers unmodified
+┌────────────────────────────────────────────────────────────────────────────┐
+│ attemptNominationsStart(origStartNominations)                               │
+├────────────────────────────────────────────────────────────────────────────┤
+│  Priority 1: renderNomsPanel()              ← Preferred (direct render)     │
+│  Priority 2: origStartNominations()         ← Fallback (unwrapped)         │
+│  Priority 3: setPhase('nominations', ...)   ← Last resort (phase API)      │
+└────────────────────────────────────────────────────────────────────────────┘
 
 
-════════════════════════════════════════════════════════════════════════════
-                              TIMING DIAGRAM
-════════════════════════════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          EDGE CASES HANDLED                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-Time (s) │ Action
-─────────┼───────────────────────────────────────────────────────────────
-   0.0   │ wrappedStartNominations() called
-   0.0   │ Show intro modal (if first time)
-   0.0   │ await modal resolution (up to 30s timeout)
-  ~2.0   │ User dismisses modal
-  ~2.0   │ await origStartNominations() completes
-  ~2.0   │ Setup 3s watchdog timer
-  ~2.0   │ return result
-  ~5.0   │ ⏰ WATCHDOG FIRES (3s after step 2.0)
-  ~5.0   │ Check: phase='nominations' && !pleaActive
-  ~5.0   │ ✓ If stuck: Force nominations start
-─────────┴───────────────────────────────────────────────────────────────
+✓ Modal never resolves (30s timeout)
+✓ Modal throws error (try-catch)
+✓ Plea remains active after modal (10s additional wait)
+✓ origStartNominations() throws (setPhase fallback)
+✓ Empty overlay blocks input (neutralization)
+✓ Progression stalls (dual watchdogs)
+✓ renderNomsPanel not available (fallback chain)
+✓ setPhase not available (fail gracefully)
 
 
-════════════════════════════════════════════════════════════════════════════
-                           EDGE CASE HANDLING
-════════════════════════════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          TIMING DIAGRAM                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-CASE 1: Modal never resolves
-  ├─ 30s timeout kicks in
-  ├─ Flow proceeds to origStartNominations()
-  ├─ Watchdog fires 3s later
-  └─ ✓ Ensures nominations start even if stuck
+Time (ms)    Event
+─────────────────────────────────────────────────────────────────────────────
+    0        startNominations() called
+    0-400    Intro modal shows and dismisses (test: 400ms)
+  400        ensureOverlayNotBlocking() called
+  400        origStartNominations() attempted
+  400        Normal flow should proceed
+ 2000        Watchdog #1 fires (check + kick if needed)
+ 5000        Watchdog #2 fires (neutralize + hard-kick if needed)
 
-CASE 2: origStartNominations() throws error
-  ├─ Catch block executes
-  ├─ Fallback to setPhase()
-  ├─ Watchdog still fires
-  └─ ✓ Double-safety ensures recovery
-
-CASE 3: Flow starts normally and progresses
-  ├─ Phase changes from 'nominations' to next phase
-  ├─ Watchdog fires but checks phase
-  ├─ phase !== 'nominations' → watchdog skips
-  └─ ✓ No interference with normal flow
-
-CASE 4: User opens "Make a Deal" plea
-  ├─ __nominationPleaActive flag set to true
-  ├─ Modal waits for plea to complete
-  ├─ Watchdog fires but checks plea flag
-  ├─ pleaActive === true → watchdog skips
-  └─ ✓ No interference with user interaction
-
-CASE 5: Watchdog itself fails
-  ├─ try/catch around watchdog logic
-  ├─ Error logged with console.warn
-  ├─ Game continues (no hard stop)
-  └─ ✓ Defensive programming prevents crash
+Expected:    Nominations active by ~500ms
+Guaranteed:  Nominations active by 2000ms (watchdog #1)
+Fail-safe:   Nominations active by 5000ms (watchdog #2)
 
 
-════════════════════════════════════════════════════════════════════════════
-                         VERIFICATION CHECKLIST
-════════════════════════════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          TEST COVERAGE                                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-[✓] Syntax check passed (Node.js -c)
-[✓] ESLint validation passed
-[✓] Unit test simulation passed
-[✓] CodeQL security scan passed (0 alerts)
-[✓] Code review feedback addressed
-[✓] No breaking changes
-[✓] Backward compatible
-[✓] Documentation complete
-[✓] Ready for merge
+test_nomination_intro_watchdog.html validates:
 
-```
+  ✓ Intro modal shows and dismisses
+  ✓ No "Locked. Nominees:" overlay text appears
+  ✓ Game progresses to veto phase
+  ✓ Progression happens within 6 seconds
+
+Check times:
+  • 1500ms: Verify no locked overlay message
+  • 6000ms: Verify progression to veto
+
+

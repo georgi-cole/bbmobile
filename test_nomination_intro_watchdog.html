@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Nomination Intro Watchdog Test</title>
+  <style>
+    body { font-family: system-ui; background: #0f1419; color: #cbd5e1; }
+    .status { margin: 8px 0; padding: 6px 10px; border-radius: 6px; }
+    .ok { background: #123524; color: #9ae6b4; }
+    .err { background: #3b1d1d; color: #feb2b2; }
+  </style>
+</head>
+<body>
+  <h1>Nomination Intro Watchdog Test</h1>
+  <div id="results"></div>
+  <div id="tv" class="tv"><div class="tvViewport"></div></div>
+
+  <script src="js/ui.phase-intro-integration.js"></script>
+  <script src="js/nominations.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+  <script>
+    (function(){
+      const results = document.getElementById('results');
+      function ok(msg){ const el=document.createElement('div'); el.className='status ok'; el.textContent='✓ '+msg; results.appendChild(el); }
+      function err(msg){ const el=document.createElement('div'); el.className='status err'; el.textContent='✗ '+msg; results.appendChild(el); }
+
+      // Test constants
+      const LOCKED_OVERLAY_PATTERN = /Locked\. Nominees:/i;
+      const NOMINATION_TIME_SECONDS = 10;
+      const OVERLAY_CHECK_DELAY_MS = 1500;
+      const PROGRESSION_CHECK_DELAY_MS = 6000;
+
+      // Minimal game scaffolding
+      window.game = { 
+        phase: 'nominations', 
+        hohId: 1, 
+        cfg: { tNoms: NOMINATION_TIME_SECONDS } // tNoms = nomination phase timer in seconds
+      };
+      window.getP = (id) => ({ id, name: id===1? 'HOH' : 'Player '+id, human: id===1, affinity: {}, threat: 0.5 });
+      window.alivePlayers = () => [ {id:1,hoh:true,human:true}, {id:2}, {id:3}, {id:4} ];
+      window.safeName = (id) => (id===1? 'HOH' : 'Player '+id);
+      window.updateHud = function(){};
+
+      // Simulate intro modal that resolves after dismissal
+      window.showNominationIntroModal = async function() {
+        const overlay = document.createElement('div');
+        overlay.id = 'fakeIntroModal';
+        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9999;';
+        document.body.appendChild(overlay);
+        return new Promise((resolve) => setTimeout(() => {
+          document.body.removeChild(overlay);
+          resolve();
+        }, 400));
+      };
+
+      // Stub selector
+      window.NomsFS = { open: async () => [2,3] };
+
+      let vetoStarted = false;
+      window.startVetoComp = function(){ vetoStarted = true; ok('startVetoComp() called'); };
+
+      // Call wrapped entry
+      if (typeof window.startNominations === 'function') {
+        window.startNominations();
+      } else {
+        err('startNominations not found');
+      }
+
+      // Check after 1.5s for locked overlay text
+      setTimeout(() => {
+        const ov = document.getElementById('tvOverlay');
+        const hasLockedMsg = ov && LOCKED_OVERLAY_PATTERN.test(ov.textContent || '');
+        if (hasLockedMsg) err('Locked message present'); else ok('No locked overlay message');
+      }, OVERLAY_CHECK_DELAY_MS);
+
+      // Check progression after 6s
+      setTimeout(() => {
+        if (vetoStarted) ok('Game progressed to veto'); else err('Game did not progress to veto');
+      }, PROGRESSION_CHECK_DELAY_MS);
+    })();
+  </script>
+</body>
+</html>

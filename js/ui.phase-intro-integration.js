@@ -5,6 +5,39 @@
   'use strict';
 
   /**
+   * Helper: Neutralize empty TV overlay to prevent input blocking
+   */
+  function ensureOverlayNotBlocking() {
+    try {
+      const ov = document.getElementById('tvOverlay');
+      if (!ov) return;
+      const content = ov.querySelector('.tvOverlayContent');
+      const hasActiveContent = !!(content && content.childElementCount > 0);
+      if (!hasActiveContent) {
+        ov.style.pointerEvents = 'none';
+        document.getElementById('tv')?.classList.remove('tvTall');
+      }
+    } catch(e){ 
+      console.warn('[phase-intro-integration] tvOverlay neutralization failed', e); 
+    }
+  }
+
+  /**
+   * Helper: Attempt to start nominations using fallback chain
+   */
+  function attemptNominationsStart(origStartNominations) {
+    if (typeof global.renderNomsPanel === 'function') {
+      global.renderNomsPanel();
+    } else if (typeof origStartNominations === 'function') {
+      origStartNominations.call(global);
+    } else if (typeof global.setPhase === 'function') {
+      const tNoms = (global.game?.cfg?.tNoms) || 25;
+      const callback = () => global.lockNominationsAndProceed?.();
+      global.setPhase('nominations', tNoms, callback);
+    }
+  }
+
+  /**
    * Wrap startVetoComp to show intro modal first
    */
   function wrapStartVetoComp() {
@@ -119,104 +152,110 @@
       global.startNominations = async function wrappedStartNominations() {
         const g = global.game || {};
         
-        // Show the nominations intro modal once per nominations phase
-        if (!g.__nominationsIntroShownThisPhase) {
-          g.__nominationsIntroShownThisPhase = true;
-          
-          if (typeof global.showNominationIntroModal === 'function') {
-            try {
-              const TIMEOUT_MS = 30000;
-              let modalResolved = false;
-              
-              const modalPromise = global.showNominationIntroModal().then(() => {
-                modalResolved = true;
-              });
-              
-              const timeoutPromise = new Promise((resolve) => {
-                setTimeout(() => {
-                  if (!modalResolved && !g.__nominationPleaActive) {
-                    console.warn('[phase-intro-integration] Modal timeout reached (30s), resuming flow');
+        // Decide whether to show intro (mark as shown only after progression)
+        const shouldShowIntro = !g.__nominationsIntroShownThisPhase;
+        
+        if (shouldShowIntro && typeof global.showNominationIntroModal === 'function') {
+          try {
+            const TIMEOUT_MS = 30000;
+            let modalResolved = false;
+            
+            const modalPromise = global.showNominationIntroModal().then(() => {
+              modalResolved = true;
+            });
+            
+            const timeoutPromise = new Promise((resolve) => {
+              setTimeout(() => {
+                if (!modalResolved && !g.__nominationPleaActive) {
+                  console.warn('[phase-intro-integration] Modal timeout reached (30s), resuming flow');
+                  resolve();
+                }
+              }, TIMEOUT_MS);
+            });
+            
+            await Promise.race([modalPromise, timeoutPromise]);
+            
+            // Wait up to 10s more if plea remains active
+            if (g.__nominationPleaActive) {
+              console.info('[phase-intro-integration] Waiting for plea to complete...');
+              const pleaTimeout = new Promise((resolve) => setTimeout(resolve, 10000));
+              const pleaWait = new Promise((resolve) => {
+                const checkInterval = setInterval(() => {
+                  if (!g.__nominationPleaActive) {
+                    clearInterval(checkInterval);
                     resolve();
                   }
-                }, TIMEOUT_MS);
+                }, 100);
               });
-              
-              // Wait for either the modal to resolve or the timeout to fire
-              await Promise.race([modalPromise, timeoutPromise]);
-              
-              // If a plea remained active, wait up to 10s more (polling)
-              if (g.__nominationPleaActive) {
-                console.info('[phase-intro-integration] Waiting for plea to complete...');
-                const pleaTimeout = new Promise((resolve) => setTimeout(resolve, 10000));
-                const pleaWait = new Promise((resolve) => {
-                  const checkInterval = setInterval(() => {
-                    if (!g.__nominationPleaActive) {
-                      clearInterval(checkInterval);
-                      resolve();
-                    }
-                  }, 100);
-                });
-                await Promise.race([pleaWait, pleaTimeout]);
-              }
-            } catch (e) {
-              console.error('[phase-intro-integration] Error showing nominations intro modal:', e);
+              await Promise.race([pleaWait, pleaTimeout]);
             }
+          } catch (e) {
+            console.error('[phase-intro-integration] Error showing nominations intro modal:', e);
           }
         }
         
-        // Call original startNominations safely
-        let result;
+        // Defensive: neutralize empty TV overlay before proceeding
+        ensureOverlayNotBlocking();
+        
+        // Try original startNominations first
+        let started = false;
         try {
-          result = await origStartNominations.apply(this, arguments);
+          await origStartNominations.apply(this, arguments);
+          started = true;
+          // Mark intro as shown once we have attempted to progress
+          g.__nominationsIntroShownThisPhase = true;
         } catch (e) {
           console.error('[phase-intro-integration] Error calling original startNominations:', e);
-          // Fallback: try to set phase directly
+          // Fallback: set phase directly
           try {
             if (typeof global.setPhase === 'function') {
               console.info('[phase-intro-integration] Falling back to setPhase');
               const tNoms = g.cfg?.tNoms || 25;
               const callback = () => global.lockNominationsAndProceed?.();
               global.setPhase('nominations', tNoms, callback);
+              started = true;
             }
           } catch (fallbackErr) {
-            console.error('[phase-intro-integration] Fallback also failed:', fallbackErr);
+            console.error('[phase-intro-integration] Fallback setPhase also failed:', fallbackErr);
           }
+          if (started) g.__nominationsIntroShownThisPhase = true;
         }
         
-        // Safety watchdog: ensure nominations start even if modal/wrap path gets stuck
-        // Note: Checking phase==='nominations' is sufficient because:
-        // 1. If flow started normally and progressed, phase would have changed
-        // 2. Original startNominations has guard: if(phase==='nominations') renderPanel()
-        // 3. Multiple calls are safe - function is idempotent when phase is correct
+        // Primary watchdog: after 2s, ensure nominations begin if phase is still nominations
         setTimeout(() => {
           try {
-            const g2 = global.game || {};
-            const currentPhase = g2.phase;
-            const pleaActive = g2.__nominationPleaActive;
-
+            const currentPhase = global.game?.phase;
+            const pleaActive = global.game?.__nominationPleaActive;
+            
             if (currentPhase === 'nominations' && !pleaActive) {
-              console.info('[phase-intro-integration] Safety watchdog: ensuring nominations start');
-              if (typeof origStartNominations === 'function') {
-                // Prefer original start to avoid double wrapping
-                origStartNominations.call(global);
-              } else if (typeof global.startNominations === 'function') {
-                global.startNominations();
-              } else if (typeof global.setPhase === 'function') {
-                const tNoms = g2.cfg?.tNoms || 25;
-                const callback = () => global.lockNominationsAndProceed?.();
-                global.setPhase('nominations', tNoms, callback);
-              }
+              console.info('[phase-intro-integration] Watchdog(2s): ensuring nominations start');
+              attemptNominationsStart(origStartNominations);
             }
           } catch (watchErr) {
-            console.warn('[phase-intro-integration] Safety watchdog failed:', watchErr);
+            console.warn('[phase-intro-integration] Watchdog(2s) failed:', watchErr);
           }
-        }, 3000);
-
-        return result;
+        }, 2000);
+        
+        // Secondary watchdog: after 5s, hard-kick and re-neutralize overlay
+        setTimeout(() => {
+          try {
+            const currentPhase = global.game?.phase;
+            const pleaActive = global.game?.__nominationPleaActive;
+            
+            if (currentPhase === 'nominations' && !pleaActive) {
+              console.info('[phase-intro-integration] Watchdog(5s): hard kick nominations start');
+              // Re-neutralize empty overlay
+              ensureOverlayNotBlocking();
+              attemptNominationsStart(origStartNominations);
+            }
+          } catch (watchErr) {
+            console.warn('[phase-intro-integration] Watchdog(5s) failed:', watchErr);
+          }
+        }, 5000);
       };
       
       global.startNominations.__wrappedForPhaseIntro = true;
-      console.info('[phase-intro-integration] startNominations wrapped for intro modal with watchdog');
+      console.info('[phase-intro-integration] startNominations wrapped with dual watchdog and overlay neutralization');
     }
   }
 
