@@ -97,17 +97,6 @@
     console.info('[ResultsGuard] Native showCompetitionReveal available - no shim needed');
   }
   
-  // Set feature flag to force inline results as primary path
-  // This can be overridden by game config if needed
-  if (global.game && global.game.cfg) {
-    if (global.game.cfg.forceInlineResults === undefined) {
-      global.game.cfg.forceInlineResults = true;
-      console.info('[ResultsGuard] Set forceInlineResults = true (can be overridden in game config)');
-    }
-  } else {
-    console.warn('[ResultsGuard] Game object not yet available, forceInlineResults flag will be set when game initializes');
-  }
-  
   // Expose diagnostic function for runtime queries
   global.ResultsGuard = {
     getAvailability: function() {
@@ -124,16 +113,6 @@
       const availability = this.getAvailability();
       console.table(availability);
       return availability;
-    },
-    
-    // Allow runtime toggling of forceInlineResults
-    setForceInlineResults: function(value) {
-      if (global.game && global.game.cfg) {
-        global.game.cfg.forceInlineResults = !!value;
-        console.info('[ResultsGuard] forceInlineResults set to:', !!value);
-      } else {
-        console.warn('[ResultsGuard] Cannot set forceInlineResults - game not initialized');
-      }
     }
   };
   
