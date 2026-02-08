@@ -5,6 +5,24 @@
   'use strict';
 
   /**
+   * Helper: Neutralize empty TV overlay to prevent input blocking
+   */
+  function ensureOverlayNotBlocking() {
+    try {
+      const ov = document.getElementById('tvOverlay');
+      if (!ov) return;
+      const content = ov.querySelector('.tvOverlayContent');
+      const hasActiveContent = !!(content && content.childElementCount > 0);
+      if (!hasActiveContent) {
+        ov.style.pointerEvents = 'none';
+        document.getElementById('tv')?.classList.remove('tvTall');
+      }
+    } catch(e){ 
+      console.warn('[phase-intro-integration] tvOverlay neutralization failed', e); 
+    }
+  }
+
+  /**
    * Wrap startVetoComp to show intro modal first
    */
   function wrapStartVetoComp() {
@@ -162,18 +180,7 @@
         }
         
         // Defensive: neutralize empty TV overlay before proceeding
-        (function ensureOverlayNotBlocking(){
-          try {
-            const ov = document.getElementById('tvOverlay');
-            if (!ov) return;
-            const content = ov.querySelector('.tvOverlayContent');
-            const hasActiveContent = !!(content && content.childElementCount > 0);
-            if (!hasActiveContent) {
-              ov.style.pointerEvents = 'none';
-              document.getElementById('tv')?.classList.remove('tvTall');
-            }
-          } catch(e){ console.warn('[phase-intro-integration] tvOverlay neutralization failed', e); }
-        })();
+        ensureOverlayNotBlocking();
         
         // Try original startNominations first
         let started = false;
@@ -231,18 +238,7 @@
             if (currentPhase === 'nominations' && !pleaActive) {
               console.info('[phase-intro-integration] Watchdog(5s): hard kick nominations start');
               // Re-neutralize empty overlay
-              (function ensureOverlayNotBlocking(){
-                try {
-                  const ov = document.getElementById('tvOverlay');
-                  if (!ov) return;
-                  const content = ov.querySelector('.tvOverlayContent');
-                  const hasActiveContent = !!(content && content.childElementCount > 0);
-                  if (!hasActiveContent) {
-                    ov.style.pointerEvents = 'none';
-                    document.getElementById('tv')?.classList.remove('tvTall');
-                  }
-                } catch(e){ console.warn('[phase-intro-integration] tvOverlay neutralization failed', e); }
-              })();
+              ensureOverlayNotBlocking();
               
               if (typeof global.renderNomsPanel === 'function') {
                 global.renderNomsPanel();

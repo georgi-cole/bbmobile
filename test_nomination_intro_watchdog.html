@@ -24,8 +24,16 @@
       function ok(msg){ const el=document.createElement('div'); el.className='status ok'; el.textContent='✓ '+msg; results.appendChild(el); }
       function err(msg){ const el=document.createElement('div'); el.className='status err'; el.textContent='✗ '+msg; results.appendChild(el); }
 
+      // Test constants
+      const LOCKED_OVERLAY_PATTERN = /Locked\. Nominees:/i;
+      const NOMINATION_TIME_SECONDS = 10;
+
       // Minimal game scaffolding
-      window.game = { phase: 'nominations', hohId: 1, cfg: { tNoms: 10 } };
+      window.game = { 
+        phase: 'nominations', 
+        hohId: 1, 
+        cfg: { tNoms: NOMINATION_TIME_SECONDS } // tNoms = nomination phase timer in seconds
+      };
       window.getP = (id) => ({ id, name: id===1? 'HOH' : 'Player '+id, human: id===1, affinity: {}, threat: 0.5 });
       window.alivePlayers = () => [ {id:1,hoh:true,human:true}, {id:2}, {id:3}, {id:4} ];
       window.safeName = (id) => (id===1? 'HOH' : 'Player '+id);
@@ -59,7 +67,7 @@
       // Check after 1.5s for locked overlay text
       setTimeout(() => {
         const ov = document.getElementById('tvOverlay');
-        const hasLockedMsg = ov && /Locked\. Nominees:/i.test(ov.textContent || '');
+        const hasLockedMsg = ov && LOCKED_OVERLAY_PATTERN.test(ov.textContent || '');
         if (hasLockedMsg) err('Locked message present'); else ok('No locked overlay message');
       }, 1500);
 
