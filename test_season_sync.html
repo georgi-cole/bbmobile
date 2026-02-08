@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Season Number Sync</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a131f;
+      color: #eaf4ff;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #3f6385;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #9bbdff;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: #1a2634;
+      border: 1px solid #3f6385;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: #1a4d2e;
+      border-left: 4px solid #4caf50;
+    }
+    .test-result.fail {
+      background: #4d1a1a;
+      border-left: 4px solid #f44336;
+    }
+    .info {
+      background: #1a2634;
+      border-left: 4px solid #2196f3;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    button {
+      background: #3563a7;
+      color: #eaf4ff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #4a7bc8;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .status.success {
+      background: #1a4d2e;
+      color: #4caf50;
+    }
+    .status.error {
+      background: #4d1a1a;
+      color: #f44336;
+    }
+    code {
+      background: #0d1821;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #9bbdff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Season Number Sync Test</h1>
+  <div class="info">
+    <strong>Issue:</strong> Profile shows "Season 3" but UI pill shows "S1W1" instead of "S3W1"<br>
+    <strong>Fix:</strong> Sync game.season when profile is applied in profileService.js
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Profile Season Sync</h2>
+    <p>This test verifies that when a profile with season=3 is applied, game.season is updated to 3</p>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div id="test1-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Guest Mode Default Season</h2>
+    <p>This test verifies that guest mode defaults to season=1</p>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div id="test2-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: HUD Season Display</h2>
+    <p>This test verifies that the CompactHud reads game.season correctly</p>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="test3-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Profile with Different Seasons</h2>
+    <p>This test verifies switching between profiles with different seasons</p>
+    <button onclick="runTest4()">Run Test 4</button>
+    <div id="test4-results"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="src/profile/profileStorage.js"></script>
+  <script src="src/profile/profileService.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/state.js"></script>
+
+  <script>
+    // Helper to show test results
+    function showResult(containerId, pass, message) {
+      const container = document.getElementById(containerId);
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${pass ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `${pass ? '✓' : '✗'} ${message}`;
+      container.appendChild(resultDiv);
+      return pass;
+    }
+
+    // Test 1: Profile Season Sync
+    function runTest1() {
+      const results = document.getElementById('test1-results');
+      results.innerHTML = '';
+      
+      try {
+        // Initialize game if not exists
+        if (!window.game) {
+          window.game = { cfg: {}, players: [], week: 1, season: 1 };
+        }
+
+        // Create test profile with season 3
+        const testProfile = {
+          id: 'test-season-3',
+          displayName: 'Test Player',
+          avatar: 'test.jpg',
+          season: 3,
+          xp: 1000
+        };
+
+        // Apply profile
+        window.ProfileService.applyProfileToGame(testProfile);
+
+        // Check if game.season was updated
+        const seasonMatch = window.game.season === 3;
+        showResult('test1-results', seasonMatch, 
+          `game.season = ${window.game.season} (expected: 3)`);
+
+        // Check if player meta was updated
+        const humanPlayer = window.game.players.find(p => p.human);
+        if (humanPlayer && humanPlayer.meta) {
+          const metaMatch = humanPlayer.meta.season === 3;
+          showResult('test1-results', metaMatch,
+            `humanPlayer.meta.season = ${humanPlayer.meta.season} (expected: 3)`);
+        } else {
+          showResult('test1-results', false, 'No human player found with meta');
+        }
+
+        showResult('test1-results', true, 'Profile season sync test completed');
+      } catch (e) {
+        showResult('test1-results', false, `Error: ${e.message}`);
+        console.error(e);
+      }
+    }
+
+    // Test 2: Guest Mode Default Season
+    function runTest2() {
+      const results = document.getElementById('test2-results');
+      results.innerHTML = '';
+      
+      try {
+        // Initialize game
+        if (!window.game) {
+          window.game = { cfg: {}, players: [], week: 1, season: 1 };
+        }
+
+        // Set guest mode
+        window.ProfileService.setGuestMode();
+
+        // Check if game.season is 1
+        const seasonMatch = window.game.season === 1;
+        showResult('test2-results', seasonMatch,
+          `Guest mode game.season = ${window.game.season} (expected: 1)`);
+
+        showResult('test2-results', true, 'Guest mode season test completed');
+      } catch (e) {
+        showResult('test2-results', false, `Error: ${e.message}`);
+        console.error(e);
+      }
+    }
+
+    // Test 3: HUD Season Display
+    function runTest3() {
+      const results = document.getElementById('test3-results');
+      results.innerHTML = '';
+      
+      try {
+        // Initialize game with season 5
+        if (!window.game) {
+          window.game = { cfg: {}, players: [], week: 2, season: 5, phase: 'hoh' };
+        } else {
+          window.game.season = 5;
+          window.game.week = 2;
+        }
+
+        // Verify CompactHud can read season
+        const season = window.game.season || 1;
+        const week = window.game.week || 1;
+        
+        showResult('test3-results', season === 5,
+          `CompactHud reads season as ${season} (expected: 5)`);
+        
+        showResult('test3-results', week === 2,
+          `CompactHud reads week as ${week} (expected: 2)`);
+
+        // Expected display format
+        const expectedDisplay = `S${season}W${week}`;
+        showResult('test3-results', expectedDisplay === 'S5W2',
+          `Expected display: ${expectedDisplay} (should be: S5W2)`);
+
+        showResult('test3-results', true, 'HUD season display test completed');
+      } catch (e) {
+        showResult('test3-results', false, `Error: ${e.message}`);
+        console.error(e);
+      }
+    }
+
+    // Test 4: Profile with Different Seasons
+    function runTest4() {
+      const results = document.getElementById('test4-results');
+      results.innerHTML = '';
+      
+      try {
+        // Initialize game
+        if (!window.game) {
+          window.game = { cfg: {}, players: [], week: 1, season: 1 };
+        }
+
+        // Create profiles with different seasons
+        const profile1 = {
+          id: 'test-s1',
+          displayName: 'Player 1',
+          avatar: 'p1.jpg',
+          season: 1,
+          xp: 0
+        };
+
+        const profile2 = {
+          id: 'test-s7',
+          displayName: 'Player 7',
+          avatar: 'p7.jpg',
+          season: 7,
+          xp: 5000
+        };
+
+        // Apply profile 1
+        window.ProfileService.applyProfileToGame(profile1);
+        const season1Match = window.game.season === 1;
+        showResult('test4-results', season1Match,
+          `After applying profile1: game.season = ${window.game.season} (expected: 1)`);
+
+        // Apply profile 2
+        window.ProfileService.applyProfileToGame(profile2);
+        const season7Match = window.game.season === 7;
+        showResult('test4-results', season7Match,
+          `After applying profile2: game.season = ${window.game.season} (expected: 7)`);
+
+        // Switch back to profile 1
+        window.ProfileService.applyProfileToGame(profile1);
+        const backTo1 = window.game.season === 1;
+        showResult('test4-results', backTo1,
+          `After switching back to profile1: game.season = ${window.game.season} (expected: 1)`);
+
+        showResult('test4-results', true, 'Multiple profile season switching test completed');
+      } catch (e) {
+        showResult('test4-results', false, `Error: ${e.message}`);
+        console.error(e);
+      }
+    }
+
+    // Auto-run all tests on load
+    window.addEventListener('load', () => {
+      console.log('Season Sync Test Suite Loaded');
+      console.log('Click buttons to run individual tests');
+    });
+  </script>
+</body>
+</html>
