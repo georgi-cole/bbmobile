@@ -24,6 +24,20 @@
     
     const sliderMode = variant === 'slider';
     
+    // Game configuration
+    const maxRounds = 3;
+    let targetColor = {r:0, g:0, b:0};
+    let playerColor = {r:128, g:128, b:128};
+    let currentRound = 1;
+    let totalScore = 0;
+    
+    // Feedback color thresholds
+    const EXCELLENT_THRESHOLD = 90;
+    const GOOD_THRESHOLD = 70;
+    const COLOR_EXCELLENT = '#4ade80';
+    const COLOR_GOOD = '#fbbf24';
+    const COLOR_POOR = '#f87171';
+    
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
     
@@ -36,7 +50,7 @@
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
     const roundDiv = document.createElement('div');
-    roundDiv.textContent = 'Round 1/3';
+    roundDiv.textContent = `Round 1/${maxRounds}`;
     roundDiv.style.cssText = 'font-size:1rem;color:#83bfff;';
     
     // Target color display
@@ -78,12 +92,6 @@
     wrapper.appendChild(controlsDiv);
     wrapper.appendChild(submitBtn);
     container.appendChild(wrapper);
-    
-    let targetColor = {r:0, g:0, b:0};
-    let playerColor = {r:128, g:128, b:128};
-    let currentRound = 1;
-    const maxRounds = 3;
-    let totalScore = 0;
     
     // Create controls
     const controls = {};
@@ -201,7 +209,9 @@
       
       // Display similarity percentage
       feedbackDiv.textContent = `${roundScore}% Similarity`;
-      feedbackDiv.style.color = roundScore >= 90 ? '#4ade80' : roundScore >= 70 ? '#fbbf24' : '#f87171';
+      feedbackDiv.style.color = roundScore >= EXCELLENT_THRESHOLD ? COLOR_EXCELLENT : 
+                                 roundScore >= GOOD_THRESHOLD ? COLOR_GOOD : 
+                                 COLOR_POOR;
       
       setTimeout(() => {
         if(currentRound < maxRounds){
