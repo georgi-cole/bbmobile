@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug: Results Rendering Paths</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e0e0e0;
+    }
+    
+    h1 {
+      color: #ffd96b;
+      border-bottom: 2px solid #ffd96b;
+      padding-bottom: 10px;
+    }
+    
+    .section {
+      background: #151922;
+      border: 1px solid #2a2f3a;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .section h2 {
+      color: #8ab4f8;
+      margin-top: 0;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      background: #1e88e5;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #1976d2;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.secondary {
+      background: #43a047;
+    }
+    
+    button.secondary:hover {
+      background: #388e3c;
+    }
+    
+    button.danger {
+      background: #e53935;
+    }
+    
+    button.danger:hover {
+      background: #c62828;
+    }
+    
+    .log-output {
+      background: #0d1117;
+      border: 1px solid #2a2f3a;
+      border-radius: 4px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1f2a;
+    }
+    
+    .log-entry.info {
+      color: #8ab4f8;
+    }
+    
+    .log-entry.warn {
+      color: #fdd663;
+    }
+    
+    .log-entry.error {
+      color: #f28b82;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 0 5px;
+    }
+    
+    .status-available {
+      background: #2d4a2e;
+      color: #81c784;
+    }
+    
+    .status-missing {
+      background: #4a2d2d;
+      color: #e57373;
+    }
+    
+    .status-shimmed {
+      background: #4a3f2d;
+      color: #ffd54f;
+    }
+    
+    .api-status {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin: 15px 0;
+    }
+    
+    .api-card {
+      background: #1a1f2a;
+      border: 1px solid #2a2f3a;
+      border-radius: 6px;
+      padding: 15px;
+    }
+    
+    .api-card h3 {
+      margin: 0 0 10px 0;
+      color: #e0e0e0;
+      font-size: 14px;
+    }
+    
+    code {
+      background: #2a2f3a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Competition Results Rendering Paths Debugger</h1>
+  
+  <div class="section">
+    <h2>API Availability Status</h2>
+    <div id="apiStatus" class="api-status">
+      <div class="api-card">
+        <h3>showCompetitionReveal</h3>
+        <div id="statusReveal">Checking...</div>
+      </div>
+      <div class="api-card">
+        <h3>showTriSlotReveal</h3>
+        <div id="statusTriSlot">Checking...</div>
+      </div>
+      <div class="api-card">
+        <h3>showResultsPopup</h3>
+        <div id="statusPopup">Checking...</div>
+      </div>
+      <div class="api-card">
+        <h3>FinaleCinematics</h3>
+        <div id="statusCinematics">Checking...</div>
+      </div>
+    </div>
+    <div class="button-group">
+      <button onclick="checkAPIs()">🔄 Refresh API Status</button>
+      <button class="secondary" onclick="showDiagnostics()">📊 Show Diagnostics Table</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Test: Inline Reveal (Preferred Path)</h2>
+    <p>Tests <code>showCompetitionReveal()</code> - the primary inline "faux TV" reveal system.</p>
+    <div class="button-group">
+      <button onclick="testInlineReveal('HOH')">Test HOH Competition</button>
+      <button onclick="testInlineReveal('POV')">Test POV Competition</button>
+      <button onclick="testInlineReveal('F3P1')">Test Final 3 Part 1</button>
+      <button onclick="testInlineReveal('F3P2')">Test Final 3 Part 2</button>
+      <button onclick="testInlineReveal('F3P3')">Test Final HOH</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Test: Popup Fallback</h2>
+    <p>Tests <code>showResultsPopup()</code> - fallback when inline reveal is unavailable.</p>
+    <div class="button-group">
+      <button onclick="testPopupFallback('HOH')">Test HOH Popup</button>
+      <button onclick="testPopupFallback('POV')">Test POV Popup</button>
+      <button onclick="testPopupFallback('Final')">Test Final 3 Popup</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Test: Cinematic Fallback</h2>
+    <p>Tests <code>FinaleCinematics</code> - legacy cinematic system for Final 3.</p>
+    <div class="button-group">
+      <button onclick="testCinematic('P1')">Test Part 1 Cinematic</button>
+      <button onclick="testCinematic('P2')">Test Part 2 Cinematic</button>
+      <button onclick="testCinematic('P3')">Test Final HOH Cinematic</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Test: Runtime Guard</h2>
+    <p>Tests the runtime guard shim functionality.</p>
+    <div class="button-group">
+      <button class="secondary" onclick="testGuardShim()">Test Guard Shim Creation</button>
+      <button class="danger" onclick="removeAndRestore()">Simulate Missing API</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Console Output</h2>
+    <div id="consoleLog" class="log-output">
+      <div class="log-entry info">Console log will appear here...</div>
+    </div>
+    <div class="button-group">
+      <button class="danger" onclick="clearLog()">Clear Log</button>
+    </div>
+  </div>
+  
+  <!-- Load dependencies -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <script src="js/config.js"></script>
+  <script src="js/global-state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/results-runtime-guard.js"></script>
+  <script src="js/results-popup.js"></script>
+  <script src="js/competitions.js"></script>
+  <script src="js/finale-cinematics.js"></script>
+  
+  <script>
+    // Mock game state for testing
+    window.game = window.game || {
+      cfg: {},
+      phase: 'hoh',
+      lastCompScores: new Map(),
+      lastCompScoresMeta: new Map(),
+      players: [],
+      humanId: 0
+    };
+    
+    // Add some mock players
+    window.game.players = [
+      { id: 0, name: 'You', evicted: false },
+      { id: 1, name: 'Alice', evicted: false },
+      { id: 2, name: 'Bob', evicted: false },
+      { id: 3, name: 'Carol', evicted: false },
+      { id: 4, name: 'David', evicted: false }
+    ];
+    
+    // Mock helper functions
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    
+    // Intercept console methods to display in our log
+    const logContainer = document.getElementById('consoleLog');
+    const originalConsole = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error
+    };
+    
+    function addLogEntry(type, ...args) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] [${type.toUpperCase()}] ${args.join(' ')}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // Call original console method
+      originalConsole[type](...args);
+    }
+    
+    console.log = (...args) => addLogEntry('info', ...args);
+    console.info = (...args) => addLogEntry('info', ...args);
+    console.warn = (...args) => addLogEntry('warn', ...args);
+    console.error = (...args) => addLogEntry('error', ...args);
+    
+    // Helper to create mock scores
+    function createMockScores(playerIds) {
+      const scores = new Map();
+      const meta = new Map();
+      
+      playerIds.forEach((id, index) => {
+        const score = Math.random() * 90 + 10; // Random score 10-100
+        scores.set(id, score);
+        
+        // Add metadata for first place
+        if (index === 0) {
+          meta.set(id, {
+            rawScoreDisplay: `${score.toFixed(1)}s`,
+            isNewPersonalBest: Math.random() > 0.5
+          });
+        }
+      });
+      
+      return { scores, meta };
+    }
+    
+    // Check API availability
+    function checkAPIs() {
+      const apis = {
+        showCompetitionReveal: typeof window.showCompetitionReveal === 'function',
+        showTriSlotReveal: typeof window.showTriSlotReveal === 'function',
+        showResultsPopup: typeof window.showResultsPopup === 'function',
+        FinaleCinematics: typeof window.FinaleCinematics === 'object' && window.FinaleCinematics !== null
+      };
+      
+      document.getElementById('statusReveal').innerHTML = apis.showCompetitionReveal
+        ? '<span class="status-badge status-available">✓ Available</span>'
+        : '<span class="status-badge status-missing">✗ Missing</span>';
+      
+      document.getElementById('statusTriSlot').innerHTML = apis.showTriSlotReveal
+        ? '<span class="status-badge status-available">✓ Available</span>'
+        : '<span class="status-badge status-missing">✗ Missing</span>';
+      
+      document.getElementById('statusPopup').innerHTML = apis.showResultsPopup
+        ? '<span class="status-badge status-available">✓ Available</span>'
+        : '<span class="status-badge status-missing">✗ Missing</span>';
+      
+      document.getElementById('statusCinematics').innerHTML = apis.FinaleCinematics
+        ? '<span class="status-badge status-available">✓ Available</span>'
+        : '<span class="status-badge status-missing">✗ Missing</span>';
+      
+      // Check if shimmed
+      if (window.showCompetitionReveal && window.showCompetitionReveal.name === 'shimShowCompetitionReveal') {
+        document.getElementById('statusReveal').innerHTML += ' <span class="status-badge status-shimmed">⚠ Shimmed</span>';
+      }
+      
+      console.info('API availability checked:', apis);
+      return apis;
+    }
+    
+    function showDiagnostics() {
+      if (window.ResultsGuard && window.ResultsGuard.logDiagnostics) {
+        window.ResultsGuard.logDiagnostics();
+      } else {
+        console.warn('ResultsGuard not available');
+      }
+    }
+    
+    async function testInlineReveal(type) {
+      console.info(`\n=== Testing Inline Reveal: ${type} ===`);
+      
+      const titles = {
+        'HOH': 'HOH Competition',
+        'POV': 'Veto Competition',
+        'F3P1': 'Final 3 Part 1',
+        'F3P2': 'Final 3 Part 2',
+        'F3P3': 'Final HOH Competition'
+      };
+      
+      const playerIds = type.includes('F3') ? [0, 1, 2] : [0, 1, 2, 3, 4];
+      const { scores, meta } = createMockScores(playerIds);
+      
+      window.game.lastCompScores = scores;
+      window.game.lastCompScoresMeta = meta;
+      
+      if (typeof window.showCompetitionReveal === 'function') {
+        try {
+          await window.showCompetitionReveal(titles[type], scores, playerIds);
+          console.info(`✓ Inline reveal completed for ${type}`);
+        } catch (e) {
+          console.error(`✗ Inline reveal failed for ${type}:`, e);
+        }
+      } else {
+        console.error('✗ showCompetitionReveal not available');
+      }
+    }
+    
+    async function testPopupFallback(type) {
+      console.info(`\n=== Testing Popup Fallback: ${type} ===`);
+      
+      const titles = {
+        'HOH': 'HOH Competition',
+        'POV': 'Veto Competition',
+        'Final': 'Final 3 Competition'
+      };
+      
+      const { scores } = createMockScores([0, 1, 2, 3, 4]);
+      
+      const topThree = Array.from(scores.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([id, score]) => ({
+          id,
+          name: window.safeName(id),
+          score
+        }));
+      
+      if (typeof window.showResultsPopup === 'function') {
+        try {
+          await window.showResultsPopup({
+            title: titles[type],
+            phase: type.toLowerCase(),
+            topThree,
+            winnerEmoji: '👑',
+            duration: 5000
+          });
+          console.info(`✓ Popup displayed for ${type}`);
+        } catch (e) {
+          console.error(`✗ Popup failed for ${type}:`, e);
+        }
+      } else {
+        console.error('✗ showResultsPopup not available');
+      }
+    }
+    
+    async function testCinematic(part) {
+      console.info(`\n=== Testing Cinematic: Part ${part} ===`);
+      
+      if (!window.FinaleCinematics) {
+        console.error('✗ FinaleCinematics not available');
+        return;
+      }
+      
+      const winnerId = 0;
+      const scores = [
+        { name: 'You', score: '85.3', medal: '🏆' },
+        { name: 'Alice', score: '72.1', medal: '🥈' }
+      ];
+      
+      try {
+        if (part === 'P1' && window.FinaleCinematics.showPart1ResultsWithScores) {
+          await window.FinaleCinematics.showPart1ResultsWithScores(winnerId, scores);
+        } else if (part === 'P2' && window.FinaleCinematics.showPart2ResultsWithScores) {
+          await window.FinaleCinematics.showPart2ResultsWithScores(winnerId, scores);
+        } else if (part === 'P3' && window.FinaleCinematics.showPart3ResultsWithScores) {
+          await window.FinaleCinematics.showPart3ResultsWithScores(winnerId, scores);
+        } else {
+          console.warn(`Method for Part ${part} not found, trying generic cinematic`);
+          if (window.FinaleCinematics.showPart1WinnerCinematic) {
+            await window.FinaleCinematics.showPart1WinnerCinematic(winnerId);
+          }
+        }
+        console.info(`✓ Cinematic completed for Part ${part}`);
+      } catch (e) {
+        console.error(`✗ Cinematic failed for Part ${part}:`, e);
+      }
+    }
+    
+    function testGuardShim() {
+      console.info('\n=== Testing Runtime Guard Shim ===');
+      
+      if (window.ResultsGuard) {
+        const status = window.ResultsGuard.getAvailability();
+        console.info('Current availability:', status);
+        
+        if (status.isShimmed) {
+          console.info('✓ Shim is active and working');
+        } else if (status.showCompetitionReveal) {
+          console.info('✓ Native showCompetitionReveal available - no shim needed');
+        } else {
+          console.warn('⚠ Neither native nor shimmed API available');
+        }
+      } else {
+        console.error('✗ ResultsGuard not loaded');
+      }
+    }
+    
+    function removeAndRestore() {
+      console.info('\n=== Simulating Missing API ===');
+      
+      const original = window.showCompetitionReveal;
+      
+      if (original) {
+        console.warn('Temporarily removing showCompetitionReveal...');
+        delete window.showCompetitionReveal;
+        
+        setTimeout(() => {
+          checkAPIs();
+          console.info('API removed. Check if shim would have helped.');
+          
+          setTimeout(() => {
+            console.info('Restoring original API...');
+            window.showCompetitionReveal = original;
+            checkAPIs();
+          }, 3000);
+        }, 500);
+      } else {
+        console.error('showCompetitionReveal already missing');
+      }
+    }
+    
+    function clearLog() {
+      logContainer.innerHTML = '<div class="log-entry info">Console cleared. Waiting for new entries...</div>';
+    }
+    
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.info('Debug Results Paths page loaded');
+      checkAPIs();
+    });
+  </script>
+</body>
+</html>

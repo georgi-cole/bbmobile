@@ -619,7 +619,14 @@
       }, 500);
       
       // Click/tap to dismiss (after 500ms)
-      const dismissHandler = (e) => {
+      let dismissHandler;
+      
+      // ESC to dismiss
+      const keyHandler = (e) => {
+        if(e.key === 'Escape') dismissHandler(e);
+      };
+      
+      dismissHandler = (_e) => {
         if(!dismissible || dismissed) return;
         const elapsed = Date.now() - startTime;
         if(elapsed < effectiveMinDisplay) return; // Force minimum display time
@@ -630,11 +637,6 @@
         setTimeout(() => {
           if(modal.parentNode) modal.remove();
         }, 250);
-      };
-      
-      // ESC to dismiss
-      const keyHandler = (e) => {
-        if(e.key === 'Escape') dismissHandler(e);
       };
       
       modal.addEventListener('click', dismissHandler);
