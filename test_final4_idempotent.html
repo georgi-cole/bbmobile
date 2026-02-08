@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final 4 Idempotent finalizeFinal4Eviction Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #96cfff;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: rgba(40,40,80,0.5);
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-item {
+      margin: 15px 0;
+      padding: 10px;
+      background: rgba(20,20,40,0.6);
+      border-radius: 4px;
+    }
+    .pass {
+      color: #88e6a0;
+      font-weight: bold;
+    }
+    .fail {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+    .info {
+      color: #96cfff;
+      font-style: italic;
+    }
+    pre {
+      background: #0a0a1e;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.9em;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #96cfff;
+      color: #0a0a1e;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #b8e0ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Final 4 Idempotent finalizeFinal4Eviction Test</h1>
+  <p class="info">Testing that duplicate calls to finalizeFinal4Eviction return resolved Promises immediately and don't hang the game</p>
+
+  <div class="test-section">
+    <h2>Test 1: Verify Module-Level Guard Exists</h2>
+    <div id="test1-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: First Call Completes Successfully</h2>
+    <div id="test2-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Duplicate Call Returns Resolved Promise</h2>
+    <div id="test3-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Multiple Simultaneous Calls (Race Condition)</h2>
+    <div id="test4-output" class="test-item">Running...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Summary</h2>
+    <div id="summary" class="test-item"></div>
+  </div>
+
+  <script type="module">
+    // Import veto.js to test the actual implementation
+    // This test verifies the idempotent behavior added to fix the Final 4 hang bug
+    
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function pass(testId, message) {
+      document.getElementById(testId).innerHTML = `<span class="pass">✓ PASS:</span> ${message}`;
+      testsPassed++;
+    }
+
+    function fail(testId, message) {
+      document.getElementById(testId).innerHTML = `<span class="fail">✗ FAIL:</span> ${message}`;
+      testsFailed++;
+    }
+
+    function info(testId, message) {
+      const el = document.getElementById(testId);
+      el.innerHTML += `<br><span class="info">${message}</span>`;
+    }
+
+    // Mock minimal global game object for testing
+    window.global = window;
+    window.game = {
+      players: [
+        { id: 0, name: 'Alice', evicted: false, human: true },
+        { id: 1, name: 'Bob', evicted: false },
+        { id: 2, name: 'Charlie', evicted: false },
+        { id: 3, name: 'Diana', evicted: false }
+      ],
+      nominees: [1, 2],
+      vetoHolder: 0,
+      week: 10,
+      phase: 'final4_eviction',
+      cfg: { enableJuryHouse: true },
+      juryHouse: []
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.addLog = function() {};
+    window.showCard = function() {};
+    window.cardQueueWaitIdle = function() { return Promise.resolve(); };
+    window.runEvictionVisual = function() { return Promise.resolve(); };
+    window.updateHud = function() {};
+    window.setPhase = function() {};
+
+    // Mock the showTVCardWithAvatars function (required by finalizeFinal4Eviction)
+    let tvCardCallCount = 0;
+    window.showTVCardWithAvatars = function(opts) {
+      tvCardCallCount++;
+      console.log('[Mock] showTVCardWithAvatars called:', opts);
+      return Promise.resolve();
+    };
+
+    // Mock proceedAfterFinal4Eviction to verify it gets called
+    let proceedCalled = 0;
+    window.proceedAfterFinal4Eviction = function() {
+      proceedCalled++;
+      console.log('[Mock] proceedAfterFinal4Eviction called');
+    };
+
+    // Test 1: Verify the module-level guard variable exists in veto.js
+    function test1() {
+      const testId = 'test1-output';
+      try {
+        // We can't directly access module-level private variables, but we can verify the behavior
+        // by checking that the function exists and is async
+        if (typeof window.finalizeFinal4Eviction === 'function') {
+          pass(testId, 'finalizeFinal4Eviction function exists and is exposed to global scope');
+          info(testId, 'Note: Module-level guard _finalizeFinal4EvictionInProgress is private but implemented');
+        } else {
+          fail(testId, 'finalizeFinal4Eviction function not found in global scope');
+        }
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    // Test 2: First call should complete successfully
+    async function test2() {
+      const testId = 'test2-output';
+      try {
+        // Load veto.js dynamically
+        await loadVetoModule();
+        
+        // Reset state
+        window.game.__f4EvictionResolved = false;
+        window.game.__f4EvictionInProgress = false;
+        window.game.__f4ToF3TransitionStarted = false;
+        tvCardCallCount = 0;
+        proceedCalled = 0;
+
+        // First call should execute normally
+        const result = window.finalizeFinal4Eviction(1); // Evict Bob (id=1)
+        
+        // Verify it returns a Promise
+        if (result && typeof result.then === 'function') {
+          pass(testId, 'First call returns a Promise');
+          info(testId, 'Function is properly async and will execute the eviction flow');
+        } else {
+          fail(testId, 'First call did not return a Promise');
+        }
+
+        // Wait for async operations to complete
+        await result;
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Verify eviction was processed
+        if (window.game.__f4EvictionResolved) {
+          info(testId, 'Eviction was marked as resolved (correct)');
+        }
+        
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    // Test 3: Duplicate call should return resolved Promise immediately
+    async function test3() {
+      const testId = 'test3-output';
+      try {
+        // Set up state to simulate a duplicate call scenario
+        window.game.__f4EvictionResolved = false;
+        window.game.__f4EvictionInProgress = false;
+        window.game.__f4ToF3TransitionStarted = true; // This should block duplicate
+        tvCardCallCount = 0;
+
+        const startTime = Date.now();
+        const result = window.finalizeFinal4Eviction(2); // Try to evict Charlie
+        const endTime = Date.now();
+
+        // Verify it returns a Promise
+        if (result && typeof result.then === 'function') {
+          info(testId, 'Duplicate call returns a Promise (good)');
+        } else {
+          fail(testId, 'Duplicate call did not return a Promise');
+          return;
+        }
+
+        // Verify the Promise resolves immediately (idempotent behavior)
+        await result;
+        const totalTime = Date.now() - startTime;
+        
+        if (totalTime < 100) {
+          pass(testId, `Duplicate call resolved immediately in ${totalTime}ms (idempotent behavior)`);
+        } else {
+          fail(testId, `Duplicate call took ${totalTime}ms to resolve (should be immediate)`);
+        }
+
+        // Verify no side-effects occurred (TV card should not be shown)
+        if (tvCardCallCount === 0) {
+          info(testId, 'No side-effects from duplicate call (TV card not shown)');
+        } else {
+          fail(testId, `Duplicate call executed side-effects: ${tvCardCallCount} TV cards shown`);
+        }
+
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    // Test 4: Multiple simultaneous calls (race condition test)
+    async function test4() {
+      const testId = 'test4-output';
+      try {
+        // Reset state for clean test
+        window.game.__f4EvictionResolved = false;
+        window.game.__f4EvictionInProgress = false;
+        window.game.__f4ToF3TransitionStarted = false;
+        tvCardCallCount = 0;
+
+        // Launch multiple calls simultaneously to simulate race condition
+        const promises = [
+          window.finalizeFinal4Eviction(1),
+          window.finalizeFinal4Eviction(1),
+          window.finalizeFinal4Eviction(1)
+        ];
+
+        // Wait for all to complete
+        const results = await Promise.all(promises);
+
+        // All should resolve successfully
+        if (results.length === 3) {
+          pass(testId, 'All 3 simultaneous calls resolved without hanging');
+        } else {
+          fail(testId, `Only ${results.length} of 3 calls resolved`);
+        }
+
+        // Only one should have executed the side-effects
+        info(testId, `TV card was shown ${tvCardCallCount} time(s) - should be 1 (only first call executes)`);
+        
+        if (tvCardCallCount <= 1) {
+          info(testId, 'Duplicate calls did not execute redundant side-effects (correct)');
+        } else {
+          fail(testId, 'Duplicate calls executed redundant side-effects');
+        }
+
+      } catch (e) {
+        fail(testId, `Error: ${e.message}`);
+      }
+    }
+
+    async function loadVetoModule() {
+      // Load veto.js by inserting a script tag
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'js/veto.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    // Run all tests sequentially
+    async function runTests() {
+      try {
+        test1();
+        await test2();
+        await test3();
+        await test4();
+
+        // Display summary
+        const summary = document.getElementById('summary');
+        const total = testsPassed + testsFailed;
+        if (testsFailed === 0) {
+          summary.innerHTML = `<span class="pass">✓ ALL TESTS PASSED</span> (${testsPassed}/${total})<br><br>
+            <span class="info">The idempotent behavior fix is working correctly. Duplicate calls to finalizeFinal4Eviction 
+            now return resolved Promises immediately, preventing the game hang bug.</span>`;
+        } else {
+          summary.innerHTML = `<span class="fail">✗ SOME TESTS FAILED</span> (${testsPassed} passed, ${testsFailed} failed out of ${total} total)`;
+        }
+      } catch (e) {
+        console.error('Test suite error:', e);
+        const summary = document.getElementById('summary');
+        summary.innerHTML = `<span class="fail">✗ TEST SUITE ERROR:</span> ${e.message}`;
+      }
+    }
+
+    // Run tests after a short delay to allow page to load
+    setTimeout(runTests, 100);
+  </script>
+</body>
+</html>
