@@ -63,8 +63,9 @@
       isNewPersonalBest = false       // If true, show personal best indicator
     } = options;
     
-    // Log that this function is being used (potentially as fallback)
-    console.info(`[results-popup][${phase || 'unknown'}] showResultsPopup called (may be fallback from inline reveal):`, title);
+    // Log that this function is being used as fallback (deprecated as primary path)
+    console.warn(`[results-popup][${phase || 'unknown'}][FallbackPath] showResultsPopup called - this is a fallback path, not the primary inline reveal`);
+    console.info(`[results-popup][${phase || 'unknown'}] Title: ${title}, TopThree count: ${topThree.length}`);
     
     if(!topThree || topThree.length === 0) return;
     
