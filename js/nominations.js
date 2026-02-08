@@ -46,6 +46,14 @@
     const hoh=global.getP(g.hohId);
     const need = requiredSlots();
 
+    // Defensive: reset a stale commit-in-progress when we have no pending selections.
+    // This prevents showing a "Locked" overlay when the human HOH flow was aborted.
+    if (g.__nomsCommitInProgress && !Array.isArray(g._pendingNoms) && (!hoh || hoh.human)) {
+      console.warn('[noms] Detected stale __nomsCommitInProgress without _pendingNoms – resetting flags');
+      g.__nomsCommitInProgress = false;
+      g.__nomsCommitted = false;
+    }
+
     // If already locked/committed, show in-TV message
     if(g.nomsLocked || g.__nomsCommitInProgress || g.__nomsCommitted){
       const names = (g.nominees||[]).map(global.safeName).join(', ') || '—';

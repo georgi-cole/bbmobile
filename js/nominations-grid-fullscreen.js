@@ -1359,7 +1359,9 @@
     // Step 1: Show intro card
     const introSuccess = await showIntroCard();
     if (!introSuccess) {
-      console.warn(LOG_PREFIX, 'Intro card failed, falling back to original');
+      console.warn(LOG_PREFIX, 'Intro card failed, clearing awaiting flags and falling back to original');
+      if (global.__awaitingHumanNominations) global.__awaitingHumanNominations = false;
+      g._pendingNoms = null;
       if (originalRenderNomsPanel) originalRenderNomsPanel();
       return;
     }
@@ -1369,7 +1371,9 @@
     // Step 2: Show fullscreen selector
     const selections = await showFullscreenSelector();
     if (!selections || !Array.isArray(selections) || selections.length === 0) {
-      console.warn(LOG_PREFIX, 'Selector failed or cancelled, falling back to original');
+      console.warn(LOG_PREFIX, 'Selector cancelled/empty, clearing awaiting flags and falling back');
+      if (global.__awaitingHumanNominations) global.__awaitingHumanNominations = false;
+      g._pendingNoms = null;
       if (originalRenderNomsPanel) originalRenderNomsPanel();
       return;
     }
@@ -1446,7 +1450,9 @@
       console.log(LOG_PREFIX, '✓ Nominations committed successfully');
       
     } catch (err) {
-      console.error(LOG_PREFIX, 'Error committing nominations:', err);
+      console.error(LOG_PREFIX, 'Error committing nominations:', err, ' – clearing awaiting flags and falling back');
+      if (global.__awaitingHumanNominations) global.__awaitingHumanNominations = false;
+      g._pendingNoms = null;
       // Even on commit error, don't fall back - nominations may be partially committed
       // Just log and continue
     }
