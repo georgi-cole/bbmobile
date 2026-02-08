@@ -91,16 +91,25 @@
         const header = document.createElement('div');
         header.style.cssText = `
           text-align: center;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         `;
 
-        const icon = document.createElement('div');
+        // Title with inline key icon
+        const titleContainer = document.createElement('div');
+        titleContainer.style.cssText = `
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-bottom: 6px;
+        `;
+
+        const icon = document.createElement('span');
         icon.textContent = '🔑';
         icon.style.cssText = `
-          font-size: 2.5rem;
-          margin-bottom: 8px;
+          font-size: 1.5rem;
         `;
-        header.appendChild(icon);
+        titleContainer.appendChild(icon);
 
         const title = document.createElement('h2');
         title.textContent = 'Make Your Plea to the HOH';
@@ -108,9 +117,11 @@
           font-size: 1.3rem;
           font-weight: 700;
           color: #ffffff;
-          margin: 0 0 6px 0;
+          margin: 0;
         `;
-        header.appendChild(title);
+        titleContainer.appendChild(title);
+        
+        header.appendChild(titleContainer);
 
         const bodyText = document.createElement('p');
         bodyText.textContent = 'Offer the Head of Household a deal or appeal for safety this week.';
