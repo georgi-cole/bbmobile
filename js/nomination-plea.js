@@ -203,6 +203,7 @@
         // Custom textarea
         customTextArea = document.createElement('textarea');
         customTextArea.placeholder = 'Or write your own custom message...';
+        customTextArea.setAttribute('aria-label', 'Custom plea message to the Head of Household');
         customTextArea.maxLength = 200;
         customTextArea.rows = 3;
         customTextArea.style.cssText = `
@@ -232,6 +233,7 @@
         const submitBtn = document.createElement('button');
         submitBtn.className = 'plea-submit-btn';
         submitBtn.textContent = 'Submit';
+        submitBtn.setAttribute('aria-label', 'Submit your plea to the Head of Household');
         submitBtn.style.cssText = `
           padding: 12px 32px;
           background: #5aa575;
@@ -259,6 +261,7 @@
         const skipBtn = document.createElement('button');
         skipBtn.className = 'plea-skip-btn';
         skipBtn.textContent = 'Skip';
+        skipBtn.setAttribute('aria-label', 'Skip making a plea and continue without offering a deal');
         skipBtn.style.cssText = `
           padding: 12px 32px;
           background: rgba(255, 255, 255, 0.1);
