@@ -276,19 +276,19 @@
       easy: {
         patternLength: 4,
         revealDuration: 8000,
-        allowedMistakes: 2,
+        allowedMistakes: 3,
         timeLimit: 75000
       },
       medium: {
         patternLength: 6,
         revealDuration: 6000,
-        allowedMistakes: 1,
+        allowedMistakes: 3,
         timeLimit: 60000
       },
       hard: {
         patternLength: 8,
         revealDuration: 4000,
-        allowedMistakes: 0,
+        allowedMistakes: 3,
         timeLimit: 45000
       }
     };

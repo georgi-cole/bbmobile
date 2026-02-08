@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Colors - Enhanced Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1d29 0%, #2d3748 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 30px;
+    }
+    
+    .test-info {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      max-width: 600px;
+    }
+    
+    .test-info h2 {
+      margin-top: 0;
+      color: #4ade80;
+    }
+    
+    .test-info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    
+    #game-container {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      min-width: 400px;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #3d4f64;
+      color: #e3ecf5;
+    }
+    
+    .btn:hover:not(:disabled) {
+      background: #4a5f7a;
+      transform: translateY(-1px);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn.primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #7c8fee 0%, #8859b3 100%);
+    }
+    
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid #4ade80;
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+    }
+    
+    #result h3 {
+      margin: 0 0 10px 0;
+      color: #4ade80;
+    }
+    
+    .restart-btn {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Memory Colors - Enhanced Test</h1>
+  
+  <div class="test-info">
+    <h2>Testing Requirements:</h2>
+    <ul>
+      <li>✅ Mistakes allowed increased to <strong>3</strong></li>
+      <li>✅ Each mistake reduces score by <strong>15 points</strong></li>
+      <li>✅ Game over after the <strong>3rd mistake</strong></li>
+      <li>✅ Expanded color palette to <strong>20 colors</strong></li>
+      <li>✅ Colors have <strong>fancy names</strong> (e.g., Coral Red, Seafoam, Amethyst)</li>
+      <li>✅ Feedback shows color names:
+        <ul>
+          <li>"✅ Correct: Coral Red"</li>
+          <li>"❌ Incorrect: You chose Golden Yellow, it was Sky Blue"</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+  
+  <div id="game-container"></div>
+  
+  <div id="result">
+    <h3>Game Complete!</h3>
+    <p id="final-score"></p>
+    <button class="btn primary restart-btn" onclick="startGame()">Play Again</button>
+  </div>
+
+  <script>
+    // Minimal game object setup
+    window.game = window.game || {};
+    window.game.MiniGames = window.game.MiniGames || {};
+    
+    // Mock MinigameScoring
+    window.MinigameScoring = {
+      calculateFinalScore(opts) {
+        const { rawScore, minScore, maxScore } = opts;
+        const normalized = (rawScore - minScore) / (maxScore - minScore);
+        return Math.round(normalized * 1000);
+      }
+    };
+    
+    // Mock GameUtils for difficulty settings
+    window.GameUtils = {
+      getDifficultySettings(difficulty = 'medium') {
+        const settings = {
+          easy: {
+            patternLength: 4,
+            revealDuration: 8000,
+            allowedMistakes: 3,
+            timeLimit: 75000
+          },
+          medium: {
+            patternLength: 6,
+            revealDuration: 6000,
+            allowedMistakes: 3,
+            timeLimit: 60000
+          },
+          hard: {
+            patternLength: 8,
+            revealDuration: 4000,
+            allowedMistakes: 3,
+            timeLimit: 45000
+          }
+        };
+        return settings[difficulty] || settings.medium;
+      },
+      generateRandomSequence(items, length) {
+        const sequence = [];
+        for(let i = 0; i < length; i++){
+          const index = Math.floor(Math.random() * items.length);
+          sequence.push(items[index]);
+        }
+        return sequence;
+      }
+    };
+  </script>
+  
+  <!-- Load the memory match game -->
+  <script src="js/minigames/memory-match.js"></script>
+  
+  <script>
+    function startGame() {
+      const container = document.getElementById('game-container');
+      const result = document.getElementById('result');
+      result.style.display = 'none';
+      
+      // Start the game in card mode (Memory Colors)
+      if (window.MiniGames && window.MiniGames.memoryMatch) {
+        window.MiniGames.memoryMatch.render(container, (score) => {
+          console.log('Game completed with score:', score);
+          document.getElementById('final-score').textContent = `Final Score: ${score}`;
+          result.style.display = 'block';
+        }, {
+          mode: 'card',
+          difficulty: 'medium',
+          debugMode: false,
+          competitionMode: false
+        });
+      } else {
+        container.innerHTML = '<p style="color: #f87171;">Error: Game not loaded. Check console.</p>';
+        console.error('Memory Match game not found');
+      }
+    }
+    
+    // Start the game on load
+    window.addEventListener('DOMContentLoaded', startGame);
+  </script>
+</body>
+</html>
