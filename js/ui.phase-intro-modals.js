@@ -83,7 +83,7 @@
       if (g.pausedTimeRemaining && typeof g.pausedTimeRemaining === 'number') {
         g.endAt = Date.now() + g.pausedTimeRemaining;
         console.info('[phase-intro] Restored endAt:', g.endAt);
-        g.pausedTimeRemaining = null;
+        delete g.pausedTimeRemaining;
       }
     }
   }
