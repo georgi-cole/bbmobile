@@ -81,7 +81,7 @@
       '#74e48b', // Mint Green
       '#f7b955', // Golden Yellow
       '#b074ff', // Lavender Purple
-      '#ff9cf1', // Cotton Candy Pink
+      '#ff9cf1', // Cotton Candy
       '#9bdc82', // Lime Green
       '#ff8c42', // Tangerine Orange
       '#4ecdc4', // Turquoise
@@ -90,7 +90,7 @@
       '#e63946', // Crimson Red
       '#457b9d', // Ocean Blue
       '#f1a7b5', // Baby Pink
-      '#c77dff', // Amethyst Purple
+      '#c77dff', // Amethyst
       '#e76f51', // Terracotta
       '#2a9d8f', // Teal
       '#ffafcc', // Rose Pink
@@ -440,6 +440,8 @@
         if(inputIndex === sequence.length){
           // Sequence complete!
           acceptingInput = false;
+          status.textContent = '✅ Perfect match!';
+          status.style.color = '#22c55e';
           submitBtn.disabled = false;
           
           // Stop anti-cheat monitoring
@@ -528,8 +530,7 @@
       const accuracy = correctCount / sequence.length;
       let rawScore = Math.round(accuracy * 100);
       
-      // Apply mistake penalty - each mistake reduces score
-      // Penalty: 15 points per mistake (configurable)
+      // Apply mistake penalty - each mistake reduces score by 15 points
       const mistakePenalty = 15;
       const penaltyAmount = mistakesMade * mistakePenalty;
       rawScore = Math.max(0, rawScore - penaltyAmount);
