@@ -1793,6 +1793,14 @@
       global.closeAllVoteUI();
     }
     
+    // CRITICAL: If Game Over modal is queued, stop game progression
+    // The game should end when the human player is evicted pre-jury
+    if(g.__showGameOverModal){
+      console.info('[gameover-pr] Game Over modal queued - stopping game progression');
+      global.updateHud?.();
+      return;
+    }
+    
     const remain=global.alivePlayers();
     if(remain.length===2){ setTimeout(()=>global.startJuryVote?.(),700); global.updateHud?.(); return; }
     if(remain.length===3){ setTimeout(()=>global.startFinal3Flow?.(),700); global.updateHud?.(); return; }
