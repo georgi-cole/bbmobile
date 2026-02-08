@@ -46,39 +46,20 @@
     const hoh=global.getP(g.hohId);
     const need = requiredSlots();
 
-    // If already locked/committed, show in-TV message
+    // If already locked/committed, do NOT render a blocking card. Just neutralize overlay and exit.
     if(g.nomsLocked || g.__nomsCommitInProgress || g.__nomsCommitted){
-      const names = (g.nominees||[]).map(global.safeName).join(', ') || '—';
-      // Use TVCards.showInlineCard if available, otherwise fallback
-      if(global.TVCards && global.TVCards.showInlineCard){
-        global.TVCards.showInlineCard({
-          title: 'Nominations',
-          content: `Locked. Nominees: ${names}.`,
-          tone: 'noms',
-          duration: 0 // Manual dismiss
-        });
-      } else {
-        // Fallback: Show a simple in-TV card
-        const host = document.getElementById('tvOverlay');
-        if(host){
-          host.innerHTML = '';
-          const card = document.createElement('div');
-          card.className = 'revealCard diaryRoomCard tvCardBody';
-          
-          const title = document.createElement('h3');
-          title.textContent = 'Nominations';
-          card.appendChild(title);
-          
-          const info = document.createElement('p');
-          info.className = 'big';
-          info.textContent = `Locked. Nominees: ${names}.`;
-          card.appendChild(info);
-          
-          host.appendChild(card);
-          document.getElementById('tv')?.classList.add('tvTall');
+      try {
+        const ov = document.getElementById('tvOverlay');
+        if (ov) {
+          const content = ov.querySelector('.tvOverlayContent');
+          if (content) content.innerHTML = '';
+          ov.style.pointerEvents = 'none';
         }
+        document.getElementById('tv')?.classList.remove('tvTall');
+      } catch (e) {
+        console.warn('[noms] Overlay neutralization failed:', e);
       }
-      return;
+      return; // Skip showing any "Locked. Nominees …" message
     }
 
     // ========== Human HOH: Nomination intro card ==========
