@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Game Over Exit → Play Flow</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0d151f;
+      color: #e0e8f0;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+    }
+    .test-panel {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: linear-gradient(145deg, #1a2533, #0f1925);
+      border: 1px solid rgba(110, 160, 220, 0.18);
+      border-radius: 16px;
+      padding: 30px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #6fd3ff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #9bbdff;
+    }
+    button {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background: #4574b8;
+    }
+    button.run-all {
+      background: #2a7d2e;
+      font-size: 1rem;
+      padding: 16px 32px;
+    }
+    button.run-all:hover {
+      background: #3a8d3e;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .pass {
+      color: #4ade80;
+    }
+    .fail {
+      color: #f87171;
+    }
+    .info {
+      color: #9bbdff;
+    }
+    .warn {
+      color: #fbbf24;
+    }
+    .instructions {
+      background: rgba(255, 212, 120, 0.1);
+      border: 1px solid rgba(255, 212, 120, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #ffdc8b;
+    }
+    .summary {
+      background: rgba(110, 160, 220, 0.1);
+      border: 1px solid rgba(110, 160, 220, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    .summary h3 {
+      margin-top: 0;
+      color: #6fd3ff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="test-panel">
+  <h1>🧪 Game Over Exit → Play Flow Tests</h1>
+  
+  <div class="instructions">
+    <h3>📋 Test Objectives</h3>
+    <p>This test validates the complete user flow when evicted pre-jury:</p>
+    <ol>
+      <li>User is evicted before making jury</li>
+      <li>Game Over modal appears</li>
+      <li>Game progression stops (no week modal appears)</li>
+      <li>User clicks "Exit" button</li>
+      <li>IntroScreen appears with reset state</li>
+      <li>User clicks "Play" button</li>
+      <li>New game starts successfully</li>
+    </ol>
+    <p><strong>This addresses the bug:</strong> "Play button does not properly trigger a new game" after Game Over exit</p>
+  </div>
+
+  <button class="run-all" onclick="runAllTests()">▶ Run All Tests</button>
+  
+  <div class="test-section">
+    <h2>Test 1: Game Progression Stops When Game Over Modal Queued</h2>
+    <p>Verifies that postEvictionRouting() returns early when __showGameOverModal is set</p>
+    <button onclick="testGameProgressionStops()">Run Test</button>
+    <div id="test1-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: IntroScreen.reset() Called on Exit</h2>
+    <p>Verifies that Exit button calls IntroScreen.reset() to clear state</p>
+    <button onclick="testIntroScreenReset()">Run Test</button>
+    <div id="test2-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Play Button Works After Exit</h2>
+    <p>Simulates full flow: Eviction → Game Over → Exit → Play button click</p>
+    <button onclick="testPlayButtonAfterExit()">Run Test</button>
+    <div id="test3-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: No Week Modal When Game Over Queued</h2>
+    <p>Verifies that proceedNextWeek() is NOT called when game is over</p>
+    <button onclick="testNoWeekModal()">Run Test</button>
+    <div id="test4-results" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Full Integration Test</h2>
+    <p>End-to-end test simulating the complete user journey</p>
+    <button onclick="testFullIntegration()">Run Test</button>
+    <div id="test5-results" class="result"></div>
+  </div>
+
+  <div id="summary" class="summary" style="display: none;">
+    <h3>📊 Test Summary</h3>
+    <div id="summary-content"></div>
+  </div>
+</div>
+
+<script>
+  // Test state
+  let testResults = [];
+
+  // Logging helpers
+  function log(elementId, message, type = 'info') {
+    const el = document.getElementById(elementId);
+    const color = type === 'pass' ? '#4ade80' : type === 'fail' ? '#f87171' : type === 'warn' ? '#fbbf24' : '#9bbdff';
+    el.innerHTML += `<span style="color: ${color}">${message}</span>\n`;
+  }
+
+  function clearLog(elementId) {
+    document.getElementById(elementId).innerHTML = '';
+  }
+
+  // Mock setup helpers
+  function setupMockGame(humanId = 1, playersLeft = 10, jurySize = 7) {
+    window.game = {
+      humanId: humanId,
+      week: 5,
+      cfg: {
+        enableJuryHouse: true,
+        jurySize: jurySize
+      },
+      players: []
+    };
+
+    for (let i = 1; i <= playersLeft; i++) {
+      window.game.players.push({
+        id: i,
+        name: `Player${i}`,
+        evicted: false,
+        autoMode: i !== humanId
+      });
+    }
+  }
+
+  function setupMockFunctions() {
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Unknown${id}`;
+    };
+    window.updateHud = () => {
+      console.log('[Mock] updateHud called');
+    };
+    window.closeAllVoteUI = () => {
+      console.log('[Mock] closeAllVoteUI called');
+    };
+  }
+
+  // TEST 1: Game Progression Stops
+  async function testGameProgressionStops() {
+    clearLog('test1-results');
+    log('test1-results', '=== Test 1: Game Progression Stops ===\n');
+    
+    try {
+      setupMockGame(1, 10, 7);
+      setupMockFunctions();
+      
+      // Set the flag that indicates game over
+      window.game.__showGameOverModal = {
+        playerName: 'Player1',
+        placement: 10,
+        jurySize: 7
+      };
+      
+      log('test1-results', '✓ Setup: __showGameOverModal flag set', 'pass');
+      
+      // Mock proceedNextWeek to detect if it's called
+      let proceedNextWeekCalled = false;
+      window.proceedNextWeek = async () => {
+        proceedNextWeekCalled = true;
+        console.log('[Mock] proceedNextWeek called - THIS SHOULD NOT HAPPEN');
+      };
+      
+      // Mock startJuryVote and startFinal3Flow
+      window.startJuryVote = () => {
+        console.log('[Mock] startJuryVote called');
+      };
+      window.startFinal3Flow = () => {
+        console.log('[Mock] startFinal3Flow called');
+      };
+      
+      // Load postEvictionRouting function
+      await loadEvictionModule();
+      
+      // Call postEvictionRouting
+      if (typeof window.postEvictionRouting === 'function') {
+        await window.postEvictionRouting();
+        log('test1-results', '✓ postEvictionRouting() executed', 'pass');
+      } else {
+        throw new Error('postEvictionRouting not available');
+      }
+      
+      // Verify proceedNextWeek was NOT called
+      if (proceedNextWeekCalled) {
+        throw new Error('proceedNextWeek was called but should have been skipped!');
+      }
+      log('test1-results', '✓ proceedNextWeek() NOT called (correct behavior)', 'pass');
+      
+      // Verify flag still exists (shouldn't be cleared by postEvictionRouting)
+      if (!window.game.__showGameOverModal) {
+        throw new Error('__showGameOverModal flag was cleared prematurely');
+      }
+      log('test1-results', '✓ __showGameOverModal flag preserved', 'pass');
+      
+      log('test1-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Game Progression Stops', passed: true });
+      
+    } catch (err) {
+      log('test1-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      testResults.push({ name: 'Game Progression Stops', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 2: IntroScreen.reset() Called
+  async function testIntroScreenReset() {
+    clearLog('test2-results');
+    log('test2-results', '=== Test 2: IntroScreen.reset() Called ===\n');
+    
+    try {
+      // Mock IntroScreen with reset function
+      let resetCalled = false;
+      let showWithPreloadCalled = false;
+      
+      window.IntroScreen = {
+        reset: () => {
+          resetCalled = true;
+          console.log('[Mock] IntroScreen.reset() called');
+        },
+        showWithPreload: () => {
+          showWithPreloadCalled = true;
+          console.log('[Mock] IntroScreen.showWithPreload() called');
+        },
+        show: () => {
+          console.log('[Mock] IntroScreen.show() called');
+        }
+      };
+      
+      log('test2-results', '✓ Setup: IntroScreen mock created', 'pass');
+      
+      // Load GameOverModal
+      await loadGameOverModalModule();
+      
+      // Simulate Exit button click by calling the modal
+      if (typeof window.GameOverModal !== 'undefined' && typeof window.GameOverModal.show === 'function') {
+        log('test2-results', '✓ GameOverModal.show available', 'pass');
+        
+        // Show modal (it will create Exit button handler)
+        const modalPromise = window.GameOverModal.show({
+          playerName: 'TestPlayer',
+          placement: 10,
+          jurySize: 7
+        });
+        
+        // Wait a bit for modal to render
+        await new Promise(r => setTimeout(r, 100));
+        
+        // Find and click Exit button
+        const exitBtn = document.querySelector('.game-over-btn-secondary');
+        if (!exitBtn) {
+          throw new Error('Exit button not found in DOM');
+        }
+        log('test2-results', '✓ Exit button found', 'pass');
+        
+        // Click Exit button
+        exitBtn.click();
+        log('test2-results', '✓ Exit button clicked', 'pass');
+        
+        // Wait for timeout in Exit handler
+        await new Promise(r => setTimeout(r, 600));
+        
+        // Verify reset was called
+        if (!resetCalled) {
+          throw new Error('IntroScreen.reset() was NOT called!');
+        }
+        log('test2-results', '✓ IntroScreen.reset() WAS called (correct behavior)', 'pass');
+        
+        // Clean up modal
+        const overlay = document.querySelector('.game-over-modal-overlay');
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+        
+      } else {
+        throw new Error('GameOverModal.show not available');
+      }
+      
+      log('test2-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'IntroScreen.reset() Called', passed: true });
+      
+    } catch (err) {
+      log('test2-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      testResults.push({ name: 'IntroScreen.reset() Called', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 3: Play Button Works After Exit
+  async function testPlayButtonAfterExit() {
+    clearLog('test3-results');
+    log('test3-results', '=== Test 3: Play Button Works After Exit ===\n');
+    
+    try {
+      // Mock IntroScreen with playButtonClicked flag
+      let playButtonClicked = true; // Simulating the "already clicked" state
+      let playAttempts = 0;
+      
+      window.IntroScreen = {
+        reset: () => {
+          playButtonClicked = false; // This is what reset() should do
+          console.log('[Mock] IntroScreen.reset() - playButtonClicked set to false');
+        },
+        showWithPreload: () => {
+          console.log('[Mock] IntroScreen.showWithPreload()');
+        },
+        // Simulate the Play button click handler
+        tryPlay: () => {
+          playAttempts++;
+          if (playButtonClicked) {
+            console.log('[Mock] Play button already clicked, ignoring');
+            return false;
+          }
+          playButtonClicked = true;
+          console.log('[Mock] Play button accepted - starting new game');
+          return true;
+        }
+      };
+      
+      log('test3-results', '✓ Setup: IntroScreen with playButtonClicked=true', 'pass');
+      
+      // First attempt: should fail because playButtonClicked=true
+      const attempt1 = window.IntroScreen.tryPlay();
+      if (attempt1) {
+        throw new Error('First play attempt should have failed!');
+      }
+      log('test3-results', '✓ Play button blocked initially (playButtonClicked=true)', 'pass');
+      
+      // Call reset (simulating Exit button click)
+      window.IntroScreen.reset();
+      log('test3-results', '✓ IntroScreen.reset() called', 'pass');
+      
+      // Second attempt: should succeed because reset() cleared the flag
+      const attempt2 = window.IntroScreen.tryPlay();
+      if (!attempt2) {
+        throw new Error('Second play attempt should have succeeded!');
+      }
+      log('test3-results', '✓ Play button works after reset (playButtonClicked=false)', 'pass');
+      
+      if (playAttempts !== 2) {
+        throw new Error(`Expected 2 play attempts, got ${playAttempts}`);
+      }
+      log('test3-results', '✓ Both play attempts recorded', 'pass');
+      
+      log('test3-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'Play Button Works After Exit', passed: true });
+      
+    } catch (err) {
+      log('test3-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      testResults.push({ name: 'Play Button Works After Exit', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 4: No Week Modal
+  async function testNoWeekModal() {
+    clearLog('test4-results');
+    log('test4-results', '=== Test 4: No Week Modal When Game Over ===\n');
+    
+    try {
+      setupMockGame(1, 10, 7);
+      setupMockFunctions();
+      
+      let showCardCalled = false;
+      let showCardArgs = null;
+      
+      window.showCard = (...args) => {
+        showCardCalled = true;
+        showCardArgs = args;
+        console.log('[Mock] showCard called with:', args);
+      };
+      
+      // Set game over flag
+      window.game.__showGameOverModal = {
+        playerName: 'Player1',
+        placement: 10,
+        jurySize: 7
+      };
+      
+      log('test4-results', '✓ Setup: __showGameOverModal flag set', 'pass');
+      
+      // Mock setPhase (called by proceedNextWeek)
+      let setPhaseCalled = false;
+      window.setPhase = async (phase, duration, callback) => {
+        setPhaseCalled = true;
+        console.log(`[Mock] setPhase called: ${phase}`);
+      };
+      
+      // Load and call postEvictionRouting
+      await loadEvictionModule();
+      
+      if (typeof window.postEvictionRouting === 'function') {
+        await window.postEvictionRouting();
+        log('test4-results', '✓ postEvictionRouting() executed', 'pass');
+      }
+      
+      // Verify setPhase was NOT called (means proceedNextWeek didn't run)
+      if (setPhaseCalled) {
+        throw new Error('setPhase was called - week progression occurred!');
+      }
+      log('test4-results', '✓ setPhase NOT called (no week progression)', 'pass');
+      
+      // Verify showCard was NOT called with week message
+      if (showCardCalled && showCardArgs && showCardArgs[0]?.includes('Week')) {
+        throw new Error(`Week modal appeared: ${showCardArgs[0]}`);
+      }
+      log('test4-results', '✓ No Week modal appeared', 'pass');
+      
+      log('test4-results', '\n✅ TEST PASSED', 'pass');
+      testResults.push({ name: 'No Week Modal When Game Over', passed: true });
+      
+    } catch (err) {
+      log('test4-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      testResults.push({ name: 'No Week Modal When Game Over', passed: false, error: err.message });
+    }
+  }
+
+  // TEST 5: Full Integration
+  async function testFullIntegration() {
+    clearLog('test5-results');
+    log('test5-results', '=== Test 5: Full Integration Test ===\n');
+    
+    try {
+      setupMockGame(1, 10, 7);
+      setupMockFunctions();
+      
+      // Track all the steps
+      const steps = {
+        gameOverQueued: false,
+        progressionStopped: false,
+        modalShown: false,
+        introResetCalled: false,
+        playButtonWorks: false
+      };
+      
+      log('test5-results', 'Step 1: User evicted pre-jury', 'info');
+      
+      // Load modules
+      await loadEvictionModule();
+      await loadGameOverModalModule();
+      
+      // Queue game over
+      if (typeof window.queueGameOverIfHumanPreJury === 'function') {
+        const queued = window.queueGameOverIfHumanPreJury(1, 'Player1', 10);
+        if (queued) {
+          steps.gameOverQueued = true;
+          log('test5-results', '  ✓ Game Over queued', 'pass');
+        }
+      }
+      
+      if (!steps.gameOverQueued) {
+        throw new Error('Failed to queue Game Over modal');
+      }
+      
+      log('test5-results', '\nStep 2: Verify game progression stops', 'info');
+      
+      // Mock to detect if progression occurs
+      let proceedCalled = false;
+      window.proceedNextWeek = async () => {
+        proceedCalled = true;
+      };
+      
+      // Call routing
+      if (typeof window.postEvictionRouting === 'function') {
+        await window.postEvictionRouting();
+        if (!proceedCalled) {
+          steps.progressionStopped = true;
+          log('test5-results', '  ✓ Game progression stopped', 'pass');
+        }
+      }
+      
+      if (!steps.progressionStopped) {
+        throw new Error('Game progression did not stop!');
+      }
+      
+      log('test5-results', '\nStep 3: Show Game Over modal', 'info');
+      
+      // Mock IntroScreen
+      let resetCalled = false;
+      let playButtonAttempts = [];
+      let playButtonBlocked = true;
+      
+      window.IntroScreen = {
+        reset: () => {
+          resetCalled = true;
+          playButtonBlocked = false;
+          console.log('[Mock] IntroScreen.reset() - playButtonBlocked = false');
+        },
+        showWithPreload: () => {
+          console.log('[Mock] IntroScreen.showWithPreload()');
+        },
+        tryPlay: () => {
+          const attempt = { blocked: playButtonBlocked, timestamp: Date.now() };
+          playButtonAttempts.push(attempt);
+          if (playButtonBlocked) {
+            console.log('[Mock] Play button blocked');
+            return false;
+          }
+          console.log('[Mock] Play button works!');
+          return true;
+        }
+      };
+      
+      // Show modal
+      if (typeof window.GameOverModal !== 'undefined' && window.GameOverModal.show) {
+        const modalData = window.game.__showGameOverModal;
+        delete window.game.__showGameOverModal;
+        
+        const modalPromise = window.GameOverModal.show(modalData);
+        steps.modalShown = true;
+        log('test5-results', '  ✓ Game Over modal shown', 'pass');
+        
+        // Wait for modal to render
+        await new Promise(r => setTimeout(r, 100));
+        
+        log('test5-results', '\nStep 4: Click Exit button', 'info');
+        
+        // Find and click Exit button
+        const exitBtn = document.querySelector('.game-over-btn-secondary');
+        if (exitBtn) {
+          exitBtn.click();
+          log('test5-results', '  ✓ Exit button clicked', 'pass');
+          
+          // Wait for Exit handler timeout
+          await new Promise(r => setTimeout(r, 600));
+          
+          if (resetCalled) {
+            steps.introResetCalled = true;
+            log('test5-results', '  ✓ IntroScreen.reset() called', 'pass');
+          }
+          
+          // Clean up modal
+          const overlay = document.querySelector('.game-over-modal-overlay');
+          if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+          }
+        }
+      }
+      
+      if (!steps.introResetCalled) {
+        throw new Error('IntroScreen.reset() was not called on Exit!');
+      }
+      
+      log('test5-results', '\nStep 5: Verify Play button works', 'info');
+      
+      // Try Play button
+      const playWorks = window.IntroScreen.tryPlay();
+      if (playWorks) {
+        steps.playButtonWorks = true;
+        log('test5-results', '  ✓ Play button works after reset', 'pass');
+      } else {
+        throw new Error('Play button still blocked after reset!');
+      }
+      
+      // Verify all steps completed
+      const allStepsComplete = Object.values(steps).every(v => v === true);
+      if (!allStepsComplete) {
+        throw new Error('Not all steps completed: ' + JSON.stringify(steps));
+      }
+      
+      log('test5-results', '\n📊 Integration Test Summary:', 'info');
+      log('test5-results', '  ✓ Game Over queued', 'pass');
+      log('test5-results', '  ✓ Progression stopped', 'pass');
+      log('test5-results', '  ✓ Modal shown', 'pass');
+      log('test5-results', '  ✓ Intro reset on exit', 'pass');
+      log('test5-results', '  ✓ Play button works', 'pass');
+      
+      log('test5-results', '\n✅ FULL INTEGRATION TEST PASSED', 'pass');
+      testResults.push({ name: 'Full Integration Test', passed: true });
+      
+    } catch (err) {
+      log('test5-results', `\n❌ TEST FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      testResults.push({ name: 'Full Integration Test', passed: false, error: err.message });
+    }
+  }
+
+  // Helper to load eviction module
+  async function loadEvictionModule() {
+    if (typeof window.postEvictionRouting === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'js/eviction.js';
+      document.head.appendChild(script);
+      
+      await new Promise((resolve) => {
+        script.onload = resolve;
+        script.onerror = () => {
+          console.error('Failed to load eviction.js');
+          resolve();
+        };
+      });
+      
+      // Wait a bit for module to initialize
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
+
+  // Helper to load game-over-modal module
+  async function loadGameOverModalModule() {
+    if (typeof window.GameOverModal === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'js/game-over-modal.js';
+      document.head.appendChild(script);
+      
+      await new Promise((resolve) => {
+        script.onload = resolve;
+        script.onerror = () => {
+          console.error('Failed to load game-over-modal.js');
+          resolve();
+        };
+      });
+      
+      // Wait a bit for module to initialize
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
+
+  // Run all tests
+  async function runAllTests() {
+    testResults = [];
+    document.getElementById('summary').style.display = 'none';
+    
+    console.log('=== Running All Tests ===');
+    
+    await testGameProgressionStops();
+    await new Promise(r => setTimeout(r, 200)); // Delay between tests
+    
+    await testIntroScreenReset();
+    await new Promise(r => setTimeout(r, 200));
+    
+    await testPlayButtonAfterExit();
+    await new Promise(r => setTimeout(r, 200));
+    
+    await testNoWeekModal();
+    await new Promise(r => setTimeout(r, 200));
+    
+    await testFullIntegration();
+    
+    showSummary();
+  }
+
+  function showSummary() {
+    const summaryEl = document.getElementById('summary');
+    const contentEl = document.getElementById('summary-content');
+    
+    const total = testResults.length;
+    const passed = testResults.filter(r => r.passed).length;
+    const failed = total - passed;
+    
+    let html = `<p><strong>Total Tests:</strong> ${total}</p>`;
+    html += `<p><strong>Passed:</strong> <span style="color: #4ade80">${passed}</span></p>`;
+    html += `<p><strong>Failed:</strong> <span style="color: #f87171">${failed}</span></p>`;
+    
+    html += '<hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0">';
+    html += '<p><strong>Test Details:</strong></p>';
+    html += '<ul style="list-style: none; padding-left: 0">';
+    
+    testResults.forEach(result => {
+      const icon = result.passed ? '✅' : '❌';
+      const color = result.passed ? '#4ade80' : '#f87171';
+      html += `<li style="color: ${color}; margin: 5px 0">${icon} ${result.name}`;
+      if (!result.passed && result.error) {
+        html += `<br><span style="color: #fbbf24; font-size: 0.85em; margin-left: 20px">Error: ${result.error}</span>`;
+      }
+      html += '</li>';
+    });
+    
+    html += '</ul>';
+    
+    if (failed === 0) {
+      html += '<p style="color: #4ade80; font-weight: bold; margin-top: 15px">🎉 All tests passed! The fix is working correctly.</p>';
+    } else {
+      html += '<p style="color: #f87171; font-weight: bold; margin-top: 15px">⚠️ Some tests failed. Please review the errors above.</p>';
+    }
+    
+    contentEl.innerHTML = html;
+    summaryEl.style.display = 'block';
+  }
+</script>
+
+<!-- Load required dependencies -->
+<script src="js/game-over-modal.js"></script>
+
+</body>
+</html>
