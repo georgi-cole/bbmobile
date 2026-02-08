@@ -57,6 +57,282 @@
   }
 
   /**
+   * NominationPlea - Lightweight nomination-specific plea UI
+   * Reuses visual pattern of FinalPlea but with nomination-appropriate copy
+   */
+  const NominationPlea = {
+    /**
+     * Show nomination plea modal
+     * @param {Object} options
+     * @param {Object} options.nominee - Player making the plea
+     * @param {Object} options.hoh - HOH player
+     * @returns {Promise<Object|null>} Resolves with { influence, plea, successful } or null on skip
+     */
+    show: function(options) {
+      const { nominee, hoh } = options;
+
+      if (!nominee || !hoh) {
+        console.error('[NominationPlea] Missing required options');
+        return Promise.resolve(null);
+      }
+
+      console.info('[phase-intro] Nomination plea opened (nomination mode)');
+
+      // Plea options for nomination ceremony
+      const pleaOptions = [
+        {
+          id: 'promise_support',
+          text: 'Promise future support',
+          influence: 0.12
+        },
+        {
+          id: 'side_deal',
+          text: 'Offer a side-deal',
+          influence: 0.15
+        },
+        {
+          id: 'appeal_sympathy',
+          text: 'Appeal to sympathy',
+          influence: 0.10
+        },
+        {
+          id: 'custom',
+          text: 'Custom message...',
+          influence: 0.08
+        }
+      ];
+
+      return new Promise((resolve) => {
+        try {
+          // Create modal backdrop
+          const modal = document.createElement('div');
+          modal.className = 'nomination-plea-modal';
+          modal.style.cssText = `
+            position: fixed;
+            inset: 0;
+            z-index: 9999999;
+            background: linear-gradient(135deg, rgba(20,25,40,0.97) 0%, rgba(15,18,30,0.98) 100%);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: modalFadeIn 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+          `;
+
+          // Create content container
+          const content = document.createElement('div');
+          content.style.cssText = `
+            background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            position: relative;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+          `;
+
+          // Header
+          const header = document.createElement('div');
+          header.style.cssText = `
+            text-align: center;
+            margin-bottom: 24px;
+          `;
+
+          const icon = document.createElement('div');
+          icon.textContent = '🔑';
+          icon.style.cssText = `
+            font-size: 3rem;
+            margin-bottom: 12px;
+          `;
+          header.appendChild(icon);
+
+          const title = document.createElement('h2');
+          title.textContent = 'Make Your Plea to the HOH';
+          title.style.cssText = `
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 8px 0;
+          `;
+          header.appendChild(title);
+
+          const bodyText = document.createElement('p');
+          bodyText.textContent = 'Offer the Head of Household a deal or appeal for safety this week.';
+          bodyText.style.cssText = `
+            font-size: 0.95rem;
+            color: #b2c2d5;
+            margin: 0;
+            line-height: 1.5;
+          `;
+          header.appendChild(bodyText);
+
+          content.appendChild(header);
+
+          // Options container
+          const optionsContainer = document.createElement('div');
+          optionsContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+          `;
+
+          // Create option buttons
+          pleaOptions.forEach(option => {
+            const optionBtn = document.createElement('button');
+            optionBtn.textContent = option.text;
+            optionBtn.style.cssText = `
+              padding: 14px 20px;
+              background: rgba(58, 123, 213, 0.2);
+              border: 2px solid rgba(58, 123, 213, 0.4);
+              border-radius: 8px;
+              color: #ffffff;
+              cursor: pointer;
+              font-size: 0.95rem;
+              font-weight: 500;
+              transition: all 0.2s;
+              text-align: left;
+            `;
+
+            optionBtn.addEventListener('mouseenter', () => {
+              optionBtn.style.background = 'rgba(58, 123, 213, 0.3)';
+              optionBtn.style.borderColor = 'rgba(58, 123, 213, 0.6)';
+              optionBtn.style.transform = 'translateX(4px)';
+            });
+
+            optionBtn.addEventListener('mouseleave', () => {
+              optionBtn.style.background = 'rgba(58, 123, 213, 0.2)';
+              optionBtn.style.borderColor = 'rgba(58, 123, 213, 0.4)';
+              optionBtn.style.transform = 'translateX(0)';
+            });
+
+            optionBtn.addEventListener('click', () => {
+              if (option.id === 'custom') {
+                handleCustomPlea(modal, resolve, option.influence, nominee, hoh);
+              } else {
+                handlePleaSubmit(modal, resolve, option, nominee, hoh);
+              }
+            });
+
+            optionsContainer.appendChild(optionBtn);
+          });
+
+          content.appendChild(optionsContainer);
+
+          // Skip button
+          const skipBtn = document.createElement('button');
+          skipBtn.textContent = 'Skip / No plea';
+          skipBtn.style.cssText = `
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+          `;
+
+          skipBtn.addEventListener('mouseenter', () => {
+            skipBtn.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+            skipBtn.style.color = 'rgba(255, 255, 255, 0.8)';
+          });
+
+          skipBtn.addEventListener('mouseleave', () => {
+            skipBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            skipBtn.style.color = 'rgba(255, 255, 255, 0.6)';
+          });
+
+          skipBtn.addEventListener('click', () => {
+            console.info('[NominationPlea] Player skipped plea');
+            dismissModal(modal);
+            resolve({ skipped: true });
+          });
+
+          content.appendChild(skipBtn);
+
+          modal.appendChild(content);
+          document.body.appendChild(modal);
+
+          // Focus trap
+          content.setAttribute('tabindex', '-1');
+          content.focus();
+
+        } catch (err) {
+          console.error('[NominationPlea] Error rendering plea UI, using fallback:', err);
+          // Defensive fallback to prompt
+          const message = prompt('What would you like to say to the Head of Household? (Leave empty to skip)');
+          if (message && message.trim()) {
+            const influence = 0.08 + Math.random() * 0.08; // 0.08 to 0.16
+            const successful = Math.random() < 0.6;
+            console.info('[NominationPlea] Fallback plea submitted', { influence, successful });
+            resolve({ influence, plea: message.trim(), successful });
+          } else {
+            console.info('[NominationPlea] Fallback plea skipped');
+            resolve({ skipped: true });
+          }
+        }
+      });
+
+      // Helper to handle custom plea input
+      function handleCustomPlea(modal, resolve, baseInfluence, nominee, hoh) {
+        const customInput = prompt('Enter your custom message to the HOH:');
+        if (customInput && customInput.trim()) {
+          const option = {
+            id: 'custom',
+            text: customInput.trim(),
+            influence: baseInfluence
+          };
+          handlePleaSubmit(modal, resolve, option, nominee, hoh);
+        }
+      }
+
+      // Helper to handle plea submission
+      function handlePleaSubmit(modal, resolve, option, nominee, hoh) {
+        // Calculate influence with small random factor
+        const randomFactor = Math.random() * 0.06; // 0 to 0.06
+        const influence = Math.min(0.18, option.influence + randomFactor);
+        
+        // Success is probabilistic but not guaranteed
+        const successful = Math.random() < (0.4 + influence * 2); // 40-76% chance
+
+        // Apply small affinity adjustment (non-persistent, in-memory only)
+        if (successful && hoh.affinity) {
+          const currentAffinity = hoh.affinity[nominee.id] || 0.5;
+          hoh.affinity[nominee.id] = Math.min(1, currentAffinity + influence * 0.5);
+        }
+
+        console.info('[NominationPlea] Plea submitted', {
+          option: option.id,
+          influence,
+          successful
+        });
+
+        dismissModal(modal);
+        resolve({
+          influence,
+          plea: option.text,
+          successful
+        });
+      }
+
+      // Helper to dismiss modal
+      function dismissModal(modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+          if (modal.parentNode) {
+            modal.parentNode.removeChild(modal);
+          }
+        }, 300);
+      }
+    }
+  };
+
+  /**
    * Compute nomination risk for current player
    * @returns {Object} Risk data with percentage and explanation
    */
@@ -432,17 +708,17 @@
         riskPercentEl.textContent = `${riskData.risk}%`;
         content.appendChild(riskPercentEl);
 
-        // Explanation
-        const explanationEl = document.createElement('p');
-        explanationEl.style.cssText = `
+        // Tip text (replacing technical explanation)
+        const tipEl = document.createElement('p');
+        tipEl.style.cssText = `
           font-size: 0.9rem;
           color: #8a9fb5;
           line-height: 1.6;
           margin: 0 0 20px 0;
           font-weight: 400;
         `;
-        explanationEl.textContent = riskData.explanation;
-        content.appendChild(explanationEl);
+        tipEl.textContent = 'Good reputation and strategic relationships can help reduce your chance. However, backstabbing is lurking all around the BB house.';
+        content.appendChild(tipEl);
 
         // Action buttons container
         const buttonsContainer = document.createElement('div');
@@ -502,58 +778,56 @@
       }
 
       // Handle "Make a deal" button
-      function handleMakeADeal() {
+      async function handleMakeADeal() {
         const hoh = global.getP?.(g.hohId);
         const player = global.getP?.(humanId);
 
-        // Try to use FinalPlea API if available
-        if (typeof global.FinalPlea !== 'undefined' && typeof global.FinalPlea.show === 'function') {
-          try {
-            console.info('[phase-intro] Attempting to use FinalPlea API');
-            
-            // Dismiss current modal first
-            dismiss();
-            
-            // Show FinalPlea modal
-            global.FinalPlea.show({
-              nominee: player,
-              hoh: hoh,
-              otherNominee: player, // Placeholder since we don't know other nominee yet
-              onSubmit: (pleaData) => {
-                console.info('[phase-intro] FinalPlea completed', pleaData);
-              }
-            });
-            return;
-          } catch (err) {
-            console.warn('[phase-intro] FinalPlea API failed, using fallback', err);
-          }
-        }
-
-        // Fallback: safe prompt and affinity adjustment
-        console.info('[phase-intro] Using fallback plea mechanism');
+        console.info('[phase-intro] Nomination plea opened (nomination mode)');
         
-        const message = prompt('What would you like to say to the Head of Household?');
-        
-        if (message && message.trim()) {
-          // Apply a small, bounded affinity increase
-          if (!hoh.affinity) hoh.affinity = {};
-          const currentAffinity = hoh.affinity[player.id] || 0.5;
-          const newAffinity = Math.min(1, currentAffinity + 0.08);
-          hoh.affinity[player.id] = newAffinity;
-          
-          // Small reputation decrease to avoid exploit
-          player.reputation = Math.max(0, (player.reputation || 0.5) - 0.03);
-          
-          console.info('[phase-intro] Plea accepted, affinity adjusted:', {
-            before: currentAffinity,
-            after: newAffinity,
-            reputation: player.reputation
+        try {
+          // Show NominationPlea and await its completion
+          const pleaResult = await NominationPlea.show({
+            nominee: player,
+            hoh: hoh
           });
           
-          alert(`You've made your case to the HOH. Your relationship has improved slightly, but this move may affect how others perceive you.`);
+          if (pleaResult && !pleaResult.skipped) {
+            console.info('[phase-intro] NominationPlea completed', pleaResult);
+            
+            // Show result feedback to user
+            const resultMsg = pleaResult.successful 
+              ? "Your plea resonated with the HOH. Your relationship has improved slightly."
+              : "You've made your case, but the HOH seems unmoved.";
+            
+            alert(resultMsg);
+          } else {
+            console.info('[phase-intro] NominationPlea skipped');
+          }
+          
+          // Now dismiss the nomination modal
+          dismiss();
+        } catch (err) {
+          console.error('[phase-intro] NominationPlea error:', err);
+          // On error, use safe fallback
+          const message = prompt('What would you like to say to the Head of Household?');
+          
+          if (message && message.trim()) {
+            // Apply a small, bounded affinity increase
+            if (!hoh.affinity) hoh.affinity = {};
+            const currentAffinity = hoh.affinity[player.id] || 0.5;
+            const newAffinity = Math.min(1, currentAffinity + 0.08);
+            hoh.affinity[player.id] = newAffinity;
+            
+            // Small reputation decrease to avoid exploit
+            player.reputation = Math.max(0, (player.reputation || 0.5) - 0.03);
+            
+            console.info('[phase-intro] Fallback plea accepted, affinity adjusted');
+            
+            alert("You've made your case to the HOH. Your relationship has improved slightly, but this move may affect how others perceive you.");
+          }
+          
+          dismiss();
         }
-        
-        dismiss();
       }
 
       // Click outside or on overlay to dismiss
@@ -1050,6 +1324,7 @@
   global.showSocialPhaseIntroModal = showSocialPhaseIntroModal;
   global.showEvictionVoteIntroModal = showEvictionVoteIntroModal;
   global.showNominationIntroModal = showNominationIntroModal;
+  global.NominationPlea = NominationPlea;
 
   console.info('[ui.phase-intro-modals] Phase intro modal system initialized');
 
