@@ -360,7 +360,7 @@
           `;
           playerCard.appendChild(playerName);
           
-          if(player.scoreFormatted !== ''){
+          if(player.scoreFormatted !== undefined && player.scoreFormatted !== null && player.scoreFormatted !== ''){
             const playerScore = document.createElement('div');
             playerScore.textContent = player.scoreFormatted;
             playerScore.style.cssText = `
@@ -445,7 +445,7 @@
       `;
       winnerSection.appendChild(winnerName);
       
-      if(winnerData.scoreFormatted !== ''){
+      if(winnerData.scoreFormatted !== undefined && winnerData.scoreFormatted !== null && winnerData.scoreFormatted !== ''){
         const winnerScore = document.createElement('div');
         
         // For raw scores, don't add "Score:" prefix as the display is self-descriptive
@@ -567,7 +567,7 @@
           `;
           runnerUp.appendChild(runnerName);
           
-          if(player.scoreFormatted !== ''){
+          if(player.scoreFormatted !== undefined && player.scoreFormatted !== null && player.scoreFormatted !== ''){
             const runnerScore = document.createElement('div');
             runnerScore.textContent = player.scoreFormatted;
             runnerScore.style.cssText = `
