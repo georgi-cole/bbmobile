@@ -71,17 +71,13 @@
     const skipActive = global.SkipController?.isActive() || false;
     const preserveModal = cfg.fastForwardPreserveResultsModal !== false; // default true
     
-    // Check if this is a Final 3 competition (which should keep legacy skip behavior)
-    const isFinal3Comp = phase === 'final3_comp1' || phase === 'final3_comp2' || phase === 'final3_comp3';
-    
-    // Legacy skip mode (quarantine/skip entire sequences): suppress modal for Final 3 only
-    // For HOH and POV: always show results regardless of skip mode
+    // Legacy skip mode (quarantine/skip entire sequences): suppress modal
     // But FFWD mode with preserveModal: always show modal (inline in TV)
-    if(skipActive && !ffActive && isFinal3Comp){
+    if(skipActive && !ffActive){
       const winner = topThree[0];
       const winnerId = (typeof winner === 'object') ? winner.id : null;
       const winnerName = (typeof winner === 'object') ? winner.name : winner;
-      console.info(`[results] Suppressed Final 3 comp under legacy skip - winner=${winnerId || winnerName}`);
+      console.info(`[results] Suppressed under legacy skip - winner=${winnerId || winnerName}`);
       return; // Do not render popup
     }
     
