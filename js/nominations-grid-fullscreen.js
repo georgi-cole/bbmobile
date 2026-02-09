@@ -1385,19 +1385,23 @@
       if (global.finalizeNoms && typeof global.finalizeNoms === 'function') {
         console.log(LOG_PREFIX, 'Calling finalizeNoms()');
         
-        // Set flag to prevent ceremony duplication
-        g.__nomsFromFullscreenSelector = true;
+        // REMOVED: __nomsFromFullscreenSelector flag
+        // Ceremony will run in finalizeNoms for all HOH types (AI and human)
+        // No longer skip ceremony - it must always run
         
         global.finalizeNoms();
       } else if (global.lockNominationsAndProceed && typeof global.lockNominationsAndProceed === 'function') {
         console.log(LOG_PREFIX, 'Calling lockNominationsAndProceed()');
         
-        g.__nomsFromFullscreenSelector = true;
+        // REMOVED: __nomsFromFullscreenSelector flag
+        // Ceremony will run in finalizeNoms for all HOH types
         
         global.lockNominationsAndProceed();
       } else {
         // Manual commit (fallback)
-        console.log(LOG_PREFIX, 'Performing manual commit');
+        // This path is only used if finalizeNoms and lockNominationsAndProceed are not available
+        // In this case, we must handle the entire ceremony sequence here
+        console.log(LOG_PREFIX, 'Performing manual commit with ceremony');
         
         // Clear awaiting flag if set (safety measure for manual commit path)
         if(global.__awaitingHumanNominations){
@@ -1427,7 +1431,7 @@
           global.updateHud();
         }
         
-        // Show ceremony sequence
+        // Show ceremony sequence (only in manual fallback path)
         await showSummaryCard(selections);
         
         // Show reactions if available
