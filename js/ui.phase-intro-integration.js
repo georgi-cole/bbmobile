@@ -149,6 +149,16 @@
     const origStartNominations = global.startNominations;
     
     if (typeof origStartNominations === 'function' && !origStartNominations.__wrappedForPhaseIntro) {
+      // NEW: Immediate resume when intro modal is dismissed
+      window.addEventListener('bb:noms:intro:dismissed', () => {
+        const g = global.game || {};
+        if (g.phase === 'nominations' && !g.__nominationPleaActive) {
+          console.info('[phase-intro-integration] Intro dismissed event → resuming nominations');
+          ensureOverlayNotBlocking();
+          attemptNominationsStart(origStartNominations);
+        }
+      });
+
       global.startNominations = async function wrappedStartNominations() {
         const g = global.game || {};
         
@@ -255,7 +265,7 @@
       };
       
       global.startNominations.__wrappedForPhaseIntro = true;
-      console.info('[phase-intro-integration] startNominations wrapped with dual watchdog and overlay neutralization');
+      console.info('[phase-intro-integration] startNominations wrapped with event-driven resume + watchdogs');
     }
   }
 
