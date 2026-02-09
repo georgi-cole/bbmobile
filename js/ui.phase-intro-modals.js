@@ -378,6 +378,21 @@
 
         console.info('[phase-intro] Nomination modal dismissed, resolving immediately');
 
+        // Defensive: neutralize empty TV overlay before dispatching event
+        try {
+          const ov = document.getElementById('tvOverlay');
+          if (ov) {
+            const content = ov.querySelector('.tvOverlayContent');
+            const hasActiveContent = !!(content && content.childElementCount > 0);
+            if (!hasActiveContent) {
+              ov.style.pointerEvents = 'none';
+              document.getElementById('tv')?.classList.remove('tvTall');
+            }
+          }
+        } catch(e) { 
+          console.warn('[phase-intro] tvOverlay neutralization failed during dismiss', e); 
+        }
+
         // Animate out
         overlay.style.opacity = '0';
         if (!prefersReducedMotion) {
@@ -391,6 +406,12 @@
           
           // Resolve immediately (tap-anywhere dismisses and resolves immediately)
           resolve();
+
+          // Dispatch event for event-driven resume (NEW)
+          if (g?.phase === 'nominations' && !g?.__nominationPleaActive) {
+            console.info('[phase-intro] Dispatching bb:noms:intro:dismissed event');
+            window.dispatchEvent(new CustomEvent('bb:noms:intro:dismissed'));
+          }
           
           // Schedule safety watchdog after dismissal
           // This fires 3 seconds after modal is dismissed to ensure game progresses
