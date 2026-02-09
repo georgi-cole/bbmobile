@@ -267,13 +267,18 @@
     }
     
     // Initialize mock game state
+    // Use data URIs for avatars to avoid external API dependency
+    const makeAvatar = (name, color) => {
+      return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='50' cy='50' r='45' fill='${color}'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='24' font-family='Arial'%3E${name[0]}%3C/text%3E%3C/svg%3E`;
+    };
+    
     window.game = {
       players: [
-        { id: 1, name: 'Alice', human: true, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
-        { id: 2, name: 'Bob', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
-        { id: 3, name: 'Charlie', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
-        { id: 4, name: 'Diana', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
-        { id: 5, name: 'Eve', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' }
+        { id: 1, name: 'Alice', human: true, avatar: makeAvatar('Alice', '%23e91e63') },
+        { id: 2, name: 'Bob', human: false, avatar: makeAvatar('Bob', '%232196f3') },
+        { id: 3, name: 'Charlie', human: false, avatar: makeAvatar('Charlie', '%234caf50') },
+        { id: 4, name: 'Diana', human: false, avatar: makeAvatar('Diana', '%23ff9800') },
+        { id: 5, name: 'Eve', human: false, avatar: makeAvatar('Eve', '%239c27b0') }
       ],
       hohId: 1,
       nominees: [],
