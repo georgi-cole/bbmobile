@@ -62,6 +62,13 @@
       return; // Skip showing any "Locked. Nominees …" message
     }
 
+    // Clear any pending event modals to prevent overlay conflicts
+    // This prevents phase intro modals from competing with nomination modal
+    if(typeof global.clearEventModalQueue === 'function'){
+      console.log('[noms] Clearing event modal queue to prevent overlay conflicts');
+      global.clearEventModalQueue();
+    }
+
     // ========== Human HOH: Nomination intro card ==========
     // The fullscreen module (nominations-grid-fullscreen.js) intercepts this function
     // and handles the flow. This code only runs if the interceptor is not installed.
@@ -547,22 +554,9 @@
       const ids=(g.nominees||[]).slice();
       g.__suppressNomBadges = true; global.updateHud?.();
 
-      // Check if ceremony was already handled by fullscreen selector
-      if(g.__nomsFromFullscreenSelector){
-        console.log('[noms] Ceremony already handled by fullscreen selector, skipping');
-        g.__nomsFromFullscreenSelector = false; // Reset flag
-        g.__suppressNomBadges = false; global.updateHud?.();
-        
-        try{
-          const names = ids.map(global.safeName).join(', ');
-          global.addLog?.(`Nominations locked: ${names}.`, 'warn');
-        }catch(e){ 
-          // Logging is optional, ignore failures
-        }
-        
-        setTimeout(()=>global.startVetoComp?.(),600);
-        return;
-      }
+      // REMOVED: The __nomsFromFullscreenSelector flag caused ceremony to be skipped
+      // The ceremony MUST always run for both AI and human HOH
+      // The fullscreen selector will no longer set this flag to avoid skipping ceremony
 
       // ========== CEREMONY FLOW (AI or fallback) ==========
       
