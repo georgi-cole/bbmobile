@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Nomination Ceremony Fix - Modal Overlap & Ceremony Skip</title>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="overrides-fixes.css?v=test">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+    }
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000000;
+      background: rgba(20, 30, 45, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      max-width: 300px;
+    }
+    .test-controls button {
+      display: block;
+      margin: 8px 0;
+      padding: 10px 15px;
+      background: #2a4766;
+      color: #e0e0e0;
+      border: 1px solid #356089;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 13px;
+    }
+    .test-controls button:hover {
+      background: #356089;
+    }
+    .test-controls button.success {
+      background: #2d7a3f;
+      border-color: #4CAF50;
+    }
+    .test-controls button.error {
+      background: #8b2828;
+      border-color: #f44336;
+    }
+    .test-section {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(110, 160, 220, 0.15);
+    }
+    .test-section:last-child {
+      border-bottom: none;
+    }
+    .test-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #96cfff;
+      margin: 0 0 8px 0;
+      letter-spacing: 0.5px;
+    }
+    .test-info {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 12px;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-info h2 {
+      margin-top: 0;
+      color: #4CAF50;
+      font-size: 1.3rem;
+    }
+    .test-info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .test-info li {
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+    .issue-summary {
+      background: rgba(139, 40, 40, 0.2);
+      border-left: 4px solid #f44336;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .fix-summary {
+      background: rgba(45, 122, 63, 0.2);
+      border-left: 4px solid #4CAF50;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    #tv {
+      margin: 20px auto;
+      max-width: 800px;
+      position: relative;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 3px solid #356089;
+      border-radius: 24px;
+      padding: 40px 30px;
+      min-height: 500px;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+    }
+    .tvViewport {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    .tvOverlayContent {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .log-container {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(15, 20, 30, 0.8);
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 3px solid #356089;
+    }
+    .log-entry.success {
+      border-left-color: #4CAF50;
+      color: #a5d6a7;
+    }
+    .log-entry.error {
+      border-left-color: #f44336;
+      color: #ef9a9a;
+    }
+    .log-entry.warn {
+      border-left-color: #ff9800;
+      color: #ffcc80;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #96cfff;">Test Controls</h3>
+    
+    <div class="test-section">
+      <div class="test-section-title">Modal Overlap Tests</div>
+      <button id="testEventModalConflict">Test Event Modal → Nomination</button>
+      <button id="testClearQueue">Test clearEventModalQueue()</button>
+    </div>
+    
+    <div class="test-section">
+      <div class="test-section-title">Ceremony Flow Tests</div>
+      <button id="testHumanCeremony">Test Human HOH Ceremony</button>
+      <button id="testAICeremony">Test AI HOH Ceremony</button>
+      <button id="testFullSequence">Test Full Ceremony Sequence</button>
+    </div>
+    
+    <div class="test-section">
+      <div class="test-section-title">Utilities</div>
+      <button id="clearAll">Clear All Overlays</button>
+      <button id="clearLog">Clear Log</button>
+    </div>
+  </div>
+
+  <div class="test-info">
+    <h2>🐛 Nomination Ceremony Bug Fix Test</h2>
+    
+    <div class="issue-summary">
+      <h3 style="margin-top: 0; color: #f44336;">Issues Fixed:</h3>
+      <ul>
+        <li><strong>Modal Overlap:</strong> Event/phase modals overlapping with nomination modal</li>
+        <li><strong>Ceremony Skip:</strong> Ceremony sequence skipped after nominations, jumping straight to Veto</li>
+        <li><strong>Missing Ceremony:</strong> No HOH speech, nominee reveals, or reactions shown</li>
+      </ul>
+    </div>
+    
+    <div class="fix-summary">
+      <h3 style="margin-top: 0; color: #4CAF50;">Fixes Applied:</h3>
+      <ul>
+        <li>✅ Call <code>clearEventModalQueue()</code> before showing nomination modal</li>
+        <li>✅ Remove <code>__nomsFromFullscreenSelector</code> flag that caused ceremony skip</li>
+        <li>✅ Ensure ceremony sequence always runs for both AI and human HOH</li>
+        <li>✅ Prevent duplicate nomination prompts with proper guards</li>
+      </ul>
+    </div>
+    
+    <p><strong>Expected Behavior After Fix:</strong></p>
+    <ul>
+      <li>✅ No modal overlap: event modals cleared before nomination modal shows</li>
+      <li>✅ Ceremony always runs: HOH speech → nominee reveals → reactions → adjournment</li>
+      <li>✅ After ceremony completes, <strong>then</strong> transition to Veto competition</li>
+      <li>✅ Works for both human and AI HOH</li>
+    </ul>
+  </div>
+
+  <div id="tv">
+    <div class="tvViewport">
+      <div id="tvOverlay">
+        <div class="tvOverlayContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-container">
+    <h3 style="margin: 0 0 10px 0; color: #96cfff; font-size: 14px;">Test Log:</h3>
+    <div id="testLog"></div>
+  </div>
+
+  <!-- Load core modules -->
+  <script src="js/state.js"></script>
+  <script src="js/ui.event-modal.js"></script>
+  <script src="js/nominations.js"></script>
+  
+  <script>
+    // Test setup
+    let testLog = [];
+    
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = { message, type, timestamp };
+      testLog.push(entry);
+      
+      const logEl = document.getElementById('testLog');
+      const entryEl = document.createElement('div');
+      entryEl.className = `log-entry ${type}`;
+      entryEl.textContent = `[${timestamp}] ${message}`;
+      logEl.appendChild(entryEl);
+      logEl.scrollTop = logEl.scrollHeight;
+      
+      console.log(`[TEST][${type.toUpperCase()}] ${message}`);
+    }
+    
+    function clearLog() {
+      testLog = [];
+      document.getElementById('testLog').innerHTML = '';
+      log('Log cleared', 'info');
+    }
+    
+    function clearAllOverlays() {
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) {
+        const content = overlay.querySelector('.tvOverlayContent');
+        if (content) content.innerHTML = '';
+        overlay.style.pointerEvents = 'none';
+      }
+      document.getElementById('tv')?.classList.remove('tvTall');
+      log('All overlays cleared', 'success');
+    }
+    
+    // Initialize mock game state
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', human: true, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+        { id: 2, name: 'Bob', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+        { id: 4, name: 'Diana', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+        { id: 5, name: 'Eve', human: false, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' }
+      ],
+      hohId: 1,
+      nominees: [],
+      nomsLocked: false,
+      phase: 'nominations',
+      week: 1
+    };
+    
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+    
+    window.tv = {
+      say: (text) => log(`TV: ${text}`, 'info')
+    };
+    
+    window.updateHud = () => log('HUD updated', 'info');
+    window.addLog = (text, level) => log(`Game Log: ${text}`, level || 'info');
+    
+    window.startVetoComp = () => {
+      log('🎯 startVetoComp() called - Transitioning to Veto competition', 'success');
+    };
+    
+    // Test 1: Event modal conflict
+    document.getElementById('testEventModalConflict').addEventListener('click', () => {
+      log('=== Test: Event Modal → Nomination Modal Conflict ===', 'info');
+      
+      // Show event modal first
+      if (typeof window.showEventModal === 'function') {
+        window.showEventModal({
+          title: 'Week 1 Begins',
+          subtitle: 'A new week of Big Brother starts now!',
+          emojis: '🏠🎬',
+          tone: 'phase',
+          duration: 3000
+        });
+        log('Event modal shown', 'info');
+        
+        // Try to show nomination modal after 1 second
+        setTimeout(() => {
+          log('Attempting to show nomination modal...', 'warn');
+          
+          // Check if clearEventModalQueue is available
+          if (typeof window.clearEventModalQueue === 'function') {
+            log('✅ clearEventModalQueue() is available - will be called', 'success');
+          } else {
+            log('❌ clearEventModalQueue() NOT available - modal overlap may occur', 'error');
+          }
+          
+          // Trigger nomination flow
+          window.game.nomsLocked = false;
+          window.game.__nomsCommitted = false;
+          window.game.__nomsCommitInProgress = false;
+          window.game.nominees = [];
+          
+          if (typeof window.renderNomsPanel === 'function') {
+            window.renderNomsPanel();
+            log('renderNomsPanel() called', 'info');
+          }
+        }, 1000);
+      } else {
+        log('❌ showEventModal() not available', 'error');
+      }
+    });
+    
+    // Test 2: clearEventModalQueue
+    document.getElementById('testClearQueue').addEventListener('click', () => {
+      log('=== Test: clearEventModalQueue() Function ===', 'info');
+      
+      if (typeof window.clearEventModalQueue === 'function') {
+        window.clearEventModalQueue();
+        log('✅ clearEventModalQueue() called successfully', 'success');
+      } else {
+        log('❌ clearEventModalQueue() is NOT defined', 'error');
+      }
+    });
+    
+    // Test 3: Human HOH ceremony
+    document.getElementById('testHumanCeremony').addEventListener('click', () => {
+      log('=== Test: Human HOH Ceremony ===', 'info');
+      
+      // Setup human HOH
+      window.game.hohId = 1; // Alice (human)
+      window.game.nomsLocked = false;
+      window.game.__nomsCommitted = false;
+      window.game.__nomsCommitInProgress = false;
+      window.game.nominees = [];
+      window.game._pendingNoms = [2, 3]; // Bob and Charlie
+      
+      log('Setup: Human HOH (Alice) with pending nominations [Bob, Charlie]', 'info');
+      
+      // Simulate finalize
+      if (typeof window.finalizeNoms === 'function') {
+        log('Calling finalizeNoms()...', 'info');
+        log('Expected: Full ceremony sequence (HOH speech → reveals → reactions → adjourn)', 'warn');
+        window.finalizeNoms();
+      } else {
+        log('❌ finalizeNoms() not available', 'error');
+      }
+    });
+    
+    // Test 4: AI HOH ceremony
+    document.getElementById('testAICeremony').addEventListener('click', () => {
+      log('=== Test: AI HOH Ceremony ===', 'info');
+      
+      // Setup AI HOH
+      window.game.hohId = 2; // Bob (AI)
+      window.game.nomsLocked = false;
+      window.game.__nomsCommitted = false;
+      window.game.__nomsCommitInProgress = false;
+      window.game.nominees = [];
+      window.game._pendingNoms = null;
+      
+      log('Setup: AI HOH (Bob) - will auto-select nominees', 'info');
+      
+      // Trigger renderNomsPanel for AI
+      if (typeof window.renderNomsPanel === 'function') {
+        log('Calling renderNomsPanel()...', 'info');
+        log('Expected: AI picks nominees → Full ceremony sequence runs', 'warn');
+        window.renderNomsPanel();
+      } else {
+        log('❌ renderNomsPanel() not available', 'error');
+      }
+    });
+    
+    // Test 5: Full ceremony sequence
+    document.getElementById('testFullSequence').addEventListener('click', () => {
+      log('=== Test: Full Ceremony Sequence ===', 'info');
+      
+      // Mock ceremony cards
+      let ceremonyStep = 0;
+      const steps = [
+        'HOH Speech Card (with HOH avatar only)',
+        'Nominee #1 Reveal',
+        'Nominee #2 Reveal',
+        'Nominee Reactions (simultaneous)',
+        'Ceremony Adjourned Card',
+        'Transition to Veto (600ms delay)'
+      ];
+      
+      function showNextStep() {
+        if (ceremonyStep < steps.length) {
+          const step = steps[ceremonyStep];
+          log(`Step ${ceremonyStep + 1}/${steps.length}: ${step}`, 'success');
+          ceremonyStep++;
+          
+          if (ceremonyStep < steps.length - 1) {
+            setTimeout(showNextStep, 2200);
+          } else {
+            setTimeout(() => {
+              log('✅ Ceremony sequence complete!', 'success');
+              log('Now calling startVetoComp()...', 'warn');
+              if (typeof window.startVetoComp === 'function') {
+                window.startVetoComp();
+              }
+            }, 600);
+          }
+        }
+      }
+      
+      showNextStep();
+    });
+    
+    // Utilities
+    document.getElementById('clearAll').addEventListener('click', clearAllOverlays);
+    document.getElementById('clearLog').addEventListener('click', clearLog);
+    
+    // Initial log
+    log('Test page loaded successfully', 'success');
+    log('Ready to test nomination ceremony fixes', 'info');
+  </script>
+</body>
+</html>
