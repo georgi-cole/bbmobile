@@ -57,6 +57,13 @@
           ]
         },
         {
+          title: 'Gameplay',
+          fields: [
+            checkbox('manualPhaseAdvance', 'Manual phase advance (Next ▶ button)'),
+            html('<div class="tiny muted">When enabled, you control when phases advance using the Next button. When disabled, phases auto-advance after timers expire (classic behavior).</div>')
+          ]
+        },
+        {
           title: 'Quality of life',
           fields: [
             checkbox('colorblindMode', 'Colorblind/high-contrast mode'),

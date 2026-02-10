@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase Advance Controller Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/phase-advance-button.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #0d151f;
+      color: #fff;
+      font-family: 'Montserrat', sans-serif;
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid rgba(100, 180, 255, 0.3);
+      border-radius: 8px;
+      background: rgba(30, 40, 55, 0.5);
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #64b4ff;
+    }
+    
+    .button-container {
+      margin: 15px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .test-btn {
+      padding: 8px 16px;
+      border: 1px solid rgba(100, 180, 255, 0.5);
+      background: rgba(50, 80, 120, 0.7);
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    
+    .test-btn:hover {
+      background: rgba(70, 100, 140, 0.8);
+    }
+    
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.3);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    
+    .tv-mock {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(20, 30, 45, 0.8);
+      border: 2px solid rgba(100, 180, 255, 0.3);
+      border-radius: 8px;
+      min-height: 100px;
+    }
+    
+    .tvHead-mock {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+      border-radius: 6px 6px 0 0;
+      border-bottom: 1px solid rgba(120,210,255,.07);
+    }
+    
+    .tvTimer-mock {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e2edf8;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Phase Advance Controller Test</h1>
+  
+  <div class="test-section">
+    <h2>Button Display Test</h2>
+    <div class="tv-mock">
+      <div class="tvHead-mock">
+        <div>House Network Live</div>
+        <div class="tvTimer-mock" id="mockTimer">03:45</div>
+        <button id="btnNextPhase" class="phase-btn--blocked" aria-label="Advance to next phase">Next ▶</button>
+      </div>
+      <div style="padding: 15px;">
+        <p>This simulates the TV header with the Next button.</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>State Control</h2>
+    <div class="button-container">
+      <button class="test-btn" onclick="setState('blocked')">Set Blocked</button>
+      <button class="test-btn" onclick="setState('ready')">Set Ready</button>
+      <button class="test-btn" onclick="setState('waiting')">Set Waiting</button>
+    </div>
+    <div class="status" id="stateDisplay">State: N/A</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Block/Unblock Test</h2>
+    <div class="button-container">
+      <button class="test-btn" onclick="block('test-reason-1')">Block (reason-1)</button>
+      <button class="test-btn" onclick="block('test-reason-2')">Block (reason-2)</button>
+      <button class="test-btn" onclick="unblock('test-reason-1')">Unblock (reason-1)</button>
+      <button class="test-btn" onclick="unblock('test-reason-2')">Unblock (reason-2)</button>
+      <button class="test-btn" onclick="unblockAll()">Unblock All</button>
+    </div>
+    <div class="status" id="blockStatus">Block reasons: []</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Mode Toggle</h2>
+    <div class="button-container">
+      <button class="test-btn" onclick="setMode('manual')">Manual Mode</button>
+      <button class="test-btn" onclick="setMode('auto')">Auto Mode</button>
+    </div>
+    <div class="status" id="modeDisplay">Mode: N/A</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Advance Test</h2>
+    <div class="button-container">
+      <button class="test-btn" onclick="setPendingAdvance()">Set Pending Advance</button>
+      <button class="test-btn" onclick="testAdvance()">Call advance()</button>
+      <button class="test-btn" onclick="forceAdvance()">Force Advance</button>
+    </div>
+    <div class="status" id="advanceLog">No advance calls yet</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <div class="status" id="eventLog" style="max-height: 200px; overflow-y: auto;">
+      Waiting for events...
+    </div>
+  </div>
+  
+  <script src="js/phase-advance-controller.js"></script>
+  <script>
+    // Initialize mock game object
+    window.game = {
+      phase: 'test',
+      cfg: {}
+    };
+    
+    // Event logging
+    const eventLog = document.getElementById('eventLog');
+    function logEvent(msg) {
+      const timestamp = new Date().toLocaleTimeString();
+      eventLog.innerHTML = `[${timestamp}] ${msg}<br>` + eventLog.innerHTML;
+    }
+    
+    // Listen to controller events
+    window.addEventListener('phaseadvance:statechange', (e) => {
+      logEvent(`State changed: ${e.detail.state}`);
+      updateDisplay();
+    });
+    
+    window.addEventListener('phaseadvance:modechange', (e) => {
+      logEvent(`Mode changed: ${e.detail.mode}`);
+      updateDisplay();
+    });
+    
+    // Test functions
+    function setState(newState) {
+      // Manually update button class for testing
+      const btn = document.getElementById('btnNextPhase');
+      btn.className = '';
+      btn.classList.add(`phase-btn--${newState}`);
+      logEvent(`Manually set state to: ${newState}`);
+      updateDisplay();
+    }
+    
+    function block(reason) {
+      if (window.PhaseAdvanceController) {
+        window.PhaseAdvanceController.block(reason);
+        logEvent(`Blocked: ${reason}`);
+        updateDisplay();
+      }
+    }
+    
+    function unblock(reason) {
+      if (window.PhaseAdvanceController) {
+        window.PhaseAdvanceController.unblock(reason);
+        logEvent(`Unblocked: ${reason}`);
+        updateDisplay();
+      }
+    }
+    
+    function unblockAll() {
+      // Clear all blocks by unblocking multiple times
+      block('clear-1');
+      block('clear-2');
+      unblock('clear-1');
+      unblock('clear-2');
+      unblock('test-reason-1');
+      unblock('test-reason-2');
+      unblock('phase-timer');
+      unblock('minigame-active');
+      unblock('tv-sequence');
+      unblock('ceremony-cards');
+      logEvent('Attempted to unblock all known reasons');
+      updateDisplay();
+    }
+    
+    function setMode(newMode) {
+      if (window.PhaseAdvanceController) {
+        window.PhaseAdvanceController.setMode(newMode);
+        logEvent(`Set mode: ${newMode}`);
+        updateDisplay();
+      }
+    }
+    
+    function setPendingAdvance() {
+      if (window.PhaseAdvanceController) {
+        window.PhaseAdvanceController.setPendingAdvance(() => {
+          logEvent('✓ Pending advance function executed!');
+          document.getElementById('advanceLog').textContent = 'Advance function called at: ' + new Date().toLocaleTimeString();
+        });
+        logEvent('Set pending advance function');
+      }
+    }
+    
+    function testAdvance() {
+      if (window.PhaseAdvanceController) {
+        window.PhaseAdvanceController.advance();
+        logEvent('Called advance()');
+      }
+    }
+    
+    function forceAdvance() {
+      if (window.PhaseAdvanceController) {
+        window.PhaseAdvanceController.forceAdvance();
+        logEvent('Called forceAdvance()');
+      }
+    }
+    
+    function updateDisplay() {
+      if (window.PhaseAdvanceController) {
+        const state = window.PhaseAdvanceController.getState();
+        const mode = window.PhaseAdvanceController.getMode();
+        
+        document.getElementById('stateDisplay').textContent = `State: ${state}`;
+        document.getElementById('modeDisplay').textContent = `Mode: ${mode}`;
+        
+        // Note: We can't easily get block reasons from outside the module
+        // This is by design (encapsulation)
+        document.getElementById('blockStatus').textContent = `Current state: ${state}`;
+      }
+    }
+    
+    // Initial display update
+    setTimeout(() => {
+      updateDisplay();
+      logEvent('Controller initialized');
+    }, 100);
+  </script>
+</body>
+</html>

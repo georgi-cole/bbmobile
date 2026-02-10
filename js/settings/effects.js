@@ -58,6 +58,19 @@
     advancedMode: function(value, cfg){
       console.info('[effects] advancedMode changed to:', value);
       // The modal rebuild is handled in render.js applySettings
+    },
+    
+    // Manual phase advance toggle
+    manualPhaseAdvance: function(value, cfg){
+      console.info('[effects] manualPhaseAdvance changed to:', value);
+      try{
+        if(global.PhaseAdvanceController && typeof global.PhaseAdvanceController.setMode === 'function'){
+          const mode = value ? 'manual' : 'auto';
+          global.PhaseAdvanceController.setMode(mode);
+        }
+      }catch(e){
+        console.warn('[effects] manualPhaseAdvance toggle failed', e);
+      }
     }
   };
 
