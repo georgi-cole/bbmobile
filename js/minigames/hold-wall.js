@@ -1113,8 +1113,8 @@
       
       // CRITICAL FIX: Check if player is the last one remaining BEFORE marking game as ended
       // If player is last, they WIN - call finalizeVictory() instead
-      const remainingBeforeEnd = participants.filter(p => !p.dropTimeMs);
-      if(remainingBeforeEnd.length === 1 && remainingBeforeEnd[0].isPlayer){
+      const stillHolding = participants.filter(p => !p.dropTimeMs);
+      if(stillHolding.length === 1 && stillHolding[0].isPlayer){
         // Player is the last one standing - they WIN!
         console.log('[HoldWall] Player is last remaining - calling finalizeVictory()');
         finalizeVictory();
@@ -1240,6 +1240,8 @@
         if(b.timeMs !== a.timeMs) return b.timeMs - a.timeMs;
         
         // If tied on time, HUMAN PLAYER ranks first (wins tiebreaker)
+        // Note: There is only one human player in the game, so we don't need to handle
+        // the case where both pA and pB are human players (that's impossible)
         const pA = participants.find(p => p.name === a.name);
         const pB = participants.find(p => p.name === b.name);
         
