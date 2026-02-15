@@ -149,7 +149,7 @@
         {
           title: 'Minigame settings',
           fields: [
-            select('miniMode', 'Minigame mode', buildMinigameOptions()),
+            select('miniMode', 'Minigame mode', buildMinigameOptions),
             html('<div class="tiny muted">Choose how minigames are selected during competitions.</div>'),
             number('minigameDuration', 'Challenge timer duration (seconds)', 30, 600, 10),
             html('<div class="tiny muted">Duration for minigame challenge timer when launched (default: 180s = 3 minutes). Phase timer takes precedence if available.</div>'),

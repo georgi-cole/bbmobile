@@ -65,7 +65,13 @@
     }
     
     if(field.type === 'select'){
-      const options = (field.options || []).map(function(opt){
+      // Support lazy options (function that returns array)
+      let optionsArray = field.options || [];
+      if (typeof optionsArray === 'function') {
+        optionsArray = optionsArray();
+      }
+      
+      const options = optionsArray.map(function(opt){
         return '<option value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.label) + '</option>';
       }).join('');
       return [
