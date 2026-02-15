@@ -1100,6 +1100,16 @@
           g.lastCompScores.set(id, +v);
         }
         if(!g.lastCompScores.has(id)){
+          // ENDURANCE FIX: Check for authoritative winner before generating fallback scores
+          // If an endurance minigame has marked an authoritative winner, skip generating AI scores
+          // This prevents the fallback logic from overriding the endurance winner
+          if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+            console.info('[veto] Skipping score generation for player ' + id + ' - authoritative winner exists (' + g.__authoritativeWinner.playerId + ')');
+            // Set 0 score for non-winners in endurance competitions
+            g.lastCompScores.set(id, 0);
+            continue;
+          }
+          
           // ROBUST CHECK: If this is the human player AND no score exists, assign 0
           // This covers all edge cases: fast-forward, skip, timing issues, etc.
           if(id === g.humanId){
@@ -1142,42 +1152,57 @@
     
     // If all players scored 0, pick a random eligible player as fallback
     // EXCEPT: Never pick human player with 0 score (who didn't play)
+    // ENDURANCE FIX: Skip fallback if authoritative winner already exists
     if(nonZeroArr.length === 0 && eligible.length){
-      console.warn('[veto] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
-      // Exclude human player who didn't play from fallback selection
-      var eligibleForFallback = eligible.filter(function(id){
-        if(id === g.humanId && !g.__humanPlayedVeto){
-          console.info('[veto] Excluding human from fallback - did not play');
-          return false;
+      // Check if we have an authoritative winner from endurance minigame
+      if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+        console.info('[veto] ✓ Authoritative winner exists (' + g.__authoritativeWinner.playerId + '), skipping random fallback');
+        // Ensure the authoritative winner has a valid score
+        var authWinner = g.__authoritativeWinner.playerId;
+        if(!g.lastCompScores.has(authWinner) || g.lastCompScores.get(authWinner) === 0){
+          console.warn('[veto] Authoritative winner ' + authWinner + ' has no score, setting to ' + g.__authoritativeWinner.score);
+          g.lastCompScores.set(authWinner, g.__authoritativeWinner.score);
         }
-        return true;
-      });
-      
-      if(eligibleForFallback.length === 0){
-        console.error('[veto] No eligible players for fallback winner - all players scored 0 and only human is eligible');
-        // Absolute fallback: pick first non-human player (ES5 compatible)
-        var nonHuman = null;
-        for(var i = 0; i < eligible.length; i++){
-          if(eligible[i] !== g.humanId){
-            nonHuman = eligible[i];
-            break;
+        nonZeroArr = [[authWinner, g.lastCompScores.get(authWinner)]];
+        // Update original array for reveal display
+        arr = nonZeroArr.slice();
+      } else {
+        console.warn('[veto] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
+        // Exclude human player who didn't play from fallback selection
+        var eligibleForFallback = eligible.filter(function(id){
+          if(id === g.humanId && !g.__humanPlayedVeto){
+            console.info('[veto] Excluding human from fallback - did not play');
+            return false;
+          }
+          return true;
+        });
+        
+        if(eligibleForFallback.length === 0){
+          console.error('[veto] No eligible players for fallback winner - all players scored 0 and only human is eligible');
+          // Absolute fallback: pick first non-human player (ES5 compatible)
+          var nonHuman = null;
+          for(var i = 0; i < eligible.length; i++){
+            if(eligible[i] !== g.humanId){
+              nonHuman = eligible[i];
+              break;
+            }
+          }
+          if(nonHuman !== null){
+            eligibleForFallback.push(nonHuman);
+          } else {
+            // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
+            console.error('[veto] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
+            eligibleForFallback.push(g.humanId);
           }
         }
-        if(nonHuman !== null){
-          eligibleForFallback.push(nonHuman);
-        } else {
-          // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
-          console.error('[veto] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
-          eligibleForFallback.push(g.humanId);
-        }
+        
+        var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];
+        // Give the random winner a minimal score > 0
+        g.lastCompScores.set(pick, 1);
+        nonZeroArr = [[pick, 1]];
+        // Update original array for reveal display
+        arr = nonZeroArr.slice();
       }
-      
-      var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];
-      // Give the random winner a minimal score > 0
-      g.lastCompScores.set(pick, 1);
-      nonZeroArr = [[pick, 1]];
-      // Update original array for reveal display
-      arr = nonZeroArr.slice();
     } else if(nonZeroArr.length > 0) {
       // Use non-zero scores for winner determination
       arr = nonZeroArr;
@@ -1221,6 +1246,19 @@
     }
 
     global.game.vetoHolder = arr[0] && arr[0][0];
+    
+    // ENDURANCE FIX: Defensive check - warn if winner doesn't match authoritative winner
+    if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+      if(g.__authoritativeWinner.playerId !== global.game.vetoHolder){
+        console.error('[veto] ⚠️ MISMATCH: Authoritative winner (' + g.__authoritativeWinner.playerId + ') differs from determined winner (' + global.game.vetoHolder + ')!');
+        console.error('[veto] This should not happen - using authoritative winner');
+        // Override with authoritative winner
+        global.game.vetoHolder = g.__authoritativeWinner.playerId;
+      } else {
+        console.info('[veto] ✓ Winner ' + global.game.vetoHolder + ' matches authoritative winner from endurance minigame');
+      }
+    }
+    
     var W = getP(global.game.vetoHolder);
     
     // Determine if human won POV using helper function - used for fast-path flow optimization
@@ -1286,6 +1324,12 @@
 
     // Clear resolving flag before async operations
     g.__vetoResolving = false;
+    
+    // ENDURANCE FIX: Clear authoritative winner after use
+    if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+      console.info('[veto] Clearing authoritative winner flag');
+      delete g.__authoritativeWinner;
+    }
 
     // If results have already been shown by a fast-forward mechanism,
     // still perform the necessary timer cleanup and countdown shortening
