@@ -236,9 +236,9 @@
           return;
         }
         
-        // Verify it was called very quickly (should be < 50ms)
-        if (finishOpeningTime > 100) {
-          log(1, `finishOpening took ${finishOpeningTime}ms (expected < 100ms)`, 'warning');
+        // Verify it was called very quickly (should be < 50ms for immediate advancement)
+        if (finishOpeningTime > 50) {
+          log(1, `finishOpening took ${finishOpeningTime}ms (expected < 50ms)`, 'warning');
           setStatus(1, `Advancement took ${finishOpeningTime}ms (not immediate enough)`, false);
           return;
         }
@@ -332,21 +332,23 @@
         }
         log(3, '✓ First season advanced', 'success');
         
-        // Wait for flag reset (happens after 1000ms)
-        log(3, 'Waiting for flag reset (1000ms)...', 'info');
-        await delay(1100);
+        // Simulate second season (flags should reset at start of startOpeningSequence)
+        log(3, 'Starting second season immediately...', 'info');
+        window.game.phase = 'lobby';
         
-        if (window.game.__openingAdvanced || window.game.__openingFinished) {
-          log(3, 'Flags not reset after delay', 'error');
-          setStatus(3, 'Flags not reset properly', false);
+        // Flags should be reset by startOpeningSequence itself
+        window.startOpeningSequence();
+        
+        // Check that flags were reset at start
+        await delay(10);
+        if (window.game.phase !== 'opening') {
+          log(3, 'Second season phase not set to opening', 'error');
+          setStatus(3, 'Second season phase setup failed', false);
           return;
         }
-        log(3, '✓ Flags reset successfully', 'success');
+        log(3, '✓ Second season phase set to opening', 'success');
         
-        // Simulate second season
-        log(3, 'Starting second season...', 'info');
-        window.game.phase = 'lobby';
-        window.startOpeningSequence();
+        // Wait for advancement
         await delay(50);
         
         if (!window.game.__openingAdvanced || !window.game.__openingFinished) {

@@ -1796,6 +1796,11 @@ header.innerHTML = `
   }
   function startOpeningSequence(){
     const game=g.game; if(!game) return;
+    
+    // Reset flags at the start of opening sequence (for fresh season starts)
+    game.__openingAdvanced = false;
+    game.__openingFinished = false;
+    
     game.phase='opening'; updateHud(); g.renderPanel?.();
     g.tv?.say?.('Season Premiere');
     try{ g.setMusic?.('theme_opening', true); }catch{}
@@ -1846,14 +1851,6 @@ header.innerHTML = `
     // Old card removed - now handled by showWeekIntroModal in ui.week-intro.js
     g.tv?.say?.('HOH Competition soon…');
     g.setPhase('intermission', game.cfg?.tIntermission || 4, ()=>{ g.tv?.say?.('HOH Competition'); g.startHOH?.(); });
-    
-    // Reset advancement flag for next season
-    setTimeout(() => {
-      if(game) {
-        game.__openingAdvanced = false;
-        game.__openingFinished = false;
-      }
-    }, 1000);
   }
   g.finishOpening = finishOpening;
 
