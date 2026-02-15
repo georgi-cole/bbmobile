@@ -485,19 +485,18 @@
       
       if(color === sequence[inputIndex]){
         correctMatches++;
+        inputIndex++; // Increment first
         
-        // Visual feedback - highlight the current position box with the correct color
-        if(boxes[inputIndex]){
-          boxes[inputIndex].style.opacity = '1';
-          boxes[inputIndex].style.background = color;
+        // Visual feedback - highlight the previous position box with the correct color
+        if(boxes[inputIndex - 1]){
+          boxes[inputIndex - 1].style.opacity = '1';
+          boxes[inputIndex - 1].style.background = color;
         }
         
         // Show color name feedback
         const colorName = colorNames[color] || 'Unknown';
         status.textContent = `✅ Correct: ${colorName}`;
         status.style.color = '#22c55e';
-        
-        inputIndex++;
         
         if(inputIndex === sequence.length){
           // Sequence complete!
@@ -580,10 +579,12 @@
       // Reset input state but keep mistakes
       inputIndex = 0;
       
-      // Hide input buttons during replay
-      buttonDiv.textContent = 'Watch again...';
-      buttonDiv.style.color = '#95a9c0';
-      buttonDiv.style.fontSize = '0.9rem';
+      // Clear and show watch message
+      buttonDiv.innerHTML = '';
+      const watchMsg = document.createElement('div');
+      watchMsg.style.cssText = 'color:#95a9c0;font-size:0.9rem;';
+      watchMsg.textContent = 'Watch again...';
+      buttonDiv.appendChild(watchMsg);
       
       // Reset sequence boxes
       const boxes = Array.from(sequenceDiv.children);
@@ -648,9 +649,9 @@
       const penaltyAmount = mistakesMade * mistakePenalty;
       rawScore = Math.max(0, rawScore - penaltyAmount);
       
-      // Apply reflash penalty - 10% reduction per reflash
+      // Apply reflash penalty - 10% reduction per reflash (capped at 90% to avoid negative scores)
       if(reflashCount > 0){
-        const reflashPenalty = 0.10 * reflashCount;
+        const reflashPenalty = Math.min(0.10 * reflashCount, 0.90); // Cap at 90% penalty
         rawScore = Math.round(rawScore * (1 - reflashPenalty));
         rawScore = Math.max(0, rawScore);
       }
@@ -674,7 +675,8 @@
     
     // Create floating color emojis container (subtle background decoration)
     const emojiContainer = document.createElement('div');
-    emojiContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden;opacity:0.15;';
+    emojiContainer.className = 'memory-colors-emoji-container'; // Set class immediately for cleanup
+    emojiContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;opacity:0.15;';
     
     // Color emojis to float (variety for randomization)
     const colorEmojis = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '🟤', '⚫', '⚪', '🔶', '🔷', '🟥', '🟦', '🟩', '🟨', '🟪', '🟧'];
@@ -737,7 +739,12 @@
     if(existingEmojis){
       existingEmojis.remove();
     }
-    emojiContainer.className = 'memory-colors-emoji-container';
+    
+    // Ensure container has relative positioning for absolute emoji positioning
+    if(!container.style.position || container.style.position === 'static'){
+      container.style.position = 'relative';
+    }
+    
     container.appendChild(emojiContainer);
     container.appendChild(wrapper);
   }
