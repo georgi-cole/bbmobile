@@ -647,12 +647,30 @@
               ? 'Your plea resonated with the HOH. Your relationship has improved slightly.'
               : 'You\'ve made your case, but the HOH seems unmoved.';
             
-            alert(resultMsg);
+            // Use non-blocking toast instead of alert() to prevent UI freeze
+            try {
+              if (typeof window.tv?.showToast === 'function') {
+                window.tv.showToast(resultMsg, { duration: 3000 });
+              } else {
+                // Inline fallback toast (matches nomination-intro-modal.js pattern)
+                const toast = document.createElement('div');
+                toast.textContent = resultMsg;
+                toast.style.cssText = `
+                  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+                  background: rgba(0,0,0,0.8); color: #fff; padding: 10px 16px; border-radius: 6px;
+                  font-size: 14px; z-index: 99999; pointer-events: none; backdrop-filter: blur(4px);
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+              }
+            } catch (e) {
+              console.warn('[phase-intro] Toast error (non-critical):', e);
+            }
           } else {
             console.info('[phase-intro] NominationPlea skipped');
           }
           
-          // Now dismiss the nomination modal
+          // Now dismiss the nomination modal (immediately, non-blocking)
           dismiss();
         } catch (err) {
           console.error('[phase-intro] NominationPlea error:', err);
