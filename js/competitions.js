@@ -1771,6 +1771,8 @@
       }
       
       const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
+      // NOTE: Using let instead of const to allow override in defensive check below
+      // This is needed when authoritative winner doesn't match the score-based winner
       let winner = sortedEntries[0][0];
       
       // ENDURANCE FIX: Defensive check - warn if winner doesn't match authoritative winner

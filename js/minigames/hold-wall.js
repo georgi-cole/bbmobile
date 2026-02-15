@@ -467,9 +467,13 @@
       // Store results globally
       if(g.lastCompScores){
         const scoresMap = new Map();
+        
+        // OPTIMIZATION: Create lookup map to avoid O(n²) complexity
+        const participantsByName = new Map(participants.map(p => [p.name, p]));
+        
         standings.forEach(s => {
           // Find the participant to get their player ID
-          const participant = participants.find(p => p.name === s.name);
+          const participant = participantsByName.get(s.name);
           if(participant && participant.id !== undefined){
             scoresMap.set(participant.id, s.score);
           }
@@ -478,7 +482,7 @@
         
         // ENDURANCE FIX: Mark winner as authoritative to prevent override by fallback logic
         // Store winner player ID for HOH/POV determination
-        const winnerParticipant = participants.find(p => p.name === standings[0].name);
+        const winnerParticipant = participantsByName.get(standings[0].name);
         if(winnerParticipant && winnerParticipant.id !== undefined){
           g.__authoritativeWinner = {
             playerId: winnerParticipant.id,
