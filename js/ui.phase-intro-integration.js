@@ -198,8 +198,30 @@
           try {
             const currentPhase = global.game?.phase;
             const pleaActive = global.game?.__nominationPleaActive;
+            const awaitingHumanNoms = global.__awaitingHumanNominations;
+            const nomsCommitInProgress = global.game?.__nomsCommitInProgress;
+            const nomsCommitted = global.game?.__nomsCommitted;
+            const nomsLocked = global.game?.nomsLocked;
             
-            if (currentPhase === 'nominations' && !pleaActive) {
+            // Check if fullscreen selector is active
+            let selectorActive = false;
+            try {
+              const nomsFsDebug = global.NomsFS?.debug?.();
+              selectorActive = nomsFsDebug?.selectorActive || false;
+            } catch (e) {
+              // Ignore errors checking selector state
+            }
+            
+            // Only trigger if phase is nominations AND no other nomination activity is in progress
+            const shouldTrigger = currentPhase === 'nominations' && 
+                                   !pleaActive && 
+                                   !awaitingHumanNoms && 
+                                   !nomsCommitInProgress && 
+                                   !nomsCommitted && 
+                                   !nomsLocked &&
+                                   !selectorActive;
+            
+            if (shouldTrigger) {
               console.info(`[phase-intro-integration] Failsafe watchdog (${FAILSAFE_TIMEOUT_MS}ms): ensuring nominations start`);
               ensureOverlayNotBlocking();
               
@@ -209,6 +231,8 @@
               } else {
                 attemptNominationsStart(origStartNominations);
               }
+            } else if (currentPhase === 'nominations' && !shouldTrigger) {
+              console.info(`[phase-intro-integration] Failsafe watchdog: nominations already in progress, skipping`);
             }
           } catch (watchErr) {
             console.warn('[phase-intro-integration] Failsafe watchdog failed:', watchErr);
