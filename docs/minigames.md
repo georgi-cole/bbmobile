@@ -347,7 +347,7 @@ Some endurance-type minigames (like Hold Wall) handle their own internal results
    }
    ```
 
-2. The minigame should call `g.showResultsPopup()` internally before calling `onComplete(score)`
+2. The minigame should call `showResultsPopup()` internally (via `g.showResultsPopup()` or `window.showResultsPopup()`) before calling `onComplete(score)`. Note: In minigame modules, `g` typically refers to the global `window` object passed as an IIFE parameter.
 
 3. When the minigame completes, `competitions-flow.js` checks the flag:
    - If `true`: Skips global reveal, but still advances the phase
@@ -362,15 +362,21 @@ Some endurance-type minigames (like Hold Wall) handle their own internal results
 **Example (Hold Wall):**
 ```javascript
 // Inside hold-wall.js
+// Note: 'g' is the global window object passed as IIFE parameter
 function showResults(finalStandings, score) {
-  g.showResultsPopup({
-    title: 'Hold Wall Results',
-    topThree: finalStandings.slice(0, 3),
-    winnerEmoji: '👑',
-    duration: 5000
-  }).then(() => {
-    onComplete(score); // Global reveal will be suppressed due to flag
-  });
+  // Call the global showResultsPopup function
+  if(g.showResultsPopup && typeof g.showResultsPopup === 'function'){
+    g.showResultsPopup({
+      title: 'Hold Wall Results',
+      topThree: finalStandings.slice(0, 3),
+      winnerEmoji: '👑',
+      duration: 5000
+    }).then(() => {
+      onComplete(score); // Global reveal will be suppressed due to flag
+    });
+  } else {
+    onComplete(score);
+  }
 }
 ```
 
