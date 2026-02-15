@@ -41,6 +41,55 @@
     };
   }
 
+  /**
+   * Build minigame mode dropdown options dynamically
+   * Includes base modes + categories (as optgroups) + individual games
+   */
+  function buildMinigameOptions(){
+    const options = [
+      {value: 'random', label: 'Random'},
+      {value: 'clicker', label: 'Clicker only'},
+      {value: 'cycle', label: 'Cycle through all'}
+    ];
+
+    // Add categories and their games using optgroups for accessibility
+    const Registry = global.MinigameRegistry;
+    if (!Registry) return options; // Fallback if registry not loaded yet
+
+    const categories = [
+      {key: 'arcade', label: 'Arcade'},
+      {key: 'endurance', label: 'Endurance'},
+      {key: 'logic', label: 'Logic'},
+      {key: 'trivia', label: 'Trivia'}
+    ];
+
+    categories.forEach(cat => {
+      // Add category option (standalone, selects all from category)
+      options.push({value: `category:${cat.key}`, label: `All ${cat.label} games`});
+      
+      // Start optgroup for individual games in this category
+      options.push({optgroup: true, label: cat.label});
+      
+      // Add games in this category
+      const games = Registry.getGamesByCategory(cat.key, {
+        implementedOnly: true,
+        excludeRetired: true
+      });
+      
+      games.forEach(gameKey => {
+        const game = Registry.getGame(gameKey);
+        if (game) {
+          options.push({value: `game:${gameKey}`, label: game.name});
+        }
+      });
+      
+      // End optgroup
+      options.push({endOptgroup: true});
+    });
+
+    return options;
+  }
+
   // Tab registry - defines all tabs, groups, and fields
   const TAB_REGISTRY = [
     {
@@ -106,11 +155,7 @@
         {
           title: 'Minigame settings',
           fields: [
-            select('miniMode', 'Minigame mode', [
-              {value: 'random', label: 'Random'},
-              {value: 'clicker', label: 'Clicker only'},
-              {value: 'cycle', label: 'Cycle through all'}
-            ]),
+            select('miniMode', 'Minigame mode', buildMinigameOptions),
             html('<div class="tiny muted">Choose how minigames are selected during competitions.</div>'),
             number('minigameDuration', 'Challenge timer duration (seconds)', 30, 600, 10),
             html('<div class="tiny muted">Duration for minigame challenge timer when launched (default: 180s = 3 minutes). Phase timer takes precedence if available.</div>'),
