@@ -1113,7 +1113,7 @@
       
       // CRITICAL FIX: Check if player is the last one remaining BEFORE marking game as ended
       // If player is last, they WIN - call finalizeVictory() instead
-      const stillHolding = participants.filter(p => !p.dropTimeMs);
+      const stillHolding = participants.filter(p => p.dropTimeMs == null);
       if(stillHolding.length === 1 && stillHolding[0].isPlayer){
         // Player is the last one standing - they WIN!
         console.log('[HoldWall] Player is last remaining - calling finalizeVictory()');
