@@ -159,14 +159,16 @@ console.log('\nTest 3b: Verifying settings/render.js integration...');
 const renderCode = readFileSync('./js/settings/render.js', 'utf8');
 
 test('Settings render calls pauseManager.open', () => {
-  if (!renderCode.includes("global.game.pauseManager.open('modal:settings')")) {
-    throw new Error('Settings render does not call pauseManager.open');
+  // Check for normalized ID pattern (without 'modal:' prefix)
+  if (!renderCode.includes("global.game.pauseManager.open('settings')")) {
+    throw new Error('Settings render does not call pauseManager.open with normalized ID');
   }
 });
 
 test('Settings render calls pauseManager.close', () => {
-  if (!renderCode.includes("global.game.pauseManager.close('modal:settings')")) {
-    throw new Error('Settings render does not call pauseManager.close');
+  // Check for normalized ID pattern (without 'modal:' prefix)
+  if (!renderCode.includes("global.game.pauseManager.close('settings')")) {
+    throw new Error('Settings render does not call pauseManager.close with normalized ID');
   }
 });
 
