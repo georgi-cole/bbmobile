@@ -248,12 +248,12 @@
     </div>
     
     <div class="scenario">
-      <h3><span class="status-indicator pending" id="scenario3-status"></span>Scenario 3: Skip Challenge</h3>
+      <h3><span class="status-indicator pending" id="scenario3-status"></span>Scenario 3: Global Fast-Forward</h3>
       <div class="scenario-desc">
-        Human sees the instructions and clicks the Skip button.
+        Human uses the global fast-forward control (HUD timer area) to accelerate the phase.
       </div>
       <div class="expected">
-        <strong>Expected:</strong> Immediately after skip → inline results show with winner → phase timer skipped → veto ceremony starts right away
+        <strong>Expected:</strong> Phase accelerates → AI players complete faster → results show → veto ceremony starts right away
       </div>
       <button onclick="testScenario3()">▶️ Test Scenario 3</button>
     </div>
@@ -271,7 +271,7 @@
     <ul>
       <li><strong>Scenario 1:</strong> Play the minigame normally and submit a score. Watch for immediate inline results.</li>
       <li><strong>Scenario 2:</strong> Click Play, then immediately click the X button to exit. Confirm the exit and watch for immediate inline results.</li>
-      <li><strong>Scenario 3:</strong> On the instructions card, click the Skip button (⏭️). Watch for immediate inline results.</li>
+      <li><strong>Scenario 3:</strong> Use the global fast-forward control in the HUD/timer area to accelerate the phase. Watch for accelerated AI completion and results.</li>
       <li><strong>All scenarios:</strong> Verify that after inline results fade, the veto ceremony starts immediately without waiting.</li>
       <li><strong>Check the log:</strong> Look for messages indicating fast-forward triggered, inline results shown, and ceremony started.</li>
     </ul>
@@ -483,10 +483,10 @@
       }
     }
 
-    // Scenario 3: Skip Challenge
+    // Scenario 3: Global Fast-Forward
     async function testScenario3() {
       log('═══════════════════════════════════════', 'info');
-      log('🎯 Starting Scenario 3: Skip Challenge', 'info');
+      log('🎯 Starting Scenario 3: Global Fast-Forward', 'info');
       updateScenarioStatus(3, 'running');
       
       try {
@@ -501,9 +501,9 @@
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           log('💡 Manual Action Required:', 'warning');
-          log('   1. Look for the Skip button (⏭️ Skip) on the instructions card', 'warning');
-          log('   2. Click the Skip button', 'warning');
-          log('   3. Watch for immediate inline results', 'warning');
+          log('   1. Look for the global fast-forward control in the HUD/timer area', 'warning');
+          log('   2. Click the fast-forward button to accelerate the phase', 'warning');
+          log('   3. Watch for accelerated AI completion and results', 'warning');
           log('   4. Verify veto ceremony starts without timer wait', 'warning');
           
           // Monitor for ceremony start
