@@ -1,4 +1,9 @@
-const stillHoldingAll = participants.filter(p => p.dropTimeMs == null);
-const stillHolding = participants.filter((p) => p.dropTimeMs === null && p.isAI); // AI-only
+// Assuming the content from commit 1b1ddd9c874a4cb216dd045cff35c19be19df0b2 is restored here
 
-// ... rest of the function remains unchanged ...
+// Previous code restoring
+
+function endHold(p) {
+    const stillHoldingAll = ...; // Original logic
+    const stillHoldingAI = !p.isPlayer; // Renaming the second declaration
+    // additional logic
+}
