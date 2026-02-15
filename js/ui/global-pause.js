@@ -18,6 +18,19 @@
   const PauseManager = (function () {
     const openModals = new Set();
 
+    /**
+     * Normalize modal ID by stripping leading 'modal:' prefix if present.
+     * This prevents double-prefixing when callers pass either 'settings' or 'modal:settings'.
+     * @param {string} id - The modal ID to normalize
+     * @returns {string} - Normalized ID without 'modal:' prefix
+     */
+    function normalizeModalId(id) {
+      if (typeof id === 'string' && id.startsWith('modal:')) {
+        return id.substring(6); // Remove 'modal:' prefix
+      }
+      return id;
+    }
+
     function emit(eventName) {
       try {
         if (window.game && window.game.bus && typeof window.game.bus.emit === 'function') {
@@ -48,12 +61,19 @@
     function open(id) {
       try {
         if (!id) throw new Error('PauseManager.open requires an id');
+        
+        // Normalize the modal ID to prevent double-prefixing
+        const normalizedId = normalizeModalId(id);
+        
         const wasPaused = openModals.size > 0;
-        openModals.add(id);
-        // Always add owner to PauseController (it handles reference counting)
+        openModals.add(normalizedId);
+        
+        // Always add owner to PauseController with 'modal:' prefix
+        // (PauseController expects owner IDs like 'modal:settings')
         if (window.PauseController && typeof window.PauseController.pause === 'function') {
-          window.PauseController.pause('modal:' + id);
+          window.PauseController.pause('modal:' + normalizedId);
         }
+        
         if (!wasPaused && openModals.size > 0) {
           emit('game:pause');
         }
@@ -67,12 +87,18 @@
     function close(id) {
       try {
         if (!id) throw new Error('PauseManager.close requires an id');
-        if (!openModals.has(id)) return;
-        openModals.delete(id);
-        // Always resume with owner ID
+        
+        // Normalize the modal ID to prevent double-prefixing
+        const normalizedId = normalizeModalId(id);
+        
+        if (!openModals.has(normalizedId)) return;
+        openModals.delete(normalizedId);
+        
+        // Always resume with 'modal:' prefix to match the pause call
         if (window.PauseController && typeof window.PauseController.resume === 'function') {
-          window.PauseController.resume('modal:' + id);
+          window.PauseController.resume('modal:' + normalizedId);
         }
+        
         if (openModals.size === 0) {
           emit('game:resume');
         }

@@ -1693,13 +1693,13 @@
     }
     
     // Pause game systems when opening settings
-    if(g.PauseController && typeof g.PauseController.pause === 'function'){
-      g.PauseController.pause('settings');
-    }
-    
-    // Also notify PauseManager if available
+    // Prefer PauseManager if available, otherwise fallback to direct PauseController
     if(g.game?.pauseManager && typeof g.game.pauseManager.open === 'function'){
-      g.game.pauseManager.open('modal:settings');
+      // Use normalized ID 'settings' (PauseManager will add 'modal:' prefix internally)
+      g.game.pauseManager.open('settings');
+    } else if(g.PauseController && typeof g.PauseController.pause === 'function'){
+      // Fallback: call PauseController directly if PauseManager not available
+      g.PauseController.pause('settings');
     }
     
     ensureGameCfg();
@@ -1761,13 +1761,14 @@
       dim.style.display = 'none';
       
       // Resume game systems when closing settings
-      if(g.PauseController && typeof g.PauseController.resume === 'function'){
-        g.PauseController.resume();
-      }
-      
-      // Also notify PauseManager if available
+      // Prefer PauseManager if available, otherwise fallback to direct PauseController
       if(g.game?.pauseManager && typeof g.game.pauseManager.close === 'function'){
-        g.game.pauseManager.close('modal:settings');
+        // Use normalized ID 'settings' (PauseManager will add 'modal:' prefix internally)
+        g.game.pauseManager.close('settings');
+      } else if(g.PauseController && typeof g.PauseController.resume === 'function'){
+        // Fallback: call PauseController directly if PauseManager not available
+        // Use owner ID to match the pause call
+        g.PauseController.resume('settings');
       }
     }
   }
