@@ -775,13 +775,16 @@
           
           // Trigger immediate fast-forward for POV competitions when human completes
           // This shows inline results and starts veto ceremony without waiting for phase timer
+          // Check for both 'veto_comp' (main phase) and 'veto' (legacy/alternate phase name)
           if (g.phase === 'veto_comp' || g.phase === 'veto') {
             console.info('[Competition] ✓ Human POV completion detected - triggering immediate fast-forward');
             if (global.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+              // Delay allows score to be registered in lastCompScores map and UI status to update
+              // This ensures inline results have the human's score available for display
               setTimeout(() => {
                 console.info('[Competition] → Triggering fast-forward after human POV completion');
                 global.CompetitionFlow.showCompetitionResultsAndFastForward(base);
-              }, 500); // Small delay to allow UI to update
+              }, 500);
             } else {
               // Fallback: call finishVetoComp directly
               console.warn('[Competition] Fast-forward not available for POV, calling finishVetoComp directly');
@@ -864,9 +867,11 @@
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
           
           // Trigger immediate fast-forward for POV competitions when human completes
+          // Check for both 'veto_comp' (main phase) and 'veto' (legacy/alternate phase name)
           if (g.phase === 'veto_comp' || g.phase === 'veto') {
             console.info('[Competition] ✓ Human POV completion detected (legacy) - triggering immediate fast-forward');
             if (global.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+              // Delay allows score to be registered in lastCompScores map and UI status to update
               setTimeout(() => {
                 console.info('[Competition] → Triggering fast-forward after human POV completion (legacy)');
                 global.CompetitionFlow.showCompetitionResultsAndFastForward(base);

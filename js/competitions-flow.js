@@ -588,7 +588,7 @@
 
     // Skip button - allows human to skip competition and see results immediately
     const skipButton = document.createElement('button');
-    skipButton.className = 'btn secondary';
+    skipButton.className = 'btn secondary skip-comp-button';
     skipButton.textContent = '⏭️ Skip';
     skipButton.style.cssText = `
       padding: 8px 20px;
@@ -731,7 +731,7 @@
                   });
                 }
                 
-                const newSkipButton = newCard.querySelector('button.secondary');
+                const newSkipButton = newCard.querySelector('.skip-comp-button');
                 if (newSkipButton) {
                   newSkipButton.addEventListener('click', () => {
                     console.info('[CompetitionFlow] ⏭️ Skip button clicked (re-rendered), triggering fast-forward');
