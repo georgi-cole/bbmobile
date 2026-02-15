@@ -1110,6 +1110,17 @@
       if(!isHolding || hasEnded) return; // Guard against duplicate calls
       
       isHolding = false;
+      
+      // CRITICAL FIX: Check if player is the last one remaining BEFORE marking game as ended
+      // If player is last, they WIN - call finalizeVictory() instead
+      const remainingBeforeEnd = participants.filter(p => !p.dropTimeMs);
+      if(remainingBeforeEnd.length === 1 && remainingBeforeEnd[0].isPlayer){
+        // Player is the last one standing - they WIN!
+        console.log('[HoldWall] Player is last remaining - calling finalizeVictory()');
+        finalizeVictory();
+        return;
+      }
+      
       hasEnded = true;
       cleanupTimers();
       stopPulsating();
@@ -1221,14 +1232,22 @@
       });
       
       // Now all participants have drop times, sort elimination log by time (descending = later is better)
-      // Players who dropped at the same time are ranked by their participant array index
+      // CRITICAL: For players with the same drop time, the HUMAN PLAYER should rank first
+      // This ensures that if the player was truly the last to drop, they rank ahead of AI participants
+      // who were marked as dropped at the same time when the game ended.
       eliminationLog.sort((a, b) => {
         // First sort by time (descending - later is better)
         if(b.timeMs !== a.timeMs) return b.timeMs - a.timeMs;
         
-        // If tied on time, maintain original order from participant array
+        // If tied on time, HUMAN PLAYER ranks first (wins tiebreaker)
         const pA = participants.find(p => p.name === a.name);
         const pB = participants.find(p => p.name === b.name);
+        
+        // Human player always wins tiebreaker
+        if(pA && pA.isPlayer) return -1; // a is human, a ranks first
+        if(pB && pB.isPlayer) return 1;  // b is human, b ranks first
+        
+        // For AI vs AI tie, maintain original order from participant array
         if (pA && pB) {
           return participants.indexOf(pA) - participants.indexOf(pB);
         }
