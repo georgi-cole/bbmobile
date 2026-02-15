@@ -43,7 +43,7 @@
 
   /**
    * Build minigame mode dropdown options dynamically
-   * Includes base modes + categories + individual games
+   * Includes base modes + categories (as optgroups) + individual games
    */
   function buildMinigameOptions(){
     const options = [
@@ -52,7 +52,7 @@
       {value: 'cycle', label: 'Cycle through all'}
     ];
 
-    // Add categories and their games
+    // Add categories and their games using optgroups for accessibility
     const Registry = global.MinigameRegistry;
     if (!Registry) return options; // Fallback if registry not loaded yet
 
@@ -64,8 +64,11 @@
     ];
 
     categories.forEach(cat => {
-      // Add category option
-      options.push({value: `category:${cat.key}`, label: `━━ ${cat.label} ━━`});
+      // Add category option (standalone, selects all from category)
+      options.push({value: `category:${cat.key}`, label: `All ${cat.label} games`});
+      
+      // Start optgroup for individual games in this category
+      options.push({optgroup: true, label: cat.label});
       
       // Add games in this category
       const games = Registry.getGamesByCategory(cat.key, {
@@ -76,9 +79,12 @@
       games.forEach(gameKey => {
         const game = Registry.getGame(gameKey);
         if (game) {
-          options.push({value: `game:${gameKey}`, label: `    ${game.name}`});
+          options.push({value: `game:${gameKey}`, label: game.name});
         }
       });
+      
+      // End optgroup
+      options.push({endOptgroup: true});
     });
 
     return options;

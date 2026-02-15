@@ -116,6 +116,24 @@
   }
 
   /**
+   * Helper function to parse minigame mode format
+   * @param {string} miniMode - Mode string (e.g., 'random', 'category:arcade', 'game:holdWall')
+   * @returns {{type: string, value: string}} Parsed mode with type and value
+   */
+  function parseModeFormat(miniMode) {
+    if (!miniMode || typeof miniMode !== 'string') {
+      return {type: 'random', value: null};
+    }
+    
+    if (miniMode.includes(':')) {
+      const [type, value] = miniMode.split(':', 2);
+      return {type, value};
+    }
+    
+    return {type: miniMode, value: null};
+  }
+
+  /**
    * Pick the next minigame type using the Phase 1 unified system
    * Uses non-repeating pool selection to ensure variety within a season
    * All games are now routed through the MinigameSelector for consistent behavior
@@ -138,9 +156,10 @@
 
     // Get the minigame mode setting
     const miniMode = g?.cfg?.miniMode || 'random';
+    const {type, value} = parseModeFormat(miniMode);
 
     // Purge stale mode tracking
-    if (miniMode === 'random' && g.__lastMiniMode === 'clicker') {
+    if (type === 'random' && g.__lastMiniMode === 'clicker') {
       delete g.__lastMiniMode;
       console.info('[Minigame] Cleared stale clicker mode');
     } else if (miniMode) {
@@ -154,17 +173,16 @@
     }
 
     // Handle category selection: 'category:arcade', 'category:endurance', etc.
-    if (miniMode.startsWith('category:')) {
-      const category = miniMode.split(':')[1];
-      console.info('[Minigame] Category mode:', category);
+    if (type === 'category' && value) {
+      console.info('[Minigame] Category mode:', value);
       
-      const available = Registry.getGamesByCategory(category, {
+      const available = Registry.getGamesByCategory(value, {
         implementedOnly: true,
         excludeRetired: true
       });
       
       if (available.length === 0) {
-        console.warn('[Minigame] No games available in category:', category);
+        console.warn('[Minigame] No games available in category:', value);
         return 'quickTap';
       }
       
@@ -176,29 +194,28 @@
     }
 
     // Handle individual game selection: 'game:holdWall', etc.
-    if (miniMode.startsWith('game:')) {
-      const gameKey = miniMode.split(':')[1];
-      console.info('[Minigame] Individual game mode:', gameKey);
+    if (type === 'game' && value) {
+      console.info('[Minigame] Individual game mode:', value);
       
-      const game = Registry.getGame(gameKey);
+      const game = Registry.getGame(value);
       if (!game || game.retired || !game.implemented) {
-        console.warn('[Minigame] Game not available:', gameKey);
+        console.warn('[Minigame] Game not available:', value);
         return 'quickTap';
       }
       
-      g.miniHistory.push(gameKey);
-      console.info('[Minigame] Selected individual game:', gameKey);
-      return gameKey;
+      g.miniHistory.push(value);
+      console.info('[Minigame] Selected individual game:', value);
+      return value;
     }
 
     // Legacy mode override: clicker only (for backwards compatibility)
-    if (miniMode === 'clicker') {
+    if (type === 'clicker') {
       g.miniHistory.push('quickTap');
       return 'quickTap'; // Map to new quickTap module
     }
 
     // Cycle mode: use deterministic cycling through available games
-    if (miniMode === 'cycle') {
+    if (type === 'cycle') {
       const available = Registry.getImplementedGames(true);
       if (available.length === 0) {
         console.warn('[Minigame] No games available for cycle mode');

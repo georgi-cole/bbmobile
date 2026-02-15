@@ -71,13 +71,41 @@
         optionsArray = optionsArray();
       }
       
-      const options = optionsArray.map(function(opt){
-        return '<option value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.label) + '</option>';
-      }).join('');
+      // Build options HTML, supporting optgroups
+      let optionsHtml = '';
+      let currentOptgroup = null;
+      
+      optionsArray.forEach(function(opt){
+        // Check if this is an optgroup marker
+        if (opt.optgroup) {
+          // Close previous optgroup if any
+          if (currentOptgroup) {
+            optionsHtml += '</optgroup>';
+          }
+          // Start new optgroup
+          currentOptgroup = opt.label;
+          optionsHtml += '<optgroup label="' + escapeHtml(opt.label) + '">';
+        } else if (opt.endOptgroup) {
+          // Close current optgroup
+          if (currentOptgroup) {
+            optionsHtml += '</optgroup>';
+            currentOptgroup = null;
+          }
+        } else {
+          // Regular option
+          optionsHtml += '<option value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.label) + '</option>';
+        }
+      });
+      
+      // Close any remaining optgroup
+      if (currentOptgroup) {
+        optionsHtml += '</optgroup>';
+      }
+      
       return [
         '<div class="toggleRow">',
           '<label>' + escapeHtml(field.label) + '</label>',
-          '<select data-key="' + field.key + '">' + options + '</select>',
+          '<select data-key="' + field.key + '">' + optionsHtml + '</select>',
         '</div>'
       ].join('');
     }
