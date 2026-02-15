@@ -175,13 +175,22 @@
         // Defensive: neutralize empty TV overlay before proceeding
         ensureOverlayNotBlocking();
         
-        // Call original startNominations
-        try {
-          await origStartNominations.apply(this, arguments);
-        } catch (e) {
-          console.error('[phase-intro-integration] Error calling original startNominations:', e);
-          // Fallback: attempt to start nominations via alternative methods
-          attemptNominationsStart(origStartNominations);
+        // Only render nominations panel directly if we're actually in the nominations phase.
+        const isInNominationsPhase = g && g.phase === 'nominations';
+        
+        if (isInNominationsPhase && typeof global.renderNomsPanel === 'function') {
+          console.info('[phase-intro-integration] Calling renderNomsPanel directly after modal dismissed (nominations phase confirmed)');
+          global.renderNomsPanel();
+        } else {
+          // Fallback to original startNominations if renderNomsPanel not available
+          // or if we're not yet in the nominations phase.
+          try {
+            await origStartNominations.apply(this, arguments);
+          } catch (e) {
+            console.error('[phase-intro-integration] Error calling original startNominations:', e);
+            // Additional fallback: attempt to start nominations via alternative methods
+            attemptNominationsStart(origStartNominations);
+          }
         }
         
         // Single failsafe watchdog: after configured timeout, ensure nominations have started
@@ -189,11 +198,41 @@
           try {
             const currentPhase = global.game?.phase;
             const pleaActive = global.game?.__nominationPleaActive;
+            const awaitingHumanNoms = global.__awaitingHumanNominations;
+            const nomsCommitInProgress = global.game?.__nomsCommitInProgress;
+            const nomsCommitted = global.game?.__nomsCommitted;
+            const nomsLocked = global.game?.nomsLocked;
             
-            if (currentPhase === 'nominations' && !pleaActive) {
+            // Check if fullscreen selector is active
+            let selectorActive = false;
+            try {
+              const nomsFsDebug = global.NomsFS?.debug?.();
+              selectorActive = nomsFsDebug?.selectorActive || false;
+            } catch (e) {
+              // Ignore errors checking selector state
+            }
+            
+            // Only trigger if phase is nominations AND no other nomination activity is in progress
+            const shouldTrigger = currentPhase === 'nominations' && 
+                                   !pleaActive && 
+                                   !awaitingHumanNoms && 
+                                   !nomsCommitInProgress && 
+                                   !nomsCommitted && 
+                                   !nomsLocked &&
+                                   !selectorActive;
+            
+            if (shouldTrigger) {
               console.info(`[phase-intro-integration] Failsafe watchdog (${FAILSAFE_TIMEOUT_MS}ms): ensuring nominations start`);
               ensureOverlayNotBlocking();
-              attemptNominationsStart(origStartNominations);
+              
+              // Prioritize renderNomsPanel
+              if (typeof global.renderNomsPanel === 'function') {
+                global.renderNomsPanel();
+              } else {
+                attemptNominationsStart(origStartNominations);
+              }
+            } else if (currentPhase === 'nominations' && !shouldTrigger) {
+              console.info(`[phase-intro-integration] Failsafe watchdog: nominations already in progress, skipping`);
             }
           } catch (watchErr) {
             console.warn('[phase-intro-integration] Failsafe watchdog failed:', watchErr);
