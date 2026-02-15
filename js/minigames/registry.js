@@ -357,7 +357,8 @@
       minScore: 0,
       maxScore: 100,
       retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
+      seasons: ['spring', 'summer', 'autumn', 'winter'],
+      suppressGlobalReveal: true // Minigame handles its own results display internally
     },
     
     pressurePlank: {
@@ -375,7 +376,8 @@
       minScore: 0,
       maxScore: 100,
       retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
+      seasons: ['spring', 'summer', 'autumn', 'winter'],
+      suppressGlobalReveal: true // Minigame handles its own results display internally
     },
     
     rainBarrelBalance: {
@@ -393,7 +395,8 @@
       minScore: 0,
       maxScore: 100,
       retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
+      seasons: ['spring', 'summer', 'autumn', 'winter'],
+      suppressGlobalReveal: true // Minigame handles its own results display internally
     },
     
     memoryZipline: {
