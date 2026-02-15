@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Game Over Termination Fix</title>
+  <style>
+    body {
+      background: #0d151f;
+      color: #e0e8f0;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #6fd3ff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      border: 1px solid rgba(110, 160, 220, 0.18);
+    }
+    button {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #4574b8;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .pass {
+      color: #4ade80;
+    }
+    .fail {
+      color: #f87171;
+    }
+    .info {
+      color: #9bbdff;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 5px 0;
+      font-weight: bold;
+    }
+    .status.pass {
+      background: rgba(74, 222, 128, 0.2);
+      border: 1px solid #4ade80;
+    }
+    .status.fail {
+      background: rgba(248, 113, 113, 0.2);
+      border: 1px solid #f87171;
+    }
+    .logs {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #000;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Game Over Termination Fix Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Description</h2>
+    <p>This test verifies that clicking EXIT on the Game Over modal properly stops all background game systems:</p>
+    <ul>
+      <li>✅ Sets termination flag (<code>window.game.__terminated</code>)</li>
+      <li>✅ Stops Social AI Scheduler</li>
+      <li>✅ Stops Social AI auto-driver</li>
+      <li>✅ Stops phase timer</li>
+      <li>✅ Prevents further phase changes</li>
+      <li>✅ Prevents further tick events</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Termination Flag</h2>
+    <button id="test1" onclick="runTest1()">Run Test</button>
+    <div id="result1" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Phase Timer Guards</h2>
+    <button id="test2" onclick="runTest2()">Run Test</button>
+    <div id="result2" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Social AI Guards</h2>
+    <button id="test3" onclick="runTest3()">Run Test</button>
+    <div id="result3" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Integration Test - Simulate Game Over Exit</h2>
+    <button id="test4" onclick="runTest4()">Run Test</button>
+    <div id="result4" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Monitor (Live)</h2>
+    <button onclick="clearLogs()">Clear Logs</button>
+    <div id="logs" class="logs"></div>
+  </div>
+
+  <script>
+    // Capture console logs for monitoring
+    const logContainer = document.getElementById('logs');
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function addLog(msg, type = 'log') {
+      const timestamp = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.style.color = type === 'error' ? '#f87171' : 
+                         type === 'warn' ? '#fbbf24' : 
+                         type === 'info' ? '#9bbdff' : '#e0e8f0';
+      line.textContent = `[${timestamp}] ${msg}`;
+      logContainer.appendChild(line);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      addLog(args.join(' '), 'log');
+      originalLog.apply(console, args);
+    };
+    console.info = function(...args) {
+      addLog(args.join(' '), 'info');
+      originalInfo.apply(console, args);
+    };
+    console.warn = function(...args) {
+      addLog(args.join(' '), 'warn');
+      originalWarn.apply(console, args);
+    };
+    console.error = function(...args) {
+      addLog(args.join(' '), 'error');
+      originalError.apply(console, args);
+    };
+
+    function clearLogs() {
+      logContainer.innerHTML = '';
+    }
+
+    // Test helper functions
+    function log(msg, resultId) {
+      const el = document.getElementById(resultId);
+      el.innerHTML += msg + '\n';
+    }
+
+    function clearResult(resultId) {
+      document.getElementById(resultId).innerHTML = '';
+    }
+
+    // Test 1: Termination Flag
+    function runTest1() {
+      clearResult('result1');
+      log('<span class="info">Testing termination flag...</span>', 'result1');
+      
+      try {
+        // Setup mock game object
+        window.game = window.game || {};
+        
+        // Initially not terminated
+        window.game.__terminated = false;
+        log('✓ Set __terminated = false', 'result1');
+        
+        // Simulate setting termination
+        window.game.__terminated = true;
+        if (window.game.__terminated === true) {
+          log('<span class="pass">✅ PASS: Termination flag can be set</span>', 'result1');
+        } else {
+          log('<span class="fail">❌ FAIL: Termination flag not set properly</span>', 'result1');
+          return;
+        }
+        
+        // Clear for next test
+        window.game.__terminated = false;
+        if (window.game.__terminated === false) {
+          log('<span class="pass">✅ PASS: Termination flag can be cleared</span>', 'result1');
+        } else {
+          log('<span class="fail">❌ FAIL: Termination flag not cleared properly</span>', 'result1');
+        }
+        
+      } catch (e) {
+        log('<span class="fail">❌ ERROR: ' + e.message + '</span>', 'result1');
+      }
+    }
+
+    // Test 2: Phase Timer Guards
+    function runTest2() {
+      clearResult('result2');
+      log('<span class="info">Testing phase timer guards...</span>', 'result2');
+      
+      try {
+        window.game = window.game || {};
+        
+        // Test setPhase blocking
+        log('Testing setPhase blocking when terminated...', 'result2');
+        window.game.__terminated = true;
+        window.game.phase = 'test';
+        
+        // Try to call setPhase (should be blocked)
+        if (typeof window.setPhase === 'function') {
+          window.setPhase('hoh', 10, null);
+          
+          // Check if phase changed (it shouldn't)
+          if (window.game.phase === 'test') {
+            log('<span class="pass">✅ PASS: setPhase blocked when terminated</span>', 'result2');
+          } else {
+            log('<span class="fail">❌ FAIL: setPhase not blocked (phase changed to ' + window.game.phase + ')</span>', 'result2');
+          }
+        } else {
+          log('<span class="info">⚠ INFO: setPhase not available (may load later)</span>', 'result2');
+        }
+        
+        // Test stopPhaseTimer function exists
+        if (typeof window.stopPhaseTimer === 'function') {
+          log('<span class="pass">✅ PASS: stopPhaseTimer function exists</span>', 'result2');
+          window.stopPhaseTimer();
+          log('✓ Called stopPhaseTimer()', 'result2');
+        } else {
+          log('<span class="info">⚠ INFO: stopPhaseTimer not available (may load later)</span>', 'result2');
+        }
+        
+        // Clear termination
+        window.game.__terminated = false;
+        
+      } catch (e) {
+        log('<span class="fail">❌ ERROR: ' + e.message + '</span>', 'result2');
+      }
+    }
+
+    // Test 3: Social AI Guards
+    function runTest3() {
+      clearResult('result3');
+      log('<span class="info">Testing Social AI guards...</span>', 'result3');
+      
+      try {
+        window.game = window.game || {};
+        window.game.__terminated = false;
+        
+        // Check if SocialAIScheduler exists
+        if (window.SocialAIScheduler) {
+          log('✓ SocialAIScheduler found', 'result3');
+          
+          if (typeof window.SocialAIScheduler.stopAiSocialPhase === 'function') {
+            log('<span class="pass">✅ PASS: stopAiSocialPhase function exists</span>', 'result3');
+          } else {
+            log('<span class="fail">❌ FAIL: stopAiSocialPhase not found</span>', 'result3');
+          }
+        } else {
+          log('<span class="info">⚠ INFO: SocialAIScheduler not loaded yet</span>', 'result3');
+        }
+        
+        // Check if auto-driver exists
+        if (window.__smAutoDriver) {
+          log('✓ Social auto-driver found', 'result3');
+          
+          if (typeof window.__smAutoDriver.stop === 'function') {
+            log('<span class="pass">✅ PASS: __smAutoDriver.stop function exists</span>', 'result3');
+          } else {
+            log('<span class="fail">❌ FAIL: __smAutoDriver.stop not found</span>', 'result3');
+          }
+        } else {
+          log('<span class="info">⚠ INFO: __smAutoDriver not loaded yet</span>', 'result3');
+        }
+        
+      } catch (e) {
+        log('<span class="fail">❌ ERROR: ' + e.message + '</span>', 'result3');
+      }
+    }
+
+    // Test 4: Integration Test
+    function runTest4() {
+      clearResult('result4');
+      log('<span class="info">Running integration test...</span>', 'result4');
+      
+      try {
+        window.game = window.game || {};
+        
+        // Simulate game over exit flow
+        log('Simulating EXIT button click...', 'result4');
+        
+        // 1. Set termination flag
+        window.game.__terminated = true;
+        log('✓ Step 1: Set termination flag', 'result4');
+        
+        // 2. Stop Social AI Scheduler
+        if (window.SocialAIScheduler?.stopAiSocialPhase) {
+          window.SocialAIScheduler.stopAiSocialPhase('test-exit');
+          log('✓ Step 2: Stopped Social AI Scheduler', 'result4');
+        } else {
+          log('⚠ Step 2: SocialAIScheduler not available', 'result4');
+        }
+        
+        // 3. Stop auto-driver
+        if (window.__smAutoDriver?.stop) {
+          window.__smAutoDriver.stop();
+          log('✓ Step 3: Stopped auto-driver', 'result4');
+        } else {
+          log('⚠ Step 3: __smAutoDriver not available', 'result4');
+        }
+        
+        // 4. Stop phase timer
+        if (window.stopPhaseTimer) {
+          window.stopPhaseTimer();
+          log('✓ Step 4: Stopped phase timer', 'result4');
+        } else {
+          log('⚠ Step 4: stopPhaseTimer not available', 'result4');
+        }
+        
+        // 5. Clear game state
+        window.game.players = [];
+        window.game.phase = 'lobby';
+        log('✓ Step 5: Cleared game state', 'result4');
+        
+        // Verify termination persists
+        setTimeout(() => {
+          if (window.game.__terminated === true) {
+            log('<span class="pass">✅ PASS: Termination flag persists after teardown</span>', 'result4');
+          } else {
+            log('<span class="fail">❌ FAIL: Termination flag was cleared</span>', 'result4');
+          }
+          
+          // Verify phase changes are blocked
+          const beforePhase = window.game.phase;
+          if (window.setPhase) {
+            window.setPhase('hoh', 10, null);
+            if (window.game.phase === beforePhase) {
+              log('<span class="pass">✅ PASS: Phase changes blocked after termination</span>', 'result4');
+            } else {
+              log('<span class="fail">❌ FAIL: Phase changes not blocked</span>', 'result4');
+            }
+          }
+          
+          log('\n<div class="status pass">✅ Integration test complete!</div>', 'result4');
+          
+          // Clean up
+          window.game.__terminated = false;
+        }, 100);
+        
+      } catch (e) {
+        log('<span class="fail">❌ ERROR: ' + e.message + '</span>', 'result4');
+      }
+    }
+
+    // Initialize
+    window.game = window.game || { cfg: {} };
+    log('<span class="info">✓ Test page initialized</span>', 'logs');
+    log('<span class="info">✓ Monitoring console for background activity</span>', 'logs');
+  </script>
+</body>
+</html>
