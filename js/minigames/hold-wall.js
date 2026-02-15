@@ -139,7 +139,7 @@
     let eligible = players.filter(p => !p.evicted);
     
     // For HOH competitions, apply previous HOH exclusion rule
-    if(compType === 'hoh'){
+    if (compType === 'hoh') {
       const alive = eligible;
       const week = g.game.week || 1;
       const lastHOHId = g.game.lastHOHId;
@@ -149,14 +149,13 @@
       // 1. It's Week 1 (everyone competes)
       // 2. It's Final 3 (alive.length === 3, everyone competes)
       // 3. The lastHOH was not from the previous week
-      const shouldExcludePreviousHOH = (
+      const shouldExcludePreviousHOH = 
         alive.length > 3 &&           // Not Final 3
         week > 1 &&                   // Not Week 1
         lastHOHId &&                  // Previous HOH exists
-        lastHOHWeek === (week - 1)    // Previous HOH was from last week
-      );
+        lastHOHWeek === (week - 1);   // Previous HOH was from last week
       
-      if(shouldExcludePreviousHOH){
+      if (shouldExcludePreviousHOH) {
         eligible = eligible.filter(p => p.id !== lastHOHId);
         console.log(`[HoldWall] Excluding previous HOH (id: ${lastHOHId}) from competition`);
       }
@@ -1230,7 +1229,7 @@
         // If tied on time, maintain original order from participant array
         const pA = participants.find(p => p.name === a.name);
         const pB = participants.find(p => p.name === b.name);
-        if(pA && pB){
+        if (pA && pB) {
           return participants.indexOf(pA) - participants.indexOf(pB);
         }
         return 0;
