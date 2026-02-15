@@ -1237,19 +1237,33 @@
       // who were marked as dropped at the same time when the game ended.
       eliminationLog.sort((a, b) => {
         // First sort by time (descending - later is better)
-        if(b.timeMs !== a.timeMs) return b.timeMs - a.timeMs;
-        
+        if (b.timeMs !== a.timeMs) return b.timeMs - a.timeMs;
+
+        // Resolve participants using a stable identifier when available.
+        // Prefer a.participantIndex / b.participantIndex if present; fall back to name lookup.
+        const indexA = (typeof a.participantIndex === 'number' && a.participantIndex >= 0)
+          ? a.participantIndex
+          : participants.findIndex(p => p.name === a.name);
+        const indexB = (typeof b.participantIndex === 'number' && b.participantIndex >= 0)
+          ? b.participantIndex
+          : participants.findIndex(p => p.name === b.name);
+
+        const pA = indexA >= 0 ? participants[indexA] : null;
+        const pB = indexB >= 0 ? participants[indexB] : null;
+
         // If tied on time, HUMAN PLAYER ranks first (wins tiebreaker)
         // Note: There is only one human player in the game, so we don't need to handle
         // the case where both pA and pB are human players (that's impossible)
-        const pA = participants.find(p => p.name === a.name);
-        const pB = participants.find(p => p.name === b.name);
-        
+
         // Human player always wins tiebreaker
-        if(pA && pA.isPlayer) return -1; // a is human, a ranks first
-        if(pB && pB.isPlayer) return 1;  // b is human, b ranks first
-        
-        // For AI vs AI tie, maintain original order from participant array
+        if (pA && pA.isPlayer) return -1; // a is human, a ranks first
+        if (pB && pB.isPlayer) return 1;  // b is human, b ranks first
+
+        // For AI vs AI tie, maintain original order from participant array using indices when possible
+        if (indexA >= 0 && indexB >= 0) {
+          return indexA - indexB;
+        }
+
         if (pA && pB) {
           return participants.indexOf(pA) - participants.indexOf(pB);
         }
