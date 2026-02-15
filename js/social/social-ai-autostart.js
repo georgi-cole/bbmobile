@@ -233,6 +233,15 @@
       return;
     }
 
+    const game = global.game || {};
+    
+    // TERMINATION GUARD: Stop if game has been terminated
+    if (game.__terminated) {
+      console.info('[social-ai-autostart] 🛑 Game terminated - stopping auto-driver');
+      stop();
+      return;
+    }
+
     const config = getConfig();
     tickCount++;
 

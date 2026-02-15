@@ -2041,6 +2041,12 @@ header.innerHTML = `
   async function setPhase(phase, seconds, onTimeout){
     const game=g.game; if(!game) return;
     
+    // TERMINATION GUARD: Block phase changes if game is terminated
+    if (game.__terminated) {
+      console.info('[phase] setPhase blocked: game has been terminated');
+      return;
+    }
+    
     // Guard: Block phase changes while game is paused
     if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
       console.info('[phase] setPhase blocked: game is paused');
@@ -2269,6 +2275,14 @@ header.innerHTML = `
     game.pausedTimeRemaining = null;
 
     function tick(){
+      // TERMINATION GUARD: Stop timer if game has been terminated (e.g., game over exit)
+      if (game.__terminated) {
+        console.info('[hud-timer] Game terminated - stopping phase timer');
+        clearInterval(tickHandle);
+        tickHandle = null;
+        return;
+      }
+      
       // Helper to freeze timer by extending endAt
       function freezeTimer() {
         if (game.endAt) {
@@ -2425,9 +2439,19 @@ header.innerHTML = `
     }
   }
   
+  // Stop/clear the phase timer
+  function stopPhaseTimer() {
+    if (tickHandle) {
+      clearInterval(tickHandle);
+      tickHandle = null;
+      console.info('[hud-timer] Phase timer stopped');
+    }
+  }
+  
   g.setPhase = setPhase;
   g.pausePhaseTimer = pausePhaseTimer;
   g.resumePhaseTimer = resumePhaseTimer;
+  g.stopPhaseTimer = stopPhaseTimer;
 
   function defaultAdvance(phase){
     try{
