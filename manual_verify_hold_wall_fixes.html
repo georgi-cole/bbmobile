@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold the Wall - Manual Verification Guide</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border-left: 4px solid;
+    }
+    
+    .test-pass {
+      background: rgba(102, 255, 102, 0.1);
+      border-color: #66ff66;
+      color: #66ff66;
+    }
+    
+    .test-fail {
+      background: rgba(255, 107, 107, 0.1);
+      border-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+    
+    .test-info {
+      background: rgba(131, 191, 255, 0.1);
+      border-color: #83bfff;
+      color: #83bfff;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .game-state {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hold the Wall - Manual Verification Guide</h1>
+    <div class="subtitle">Manual verification guide for HOH eligibility rules and winner determination fixes</div>
+    
+    <div class="section">
+      <h2>Verification Scenario 1: HOH Eligibility - Normal Week</h2>
+      <p>Should exclude previous HOH when not Week 1 or Final 3</p>
+      <button class="btn" onclick="testHOHEligibilityNormal()">Show Expected Behavior</button>
+      <div id="test1-results"></div>
+    </div>
+    
+    <div class="section">
+      <h2>Verification Scenario 2: HOH Eligibility - Week 1</h2>
+      <p>Should include all players in Week 1 (no exclusions)</p>
+      <button class="btn" onclick="testHOHEligibilityWeek1()">Show Expected Behavior</button>
+      <div id="test2-results"></div>
+    </div>
+    
+    <div class="section">
+      <h2>Verification Scenario 3: HOH Eligibility - Final 3</h2>
+      <p>Should include all players at Final 3 (no exclusions)</p>
+      <button class="btn" onclick="testHOHEligibilityFinal3()">Show Expected Behavior</button>
+      <div id="test3-results"></div>
+    </div>
+    
+    <div class="section">
+      <h2>Verification Scenario 4: Winner Determination - Player Releases Early</h2>
+      <p>Player should be ranked correctly when releasing early, not behind AI participants who never dropped</p>
+      <button class="btn" onclick="testWinnerDetermination()">Show Expected Behavior</button>
+      <div id="test4-results"></div>
+    </div>
+    
+    <div class="section">
+      <h2>How to Use This Guide</h2>
+      <p>This is a <strong>manual verification guide</strong>, not an automated test. To verify the fixes:</p>
+      <ol style="color: #95a9c0; line-height: 1.8;">
+        <li>Click the "Show Expected Behavior" buttons above to see what should happen in each scenario</li>
+        <li>Open the actual game (<code>index.html</code>) in a separate browser tab</li>
+        <li>Play through the scenarios and verify the behavior matches expectations</li>
+        <li>Check the browser console (F12) for log messages like <code>[HoldWall] Excluding previous HOH</code></li>
+        <li>Use the other test files (<code>test_hold_wall_fixes.html</code>, etc.) to actually run the minigame</li>
+      </ol>
+      <p style="margin-top: 15px;"><strong>Note:</strong> This page sets up mock game state but does not load or execute the actual minigame code. For interactive testing, use the dedicated test files listed above.</p>
+    </div>
+  </div>
+
+  <!-- Load the hold-wall module -->
+  <script>
+    // Mock window.game object
+    window.game = {
+      players: [],
+      week: 2,
+      lastHOHId: null,
+      lastHOHWeek: 1,
+      phase: 'hoh'
+    };
+    
+    // Create mock players
+    function createMockPlayers(count) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        players.push({
+          id: i + 1,
+          name: `Player ${i + 1}`,
+          human: i === 0, // First player is human
+          evicted: false,
+          hoh: false
+        });
+      }
+      return players;
+    }
+    
+    function showResult(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      const div = document.createElement('div');
+      div.className = `test-result test-${type}`;
+      div.innerHTML = message;
+      element.appendChild(div);
+    }
+    
+    function showGameState(elementId, gameState) {
+      const element = document.getElementById(elementId);
+      const div = document.createElement('div');
+      div.className = 'game-state';
+      div.textContent = JSON.stringify(gameState, null, 2);
+      element.appendChild(div);
+    }
+    
+    function testHOHEligibilityNormal() {
+      console.log('\n=== Scenario 1: HOH Eligibility - Normal Week ===');
+      const resultsId = 'test1-results';
+      document.getElementById(resultsId).innerHTML = '';
+      
+      // Setup: 8 players, week 2, player 3 was HOH in week 1
+      window.game.players = createMockPlayers(8);
+      window.game.week = 2;
+      window.game.lastHOHId = 3;
+      window.game.lastHOHWeek = 1;
+      
+      showGameState(resultsId, {
+        playerCount: 8,
+        week: 2,
+        lastHOHId: 3,
+        lastHOHWeek: 1
+      });
+      
+      showResult(resultsId, '✓ Scenario configured: Player 3 was HOH in week 1.', 'info');
+      showResult(resultsId, '✓ Expected behavior: 7 eligible players (excluding player 3)', 'pass');
+      showResult(resultsId, '📋 To verify: Start an HOH competition in Week 2+ with previous HOH still in game', 'info');
+      showResult(resultsId, '📋 Check console logs for "[HoldWall] Excluding previous HOH (id: X)" message', 'info');
+      showResult(resultsId, '📋 Verify previous HOH is not shown in the participant list', 'info');
+    }
+    
+    function testHOHEligibilityWeek1() {
+      console.log('\n=== Scenario 2: HOH Eligibility - Week 1 ===');
+      const resultsId = 'test2-results';
+      document.getElementById(resultsId).innerHTML = '';
+      
+      // Setup: 8 players, week 1 (everyone should compete)
+      window.game.players = createMockPlayers(8);
+      window.game.week = 1;
+      window.game.lastHOHId = null;
+      window.game.lastHOHWeek = null;
+      
+      showGameState(resultsId, {
+        playerCount: 8,
+        week: 1,
+        lastHOHId: null,
+        lastHOHWeek: null
+      });
+      
+      showResult(resultsId, '✓ Scenario configured: Week 1 - all players should compete.', 'info');
+      showResult(resultsId, '✓ Expected behavior: 8 eligible players (no exclusions in week 1)', 'pass');
+      showResult(resultsId, '📋 To verify: Start an HOH competition in Week 1', 'info');
+      showResult(resultsId, '📋 All non-evicted players should participate', 'info');
+    }
+    
+    function testHOHEligibilityFinal3() {
+      console.log('\n=== Scenario 3: HOH Eligibility - Final 3 ===');
+      const resultsId = 'test3-results';
+      document.getElementById(resultsId).innerHTML = '';
+      
+      // Setup: 3 players, week 8, player 2 was HOH in week 7
+      const players = createMockPlayers(8);
+      // Mark 5 as evicted to get to Final 3
+      for (let i = 3; i < 8; i++) {
+        players[i].evicted = true;
+      }
+      window.game.players = players;
+      window.game.week = 8;
+      window.game.lastHOHId = 2;
+      window.game.lastHOHWeek = 7;
+      
+      showGameState(resultsId, {
+        playerCount: 8,
+        aliveCount: 3,
+        week: 8,
+        lastHOHId: 2,
+        lastHOHWeek: 7
+      });
+      
+      showResult(resultsId, '✓ Scenario configured: Final 3 - all remaining players should compete.', 'info');
+      showResult(resultsId, '✓ Expected behavior: 3 eligible players (no exclusions at Final 3)', 'pass');
+      showResult(resultsId, '📋 To verify: Reach Final 3 (3 players remaining)', 'info');
+      showResult(resultsId, '📋 Start HOH competition - all 3 should participate regardless of previous HOH', 'info');
+    }
+    
+    function testWinnerDetermination() {
+      console.log('\n=== Scenario 4: Winner Determination ===');
+      const resultsId = 'test4-results';
+      document.getElementById(resultsId).innerHTML = '';
+      
+      showResult(resultsId, '✓ Scenario: Player is the last one standing', 'info');
+      showResult(resultsId, '✓ Expected behavior when player releases/drops:', 'pass');
+      showResult(resultsId, '  • If player is last remaining → WIN (score 100)', 'pass');
+      showResult(resultsId, '  • Player shown as 1st place in results popup', 'pass');
+      showResult(resultsId, '  • No AI participant who never dropped ranks ahead of player', 'pass');
+      showResult(resultsId, '', 'info');
+      showResult(resultsId, '📋 To verify manually:', 'info');
+      showResult(resultsId, '1. Open test_hold_wall_fixes.html or play the actual game', 'info');
+      showResult(resultsId, '2. Play Hold the Wall until you are the last one holding', 'info');
+      showResult(resultsId, '3. Release from the wall', 'info');
+      showResult(resultsId, '4. Check final standings - you should be 1st place', 'info');
+      showResult(resultsId, '5. Check console for "[HoldWall] Player is last remaining - calling finalizeVictory()"', 'info');
+      showResult(resultsId, '', 'info');
+      showResult(resultsId, '✓ The fix ensures:', 'pass');
+      showResult(resultsId, '  • Winner determined by who lasted longest, not by random scores', 'pass');
+      showResult(resultsId, '  • Last player standing always receives score 100 (win)', 'pass');
+      showResult(resultsId, '  • Human player wins tiebreakers when drop times are equal', 'pass');
+    }
+    
+    // Run instructions on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Hold the Wall - Manual Verification Guide Loaded');
+      console.log('This is a manual verification guide, not an automated test.');
+      console.log('Click the "Show Expected Behavior" buttons to see expected outcomes for each scenario.');
+    });
+  </script>
+</body>
+</html>
