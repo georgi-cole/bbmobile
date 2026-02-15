@@ -46,6 +46,7 @@
    * - maxScore: maximum possible score (default 100)
    * - retired: true if game should not be selected anymore
    * - replacedBy: optional field, key of game that replaced this one
+   * - suppressGlobalReveal: optional flag, if true the minigame handles its own results display
    * 
    * Category system:
    * - arcade: fast-paced action games (snake, laser dash, etc.)
@@ -337,7 +338,8 @@
       minScore: 0,
       maxScore: 100,
       retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
+      seasons: ['spring', 'summer', 'autumn', 'winter'],
+      suppressGlobalReveal: true // Minigame handles its own results display internally
     },
     
     tiltedLedge: {

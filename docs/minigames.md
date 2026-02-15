@@ -46,9 +46,11 @@ The registry is the central metadata store for all minigames. Each game entry in
   module: 'count-house.js',       // Module filename
   minScore: 0,                    // Minimum score
   maxScore: 100,                  // Maximum score
-  retired: false                  // Should not be selected
+  retired: false,                 // Should not be selected
+  suppressGlobalReveal: false     // Optional: if true, minigame handles its own results display
 }
 ```
+
 
 **API:**
 - `MinigameRegistry.getAll()` - Get all games
@@ -329,6 +331,57 @@ Legacy keys are automatically mapped to new module keys:
 - `'bar'` → `'timingBar'`
 - `'reaction'` → `'reactionTimer'`
 - etc.
+
+### Endurance Minigames and Results Display
+
+Some endurance-type minigames (like Hold Wall) handle their own internal results display and should not show the global competition reveal/popup afterward. This prevents duplicate results popups.
+
+**To suppress the global reveal:**
+
+1. Set `suppressGlobalReveal: true` in the registry metadata:
+   ```javascript
+   holdWall: {
+     key: 'holdWall',
+     // ... other metadata
+     suppressGlobalReveal: true
+   }
+   ```
+
+2. The minigame should call `showResultsPopup()` internally (via `g.showResultsPopup()` or `window.showResultsPopup()`) before calling `onComplete(score)`. Note: In minigame modules, `g` typically refers to the global `window` object passed as an IIFE parameter.
+
+3. When the minigame completes, `competitions-flow.js` checks the flag:
+   - If `true`: Skips global reveal, but still advances the phase
+   - If `false` or undefined: Shows global reveal as normal
+
+**How it works:**
+- After a minigame calls `onComplete(score)`, the framework checks the registry
+- If `suppressGlobalReveal` is true, it skips calling `showCompetitionResultsAndFastForward()`
+- Phase progression still occurs via `game.advancePhase()` to ensure proper game flow
+- Useful for minigames that already show comprehensive internal results (e.g., last-person-standing competitions)
+
+**Example (Hold Wall):**
+```javascript
+// Inside hold-wall.js
+// Note: 'g' is the global window object passed as IIFE parameter
+function showResults(finalStandings, score) {
+  // Call the global showResultsPopup function
+  if(g.showResultsPopup && typeof g.showResultsPopup === 'function'){
+    g.showResultsPopup({
+      title: 'Hold Wall Results',
+      topThree: finalStandings.slice(0, 3),
+      winnerEmoji: '👑',
+      duration: 5000
+    }).then(() => {
+      onComplete(score); // Global reveal will be suppressed due to flag
+    });
+  } else {
+    onComplete(score);
+  }
+}
+```
+
+**Testing:**
+Use `test_hold_wall_suppress_global_reveal.html` to validate that only one results popup appears.
 
 ## Adding New Games
 

@@ -2,6 +2,12 @@
 // Competition flow with instructions popup and fullscreen minigame overlay
 // Handles: show instructions → play button → fullscreen game → completion → return
 //
+// ENDURANCE MINIGAME SUPPORT:
+// - Minigames that handle their own internal results display (e.g., Hold Wall, endurance games)
+// - can set `suppressGlobalReveal: true` in their registry metadata
+// - This prevents the global competition reveal/popup from showing after the minigame's internal results
+// - Phase progression still occurs normally, but without duplicate results display
+//
 // ═══════════════════════════════════════════════════════════════════════════
 // GUARD SYSTEM & LIFECYCLE FLAGS (Anti-TDZ, Anti-Circular-Dependency)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1962,9 +1968,30 @@
   }
   const original = global.CompetitionFlow.runCompetitionFlow;
   global.CompetitionFlow.runCompetitionFlow = function(gameKey, container, onComplete, options = {}){
+    // Check if minigame has suppressGlobalReveal flag set
+    let suppressGlobalReveal = false;
+    if(global.MinigameRegistry && typeof global.MinigameRegistry.getRegistry === 'function'){
+      const registry = global.MinigameRegistry.getRegistry();
+      const metadata = registry[gameKey];
+      if(metadata && metadata.suppressGlobalReveal === true){
+        suppressGlobalReveal = true;
+        console.info(`[ImmediateResults] Minigame '${gameKey}' has suppressGlobalReveal flag – skipping global reveal`);
+      }
+    }
+    
     const wrappedOnComplete = function(score){
       try { if(typeof onComplete === 'function'){ onComplete(score); } } catch(e){ console.warn('[ImmediateResults] Original onComplete error:', e); }
-      if(options.autoFastAdvance !== false){
+      
+      // Skip global reveal if minigame handles its own results OR autoFastAdvance is disabled
+      if(suppressGlobalReveal){
+        console.info('[ImmediateResults] Skipping global reveal (minigame handles results internally)');
+        // Still need to advance the phase, but without showing results
+        const g = global.game;
+        if(g && typeof g.advancePhase === 'function'){
+          console.info('[ImmediateResults] Advancing phase without results display');
+          setTimeout(() => g.advancePhase(), 100);
+        }
+      } else if(options.autoFastAdvance !== false){
         global.CompetitionFlow.showCompetitionResultsAndFastForward(score);
       } else {
         console.info('[ImmediateResults] autoFastAdvance disabled for this flow call');
