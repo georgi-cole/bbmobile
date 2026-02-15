@@ -185,6 +185,8 @@
             await origStartNominations.apply(this, arguments);
           } catch (e) {
             console.error('[phase-intro-integration] Error calling original startNominations:', e);
+            // Additional fallback: attempt to start nominations via alternative methods
+            attemptNominationsStart(origStartNominations);
           }
         }
         
