@@ -119,6 +119,16 @@
    * Pick the next minigame type using the Phase 1 unified system
    * Uses non-repeating pool selection to ensure variety within a season
    * All games are now routed through the MinigameSelector for consistent behavior
+   * 
+   * Supports new category and individual game selection formats:
+   * - 'random': Random selection from all games (default)
+   * - 'clicker': Only quickTap game
+   * - 'cycle': Cycle through all available games
+   * - 'category:arcade': Random from arcade category
+   * - 'category:endurance': Random from endurance category
+   * - 'category:logic': Random from logic category
+   * - 'category:trivia': Random from trivia category
+   * - 'game:holdWall': Play specific game only
    */
   function pickMinigameType() {
     const g = global.game;
@@ -126,28 +136,69 @@
     // Initialize miniHistory if needed (for backwards compatibility tracking)
     if (!g.miniHistory) g.miniHistory = [];
 
-    // Purge stale 'clicker' miniMode when user switches to random
-    if (g?.cfg?.miniMode === 'random' && g.__lastMiniMode === 'clicker') {
+    // Get the minigame mode setting
+    const miniMode = g?.cfg?.miniMode || 'random';
+
+    // Purge stale mode tracking
+    if (miniMode === 'random' && g.__lastMiniMode === 'clicker') {
       delete g.__lastMiniMode;
       console.info('[Minigame] Cleared stale clicker mode');
-    } else if (g?.cfg?.miniMode) {
-      g.__lastMiniMode = g.cfg.miniMode;
+    } else if (miniMode) {
+      g.__lastMiniMode = miniMode;
+    }
+
+    const Registry = global.MinigameRegistry || global.MiniGamesRegistry;
+    if (!Registry) {
+      console.warn('[Minigame] Registry not available');
+      return 'quickTap';
+    }
+
+    // Handle category selection: 'category:arcade', 'category:endurance', etc.
+    if (miniMode.startsWith('category:')) {
+      const category = miniMode.split(':')[1];
+      console.info('[Minigame] Category mode:', category);
+      
+      const available = Registry.getGamesByCategory(category, {
+        implementedOnly: true,
+        excludeRetired: true
+      });
+      
+      if (available.length === 0) {
+        console.warn('[Minigame] No games available in category:', category);
+        return 'quickTap';
+      }
+      
+      // Random selection from category
+      const selected = available[Math.floor(Math.random() * available.length)];
+      g.miniHistory.push(selected);
+      console.info('[Minigame] Selected from category:', selected);
+      return selected;
+    }
+
+    // Handle individual game selection: 'game:holdWall', etc.
+    if (miniMode.startsWith('game:')) {
+      const gameKey = miniMode.split(':')[1];
+      console.info('[Minigame] Individual game mode:', gameKey);
+      
+      const game = Registry.getGame(gameKey);
+      if (!game || game.retired || !game.implemented) {
+        console.warn('[Minigame] Game not available:', gameKey);
+        return 'quickTap';
+      }
+      
+      g.miniHistory.push(gameKey);
+      console.info('[Minigame] Selected individual game:', gameKey);
+      return gameKey;
     }
 
     // Legacy mode override: clicker only (for backwards compatibility)
-    if (g?.cfg?.miniMode === 'clicker') {
+    if (miniMode === 'clicker') {
       g.miniHistory.push('quickTap');
       return 'quickTap'; // Map to new quickTap module
     }
 
     // Cycle mode: use deterministic cycling through available games
-    if (g?.cfg?.miniMode === 'cycle') {
-      const Registry = global.MinigameRegistry || global.MiniGamesRegistry;
-      if (!Registry) {
-        console.warn('[Minigame] Registry not available for cycle mode');
-        return 'quickTap';
-      }
-
+    if (miniMode === 'cycle') {
       const available = Registry.getImplementedGames(true);
       if (available.length === 0) {
         console.warn('[Minigame] No games available for cycle mode');
@@ -166,8 +217,7 @@
     }
 
     // PRIMARY SYSTEM: Use Phase 1 minigame system with non-repeating pool
-    const Registry = global.MinigameRegistry || global.MiniGamesRegistry;
-    if (!global.MinigameSelector || !Registry) {
+    if (!global.MinigameSelector) {
       console.error('[Minigame] Phase 1 system not available! MinigameSelector:', !!global.MinigameSelector, 'Registry:', !!Registry);
       // Emergency fallback
       return 'quickTap';
