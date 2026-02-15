@@ -99,6 +99,9 @@
     // Intermission Games (feature-flagged, on by default)
     enableIntermissionGames: true,  // When true, offer Tic Tac Toe game when player is ineligible for HOH/Veto competitions
     
+    // Anti-Cheat System (feature-flagged, off by default)
+    enableAntiCheat: false,  // When true, enable anti-cheat validation (play time, input checks, backgrounding detection)
+    
     // Avatar Preloading Configuration
     avatarPreloadConcurrency: 8,    // Max concurrent avatar requests (mobile stability)
     avatarPreloadTimeoutMs: 7000,   // Timeout before forcing ready (ms)
@@ -240,7 +243,8 @@
     'aiSocialMaxPerPhase',
     'socialHighlightsEnabled',
     'final4CombinedPower',
-    'enableIntermissionGames'
+    'enableIntermissionGames',
+    'enableAntiCheat'
   ];
 
   /**

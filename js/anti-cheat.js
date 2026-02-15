@@ -30,6 +30,16 @@
   let sessionIdCounter = 0;
 
   /**
+   * Check if anti-cheat is enabled via config
+   * @returns {boolean}
+   */
+  function isEnabled(){
+    const g = window.game || {};
+    const cfg = g.cfg || {};
+    return cfg.enableAntiCheat === true;
+  }
+
+  /**
    * Create a new anti-cheat session
    * Call this when starting a minigame
    * 
@@ -40,6 +50,12 @@
    * @returns {string} sessionId - Unique session identifier
    */
   function startSession(options = {}){
+    // Check if anti-cheat is enabled
+    if(!isEnabled()){
+      console.info('[AntiCheat] Anti-cheat is disabled (cfg.enableAntiCheat = false)');
+      return null;
+    }
+    
     const {
       thresholds = {},
       container = null,
@@ -149,6 +165,15 @@
    * @returns {Object} Validation result with { valid: boolean, reason: string, metadata: Object }
    */
   function validate(sessionId){
+    // If anti-cheat is disabled, always return valid
+    if(!isEnabled()){
+      return {
+        valid: true,
+        reason: 'anti-cheat-disabled',
+        metadata: {}
+      };
+    }
+    
     const session = activeSessions.get(sessionId);
     
     if(!session){
@@ -349,9 +374,20 @@
     cleanup,
     getSessionMetadata,
     isSessionActive,
+    isEnabled,
     DEFAULT_THRESHOLDS
   };
 
+  // Log module load status
   console.info('[AntiCheat] Module loaded');
+  
+  // Log anti-cheat status on next tick (after config is fully initialized)
+  setTimeout(() => {
+    if(!isEnabled()){
+      console.info('[AntiCheat] ⓘ Anti-cheat system is DISABLED (cfg.enableAntiCheat = false). To re-enable, set window.game.cfg.enableAntiCheat = true and restart the season.');
+    } else {
+      console.info('[AntiCheat] ✓ Anti-cheat system is ENABLED');
+    }
+  }, 0);
 
 })(window);
