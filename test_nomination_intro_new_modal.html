@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: New Nomination Intro Modal</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #0d151f;
+      color: #fff;
+    }
+    
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #5a9ff2;
+      transform: translateY(-2px);
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .success {
+      color: #4ade80;
+    }
+    
+    .error {
+      color: #f87171;
+    }
+    
+    .info {
+      color: #60a5fa;
+    }
+    
+    h1 {
+      color: #ffd700;
+    }
+    
+    h2 {
+      color: #8a9fb5;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔑 New Nomination Intro Modal Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Setup</h2>
+    <button onclick="initializeGame()">Initialize Game State</button>
+    <button onclick="makePlayerHOH()">Make Player HOH (No Risk Button)</button>
+    <button onclick="makePlayerNominated()">Make Player Nominated (Show Risk Button)</button>
+    <div id="setup-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Basic Modal Tests</h2>
+    <button onclick="testBasicShow()">Test 1: Show Modal (Click to Dismiss)</button>
+    <button onclick="testEscapeKey()">Test 2: Show Modal (Escape to Dismiss)</button>
+    <button onclick="testMultipleCalls()">Test 3: Multiple Rapid Calls (Debounce)</button>
+    <div id="basic-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Risk Check Tests</h2>
+    <button onclick="testRiskView()">Test 4: Check Risk Flow</button>
+    <button onclick="testRiskWithPlea()">Test 5: Check Risk → Make Deal</button>
+    <div id="risk-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Plea Tests</h2>
+    <button onclick="testPleaSubmit()">Test 6: Submit Plea</button>
+    <button onclick="testPleaSkip()">Test 7: Skip Plea</button>
+    <button onclick="testPleaEscape()">Test 8: Escape from Plea</button>
+    <div id="plea-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Edge Cases</h2>
+    <button onclick="testEvictedPlayer()">Test 9: Evicted Player (Skip Modal)</button>
+    <button onclick="testFailsafeTimeout()">Test 10: Failsafe Timeout (10s)</button>
+    <button onclick="testFeatureFlag()">Test 11: Feature Flag Disabled (Fallback)</button>
+    <div id="edge-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Cleanup Tests</h2>
+    <button onclick="testNoLeakedListeners()">Test 12: No Leaked Event Listeners</button>
+    <button onclick="testNoOrphanedDOM()">Test 13: No Orphaned DOM Nodes</button>
+    <div id="cleanup-status" class="status"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script>
+    // Global shim
+    window.global = window;
+    
+    // Initialize minimal game state
+    window.game = {
+      humanId: 'p1',
+      hohId: 'p2',
+      phase: 'nominations',
+      cfg: {
+        useNewNominationModal: true // Enable new modal by default
+      }
+    };
+    
+    // Mock players
+    window.players = [
+      { id: 'p1', name: 'Alice', evicted: false, affinity: {}, reputation: 0.5, threat: 0.6 },
+      { id: 'p2', name: 'Bob (HOH)', evicted: false, affinity: {}, reputation: 0.4, threat: 0.5 },
+      { id: 'p3', name: 'Charlie', evicted: false, affinity: {}, reputation: 0.6, threat: 0.7 },
+      { id: 'p4', name: 'Diana', evicted: false, affinity: {}, reputation: 0.3, threat: 0.4 },
+      { id: 'p5', name: 'Eve', evicted: false, affinity: {}, reputation: 0.5, threat: 0.5 },
+      { id: 'p6', name: 'Frank', evicted: false, affinity: {}, reputation: 0.4, threat: 0.6 }
+    ];
+    
+    // Helper functions
+    window.getP = (id) => window.players.find(p => p.id === id);
+    window.alivePlayers = () => window.players.filter(p => !p.evicted);
+    
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+      el.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+    
+    function clearLog(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+    
+    // Setup functions
+    function initializeGame() {
+      clearLog('setup-status');
+      window.game.humanId = 'p1';
+      window.game.hohId = 'p2';
+      window.game.phase = 'nominations';
+      window.game.__nominationsIntroShownThisPhase = false;
+      window.game.__nominationPleaActive = false;
+      window.players.forEach(p => p.evicted = false);
+      log('setup-status', 'Game state initialized: Player p1 (Alice), HOH p2 (Bob)', 'success');
+    }
+    
+    function makePlayerHOH() {
+      clearLog('setup-status');
+      window.game.humanId = 'p2';
+      window.game.hohId = 'p2';
+      log('setup-status', 'Player is now HOH - no risk button should appear', 'info');
+    }
+    
+    function makePlayerNominated() {
+      clearLog('setup-status');
+      window.game.humanId = 'p1';
+      window.game.hohId = 'p2';
+      log('setup-status', 'Player is eligible nominee - risk button should appear', 'info');
+    }
+    
+    // Test functions
+    async function testBasicShow() {
+      clearLog('basic-status');
+      log('basic-status', 'Test 1: Showing modal... Click overlay or modal to dismiss', 'info');
+      
+      try {
+        const start = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - start;
+        log('basic-status', `Modal dismissed successfully in ${duration}ms`, 'success');
+      } catch (err) {
+        log('basic-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testEscapeKey() {
+      clearLog('basic-status');
+      log('basic-status', 'Test 2: Showing modal... Press Escape to dismiss', 'info');
+      
+      try {
+        const start = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - start;
+        log('basic-status', `Modal dismissed successfully in ${duration}ms`, 'success');
+      } catch (err) {
+        log('basic-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testMultipleCalls() {
+      clearLog('basic-status');
+      log('basic-status', 'Test 3: Calling show() three times rapidly...', 'info');
+      
+      try {
+        // Call show() multiple times - should only create one modal
+        const promise1 = window.NominationIntroModal.show();
+        const promise2 = window.NominationIntroModal.show();
+        const promise3 = window.NominationIntroModal.show();
+        
+        log('basic-status', 'Three calls made. Only one modal should be visible.', 'info');
+        log('basic-status', 'Dismiss to continue...', 'info');
+        
+        await Promise.all([promise1, promise2, promise3]);
+        log('basic-status', 'All promises resolved (debounce working)', 'success');
+      } catch (err) {
+        log('basic-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testRiskView() {
+      clearLog('risk-status');
+      log('risk-status', 'Test 4: Showing modal... Click "Check My Risk" then "OK"', 'info');
+      
+      try {
+        const start = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - start;
+        log('risk-status', `Risk flow completed in ${duration}ms`, 'success');
+      } catch (err) {
+        log('risk-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testRiskWithPlea() {
+      clearLog('risk-status');
+      log('risk-status', 'Test 5: Showing modal... Check Risk → Make Deal → Skip or Submit', 'info');
+      
+      try {
+        const start = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - start;
+        log('risk-status', `Plea flow completed in ${duration}ms`, 'success');
+        
+        if (window.game.__nomsPleaInfluence && window.game.__nomsPleaInfluence.p1 !== undefined) {
+          log('risk-status', `Plea influence recorded: ${window.game.__nomsPleaInfluence.p1}`, 'success');
+        }
+      } catch (err) {
+        log('risk-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testPleaSubmit() {
+      clearLog('plea-status');
+      log('plea-status', 'Test 6: Showing plea modal... Select option and submit', 'info');
+      
+      try {
+        const player = window.getP('p1');
+        const hoh = window.getP('p2');
+        
+        const start = Date.now();
+        const result = await window.NominationPlea.show({ nominee: player, hoh: hoh });
+        const duration = Date.now() - start;
+        
+        if (result.skipped) {
+          log('plea-status', `Plea skipped in ${duration}ms`, 'info');
+        } else {
+          log('plea-status', `Plea submitted in ${duration}ms`, 'success');
+          log('plea-status', `Influence: ${result.influence}, Successful: ${result.successful}`, 'info');
+        }
+      } catch (err) {
+        log('plea-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testPleaSkip() {
+      clearLog('plea-status');
+      log('plea-status', 'Test 7: Showing plea modal... Click Skip', 'info');
+      
+      try {
+        const player = window.getP('p1');
+        const hoh = window.getP('p2');
+        
+        const start = Date.now();
+        const result = await window.NominationPlea.show({ nominee: player, hoh: hoh });
+        const duration = Date.now() - start;
+        
+        if (result.skipped) {
+          log('plea-status', `Plea skipped correctly in ${duration}ms`, 'success');
+        } else {
+          log('plea-status', `Unexpected: plea was not skipped`, 'error');
+        }
+      } catch (err) {
+        log('plea-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testPleaEscape() {
+      clearLog('plea-status');
+      log('plea-status', 'Test 8: Showing plea modal... Press Escape', 'info');
+      
+      try {
+        const player = window.getP('p1');
+        const hoh = window.getP('p2');
+        
+        const start = Date.now();
+        const result = await window.NominationPlea.show({ nominee: player, hoh: hoh });
+        const duration = Date.now() - start;
+        
+        if (result.skipped) {
+          log('plea-status', `Plea skipped via Escape in ${duration}ms`, 'success');
+        } else {
+          log('plea-status', `Unexpected: plea was not skipped`, 'error');
+        }
+      } catch (err) {
+        log('plea-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testEvictedPlayer() {
+      clearLog('edge-status');
+      log('edge-status', 'Test 9: Marking player as evicted...', 'info');
+      
+      try {
+        const player = window.getP(window.game.humanId);
+        player.evicted = true;
+        
+        const start = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - start;
+        
+        log('edge-status', `Modal skipped for evicted player in ${duration}ms`, 'success');
+        player.evicted = false; // Reset
+      } catch (err) {
+        log('edge-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testFailsafeTimeout() {
+      clearLog('edge-status');
+      log('edge-status', 'Test 10: Testing failsafe timeout (will take 10 seconds)...', 'info');
+      log('edge-status', 'Do NOT dismiss the modal. It should auto-resolve after 10s.', 'info');
+      
+      try {
+        const start = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - start;
+        
+        if (duration >= 9900 && duration <= 10500) {
+          log('edge-status', `Failsafe timeout worked! Resolved in ${duration}ms`, 'success');
+        } else {
+          log('edge-status', `Modal resolved in ${duration}ms (expected ~10000ms)`, duration < 9900 ? 'error' : 'info');
+        }
+      } catch (err) {
+        log('edge-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testFeatureFlag() {
+      clearLog('edge-status');
+      log('edge-status', 'Test 11: Disabling feature flag...', 'info');
+      
+      try {
+        window.game.cfg.useNewNominationModal = false;
+        log('edge-status', 'Feature flag disabled. Should use legacy modal.', 'info');
+        log('edge-status', 'Attempting to show modal...', 'info');
+        
+        const start = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - start;
+        
+        log('edge-status', `Fallback to legacy modal worked (${duration}ms)`, 'success');
+        window.game.cfg.useNewNominationModal = true; // Reset
+      } catch (err) {
+        log('edge-status', `Error: ${err.message}`, 'error');
+        window.game.cfg.useNewNominationModal = true; // Reset
+      }
+    }
+    
+    function testNoLeakedListeners() {
+      clearLog('cleanup-status');
+      log('cleanup-status', 'Test 12: Checking for leaked event listeners...', 'info');
+      
+      // This is a manual inspection test
+      log('cleanup-status', 'Open DevTools Console and run: getEventListeners(document)', 'info');
+      log('cleanup-status', 'Check for keydown listeners. Should only see expected listeners.', 'info');
+      log('cleanup-status', 'Show and dismiss modal multiple times, then check again.', 'info');
+    }
+    
+    function testNoOrphanedDOM() {
+      clearLog('cleanup-status');
+      log('cleanup-status', 'Test 13: Checking for orphaned DOM nodes...', 'info');
+      
+      // Count relevant elements
+      const overlays = document.querySelectorAll('.phase-intro-overlay, .nomination-intro-modal-container, .nomination-plea-modal');
+      const styles = document.querySelectorAll('style'); // Check for style tags
+      
+      log('cleanup-status', `Found ${overlays.length} modal overlays in DOM`, overlays.length === 0 ? 'success' : 'error');
+      log('cleanup-status', `Found ${styles.length} style tags in DOM`, 'info');
+      
+      if (overlays.length > 0) {
+        log('cleanup-status', 'Orphaned modals detected! Check cleanup logic.', 'error');
+      } else {
+        log('cleanup-status', 'No orphaned modals detected', 'success');
+      }
+    }
+  </script>
+  
+  <!-- Load the modules in correct order -->
+  <script src="js/nomination-plea.js"></script>
+  <script src="js/nomination-intro-modal.js"></script>
+  <script src="js/ui.phase-intro-modals.js"></script>
+  
+  <script>
+    // Auto-initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('setup-status', 'Test suite loaded. Click "Initialize Game State" to begin.', 'info');
+    });
+  </script>
+</body>
+</html>

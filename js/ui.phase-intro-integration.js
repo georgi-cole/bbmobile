@@ -4,6 +4,9 @@
 (function(global) {
   'use strict';
 
+  // Configuration constants (matches nomination-intro-modal.js)
+  const FAILSAFE_TIMEOUT_MS = 10000;
+
   /**
    * Helper: Neutralize empty TV overlay to prevent input blocking
    */
@@ -143,62 +146,27 @@
   }
 
   /**
-   * Wrap startNominations to show intro modal first
+   * Wrap startNominations to show intro modal first (SIMPLIFIED for new modal system)
    */
   function wrapStartNominations() {
     const origStartNominations = global.startNominations;
     
     if (typeof origStartNominations === 'function' && !origStartNominations.__wrappedForPhaseIntro) {
-      // NEW: Immediate resume when intro modal is dismissed
-      window.addEventListener('bb:noms:intro:dismissed', () => {
-        const g = global.game || {};
-        if (g.phase === 'nominations' && !g.__nominationPleaActive) {
-          console.info('[phase-intro-integration] Intro dismissed event → resuming nominations');
-          ensureOverlayNotBlocking();
-          attemptNominationsStart(origStartNominations);
-        }
-      });
-
       global.startNominations = async function wrappedStartNominations() {
         const g = global.game || {};
         
-        // Decide whether to show intro (mark as shown only after progression)
+        // Check if we should show intro modal
         const shouldShowIntro = !g.__nominationsIntroShownThisPhase;
         
         if (shouldShowIntro && typeof global.showNominationIntroModal === 'function') {
+          // Mark as shown BEFORE showing modal to prevent re-entry
+          g.__nominationsIntroShownThisPhase = true;
+          
           try {
-            const TIMEOUT_MS = 30000;
-            let modalResolved = false;
-            
-            const modalPromise = global.showNominationIntroModal().then(() => {
-              modalResolved = true;
-            });
-            
-            const timeoutPromise = new Promise((resolve) => {
-              setTimeout(() => {
-                if (!modalResolved && !g.__nominationPleaActive) {
-                  console.warn('[phase-intro-integration] Modal timeout reached (30s), resuming flow');
-                  resolve();
-                }
-              }, TIMEOUT_MS);
-            });
-            
-            await Promise.race([modalPromise, timeoutPromise]);
-            
-            // Wait up to 10s more if plea remains active
-            if (g.__nominationPleaActive) {
-              console.info('[phase-intro-integration] Waiting for plea to complete...');
-              const pleaTimeout = new Promise((resolve) => setTimeout(resolve, 10000));
-              const pleaWait = new Promise((resolve) => {
-                const checkInterval = setInterval(() => {
-                  if (!g.__nominationPleaActive) {
-                    clearInterval(checkInterval);
-                    resolve();
-                  }
-                }, 100);
-              });
-              await Promise.race([pleaWait, pleaTimeout]);
-            }
+            console.info('[phase-intro-integration] Showing nomination intro modal');
+            // Simply await the modal - no dual path, no custom event, no Promise.race
+            await global.showNominationIntroModal();
+            console.info('[phase-intro-integration] Nomination intro modal dismissed');
           } catch (e) {
             console.error('[phase-intro-integration] Error showing nominations intro modal:', e);
           }
@@ -207,65 +175,34 @@
         // Defensive: neutralize empty TV overlay before proceeding
         ensureOverlayNotBlocking();
         
-        // Try original startNominations first
-        let started = false;
+        // Call original startNominations
         try {
           await origStartNominations.apply(this, arguments);
-          started = true;
-          // Mark intro as shown once we have attempted to progress
-          g.__nominationsIntroShownThisPhase = true;
         } catch (e) {
           console.error('[phase-intro-integration] Error calling original startNominations:', e);
-          // Fallback: set phase directly
-          try {
-            if (typeof global.setPhase === 'function') {
-              console.info('[phase-intro-integration] Falling back to setPhase');
-              const tNoms = g.cfg?.tNoms || 25;
-              const callback = () => global.lockNominationsAndProceed?.();
-              global.setPhase('nominations', tNoms, callback);
-              started = true;
-            }
-          } catch (fallbackErr) {
-            console.error('[phase-intro-integration] Fallback setPhase also failed:', fallbackErr);
-          }
-          if (started) g.__nominationsIntroShownThisPhase = true;
+          // Fallback: attempt to start nominations via alternative methods
+          attemptNominationsStart(origStartNominations);
         }
         
-        // Primary watchdog: after 2s, ensure nominations begin if phase is still nominations
+        // Single failsafe watchdog: after configured timeout, ensure nominations have started
         setTimeout(() => {
           try {
             const currentPhase = global.game?.phase;
             const pleaActive = global.game?.__nominationPleaActive;
             
             if (currentPhase === 'nominations' && !pleaActive) {
-              console.info('[phase-intro-integration] Watchdog(2s): ensuring nominations start');
-              attemptNominationsStart(origStartNominations);
-            }
-          } catch (watchErr) {
-            console.warn('[phase-intro-integration] Watchdog(2s) failed:', watchErr);
-          }
-        }, 2000);
-        
-        // Secondary watchdog: after 5s, hard-kick and re-neutralize overlay
-        setTimeout(() => {
-          try {
-            const currentPhase = global.game?.phase;
-            const pleaActive = global.game?.__nominationPleaActive;
-            
-            if (currentPhase === 'nominations' && !pleaActive) {
-              console.info('[phase-intro-integration] Watchdog(5s): hard kick nominations start');
-              // Re-neutralize empty overlay
+              console.info(`[phase-intro-integration] Failsafe watchdog (${FAILSAFE_TIMEOUT_MS}ms): ensuring nominations start`);
               ensureOverlayNotBlocking();
               attemptNominationsStart(origStartNominations);
             }
           } catch (watchErr) {
-            console.warn('[phase-intro-integration] Watchdog(5s) failed:', watchErr);
+            console.warn('[phase-intro-integration] Failsafe watchdog failed:', watchErr);
           }
-        }, 5000);
+        }, FAILSAFE_TIMEOUT_MS);
       };
       
       global.startNominations.__wrappedForPhaseIntro = true;
-      console.info('[phase-intro-integration] startNominations wrapped with event-driven resume + watchdogs');
+      console.info('[phase-intro-integration] startNominations wrapped (simplified)');
     }
   }
 

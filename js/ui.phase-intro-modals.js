@@ -53,11 +53,37 @@
    * @returns {Promise} Resolves when modal is dismissed
    */
   function showNominationIntroModal() {
+    // Use new clean-room implementation if available and not disabled by feature flag
+    if (typeof global.NominationIntroModal?.show === 'function') {
+      const useNewModal = global.game?.cfg?.useNewNominationModal !== false; // default true
+      if (useNewModal) {
+        console.info('[phase-intro-modals] Using new NominationIntroModal implementation');
+        return global.NominationIntroModal.show();
+      }
+    }
+    
+    // Fallback to old implementation
+    console.info('[phase-intro-modals] Using legacy nomination modal implementation');
     return showNominationIntroModalWithRisk();
   }
 
+  /* ============================================================================
+   * LEGACY NOMINATION MODAL IMPLEMENTATION (KEPT FOR ROLLBACK SAFETY)
+   * 
+   * This implementation has been replaced by nomination-intro-modal.js
+   * Preserved here for one release to allow instant rollback via feature flag.
+   * To rollback: Set game.cfg.useNewNominationModal = false
+   * 
+   * Known issues in this implementation:
+   * - Resolve-after-remove anti-pattern (L402-408)
+   * - Dual-path resume with custom event (L410-414) 
+   * - Unguarded alert() blocking JS runtime (L624)
+   * - Leaked event listeners (L670-688)
+   * - Multiple competing watchdogs (L418-449)
+   * ============================================================================ */
+
   /**
-   * Compute nomination risk for current player
+   * Compute nomination risk for current player (LEGACY)
    * @returns {Object} Risk data with percentage and explanation
    */
   function computeNominationRisk() {
