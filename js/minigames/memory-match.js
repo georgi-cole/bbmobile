@@ -694,17 +694,20 @@
       emojiContainer.appendChild(emoji);
     }
     
-    // Add CSS animation for floating emojis
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes float-emoji {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        25% { transform: translate(30px, -30px) rotate(90deg); }
-        50% { transform: translate(-20px, 20px) rotate(180deg); }
-        75% { transform: translate(20px, 30px) rotate(270deg); }
-      }
-    `;
-    document.head.appendChild(style);
+    // Add CSS animation for floating emojis (only once per page)
+    if(!document.getElementById('memory-colors-emoji-animation')){
+      const style = document.createElement('style');
+      style.id = 'memory-colors-emoji-animation';
+      style.textContent = `
+        @keyframes float-emoji {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          25% { transform: translate(30px, -30px) rotate(90deg); }
+          50% { transform: translate(-20px, 20px) rotate(180deg); }
+          75% { transform: translate(20px, 30px) rotate(270deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
     
     // Assemble UI
     wrapper.appendChild(title);
@@ -728,6 +731,13 @@
     wrapper.appendChild(buttonRow);
     wrapper.appendChild(buttonDiv);
     wrapper.appendChild(submitBtn);
+    
+    // Clear any existing emoji containers in this container first
+    const existingEmojis = container.querySelector('.memory-colors-emoji-container');
+    if(existingEmojis){
+      existingEmojis.remove();
+    }
+    emojiContainer.className = 'memory-colors-emoji-container';
     container.appendChild(emojiContainer);
     container.appendChild(wrapper);
   }
