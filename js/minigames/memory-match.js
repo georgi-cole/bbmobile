@@ -485,7 +485,7 @@
       
       if(color === sequence[inputIndex]){
         correctMatches++;
-        inputIndex++; // Increment first
+        inputIndex++; // Increment to move to next position (visual feedback will use inputIndex-1)
         
         // Visual feedback - highlight the previous position box with the correct color
         if(boxes[inputIndex - 1]){
@@ -580,7 +580,7 @@
       inputIndex = 0;
       
       // Clear and show watch message
-      buttonDiv.innerHTML = '';
+      buttonDiv.textContent = ''; // Clear safely
       const watchMsg = document.createElement('div');
       watchMsg.style.cssText = 'color:#95a9c0;font-size:0.9rem;';
       watchMsg.textContent = 'Watch again...';
