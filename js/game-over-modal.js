@@ -261,24 +261,58 @@
 
       // Exit button - navigates back to intro hub
       exitBtn.addEventListener('click', () => {
-        console.info('[game-over] EXIT clicked, navigating to intro hub');
+        console.info('[game-over] EXIT clicked, initiating comprehensive teardown');
         newSeasonBtn.disabled = true;
         exitBtn.disabled = true;
         closeModal();
         
         // Navigate back to intro hub after modal is closed
         setTimeout(() => {
-          // CRITICAL: Stop Social AI Scheduler first to prevent background ticks
+          // ========================================
+          // CRITICAL: Comprehensive game teardown
+          // ========================================
+          
+          // 1. Set termination flag FIRST to stop all background loops
+          try {
+            if (global.game) {
+              global.game.__terminated = true;
+              console.info('[game-over] ✓ Set game termination flag');
+            }
+          } catch (e) {
+            console.warn('[game-over] Failed to set termination flag', e);
+          }
+          
+          // 2. Stop Social AI Scheduler
           try {
             if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
               global.SocialAIScheduler.stopAiSocialPhase('game-over-exit');
-              console.info('[game-over] Social AI Scheduler stopped');
+              console.info('[game-over] ✓ Social AI Scheduler stopped');
             }
           } catch (e) {
-            console.warn('[game-over] failed to stop Social AI Scheduler', e);
+            console.warn('[game-over] Failed to stop Social AI Scheduler', e);
           }
           
-          // Pause/stop any running game loops to avoid background activity
+          // 3. Stop social auto-driver
+          try {
+            if (global.__smAutoDriver && typeof global.__smAutoDriver.stop === 'function') {
+              global.__smAutoDriver.stop();
+              console.info('[game-over] ✓ Social AI auto-driver stopped');
+            }
+          } catch (e) {
+            console.warn('[game-over] Failed to stop social auto-driver', e);
+          }
+          
+          // 4. Stop phase timer
+          try {
+            if (typeof global.stopPhaseTimer === 'function') {
+              global.stopPhaseTimer();
+              console.info('[game-over] ✓ Phase timer stopped');
+            }
+          } catch (e) {
+            console.warn('[game-over] Failed to stop phase timer', e);
+          }
+          
+          // 5. Pause/stop any running game loops
           try {
             if (global.PauseController && typeof global.PauseController.pause === 'function') {
               global.PauseController.pause('game-over-exit');
@@ -287,10 +321,10 @@
               global.game.pauseManager.reset();
             }
           } catch (e) {
-            console.warn('[game-over] failed to pause game on exit', e);
+            console.warn('[game-over] Failed to pause game on exit', e);
           }
           
-          // CRITICAL: Clear game state to allow fresh restart
+          // 6. Clear game state to allow fresh restart
           try {
             if (global.game) {
               global.game.players = [];
@@ -303,8 +337,10 @@
               global.game.juryHouse = [];
             }
           } catch (e) {
-            console.warn('[game-over] failed to clear game state', e);
+            console.warn('[game-over] Failed to clear game state', e);
           }
+          
+          console.info('[game-over] ✓ Terminated all game systems - safe to return to hub');
           
           // Hide main game UI by removing the 'main-screen-built' class
           // This ensures the topbar and wrap elements are hidden via CSS
@@ -359,7 +395,17 @@
   function startNewSeasonFlow() {
     console.info('[game-over] starting new season flow');
 
-    // 0) CRITICAL: Stop Social AI Scheduler FIRST to prevent background ticks
+    // 0a) CRITICAL: Clear termination flag to allow new game to run
+    try {
+      if (global.game) {
+        global.game.__terminated = false;
+        console.info('[game-over] ✓ Cleared termination flag for new season');
+      }
+    } catch (e) {
+      console.warn('[game-over] Failed to clear termination flag:', e);
+    }
+
+    // 0b) CRITICAL: Stop Social AI Scheduler FIRST to prevent background ticks
     try {
       if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
         global.SocialAIScheduler.stopAiSocialPhase('game-over-new-season');

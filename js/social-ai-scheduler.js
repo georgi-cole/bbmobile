@@ -734,6 +734,15 @@
   function performTick() {
     if (!isRunning || !isActive) return;
     
+    const game = global.game || {};
+    
+    // TERMINATION GUARD: Stop if game has been terminated
+    if (game.__terminated) {
+      infoLog('🛑 Game terminated - stopping scheduler', 'game_terminated');
+      stopAiSocialPhase('game_terminated');
+      return;
+    }
+    
     // Skip work if paused (but keep loop running)
     if (isPaused) {
       debugLog('performTick: paused, skipping work');
