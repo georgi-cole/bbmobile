@@ -175,12 +175,15 @@
         // Defensive: neutralize empty TV overlay before proceeding
         ensureOverlayNotBlocking();
         
-        // Call renderNomsPanel directly after new modal dismisses
-        if (typeof global.renderNomsPanel === 'function') {
-          console.info('[phase-intro-integration] Calling renderNomsPanel directly after modal dismissed');
+        // Only render nominations panel directly if we're actually in the nominations phase.
+        const isInNominationsPhase = g && g.phase === 'nominations';
+        
+        if (isInNominationsPhase && typeof global.renderNomsPanel === 'function') {
+          console.info('[phase-intro-integration] Calling renderNomsPanel directly after modal dismissed (nominations phase confirmed)');
           global.renderNomsPanel();
         } else {
-          // Fallback to original if renderNomsPanel not available
+          // Fallback to original startNominations if renderNomsPanel not available
+          // or if we're not yet in the nominations phase.
           try {
             await origStartNominations.apply(this, arguments);
           } catch (e) {
