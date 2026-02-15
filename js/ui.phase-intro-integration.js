@@ -175,13 +175,17 @@
         // Defensive: neutralize empty TV overlay before proceeding
         ensureOverlayNotBlocking();
         
-        // Call original startNominations
-        try {
-          await origStartNominations.apply(this, arguments);
-        } catch (e) {
-          console.error('[phase-intro-integration] Error calling original startNominations:', e);
-          // Fallback: attempt to start nominations via alternative methods
-          attemptNominationsStart(origStartNominations);
+        // Call renderNomsPanel directly after new modal dismisses
+        if (typeof global.renderNomsPanel === 'function') {
+          console.info('[phase-intro-integration] Calling renderNomsPanel directly after modal dismissed');
+          global.renderNomsPanel();
+        } else {
+          // Fallback to original if renderNomsPanel not available
+          try {
+            await origStartNominations.apply(this, arguments);
+          } catch (e) {
+            console.error('[phase-intro-integration] Error calling original startNominations:', e);
+          }
         }
         
         // Single failsafe watchdog: after configured timeout, ensure nominations have started
@@ -193,7 +197,13 @@
             if (currentPhase === 'nominations' && !pleaActive) {
               console.info(`[phase-intro-integration] Failsafe watchdog (${FAILSAFE_TIMEOUT_MS}ms): ensuring nominations start`);
               ensureOverlayNotBlocking();
-              attemptNominationsStart(origStartNominations);
+              
+              // Prioritize renderNomsPanel
+              if (typeof global.renderNomsPanel === 'function') {
+                global.renderNomsPanel();
+              } else {
+                attemptNominationsStart(origStartNominations);
+              }
             }
           } catch (watchErr) {
             console.warn('[phase-intro-integration] Failsafe watchdog failed:', watchErr);
