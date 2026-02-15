@@ -586,6 +586,63 @@
       }
     });
 
+    // Skip button - allows human to skip competition and see results immediately
+    const skipButton = document.createElement('button');
+    skipButton.className = 'btn secondary skip-comp-button';
+    skipButton.textContent = '⏭️ Skip';
+    skipButton.style.cssText = `
+      padding: 8px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: rgba(128, 128, 128, 0.2);
+      border: 1px solid rgba(128, 128, 128, 0.4);
+      border-radius: 8px;
+      color: ${theme.textColor};
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.8;
+    `;
+    skipButton.addEventListener('mouseenter', () => {
+      skipButton.style.opacity = '1';
+      skipButton.style.background = 'rgba(128, 128, 128, 0.3)';
+    });
+    skipButton.addEventListener('mouseleave', () => {
+      skipButton.style.opacity = '0.8';
+      skipButton.style.background = 'rgba(128, 128, 128, 0.2)';
+    });
+    skipButton.addEventListener('click', () => {
+      console.info('[CompetitionFlow] ⏭️ Skip button clicked, triggering fast-forward');
+      
+      // Remove instructions card
+      if(card && card.parentNode){
+        card.remove();
+      }
+      
+      // Trigger fast-forward with 0 score (human didn't play)
+      if(global.CompetitionFlow?.showCompetitionResultsAndFastForward && typeof global.CompetitionFlow.showCompetitionResultsAndFastForward === 'function'){
+        setTimeout(() => {
+          console.info('[CompetitionFlow] Triggering fast-forward after skip');
+          global.CompetitionFlow.showCompetitionResultsAndFastForward(0);
+        }, 100);
+      } else {
+        // Fallback: directly resolve the phase
+        console.warn('[CompetitionFlow] Fast-forward not available, using fallback');
+        setTimeout(() => {
+          const phase = gameRef?.phase;
+          if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !gameRef?.__hohResolved){
+            console.info('[CompetitionFlow] Calling finishCompPhase() after skip');
+            global.finishCompPhase();
+          } else if(phase === 'veto_comp' && typeof global.finishVetoComp === 'function'){
+            console.info('[CompetitionFlow] Calling finishVetoComp() after skip');
+            global.finishVetoComp();
+          } else if(typeof global.defaultAdvance === 'function'){
+            console.info('[CompetitionFlow] Calling defaultAdvance() after skip');
+            global.defaultAdvance(phase);
+          }
+        }, 100);
+      }
+    });
+
     // Assemble card
     card.appendChild(title);
     card.appendChild(description);
@@ -593,6 +650,7 @@
       card.appendChild(stepsContainer);
     }
     buttonsContainer.appendChild(playButton);
+    buttonsContainer.appendChild(skipButton);
     card.appendChild(buttonsContainer);
     container.appendChild(card);
     
@@ -670,6 +728,36 @@
                   newPlayButton.addEventListener('click', () => {
                     console.info('[CompetitionFlow] ▶ Play button clicked (re-rendered), launching fullscreen minigame');
                     onPlay();
+                  });
+                }
+                
+                const newSkipButton = newCard.querySelector('.skip-comp-button');
+                if (newSkipButton) {
+                  newSkipButton.addEventListener('click', () => {
+                    console.info('[CompetitionFlow] ⏭️ Skip button clicked (re-rendered), triggering fast-forward');
+                    
+                    // Remove instructions card
+                    if(newCard && newCard.parentNode){
+                      newCard.remove();
+                    }
+                    
+                    // Trigger fast-forward with 0 score
+                    if(global.CompetitionFlow?.showCompetitionResultsAndFastForward){
+                      setTimeout(() => {
+                        global.CompetitionFlow.showCompetitionResultsAndFastForward(0);
+                      }, 100);
+                    } else {
+                      setTimeout(() => {
+                        const phase = gameRef?.phase;
+                        if(phase === 'hoh' && typeof global.finishCompPhase === 'function'){
+                          global.finishCompPhase();
+                        } else if(phase === 'veto_comp' && typeof global.finishVetoComp === 'function'){
+                          global.finishVetoComp();
+                        } else if(typeof global.defaultAdvance === 'function'){
+                          global.defaultAdvance(phase);
+                        }
+                      }, 100);
+                    }
                   });
                 }
                 
@@ -1251,6 +1339,9 @@
             if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !g.__hohResolved){
               console.info('[CompetitionFlow] Calling finishCompPhase() after premature exit');
               global.finishCompPhase();
+            } else if(phase === 'veto_comp' && typeof global.finishVetoComp === 'function'){
+              console.info('[CompetitionFlow] Calling finishVetoComp() after premature exit');
+              global.finishVetoComp();
             } else if(typeof global.defaultAdvance === 'function'){
               console.info('[CompetitionFlow] Calling defaultAdvance() after premature exit');
               global.defaultAdvance(phase);

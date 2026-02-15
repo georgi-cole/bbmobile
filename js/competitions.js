@@ -772,7 +772,32 @@
             window.TvStatus.set('Submission received. Waiting for others…');
           }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
-          maybeFinishComp();
+          
+          // Trigger immediate fast-forward for POV competitions when human completes
+          // This shows inline results and starts veto ceremony without waiting for phase timer
+          // Check for both 'veto_comp' (main phase) and 'veto' (legacy/alternate phase name)
+          if (g.phase === 'veto_comp' || g.phase === 'veto') {
+            console.info('[Competition] ✓ Human POV completion detected - triggering immediate fast-forward');
+            if (global.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+              // Delay allows score to be registered in lastCompScores map and UI status to update
+              // This ensures inline results have the human's score available for display
+              setTimeout(() => {
+                console.info('[Competition] → Triggering fast-forward after human POV completion');
+                global.CompetitionFlow.showCompetitionResultsAndFastForward(base);
+              }, 500);
+            } else {
+              // Fallback: call finishVetoComp directly
+              console.warn('[Competition] Fast-forward not available for POV, calling finishVetoComp directly');
+              setTimeout(() => {
+                if (typeof global.finishVetoComp === 'function') {
+                  global.finishVetoComp();
+                }
+              }, 500);
+            }
+          } else {
+            // For non-POV competitions, use existing maybeFinishComp logic
+            maybeFinishComp();
+          }
         } else {
           console.warn('[Competition] ⚠ Score submission failed (duplicate or invalid)');
         }
@@ -840,7 +865,28 @@
             window.TvStatus.set('Submission received. Waiting for others…');
           }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
-          maybeFinishComp();
+          
+          // Trigger immediate fast-forward for POV competitions when human completes
+          // Check for both 'veto_comp' (main phase) and 'veto' (legacy/alternate phase name)
+          if (g.phase === 'veto_comp' || g.phase === 'veto') {
+            console.info('[Competition] ✓ Human POV completion detected (legacy) - triggering immediate fast-forward');
+            if (global.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+              // Delay allows score to be registered in lastCompScores map and UI status to update
+              setTimeout(() => {
+                console.info('[Competition] → Triggering fast-forward after human POV completion (legacy)');
+                global.CompetitionFlow.showCompetitionResultsAndFastForward(base);
+              }, 500);
+            } else {
+              console.warn('[Competition] Fast-forward not available for POV (legacy), calling finishVetoComp directly');
+              setTimeout(() => {
+                if (typeof global.finishVetoComp === 'function') {
+                  global.finishVetoComp();
+                }
+              }, 500);
+            }
+          } else {
+            maybeFinishComp();
+          }
         } else {
           console.warn('[Competition] ⚠ Score submission failed (duplicate or invalid, legacy)');
         }

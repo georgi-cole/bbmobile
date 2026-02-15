@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POV Human Player Timer Handling Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-styles.css">
+  <link rel="stylesheet" href="css/card-system.css">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      background: #0e1a28;
+      color: #e2e8f0;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      color: white;
+      font-size: 2rem;
+    }
+    
+    .test-header p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
+    }
+    
+    .test-section {
+      background: rgba(28, 43, 62, 0.7);
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 25px;
+      border: 1px solid rgba(113, 191, 255, 0.2);
+    }
+    
+    .test-section h2 {
+      color: #71bfff;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .scenario {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 4px solid #3b82f6;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+    }
+    
+    .scenario h3 {
+      color: #94a3b8;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+    
+    .scenario-desc {
+      color: #cbd5e1;
+      margin-bottom: 15px;
+      line-height: 1.6;
+    }
+    
+    .expected {
+      background: rgba(74, 222, 128, 0.1);
+      border-left: 3px solid #4ade80;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    
+    .expected strong {
+      color: #4ade80;
+    }
+    
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    button.secondary {
+      background: #64748b;
+    }
+    
+    button.secondary:hover {
+      background: #475569;
+    }
+    
+    button.success {
+      background: #10b981;
+    }
+    
+    button.success:hover {
+      background: #059669;
+    }
+    
+    #gameContainer {
+      min-height: 400px;
+      margin-top: 20px;
+    }
+    
+    #log {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    
+    #log div {
+      margin-bottom: 4px;
+      line-height: 1.5;
+      padding: 2px 0;
+    }
+    
+    #log .info { color: #71bfff; }
+    #log .success { color: #4ade80; }
+    #log .warning { color: #fbbf24; }
+    #log .error { color: #f87171; }
+    #log .veto { color: #a78bfa; }
+    #log .ceremony { color: #fb923c; }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .status-indicator.pending {
+      background: #64748b;
+    }
+    
+    .status-indicator.running {
+      background: #3b82f6;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-indicator.success {
+      background: #10b981;
+    }
+    
+    .status-indicator.failed {
+      background: #ef4444;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+    
+    .instructions-note {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid #fbbf24;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    
+    .instructions-note h3 {
+      color: #fbbf24;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+    
+    .instructions-note ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #cbd5e1;
+    }
+    
+    .instructions-note li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>🎮 POV Human Player Timer Handling Test</h1>
+    <p>Testing immediate inline results and veto ceremony transitions</p>
+  </div>
+
+  <div class="test-section">
+    <h2>📋 Test Scenarios</h2>
+    
+    <div class="scenario">
+      <h3><span class="status-indicator pending" id="scenario1-status"></span>Scenario 1: Complete Challenge</h3>
+      <div class="scenario-desc">
+        Human completes the POV challenge and sees their score.
+      </div>
+      <div class="expected">
+        <strong>Expected:</strong> Immediately after score popup → inline results show with winner → phase timer skipped → veto ceremony starts right away
+      </div>
+      <button onclick="testScenario1()">▶️ Test Scenario 1</button>
+    </div>
+    
+    <div class="scenario">
+      <h3><span class="status-indicator pending" id="scenario2-status"></span>Scenario 2: Premature Exit (X Button)</h3>
+      <div class="scenario-desc">
+        Human starts the challenge and closes it prematurely via the X button.
+      </div>
+      <div class="expected">
+        <strong>Expected:</strong> Immediately after closing → inline results show with winner → phase timer skipped → veto ceremony starts right away
+      </div>
+      <button onclick="testScenario2()">▶️ Test Scenario 2</button>
+    </div>
+    
+    <div class="scenario">
+      <h3><span class="status-indicator pending" id="scenario3-status"></span>Scenario 3: Skip Challenge</h3>
+      <div class="scenario-desc">
+        Human sees the instructions and clicks the Skip button.
+      </div>
+      <div class="expected">
+        <strong>Expected:</strong> Immediately after skip → inline results show with winner → phase timer skipped → veto ceremony starts right away
+      </div>
+      <button onclick="testScenario3()">▶️ Test Scenario 3</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>🎯 Quick Actions</h2>
+    <button class="secondary" onclick="resetTest()">🔄 Reset Test</button>
+    <button class="secondary" onclick="clearLog()">🗑️ Clear Log</button>
+    <button class="success" onclick="testAllScenarios()">▶️ Run All Scenarios</button>
+  </div>
+
+  <div class="instructions-note">
+    <h3>📝 Manual Testing Instructions</h3>
+    <ul>
+      <li><strong>Scenario 1:</strong> Play the minigame normally and submit a score. Watch for immediate inline results.</li>
+      <li><strong>Scenario 2:</strong> Click Play, then immediately click the X button to exit. Confirm the exit and watch for immediate inline results.</li>
+      <li><strong>Scenario 3:</strong> On the instructions card, click the Skip button (⏭️). Watch for immediate inline results.</li>
+      <li><strong>All scenarios:</strong> Verify that after inline results fade, the veto ceremony starts immediately without waiting.</li>
+      <li><strong>Check the log:</strong> Look for messages indicating fast-forward triggered, inline results shown, and ceremony started.</li>
+    </ul>
+  </div>
+
+  <!-- Game Container -->
+  <div id="gameContainer"></div>
+
+  <!-- Console Log -->
+  <div id="log"></div>
+
+  <!-- Include game scripts -->
+  <script src="js/seeder.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/tvLogic.js"></script>
+  <script src="js/ui.config-and-settings.js"></script>
+  <script src="js/players.js"></script>
+  <script src="js/houseguest-profile.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/phase-manager.js"></script>
+  <script src="js/minigames/index.js"></script>
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/anti-cheat.js"></script>
+  <script src="js/competitions-flow.js"></script>
+  <script src="js/competitions.js"></script>
+  <script src="js/veto.js"></script>
+  <script src="js/ui.veto-results.js"></script>
+
+  <script>
+    // Test logging
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = type;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function updateScenarioStatus(scenarioNum, status) {
+      const indicator = document.getElementById(`scenario${scenarioNum}-status`);
+      if (indicator) {
+        indicator.className = `status-indicator ${status}`;
+      }
+    }
+
+    // Initialize test game
+    function initTestGame() {
+      log('🎮 Initializing test game...', 'info');
+      
+      // Create minimal game state
+      if (!window.game) {
+        window.game = {
+          players: [
+            { id: 1, name: 'Guest', human: true, evicted: false, compBeast: 0.7 },
+            { id: 2, name: 'Alex', human: false, evicted: false, compBeast: 0.6 },
+            { id: 3, name: 'Jordan', human: false, evicted: false, compBeast: 0.5 },
+            { id: 4, name: 'Taylor', human: false, evicted: false, compBeast: 0.8 },
+            { id: 5, name: 'Morgan', human: false, evicted: false, compBeast: 0.4 }
+          ],
+          humanId: 1,
+          week: 2,
+          phase: 'veto_comp',
+          hohId: 2,
+          noms: [3, 4],
+          lastCompScores: new Map(),
+          cfg: {
+            tVeto: 60,
+            autoFastAdvanceCompetitions: true
+          }
+        };
+      }
+      
+      // Setup helper functions
+      if (!window.getP) {
+        window.getP = (id) => window.game.players.find(p => p.id === id);
+      }
+      
+      if (!window.alivePlayers) {
+        window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      }
+      
+      if (!window.safeName) {
+        window.safeName = (id) => {
+          const p = window.getP(id);
+          return p ? p.name : `Player ${id}`;
+        };
+      }
+      
+      if (!window.rng) {
+        window.rng = Math.random;
+      }
+      
+      // Setup veto participants
+      if (!window.game.__vetoPlayers) {
+        window.game.__vetoPlayers = [1, 2, 3, 4]; // Human, HOH, and both nominees
+      }
+      
+      log('✅ Test game initialized', 'success');
+      log(`   Human: ${window.game.players[0].name} (ID: 1)`, 'info');
+      log(`   HOH: ${window.game.players[1].name} (ID: 2)`, 'info');
+      log(`   Nominees: ${window.game.players[2].name}, ${window.game.players[3].name}`, 'info');
+      log(`   Veto Participants: ${window.game.__vetoPlayers.map(id => window.safeName(id)).join(', ')}`, 'veto');
+    }
+
+    // Scenario 1: Complete Challenge
+    async function testScenario1() {
+      log('═══════════════════════════════════════', 'info');
+      log('🎯 Starting Scenario 1: Complete Challenge', 'info');
+      updateScenarioStatus(1, 'running');
+      
+      try {
+        initTestGame();
+        window.game.phase = 'veto_comp';
+        
+        // Monitor for fast-forward call
+        let fastForwardCalled = false;
+        const originalFastForward = window.CompetitionFlow?.showCompetitionResultsAndFastForward;
+        if (window.CompetitionFlow) {
+          window.CompetitionFlow.showCompetitionResultsAndFastForward = function(score) {
+            fastForwardCalled = true;
+            log(`✅ Fast-forward triggered with score: ${score}`, 'success');
+            if (originalFastForward) {
+              return originalFastForward.call(this, score);
+            }
+          };
+        }
+        
+        // Start POV competition
+        log('📢 Starting POV competition...', 'veto');
+        if (typeof window.startVetoComp === 'function') {
+          window.startVetoComp();
+          
+          // Wait a bit for UI to load
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          log('💡 Manual Action Required:', 'warning');
+          log('   1. Click the Play button (▶ Play)', 'warning');
+          log('   2. Complete the minigame', 'warning');
+          log('   3. Watch for immediate inline results after score', 'warning');
+          log('   4. Verify veto ceremony starts without timer wait', 'warning');
+          
+          // Monitor for ceremony start
+          const originalStartCeremony = window.startVetoCeremony;
+          if (originalStartCeremony) {
+            window.startVetoCeremony = async function() {
+              log('🎪 Veto ceremony started!', 'ceremony');
+              updateScenarioStatus(1, 'success');
+              return originalStartCeremony.call(this);
+            };
+          }
+        } else {
+          log('❌ startVetoComp function not found', 'error');
+          updateScenarioStatus(1, 'failed');
+        }
+      } catch (error) {
+        log(`❌ Error in Scenario 1: ${error.message}`, 'error');
+        updateScenarioStatus(1, 'failed');
+      }
+    }
+
+    // Scenario 2: Premature Exit (X Button)
+    async function testScenario2() {
+      log('═══════════════════════════════════════', 'info');
+      log('🎯 Starting Scenario 2: Premature Exit', 'info');
+      updateScenarioStatus(2, 'running');
+      
+      try {
+        initTestGame();
+        window.game.phase = 'veto_comp';
+        
+        // Start POV competition
+        log('📢 Starting POV competition...', 'veto');
+        if (typeof window.startVetoComp === 'function') {
+          window.startVetoComp();
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          log('💡 Manual Action Required:', 'warning');
+          log('   1. Click the Play button (▶ Play)', 'warning');
+          log('   2. Immediately click the X button to exit', 'warning');
+          log('   3. Confirm the exit prompt', 'warning');
+          log('   4. Watch for immediate inline results', 'warning');
+          log('   5. Verify veto ceremony starts without timer wait', 'warning');
+          
+          // Monitor for ceremony start
+          const originalStartCeremony = window.startVetoCeremony;
+          if (originalStartCeremony) {
+            window.startVetoCeremony = async function() {
+              log('🎪 Veto ceremony started!', 'ceremony');
+              updateScenarioStatus(2, 'success');
+              return originalStartCeremony.call(this);
+            };
+          }
+        } else {
+          log('❌ startVetoComp function not found', 'error');
+          updateScenarioStatus(2, 'failed');
+        }
+      } catch (error) {
+        log(`❌ Error in Scenario 2: ${error.message}`, 'error');
+        updateScenarioStatus(2, 'failed');
+      }
+    }
+
+    // Scenario 3: Skip Challenge
+    async function testScenario3() {
+      log('═══════════════════════════════════════', 'info');
+      log('🎯 Starting Scenario 3: Skip Challenge', 'info');
+      updateScenarioStatus(3, 'running');
+      
+      try {
+        initTestGame();
+        window.game.phase = 'veto_comp';
+        
+        // Start POV competition
+        log('📢 Starting POV competition...', 'veto');
+        if (typeof window.startVetoComp === 'function') {
+          window.startVetoComp();
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          log('💡 Manual Action Required:', 'warning');
+          log('   1. Look for the Skip button (⏭️ Skip) on the instructions card', 'warning');
+          log('   2. Click the Skip button', 'warning');
+          log('   3. Watch for immediate inline results', 'warning');
+          log('   4. Verify veto ceremony starts without timer wait', 'warning');
+          
+          // Monitor for ceremony start
+          const originalStartCeremony = window.startVetoCeremony;
+          if (originalStartCeremony) {
+            window.startVetoCeremony = async function() {
+              log('🎪 Veto ceremony started!', 'ceremony');
+              updateScenarioStatus(3, 'success');
+              return originalStartCeremony.call(this);
+            };
+          }
+        } else {
+          log('❌ startVetoComp function not found', 'error');
+          updateScenarioStatus(3, 'failed');
+        }
+      } catch (error) {
+        log(`❌ Error in Scenario 3: ${error.message}`, 'error');
+        updateScenarioStatus(3, 'failed');
+      }
+    }
+
+    // Run all scenarios sequentially
+    async function testAllScenarios() {
+      log('═══════════════════════════════════════', 'info');
+      log('🚀 Running all test scenarios...', 'info');
+      log('NOTE: Each scenario requires manual interaction', 'warning');
+      
+      await testScenario1();
+      log('⏸️ Complete Scenario 1 before proceeding to Scenario 2', 'warning');
+    }
+
+    // Reset test
+    function resetTest() {
+      log('🔄 Resetting test...', 'info');
+      
+      // Clear game state
+      if (window.game) {
+        window.game.phase = 'veto_comp';
+        window.game.lastCompScores = new Map();
+        window.game.__vetoResultsShown = false;
+        window.game.__postVetoRevealCalled = false;
+        window.game.__skipInlineWinner = false;
+      }
+      
+      // Clear UI
+      const gameContainer = document.getElementById('gameContainer');
+      if (gameContainer) {
+        gameContainer.innerHTML = '';
+      }
+      
+      // Reset status indicators
+      updateScenarioStatus(1, 'pending');
+      updateScenarioStatus(2, 'pending');
+      updateScenarioStatus(3, 'pending');
+      
+      log('✅ Test reset complete', 'success');
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('📄 POV Human Timer Handling Test loaded', 'info');
+      log('👆 Click a scenario button to start testing', 'info');
+    });
+  </script>
+</body>
+</html>
