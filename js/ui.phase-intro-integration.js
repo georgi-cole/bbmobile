@@ -4,6 +4,9 @@
 (function(global) {
   'use strict';
 
+  // Configuration constants (matches nomination-intro-modal.js)
+  const FAILSAFE_TIMEOUT_MS = 10000;
+
   /**
    * Helper: Neutralize empty TV overlay to prevent input blocking
    */
@@ -181,21 +184,21 @@
           attemptNominationsStart(origStartNominations);
         }
         
-        // Single failsafe watchdog: after 10s, ensure nominations have started
+        // Single failsafe watchdog: after configured timeout, ensure nominations have started
         setTimeout(() => {
           try {
             const currentPhase = global.game?.phase;
             const pleaActive = global.game?.__nominationPleaActive;
             
             if (currentPhase === 'nominations' && !pleaActive) {
-              console.info('[phase-intro-integration] Failsafe watchdog (10s): ensuring nominations start');
+              console.info(`[phase-intro-integration] Failsafe watchdog (${FAILSAFE_TIMEOUT_MS}ms): ensuring nominations start`);
               ensureOverlayNotBlocking();
               attemptNominationsStart(origStartNominations);
             }
           } catch (watchErr) {
             console.warn('[phase-intro-integration] Failsafe watchdog failed:', watchErr);
           }
-        }, 10000);
+        }, FAILSAFE_TIMEOUT_MS);
       };
       
       global.startNominations.__wrappedForPhaseIntro = true;

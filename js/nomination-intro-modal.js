@@ -6,6 +6,14 @@
 (function(global) {
   'use strict';
 
+  // Configuration constants
+  const CONFIG = {
+    FAILSAFE_TIMEOUT_MS: 10000,  // Absolute maximum time before force-resolve
+    DISMISS_ANIMATION_MS: 300,   // Modal fade-out animation duration
+    TOAST_DURATION_MS: 2000,     // Toast notification auto-dismiss time
+    PLEA_DELAY_BEFORE_DISMISS_MS: 500  // Delay before dismissing after plea completes
+  };
+
   // State machine states
   const STATE = {
     IDLE: 'idle',
@@ -139,8 +147,11 @@
       resolvePromise = null;
     }
 
-    // Transition to DONE state
-    currentState = STATE.DONE;
+    // Transition to DONE state only if not already dismissing
+    // This prevents state machine corruption when failsafe fires during dismiss
+    if (currentState !== STATE.DISMISSING) {
+      currentState = STATE.DONE;
+    }
   }
 
   /**
@@ -172,15 +183,15 @@
     // Cleanup after animation (or immediately if no animation)
     setTimeout(() => {
       cleanup();
-    }, 300);
+    }, CONFIG.DISMISS_ANIMATION_MS);
   }
 
   /**
    * Show in-modal toast notification (non-blocking)
    * @param {string} message - Toast message
-   * @param {number} duration - Duration in ms (default: 2000)
+   * @param {number} duration - Duration in ms (default: CONFIG.TOAST_DURATION_MS)
    */
-  function showToast(message, duration = 2000) {
+  function showToast(message, duration = CONFIG.TOAST_DURATION_MS) {
     if (!overlayElement) return;
 
     const toast = document.createElement('div');
@@ -440,7 +451,7 @@
       // Dismiss modal after plea completes (with small delay for toast)
       setTimeout(() => {
         dismiss();
-      }, 500);
+      }, CONFIG.PLEA_DELAY_BEFORE_DISMISS_MS);
     }
   }
 
@@ -758,8 +769,8 @@
 
         // Click modal itself to dismiss (only in initial state, no buttons)
         modal.addEventListener('click', (e) => {
-          // Only dismiss if in initial state (SHOWING) and clicking modal itself
-          if (currentState === STATE.SHOWING && (e.target === modal || e.target.closest('.nomination-intro-modal-container') === modal)) {
+          // Only dismiss if in initial state (SHOWING) and clicking modal directly (not descendants)
+          if (currentState === STATE.SHOWING && e.target === modal) {
             dismiss();
           }
         }, { signal: abortController.signal });
@@ -771,12 +782,12 @@
           }
         }, { signal: abortController.signal });
 
-        // Failsafe timeout - guarantee resolution within 10s
+        // Failsafe timeout - guarantee resolution within configured time
         failsafeTimeout = setTimeout(() => {
-          console.warn('[NominationIntroModal] Failsafe timeout reached (10s), force resolving');
+          console.warn('[NominationIntroModal] Failsafe timeout reached, force resolving');
           guaranteeResolve();
           cleanup();
-        }, 10000);
+        }, CONFIG.FAILSAFE_TIMEOUT_MS);
 
       } catch (err) {
         console.error('[NominationIntroModal] Error showing modal:', err);
@@ -785,10 +796,13 @@
         cleanup();
       }
     }).then(() => {
-      // Ensure cleanup happens after promise resolution
-      if (currentState !== STATE.DONE) {
-        cleanup();
-      }
+      // Final cleanup after promise resolution completes
+      // Wait for dismiss animation (300ms) before final cleanup
+      setTimeout(() => {
+        if (currentState === STATE.DONE) {
+          cleanup();
+        }
+      }, 350);
     });
   }
 
