@@ -306,8 +306,25 @@
     }
 
     function toggleLogTypes() {
-      // TODO: Implement log filtering
-      alert('Log filtering not yet implemented');
+      // Simple filter: hide/show info logs
+      const logLines = logContainer.querySelectorAll('[data-log-type]');
+      const currentDisplay = logContainer.getAttribute('data-filter-info') || 'show';
+      
+      if (currentDisplay === 'show') {
+        logContainer.setAttribute('data-filter-info', 'hide');
+        logLines.forEach(line => {
+          if (line.getAttribute('data-log-type') === 'info') {
+            line.style.display = 'none';
+          }
+        });
+        alert('Info logs hidden. Click again to show.');
+      } else {
+        logContainer.setAttribute('data-filter-info', 'show');
+        logLines.forEach(line => {
+          line.style.display = '';
+        });
+        alert('All logs shown.');
+      }
     }
 
     // Test helper functions

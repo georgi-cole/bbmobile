@@ -150,4 +150,16 @@
   
   console.info('[GameLifecycle] Module loaded and initialized');
 
+  // Initialize on first load only (prevent double-initialization on script reload)
+  if (typeof global.__gameLifecycleInitialized === 'undefined') {
+    global.__gameLifecycleInitialized = true;
+    
+    // Start with token 1 (0 is reserved for uninitialized) on first load
+    if (GameLifecycle.currentRunToken === 0) {
+      GameLifecycle.startNewRun();
+    }
+  } else {
+    console.info('[GameLifecycle] Module already initialized, skipping startNewRun');
+  }
+
 })(window);
