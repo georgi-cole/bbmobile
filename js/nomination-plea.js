@@ -52,7 +52,36 @@
       }
     ];
 
-    return new Promise((resolve) => {
+    // Wrap promise with 60s timeout failsafe
+    const pleaPromise = new Promise((resolve) => {
+      let resolved = false;
+      let failsafeTimeout = null;
+
+      // Guaranteed resolve wrapper
+      const guaranteeResolve = (result) => {
+        if (resolved) return;
+        resolved = true;
+        
+        if (failsafeTimeout) {
+          clearTimeout(failsafeTimeout);
+          failsafeTimeout = null;
+        }
+        
+        resolve(result);
+      };
+
+      // 60s failsafe timeout
+      failsafeTimeout = setTimeout(() => {
+        console.warn('[NominationPlea] Failsafe timeout (60s), force resolving');
+        
+        // Cleanup any lingering modal
+        if (currentModal) {
+          cleanup(currentModal);
+        }
+        
+        guaranteeResolve({ skipped: true, timedOut: true });
+      }, 60000);
+
       try {
         // Create modal backdrop
         const modal = document.createElement('div');
@@ -266,7 +295,7 @@
           submitBtn.style.background = '#5aa575';
         });
         submitBtn.addEventListener('click', () => {
-          handleSubmit(modal, resolve, selectedOption, customTextArea, nominee, hoh, timestamp);
+          handleSubmit(modal, guaranteeResolve, selectedOption, customTextArea, nominee, hoh, timestamp);
         });
         buttonsContainer.appendChild(submitBtn);
 
@@ -298,7 +327,7 @@
           const closeTimestamp = Date.now();
           console.info(`[NominationPlea] Plea skipped at ${new Date(closeTimestamp).toISOString()} (duration: ${closeTimestamp - timestamp}ms)`);
           cleanup(modal);
-          resolve({ skipped: true });
+          guaranteeResolve({ skipped: true });
         });
         buttonsContainer.appendChild(skipBtn);
 
@@ -318,7 +347,7 @@
             const closeTimestamp = Date.now();
             console.info(`[NominationPlea] Plea closed via Escape at ${new Date(closeTimestamp).toISOString()} (duration: ${closeTimestamp - timestamp}ms)`);
             cleanup(modal);
-            resolve({ skipped: true });
+            guaranteeResolve({ skipped: true });
           }
         };
         document.addEventListener('keydown', keydownHandler);
@@ -327,9 +356,11 @@
         console.error('[NominationPlea] Error rendering plea UI:', err);
         const closeTimestamp = Date.now();
         console.info(`[NominationPlea] Plea failed at ${new Date(closeTimestamp).toISOString()} (duration: ${closeTimestamp - timestamp}ms)`);
-        resolve({ skipped: true });
+        guaranteeResolve({ skipped: true });
       }
     });
+
+    return pleaPromise;
   }
 
   /**
