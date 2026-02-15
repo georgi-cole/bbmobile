@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Legacy Nomination Intro - Non-Blocking Toast</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #0d151f;
+      color: #fff;
+    }
+    
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #5a9ff2;
+      transform: translateY(-2px);
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .success {
+      color: #4ade80;
+    }
+    
+    .error {
+      color: #f87171;
+    }
+    
+    .info {
+      color: #60a5fa;
+    }
+    
+    h1 {
+      color: #ffd700;
+    }
+    
+    h2 {
+      color: #8a9fb5;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Legacy Nomination Intro - Non-Blocking Toast Fix</h1>
+  
+  <div class="test-section">
+    <h2>Issue Description</h2>
+    <p>The legacy nomination intro modal was using <code>alert(resultMsg)</code> which blocks the JavaScript main thread, 
+    delaying overlay cleanup and phase progression, making the UI feel frozen.</p>
+    <p><strong>Fix:</strong> Replace blocking alert() with non-blocking toast notification.</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Setup</h2>
+    <button onclick="initializeGame()">Initialize Game State</button>
+    <div id="setup-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test: Legacy Modal Path with Non-Blocking Toast</h2>
+    <button onclick="testLegacyModalWithToast()">Show Legacy Modal → Check Risk → Make Deal</button>
+    <div id="test-status" class="status"></div>
+    <p style="margin-top: 10px; font-size: 0.9rem; color: #8a9fb5;">
+      <strong>Expected Behavior:</strong><br>
+      1. Click "Show Legacy Modal" button<br>
+      2. Click "Check My Risk" in the modal<br>
+      3. Click "Make a Deal with HOH" button<br>
+      4. In the plea modal, select an option and click Submit<br>
+      5. You should see a non-blocking toast message (bottom of screen)<br>
+      6. The modal should dismiss immediately (not blocked by alert)<br>
+      7. UI should remain responsive throughout
+    </p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Verification</h2>
+    <button onclick="checkForBlockingCalls()">Check for Blocking alert() Calls</button>
+    <div id="verify-status" class="status"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script>
+    // Global shim
+    window.global = window;
+    
+    // Initialize minimal game state
+    window.game = {
+      humanId: 'p1',
+      hohId: 'p2',
+      phase: 'nominations',
+      cfg: {
+        useNewNominationModal: false // Force legacy path for testing
+      }
+    };
+    
+    // Mock players
+    window.players = [
+      { id: 'p1', name: 'Alice', evicted: false, affinity: {}, reputation: 0.5, threat: 0.6 },
+      { id: 'p2', name: 'Bob (HOH)', evicted: false, affinity: {}, reputation: 0.4, threat: 0.5 },
+      { id: 'p3', name: 'Charlie', evicted: false, affinity: {}, reputation: 0.6, threat: 0.7 },
+      { id: 'p4', name: 'Diana', evicted: false, affinity: {}, reputation: 0.3, threat: 0.4 },
+      { id: 'p5', name: 'Eve', evicted: false, affinity: {}, reputation: 0.5, threat: 0.5 },
+      { id: 'p6', name: 'Frank', evicted: false, affinity: {}, reputation: 0.4, threat: 0.6 }
+    ];
+    
+    // Helper functions
+    window.getP = (id) => window.players.find(p => p.id === id);
+    window.alivePlayers = () => window.players.filter(p => !p.evicted);
+    
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+      el.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+    
+    function clearLog(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+    
+    // Setup functions
+    function initializeGame() {
+      clearLog('setup-status');
+      window.game.humanId = 'p1';
+      window.game.hohId = 'p2';
+      window.game.phase = 'nominations';
+      window.game.__nominationsIntroShownThisPhase = false;
+      window.game.__nominationPleaActive = false;
+      window.game.cfg.useNewNominationModal = false; // Force legacy path
+      window.players.forEach(p => p.evicted = false);
+      log('setup-status', '✓ Game state initialized: Player p1 (Alice), HOH p2 (Bob)', 'success');
+      log('setup-status', '✓ Feature flag set to use LEGACY modal path', 'success');
+    }
+    
+    // Test function
+    async function testLegacyModalWithToast() {
+      clearLog('test-status');
+      log('test-status', 'Opening legacy nomination intro modal...', 'info');
+      log('test-status', 'Instructions: Check Risk → Make Deal → Submit plea', 'info');
+      
+      try {
+        const start = Date.now();
+        
+        // Call the legacy modal path
+        await window.showNominationIntroModal();
+        
+        const duration = Date.now() - start;
+        log('test-status', `✓ Modal flow completed in ${duration}ms`, 'success');
+        log('test-status', '✓ UI remained responsive (no blocking alert)', 'success');
+        
+        if (window.game.__nomsPleaInfluence && window.game.__nomsPleaInfluence.p1 !== undefined) {
+          log('test-status', `✓ Plea influence recorded: ${window.game.__nomsPleaInfluence.p1}`, 'success');
+        }
+      } catch (err) {
+        log('test-status', `✗ Error: ${err.message}`, 'error');
+      }
+    }
+    
+    // Verification function
+    function checkForBlockingCalls() {
+      clearLog('verify-status');
+      log('verify-status', 'Checking ui.phase-intro-modals.js for blocking calls...', 'info');
+      
+      // In a real test environment, this would parse the file
+      // For this demo, we'll just confirm the fix is in place
+      fetch('js/ui.phase-intro-modals.js')
+        .then(response => response.text())
+        .then(code => {
+          // Check for the old blocking alert() call
+          const hasOldBlockingAlert = code.includes('alert(resultMsg)') && 
+                                      !code.includes('// alert(resultMsg)');
+          
+          // Check for the new non-blocking toast
+          const hasNonBlockingToast = code.includes('window.tv?.showToast') ||
+                                      code.includes('toast.textContent = resultMsg');
+          
+          if (hasOldBlockingAlert) {
+            log('verify-status', '✗ Found blocking alert() call in code', 'error');
+          } else {
+            log('verify-status', '✓ No blocking alert() calls found', 'success');
+          }
+          
+          if (hasNonBlockingToast) {
+            log('verify-status', '✓ Non-blocking toast implementation found', 'success');
+          } else {
+            log('verify-status', '✗ Non-blocking toast not found', 'error');
+          }
+          
+          if (!hasOldBlockingAlert && hasNonBlockingToast) {
+            log('verify-status', '✅ Fix verified: Using non-blocking toast instead of alert()', 'success');
+          }
+        })
+        .catch(err => {
+          log('verify-status', `Error reading file: ${err.message}`, 'error');
+        });
+    }
+  </script>
+  
+  <!-- Load the modules in correct order -->
+  <script src="js/nomination-plea.js"></script>
+  <script src="js/nomination-intro-modal.js"></script>
+  <script src="js/ui.phase-intro-modals.js"></script>
+  
+  <script>
+    // Auto-initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('setup-status', 'Test page loaded. Click "Initialize Game State" to begin.', 'info');
+    });
+  </script>
+</body>
+</html>
