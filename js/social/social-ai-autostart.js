@@ -235,7 +235,17 @@
 
     const game = global.game || {};
     
-    // TERMINATION GUARD: Stop if game has been terminated
+    // LIFECYCLE: Check run token FIRST (most reliable guard)
+    if (global.GameLifecycle) {
+      const currentToken = game.__runToken;
+      if (typeof currentToken === 'number' && !global.GameLifecycle.isCurrentRun(currentToken)) {
+        console.info('[social-ai-autostart] 🛑 Run token mismatch - stopping auto-driver');
+        stop();
+        return;
+      }
+    }
+    
+    // TERMINATION GUARD: Stop if game has been terminated (legacy compatibility)
     if (game.__terminated) {
       console.info('[social-ai-autostart] 🛑 Game terminated - stopping auto-driver');
       stop();

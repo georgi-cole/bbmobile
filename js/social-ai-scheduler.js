@@ -736,7 +736,17 @@
     
     const game = global.game || {};
     
-    // TERMINATION GUARD: Stop if game has been terminated
+    // LIFECYCLE: Check run token FIRST (most reliable guard)
+    if (global.GameLifecycle) {
+      const currentToken = game.__runToken;
+      if (typeof currentToken === 'number' && !global.GameLifecycle.isCurrentRun(currentToken)) {
+        infoLog('🛑 Run token mismatch - stopping scheduler', 'run_token_mismatch');
+        stopAiSocialPhase('run_token_mismatch');
+        return;
+      }
+    }
+    
+    // TERMINATION GUARD: Stop if game has been terminated (legacy compatibility)
     if (game.__terminated) {
       infoLog('🛑 Game terminated - stopping scheduler', 'game_terminated');
       stopAiSocialPhase('game_terminated');

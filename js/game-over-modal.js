@@ -272,11 +272,21 @@
           // CRITICAL: Comprehensive game teardown
           // ========================================
           
-          // 1. Set termination flag FIRST to stop all background loops
+          // 1. END CURRENT RUN using lifecycle system (NEW)
+          try {
+            if (global.GameLifecycle) {
+              global.GameLifecycle.endCurrentRun();
+              console.info('[game-over] ✓ Ended current run via GameLifecycle');
+            }
+          } catch (e) {
+            console.warn('[game-over] Failed to end run via GameLifecycle', e);
+          }
+          
+          // 2. Set termination flag for legacy compatibility
           try {
             if (global.game) {
               global.game.__terminated = true;
-              console.info('[game-over] ✓ Set game termination flag');
+              console.info('[game-over] ✓ Set game termination flag (legacy)');
             }
           } catch (e) {
             console.warn('[game-over] Failed to set termination flag', e);
@@ -395,11 +405,21 @@
   function startNewSeasonFlow() {
     console.info('[game-over] starting new season flow');
 
-    // 0a) CRITICAL: Clear termination flag to allow new game to run
+    // 0a) CRITICAL: Start a new run using lifecycle system (NEW)
+    try {
+      if (global.GameLifecycle) {
+        global.GameLifecycle.startNewRun();
+        console.info('[game-over] ✓ Started new run via GameLifecycle');
+      }
+    } catch (e) {
+      console.warn('[game-over] Failed to start new run via GameLifecycle:', e);
+    }
+
+    // 0b) CRITICAL: Clear termination flag for legacy compatibility
     try {
       if (global.game) {
         global.game.__terminated = false;
-        console.info('[game-over] ✓ Cleared termination flag for new season');
+        console.info('[game-over] ✓ Cleared termination flag for new season (legacy)');
       }
     } catch (e) {
       console.warn('[game-over] Failed to clear termination flag:', e);

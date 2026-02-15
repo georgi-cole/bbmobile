@@ -2274,8 +2274,19 @@ header.innerHTML = `
     game.timerPaused = false;
     game.pausedTimeRemaining = null;
 
+    // LIFECYCLE: Capture run token for this timer
+    const myRunToken = g.GameLifecycle?.getCurrentToken() || game.__runToken || 0;
+
     function tick(){
-      // TERMINATION GUARD: Stop timer if game has been terminated (e.g., game over exit)
+      // TERMINATION GUARD: Stop timer if run token has changed or game terminated
+      if (g.GameLifecycle && !g.GameLifecycle.isCurrentRun(myRunToken)) {
+        console.info('[hud-timer] Run token mismatch - stopping phase timer');
+        clearInterval(tickHandle);
+        tickHandle = null;
+        return;
+      }
+      
+      // Legacy termination check for backward compatibility
       if (game.__terminated) {
         console.info('[hud-timer] Game terminated - stopping phase timer');
         clearInterval(tickHandle);
