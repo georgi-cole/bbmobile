@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skip Button Removal - Visual Comparison</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0e1a28 0%, #1a2332 100%);
+      color: #e2e8f0;
+      padding: 40px;
+      margin: 0;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #71bfff;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 1.2rem;
+      margin-bottom: 50px;
+    }
+    
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 60px;
+    }
+    
+    .card {
+      background: rgba(28, 43, 62, 0.7);
+      border-radius: 16px;
+      padding: 30px;
+      border: 2px solid rgba(113, 191, 255, 0.3);
+    }
+    
+    .card-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .card-header h2 {
+      margin: 0 0 10px 0;
+      font-size: 1.8rem;
+    }
+    
+    .before h2 { color: #f87171; }
+    .after h2 { color: #4ade80; }
+    
+    .badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    
+    .badge-before {
+      background: rgba(248, 113, 113, 0.2);
+      color: #f87171;
+      border: 1px solid #f87171;
+    }
+    
+    .badge-after {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+      border: 1px solid #4ade80;
+    }
+    
+    .mockup {
+      background: rgba(20, 35, 55, 0.95);
+      border-radius: 12px;
+      padding: 25px;
+      margin: 20px 0;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    
+    .mockup-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: #71bfff;
+    }
+    
+    .mockup-desc {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    
+    .mockup-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    
+    .btn {
+      padding: 10px 28px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+    
+    .btn-skip {
+      background: rgba(128, 128, 128, 0.25);
+      color: #cbd5e1;
+      border: 1px solid rgba(128, 128, 128, 0.4);
+      opacity: 0.85;
+    }
+    
+    .btn-skip:hover {
+      opacity: 1;
+      background: rgba(128, 128, 128, 0.35);
+    }
+    
+    .features {
+      margin-top: 30px;
+    }
+    
+    .features h3 {
+      color: #71bfff;
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+    }
+    
+    .features ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .features li {
+      padding: 10px 0;
+      padding-left: 30px;
+      position: relative;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+    
+    .features li::before {
+      position: absolute;
+      left: 0;
+      font-size: 1.2rem;
+    }
+    
+    .before .features li::before {
+      content: '⚠️';
+    }
+    
+    .after .features li::before {
+      content: '✅';
+    }
+    
+    .flow-section {
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 16px;
+      padding: 40px;
+      margin-top: 60px;
+      border: 2px solid rgba(113, 191, 255, 0.2);
+    }
+    
+    .flow-section h2 {
+      color: #71bfff;
+      text-align: center;
+      margin-bottom: 40px;
+      font-size: 2rem;
+    }
+    
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+    }
+    
+    .flow-card {
+      background: rgba(59, 130, 246, 0.1);
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      padding: 25px;
+    }
+    
+    .flow-card h3 {
+      color: #71bfff;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+    }
+    
+    .flow-card .icon {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    
+    .flow-steps {
+      list-style: none;
+      padding: 0;
+      margin: 15px 0;
+    }
+    
+    .flow-steps li {
+      padding: 8px 0;
+      padding-left: 25px;
+      position: relative;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .flow-steps li::before {
+      content: '↓';
+      position: absolute;
+      left: 0;
+      color: #3b82f6;
+      font-weight: bold;
+    }
+    
+    .flow-steps li:last-child::before {
+      content: '✓';
+      color: #4ade80;
+    }
+    
+    @media (max-width: 1024px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+      
+      .flow-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Skip Button Removal</h1>
+    <p class="subtitle">Visual comparison of UI changes and POV timer fix preservation</p>
+    
+    <div class="comparison">
+      <!-- BEFORE -->
+      <div class="card before">
+        <div class="card-header">
+          <h2>❌ Before</h2>
+          <span class="badge badge-before">With Skip Button</span>
+        </div>
+        
+        <div class="mockup">
+          <div class="mockup-title">Quick Tap Challenge</div>
+          <div class="mockup-desc">
+            Click the target as quickly as you can! The faster you react, the higher your score.
+          </div>
+          <div class="mockup-buttons">
+            <button class="btn btn-primary">▶ Play</button>
+            <button class="btn btn-skip">⏭️ Skip</button>
+          </div>
+        </div>
+        
+        <div class="features">
+          <h3>Issues:</h3>
+          <ul>
+            <li>Two skip mechanisms (confusing UX)</li>
+            <li>Redundant UI element on instructions</li>
+            <li>Users unsure which skip button to use</li>
+            <li>Extra click target clutters interface</li>
+            <li>Inconsistent with HUD fast-forward</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- AFTER -->
+      <div class="card after">
+        <div class="card-header">
+          <h2>✅ After</h2>
+          <span class="badge badge-after">Without Skip Button</span>
+        </div>
+        
+        <div class="mockup">
+          <div class="mockup-title">Quick Tap Challenge</div>
+          <div class="mockup-desc">
+            Click the target as quickly as you can! The faster you react, the higher your score.
+          </div>
+          <div class="mockup-buttons">
+            <button class="btn btn-primary">▶ Play</button>
+          </div>
+        </div>
+        
+        <div class="features">
+          <h3>Benefits:</h3>
+          <ul>
+            <li>Single skip mechanism (clear UX)</li>
+            <li>Cleaner instructions interface</li>
+            <li>Users know to use global fast-forward</li>
+            <li>Reduced visual clutter</li>
+            <li>Consistent with game's skip pattern</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- POV TIMER FIX FLOW -->
+    <div class="flow-section">
+      <h2>POV Timer Fix - Three Pathways (Preserved)</h2>
+      
+      <div class="flow-grid">
+        <!-- Pathway A -->
+        <div class="flow-card">
+          <div class="icon">🎮</div>
+          <h3>A: Complete Normally</h3>
+          <ul class="flow-steps">
+            <li>Human plays minigame</li>
+            <li>Score submitted</li>
+            <li>showResultsAndFastForward(score)</li>
+            <li>Inline results show (~3s)</li>
+            <li>Phase timer = 1s</li>
+            <li>Veto ceremony starts</li>
+          </ul>
+        </div>
+        
+        <!-- Pathway B -->
+        <div class="flow-card">
+          <div class="icon">❌</div>
+          <h3>B: Exit Early (X)</h3>
+          <ul class="flow-steps">
+            <li>Human clicks X button</li>
+            <li>Confirms exit</li>
+            <li>showResultsAndFastForward(0)</li>
+            <li>Inline results (AI winners)</li>
+            <li>Phase timer shortened</li>
+            <li>Veto ceremony starts</li>
+          </ul>
+        </div>
+        
+        <!-- Pathway C -->
+        <div class="flow-card">
+          <div class="icon">⏩</div>
+          <h3>C: Global Fast-Forward</h3>
+          <ul class="flow-steps">
+            <li>User clicks HUD fast-forward</li>
+            <li>Phase accelerates (10% speed)</li>
+            <li>AI players complete faster</li>
+            <li>Results show when done</li>
+            <li>Phase timer accelerates</li>
+            <li>Veto ceremony starts</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
