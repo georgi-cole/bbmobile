@@ -298,11 +298,11 @@
           });
           
           if(sequenceIndex >= sequence.length){
-            // Hide color name label
-            if(colorNameLabel){
+            // Hide color name label (card mode only)
+            if(mode === 'card' && colorNameLabel){
               colorNameLabel.textContent = '';
             }
-            // Auto-hide after reveal duration
+            // Auto-hide after a short pause (800ms is good for all difficulty levels in card mode)
             setTimeout(() => {
               hideSequence();
             }, 800);
@@ -314,8 +314,8 @@
           boxes[sequenceIndex].style.opacity = '1';
           boxes[sequenceIndex].style.background = currentColor;
           
-          // Show color name below
-          if(colorNameLabel){
+          // Show color name below (card mode only)
+          if(mode === 'card' && colorNameLabel){
             const colorName = colorNames[currentColor] || 'Unknown';
             colorNameLabel.textContent = colorName;
             colorNameLabel.style.color = currentColor;
@@ -486,7 +486,7 @@
       if(color === sequence[inputIndex]){
         correctMatches++;
         
-        // Visual feedback - highlight the sequence box with color name
+        // Visual feedback - highlight the current position box with the correct color
         if(boxes[inputIndex]){
           boxes[inputIndex].style.opacity = '1';
           boxes[inputIndex].style.background = color;
@@ -581,7 +581,9 @@
       inputIndex = 0;
       
       // Hide input buttons during replay
-      buttonDiv.innerHTML = '<div style="color:#95a9c0;font-size:0.9rem;">Watch again...</div>';
+      buttonDiv.textContent = 'Watch again...';
+      buttonDiv.style.color = '#95a9c0';
+      buttonDiv.style.fontSize = '0.9rem';
       
       // Reset sequence boxes
       const boxes = Array.from(sequenceDiv.children);
@@ -674,10 +676,10 @@
     const emojiContainer = document.createElement('div');
     emojiContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden;opacity:0.15;';
     
-    // Color emojis to float
+    // Color emojis to float (variety for randomization)
     const colorEmojis = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '🟤', '⚫', '⚪', '🔶', '🔷', '🟥', '🟦', '🟩', '🟨', '🟪', '🟧'];
     
-    // Create floating emojis
+    // Create 12 floating emojis with random selection from the pool
     for(let i = 0; i < 12; i++){
       const emoji = document.createElement('div');
       emoji.textContent = colorEmojis[Math.floor(Math.random() * colorEmojis.length)];
@@ -708,7 +710,8 @@
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
     wrapper.appendChild(sequenceContainer);
-    if(mode === 'card' && colorNameLabel){
+    // Only add color name label in card mode (it's used during flash sequence)
+    if(mode === 'card'){
       wrapper.appendChild(colorNameLabel);
     }
     if(mode === 'pattern' && distractorDiv){
