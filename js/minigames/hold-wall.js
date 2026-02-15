@@ -336,8 +336,8 @@
       hasEnded = true;
       
       // Check if player was the last one standing before they released
-      const stillHolding = participants.filter(p => p.dropTimeMs === null);
-      if(stillHolding.length === 1 && stillHolding[0].isPlayer){
+      const stillHoldingBeforeRelease = participants.filter(p => p.dropTimeMs === null);
+      if(stillHoldingBeforeRelease.length === 1 && stillHoldingBeforeRelease[0].isPlayer){
         console.log('[HoldWall] Player was last standing before release - should not happen in normal flow');
       }
       
