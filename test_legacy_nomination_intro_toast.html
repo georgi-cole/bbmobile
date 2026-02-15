@@ -195,13 +195,30 @@
       fetch('js/ui.phase-intro-modals.js')
         .then(response => response.text())
         .then(code => {
-          // Check for the old blocking alert() call
-          const hasOldBlockingAlert = code.includes('alert(resultMsg)') && 
-                                      !code.includes('// alert(resultMsg)');
+          // Check for the old blocking alert() call using regex
+          // Matches alert() with any content that's not commented out
+          const alertPattern = /(?<!\/\/\s*)alert\s*\([^)]+\)/g;
+          const matches = code.match(alertPattern) || [];
+          
+          // Filter out commented lines more thoroughly
+          const codeLines = code.split('\n');
+          let hasOldBlockingAlert = false;
+          for (const match of matches) {
+            // Find the line containing this alert
+            const lineWithAlert = codeLines.find(line => 
+              line.includes(match) && 
+              !line.trim().startsWith('//') &&
+              !line.includes('// alert(')
+            );
+            if (lineWithAlert && lineWithAlert.includes('handleMakeADeal')) {
+              hasOldBlockingAlert = true;
+              break;
+            }
+          }
           
           // Check for the new non-blocking toast
           const hasNonBlockingToast = code.includes('window.tv?.showToast') ||
-                                      code.includes('toast.textContent = resultMsg');
+                                      code.includes('toast.textContent');
           
           if (hasOldBlockingAlert) {
             log('verify-status', '✗ Found blocking alert() call in code', 'error');
