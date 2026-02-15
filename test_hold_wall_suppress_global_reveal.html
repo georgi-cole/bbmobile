@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold Wall - Suppress Global Reveal Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #2c3a4d;
+      color: #83bfff;
+    }
+    
+    .btn-secondary:hover {
+      background: #3c4a5d;
+    }
+    
+    .game-container {
+      background: rgba(44, 58, 77, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .log-container {
+      background: rgba(10, 19, 31, 0.8);
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .log-info {
+      color: #83bfff;
+      background: rgba(131, 191, 255, 0.1);
+    }
+    
+    .log-warn {
+      color: #ffd700;
+      background: rgba(255, 215, 0, 0.1);
+    }
+    
+    .log-error {
+      color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.1);
+    }
+    
+    .log-success {
+      color: #51cf66;
+      background: rgba(81, 207, 102, 0.1);
+    }
+    
+    .counter {
+      display: inline-block;
+      background: rgba(131, 191, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 6px;
+      margin: 5px;
+      font-weight: bold;
+    }
+    
+    .counter-label {
+      color: #95a9c0;
+      font-size: 0.85rem;
+    }
+    
+    .counter-value {
+      color: #83bfff;
+      font-size: 1.5rem;
+      margin-left: 8px;
+    }
+    
+    .status-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+    
+    .status-pass {
+      background: rgba(81, 207, 102, 0.2);
+      border: 2px solid #51cf66;
+      color: #51cf66;
+    }
+    
+    .status-fail {
+      background: rgba(255, 107, 107, 0.2);
+      border: 2px solid #ff6b6b;
+      color: #ff6b6b;
+    }
+    
+    .status-running {
+      background: rgba(255, 215, 0, 0.2);
+      border: 2px solid #ffd700;
+      color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hold Wall - Suppress Global Reveal Test</h1>
+    <div class="subtitle">Validates that endurance minigames only show one results popup</div>
+    
+    <div class="section">
+      <h2>📋 Test Objective</h2>
+      <p>
+        This test validates that Hold Wall (and other endurance minigames) with 
+        <code>suppressGlobalReveal: true</code> show only ONE results popup:
+      </p>
+      <ul>
+        <li>✅ Minigame's internal results popup (from Hold Wall itself)</li>
+        <li>❌ NO global competition reveal/popup from the framework</li>
+        <li>✅ Phase progression still occurs normally</li>
+      </ul>
+    </div>
+    
+    <div class="section">
+      <h2>🎮 Test Controls</h2>
+      <button class="btn" onclick="testHoldWallHOH()">Test Hold Wall (HOH Context)</button>
+      <button class="btn" onclick="testHoldWallPOV()">Test Hold Wall (POV Context)</button>
+      <button class="btn-secondary" onclick="testDirectMinigame()">Test Direct (No Framework)</button>
+      <button class="btn-secondary" onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="section">
+      <h2>📊 Results Counter</h2>
+      <div class="counter">
+        <span class="counter-label">Internal Results Shown:</span>
+        <span class="counter-value" id="internalCount">0</span>
+      </div>
+      <div class="counter">
+        <span class="counter-label">Global Reveals Shown:</span>
+        <span class="counter-value" id="globalCount">0</span>
+      </div>
+      <div id="statusBox" class="status-box status-running" style="display: none;">
+        Test Status: Waiting
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>🎯 Game Container</h2>
+      <div id="gameContainer" class="game-container">
+        <p style="color: #95a9c0;">Click a test button to start</p>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>📝 Event Log</h2>
+      <div id="logContainer" class="log-container">
+        <div class="log-entry log-info">Ready for testing...</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Test state
+    let internalResultsCount = 0;
+    let globalRevealCount = 0;
+    let testRunning = false;
+    
+    // Logging helper
+    function log(message, type = 'info') {
+      const container = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+      
+      // Also log to console
+      console.log(`[Test] ${message}`);
+    }
+    
+    function updateCounters() {
+      document.getElementById('internalCount').textContent = internalResultsCount;
+      document.getElementById('globalCount').textContent = globalRevealCount;
+    }
+    
+    function updateStatus(message, type = 'running') {
+      const statusBox = document.getElementById('statusBox');
+      statusBox.style.display = 'block';
+      statusBox.textContent = message;
+      statusBox.className = `status-box status-${type}`;
+    }
+    
+    function clearLog() {
+      document.getElementById('logContainer').innerHTML = '<div class="log-entry log-info">Log cleared</div>';
+      internalResultsCount = 0;
+      globalRevealCount = 0;
+      updateCounters();
+      document.getElementById('statusBox').style.display = 'none';
+    }
+    
+    // Intercept showResultsPopup calls
+    const originalShowResultsPopup = window.showResultsPopup;
+    window.showResultsPopup = function(...args) {
+      const caller = new Error().stack.split('\n')[2];
+      
+      // Detect if this is from hold-wall.js (internal) or framework (global)
+      if (caller.includes('hold-wall')) {
+        internalResultsCount++;
+        log('✅ Internal results popup called from Hold Wall', 'success');
+      } else {
+        globalRevealCount++;
+        log('⚠️ Global results popup called from framework!', 'warn');
+      }
+      
+      updateCounters();
+      
+      // Call original if it exists
+      if (originalShowResultsPopup && typeof originalShowResultsPopup === 'function') {
+        return originalShowResultsPopup.apply(this, args);
+      }
+      
+      // Mock implementation
+      return new Promise(resolve => {
+        setTimeout(resolve, 1000);
+      });
+    };
+    
+    // Intercept showCompetitionReveal calls
+    const originalShowCompetitionReveal = window.showCompetitionReveal;
+    window.showCompetitionReveal = function(...args) {
+      globalRevealCount++;
+      log('⚠️ Global competition reveal called!', 'warn');
+      updateCounters();
+      
+      if (originalShowCompetitionReveal && typeof originalShowCompetitionReveal === 'function') {
+        return originalShowCompetitionReveal.apply(this, args);
+      }
+      
+      return Promise.resolve();
+    };
+    
+    // Setup mock game state
+    function setupMockGame(phase) {
+      window.game = window.game || {};
+      window.game.phase = phase;
+      window.game.week = 3;
+      window.game.humanId = 0;
+      window.game.players = [
+        { id: 0, name: 'You', evicted: false },
+        { id: 1, name: 'Alex', evicted: false },
+        { id: 2, name: 'Bailey', evicted: false },
+        { id: 3, name: 'Casey', evicted: false },
+        { id: 4, name: 'Drew', evicted: false },
+        { id: 5, name: 'Ellis', evicted: false }
+      ];
+      window.game.lastCompScores = new Map();
+      window.game.cfg = {
+        autoFastAdvanceCompetitions: true,
+        skipIdleTimersF3: true
+      };
+      
+      // Mock advancePhase
+      window.game.advancePhase = function() {
+        log('✅ Phase advanced successfully', 'success');
+        validateTest();
+      };
+      
+      log(`Game state initialized for phase: ${phase}`, 'info');
+    }
+    
+    function validateTest() {
+      if (!testRunning) return;
+      
+      log('=== Test Validation ===', 'info');
+      log(`Internal Results: ${internalResultsCount}`, 'info');
+      log(`Global Reveals: ${globalRevealCount}`, 'info');
+      
+      if (internalResultsCount === 1 && globalRevealCount === 0) {
+        log('✅ TEST PASSED: Only one results popup shown (internal)', 'success');
+        updateStatus('✅ TEST PASSED: suppressGlobalReveal working correctly', 'pass');
+      } else if (internalResultsCount === 1 && globalRevealCount === 1) {
+        log('❌ TEST FAILED: Both internal and global popups shown (duplicate!)', 'error');
+        updateStatus('❌ TEST FAILED: Duplicate results popups detected', 'fail');
+      } else if (internalResultsCount === 0 && globalRevealCount === 1) {
+        log('⚠️ WARNING: Only global popup shown (no internal)', 'warn');
+        updateStatus('⚠️ WARNING: No internal results shown', 'fail');
+      } else {
+        log(`⚠️ UNEXPECTED: Internal=${internalResultsCount}, Global=${globalRevealCount}`, 'warn');
+        updateStatus('⚠️ UNEXPECTED: Unusual result counts', 'fail');
+      }
+      
+      testRunning = false;
+    }
+    
+    async function testHoldWallHOH() {
+      log('=== Starting HOH Hold Wall Test ===', 'info');
+      testRunning = true;
+      internalResultsCount = 0;
+      globalRevealCount = 0;
+      updateCounters();
+      updateStatus('Test Running: Hold Wall (HOH)', 'running');
+      
+      setupMockGame('hoh');
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      log('Checking if CompetitionFlow is available...', 'info');
+      
+      if (!window.CompetitionFlow || !window.CompetitionFlow.runCompetitionFlow) {
+        log('❌ CompetitionFlow not available, loading required modules...', 'error');
+        updateStatus('❌ Test Error: CompetitionFlow not loaded', 'fail');
+        testRunning = false;
+        return;
+      }
+      
+      log('✅ CompetitionFlow available', 'success');
+      
+      // Check registry for suppressGlobalReveal flag
+      if (window.MinigameRegistry && typeof window.MinigameRegistry.getRegistry === 'function') {
+        const registry = window.MinigameRegistry.getRegistry();
+        const holdWallMeta = registry.holdWall;
+        
+        if (holdWallMeta && holdWallMeta.suppressGlobalReveal === true) {
+          log('✅ holdWall has suppressGlobalReveal flag set to true', 'success');
+        } else {
+          log('⚠️ WARNING: holdWall suppressGlobalReveal flag not found or not true', 'warn');
+        }
+      }
+      
+      try {
+        log('Calling CompetitionFlow.runCompetitionFlow("holdWall", ...)...', 'info');
+        
+        const onComplete = function(score) {
+          log(`✅ Competition completed with score: ${score}`, 'success');
+          window.game.lastCompScores.set(0, score);
+          
+          // Validate after a short delay to let any async operations complete
+          setTimeout(() => {
+            if (testRunning) {
+              log('Test still running after 2 seconds, forcing validation...', 'warn');
+              validateTest();
+            }
+          }, 2000);
+        };
+        
+        const result = window.CompetitionFlow.runCompetitionFlow('holdWall', container, onComplete, {
+          competitionType: 'hoh'
+        });
+        
+        log('✅ runCompetitionFlow called successfully', 'success');
+        log('ℹ️ Hold Wall is now running. Let the minigame complete to see results...', 'info');
+        
+      } catch (err) {
+        log(`❌ Error running test: ${err.message}`, 'error');
+        updateStatus('❌ Test Error: ' + err.message, 'fail');
+        testRunning = false;
+      }
+    }
+    
+    async function testHoldWallPOV() {
+      log('=== Starting POV Hold Wall Test ===', 'info');
+      testRunning = true;
+      internalResultsCount = 0;
+      globalRevealCount = 0;
+      updateCounters();
+      updateStatus('Test Running: Hold Wall (POV)', 'running');
+      
+      setupMockGame('pov');
+      
+      // Setup POV-specific state
+      window.game.povPlayers = [0, 1, 2, 3, 4, 5];
+      window.game.hohId = 1;
+      window.game.nominees = [2, 3];
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      if (!window.CompetitionFlow || !window.CompetitionFlow.runCompetitionFlow) {
+        log('❌ CompetitionFlow not available', 'error');
+        updateStatus('❌ Test Error: CompetitionFlow not loaded', 'fail');
+        testRunning = false;
+        return;
+      }
+      
+      try {
+        const onComplete = function(score) {
+          log(`✅ Competition completed with score: ${score}`, 'success');
+          window.game.lastCompScores.set(0, score);
+          
+          setTimeout(() => {
+            if (testRunning) {
+              validateTest();
+            }
+          }, 2000);
+        };
+        
+        const result = window.CompetitionFlow.runCompetitionFlow('holdWall', container, onComplete, {
+          competitionType: 'pov'
+        });
+        
+        log('✅ runCompetitionFlow called successfully', 'success');
+        
+      } catch (err) {
+        log(`❌ Error running test: ${err.message}`, 'error');
+        updateStatus('❌ Test Error: ' + err.message, 'fail');
+        testRunning = false;
+      }
+    }
+    
+    async function testDirectMinigame() {
+      log('=== Starting Direct Minigame Test (No Framework) ===', 'info');
+      testRunning = true;
+      internalResultsCount = 0;
+      globalRevealCount = 0;
+      updateCounters();
+      updateStatus('Test Running: Direct Hold Wall', 'running');
+      
+      setupMockGame('hoh');
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      if (!window.MiniGames || !window.MiniGames.holdWall) {
+        log('❌ Hold Wall minigame not available', 'error');
+        updateStatus('❌ Test Error: Hold Wall not loaded', 'fail');
+        testRunning = false;
+        return;
+      }
+      
+      try {
+        const onComplete = function(score) {
+          log(`✅ Minigame completed with score: ${score}`, 'success');
+          
+          // For direct minigame, we expect internal results only
+          setTimeout(() => {
+            log('=== Direct Test Validation ===', 'info');
+            log(`Internal Results: ${internalResultsCount}`, 'info');
+            log(`Global Reveals: ${globalRevealCount}`, 'info');
+            
+            if (internalResultsCount === 1 && globalRevealCount === 0) {
+              log('✅ DIRECT TEST PASSED: Internal results shown correctly', 'success');
+              updateStatus('✅ DIRECT TEST PASSED', 'pass');
+            } else {
+              log('⚠️ DIRECT TEST: Unexpected result counts', 'warn');
+              updateStatus('⚠️ DIRECT TEST: Unexpected results', 'fail');
+            }
+            testRunning = false;
+          }, 2000);
+        };
+        
+        log('Rendering Hold Wall directly...', 'info');
+        window.MiniGames.holdWall.render(container, onComplete, {
+          competitionType: 'hoh'
+        });
+        
+        log('✅ Hold Wall rendered directly', 'success');
+        
+      } catch (err) {
+        log(`❌ Error running direct test: ${err.message}`, 'error');
+        updateStatus('❌ Test Error: ' + err.message, 'fail');
+        testRunning = false;
+      }
+    }
+    
+    // Log initial state
+    log('Test page loaded. Ready for testing.', 'success');
+    log('ℹ️ This test validates the suppressGlobalReveal flag functionality', 'info');
+  </script>
+  
+  <!-- Load required game modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/hold-wall.js"></script>
+  <script src="js/competitions-flow.js"></script>
+  <script src="js/results-popup.js"></script>
+  <script src="js/results-runtime-guard.js"></script>
+</body>
+</html>
