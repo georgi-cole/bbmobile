@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anti-Cheat Disabled Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .pass {
+      background: rgba(124, 255, 173, 0.2);
+      border: 1px solid #7cffad;
+      color: #7cffad;
+    }
+    .fail {
+      background: rgba(255, 107, 157, 0.2);
+      border: 1px solid #ff6b9d;
+      color: #ff6b9d;
+    }
+    button {
+      background: #0f3460;
+      color: #e3ecf5;
+      border: 1px solid #16213e;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #16213e;
+    }
+    pre {
+      background: #0a0a0a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔒 Anti-Cheat Disabled Test</h1>
+  <p>Testing that anti-cheat is properly disabled when cfg.enableAntiCheat = false (default).</p>
+
+  <!-- Test 1: Verify Config Default -->
+  <div class="test-section">
+    <h2>Test 1: Config Default Value</h2>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div id="test1-result"></div>
+  </div>
+
+  <!-- Test 2: Verify startSession Returns Null -->
+  <div class="test-section">
+    <h2>Test 2: startSession Returns Null When Disabled</h2>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div id="test2-result"></div>
+  </div>
+
+  <!-- Test 3: Verify validate Returns Valid -->
+  <div class="test-section">
+    <h2>Test 3: validate Always Returns Valid When Disabled</h2>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="test3-result"></div>
+  </div>
+
+  <!-- Test 4: Verify isEnabled Function -->
+  <div class="test-section">
+    <h2>Test 4: isEnabled Function Works</h2>
+    <button onclick="runTest4()">Run Test 4</button>
+    <div id="test4-result"></div>
+  </div>
+
+  <!-- Test 5: Verify Enabling Works -->
+  <div class="test-section">
+    <h2>Test 5: Enable Anti-Cheat and Test</h2>
+    <button onclick="runTest5()">Run Test 5</button>
+    <div id="test5-result"></div>
+  </div>
+
+  <!-- Console Log Output -->
+  <div class="test-section">
+    <h2>Console Log Output</h2>
+    <button onclick="showLogs()">Show Captured Logs</button>
+    <pre id="console-logs"></pre>
+  </div>
+
+  <!-- Load required scripts -->
+  <script>
+    // Capture console logs
+    const capturedLogs = [];
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+
+    console.log = function(...args) {
+      capturedLogs.push({ type: 'log', args: args });
+      originalLog.apply(console, args);
+    };
+
+    console.info = function(...args) {
+      capturedLogs.push({ type: 'info', args: args });
+      originalInfo.apply(console, args);
+    };
+
+    console.warn = function(...args) {
+      capturedLogs.push({ type: 'warn', args: args });
+      originalWarn.apply(console, args);
+    };
+
+    function showLogs() {
+      const logsDiv = document.getElementById('console-logs');
+      logsDiv.textContent = capturedLogs.map(log => 
+        `[${log.type}] ${log.args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+        ).join(' ')}`
+      ).join('\n');
+    }
+  </script>
+
+  <script src="js/state.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/anti-cheat.js"></script>
+
+  <script>
+    function log(elementId, message, isPass) {
+      const resultDiv = document.getElementById(elementId);
+      resultDiv.innerHTML = `<div class="test-result ${isPass ? 'pass' : 'fail'}">${message}</div>`;
+    }
+
+    function runTest1() {
+      try {
+        const cfg = window.game.cfg;
+        const enableAntiCheat = cfg.enableAntiCheat;
+        
+        if (enableAntiCheat === false) {
+          log('test1-result', `✅ PASS: cfg.enableAntiCheat is false (default)`, true);
+        } else {
+          log('test1-result', `❌ FAIL: cfg.enableAntiCheat is ${enableAntiCheat}, expected false`, false);
+        }
+      } catch (e) {
+        log('test1-result', `❌ FAIL: ${e.message}`, false);
+      }
+    }
+
+    function runTest2() {
+      try {
+        const sessionId = window.AntiCheat.startSession({
+          gameKey: 'test-game',
+          container: document.body
+        });
+        
+        if (sessionId === null) {
+          log('test2-result', `✅ PASS: startSession returned null (anti-cheat disabled)`, true);
+        } else {
+          log('test2-result', `❌ FAIL: startSession returned ${sessionId}, expected null`, false);
+        }
+      } catch (e) {
+        log('test2-result', `❌ FAIL: ${e.message}`, false);
+      }
+    }
+
+    function runTest3() {
+      try {
+        // Try to validate a non-existent session when anti-cheat is disabled
+        const result = window.AntiCheat.validate('fake-session-id');
+        
+        if (result.valid === true && result.reason === 'anti-cheat-disabled') {
+          log('test3-result', `✅ PASS: validate returned valid=true with reason='anti-cheat-disabled'`, true);
+        } else {
+          log('test3-result', `❌ FAIL: validate returned ${JSON.stringify(result)}`, false);
+        }
+      } catch (e) {
+        log('test3-result', `❌ FAIL: ${e.message}`, false);
+      }
+    }
+
+    function runTest4() {
+      try {
+        const isEnabled = window.AntiCheat.isEnabled();
+        
+        if (isEnabled === false) {
+          log('test4-result', `✅ PASS: isEnabled() returned false`, true);
+        } else {
+          log('test4-result', `❌ FAIL: isEnabled() returned ${isEnabled}, expected false`, false);
+        }
+      } catch (e) {
+        log('test4-result', `❌ FAIL: ${e.message}`, false);
+      }
+    }
+
+    function runTest5() {
+      try {
+        // Enable anti-cheat
+        window.game.cfg.enableAntiCheat = true;
+        
+        // Now startSession should return a session ID
+        const sessionId = window.AntiCheat.startSession({
+          gameKey: 'test-game-enabled',
+          container: document.body
+        });
+        
+        if (sessionId !== null && typeof sessionId === 'string') {
+          // Clean up the session
+          window.AntiCheat.cleanup(sessionId);
+          log('test5-result', `✅ PASS: After enabling, startSession returned a session ID: ${sessionId}`, true);
+        } else {
+          log('test5-result', `❌ FAIL: After enabling, startSession returned ${sessionId}`, false);
+        }
+        
+        // Disable it again for other tests
+        window.game.cfg.enableAntiCheat = false;
+      } catch (e) {
+        log('test5-result', `❌ FAIL: ${e.message}`, false);
+        window.game.cfg.enableAntiCheat = false;
+      }
+    }
+
+    // Wait for everything to load, then show a summary
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.info('=== Test Page Ready ===');
+        console.info('Config state:', {
+          enableAntiCheat: window.game?.cfg?.enableAntiCheat,
+          isEnabled: window.AntiCheat?.isEnabled()
+        });
+      }, 100);
+    });
+  </script>
+</body>
+</html>
