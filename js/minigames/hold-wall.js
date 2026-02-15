@@ -135,8 +135,34 @@
       return players.filter(p => povSet.has(p.id) && !p.evicted);
     }
     
-    // HOH or unknown: All non-evicted players
-    return players.filter(p => !p.evicted);
+    // HOH or unknown: All non-evicted players, excluding previous HOH (with exceptions)
+    let eligible = players.filter(p => !p.evicted);
+    
+    // For HOH competitions, apply previous HOH exclusion rule
+    if(compType === 'hoh'){
+      const alive = eligible;
+      const week = g.game.week || 1;
+      const lastHOHId = g.game.lastHOHId;
+      const lastHOHWeek = g.game.lastHOHWeek;
+      
+      // Exclude previous HOH unless:
+      // 1. It's Week 1 (everyone competes)
+      // 2. It's Final 3 (alive.length === 3, everyone competes)
+      // 3. The lastHOH was not from the previous week
+      const shouldExcludePreviousHOH = (
+        alive.length > 3 &&           // Not Final 3
+        week > 1 &&                   // Not Week 1
+        lastHOHId &&                  // Previous HOH exists
+        lastHOHWeek === (week - 1)    // Previous HOH was from last week
+      );
+      
+      if(shouldExcludePreviousHOH){
+        eligible = eligible.filter(p => p.id !== lastHOHId);
+        console.log(`[HoldWall] Excluding previous HOH (id: ${lastHOHId}) from competition`);
+      }
+    }
+    
+    return eligible;
   }
 
   /**
@@ -1180,33 +1206,38 @@
       }
       
       // Build final standings with player not as winner
-      // Winners are those still holding (haven't dropped yet)
-      // Get all participants who are still holding (dropTimeMs === null or undefined)
-      // BUGFIX: Explicitly exclude player participants (isPlayer === true) from stillHolding
+      // BUGFIX: When player drops and game ends, any AI participants who haven't dropped yet
+      // should not be considered winners - they just haven't been processed yet by the drop logic.
+      // The player was the LAST to drop (which is why the game ended), so they should be ranked
+      // based on their actual drop time, not behind AI participants who never dropped.
+      
+      // Get all participants who are still holding (haven't dropped yet)
       const stillHolding = participants.filter(p => p.dropTimeMs == null && !p.isPlayer);
       
-      // BUGFIX: Sort stillHolding deterministically by participant array index
-      // Since all still-holding players effectively tied (game ended when player dropped),
-      // we sort them by their original index to ensure consistent winner selection
-      stillHolding.sort((a, b) => {
-        const indexA = participants.indexOf(a);
-        const indexB = participants.indexOf(b);
-        return indexA - indexB;
+      // Mark all still-holding AI participants as dropped at the same time as the player
+      // This ensures they're ranked equally with the player (they all "dropped" when game ended)
+      stillHolding.forEach(p => {
+        p.dropTimeMs = holdDuration;
+        eliminationLog.push({ name: p.name, timeMs: holdDuration });
       });
       
-      // Still-holding players get credited with the time when the game ended
-      // They outlasted all dropped players, so they get the same time (game ended when player dropped)
-      // Note: All still-holding players effectively tied for first place
-      const holdingStandings = stillHolding.map(p => ({
-        name: p.name,
-        timeMs: holdDuration // Game ended at this time; they were still holding
-      }));
+      // Now all participants have drop times, sort elimination log by time (descending = later is better)
+      // Players who dropped at the same time are ranked by their participant array index
+      eliminationLog.sort((a, b) => {
+        // First sort by time (descending - later is better)
+        if(b.timeMs !== a.timeMs) return b.timeMs - a.timeMs;
+        
+        // If tied on time, maintain original order from participant array
+        const pA = participants.find(p => p.name === a.name);
+        const pB = participants.find(p => p.name === b.name);
+        if(pA && pB){
+          return participants.indexOf(pA) - participants.indexOf(pB);
+        }
+        return 0;
+      });
       
-      // Then add eliminated players in reverse chronological order (last to drop = higher placement)
-      const eliminatedStandings = [...eliminationLog].reverse();
-      
-      // Combine: winners first, then eliminated players
-      const finalStandings = [...holdingStandings, ...eliminatedStandings];
+      // Final standings is just the sorted elimination log
+      const finalStandings = eliminationLog;
       
       // BUGFIX: Debug log for final standings
       console.log('[HoldWall] Final standings (lose path):', finalStandings.map(s => `${s.name}: ${(s.timeMs/1000).toFixed(1)}s`).join(', '));
