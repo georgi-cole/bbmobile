@@ -1767,7 +1767,7 @@
         g.game.pauseManager.close('settings');
       } else if(g.PauseController && typeof g.PauseController.resume === 'function'){
         // Fallback: call PauseController directly if PauseManager not available
-        // Use owner ID to match the pause call
+        // Pass owner ID to match the pause call and properly clean up the owner tracking
         g.PauseController.resume('settings');
       }
     }

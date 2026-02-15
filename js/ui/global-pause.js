@@ -25,7 +25,12 @@
      * @returns {string} - Normalized ID without 'modal:' prefix
      */
     function normalizeModalId(id) {
-      if (typeof id === 'string' && id.startsWith('modal:')) {
+      // Validate input
+      if (!id || typeof id !== 'string') {
+        throw new Error('PauseManager: Modal ID must be a non-empty string');
+      }
+      
+      if (id.startsWith('modal:')) {
         return id.substring(6); // Remove 'modal:' prefix
       }
       return id;
