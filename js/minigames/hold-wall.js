@@ -468,9 +468,27 @@
       if(g.lastCompScores){
         const scoresMap = new Map();
         standings.forEach(s => {
-          scoresMap.set(s.name, s.score);
+          // Find the participant to get their player ID
+          const participant = participants.find(p => p.name === s.name);
+          if(participant && participant.id !== undefined){
+            scoresMap.set(participant.id, s.score);
+          }
         });
         g.lastCompScores = scoresMap;
+        
+        // ENDURANCE FIX: Mark winner as authoritative to prevent override by fallback logic
+        // Store winner player ID for HOH/POV determination
+        const winnerParticipant = participants.find(p => p.name === standings[0].name);
+        if(winnerParticipant && winnerParticipant.id !== undefined){
+          g.__authoritativeWinner = {
+            playerId: winnerParticipant.id,
+            score: standings[0].score,
+            minigame: gameId,
+            compType: compType, // 'hoh' or 'pov'
+            timestamp: Date.now()
+          };
+          console.log(`[HoldWall] ✓ Authoritative winner set: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
+        }
       }
       
       // Dispatch event

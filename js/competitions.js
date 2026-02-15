@@ -1664,6 +1664,16 @@
       // Apply dampening for consecutive winners
       for (const id of elig) {
         if (!g.lastCompScores.has(id)) {
+          // ENDURANCE FIX: Check for authoritative winner before generating fallback scores
+          // If an endurance minigame has marked an authoritative winner, skip generating AI scores
+          // This prevents the fallback logic from overriding the endurance winner
+          if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+            console.info(`[hoh] Skipping score generation for player ${id} - authoritative winner exists (${g.__authoritativeWinner.playerId})`);
+            // Set 0 score for non-winners in endurance competitions
+            g.lastCompScores.set(id, 0);
+            continue;
+          }
+          
           // ROBUST CHECK: If this is the human player AND no score exists, assign 0
           // This covers all edge cases: fast-forward, skip, timing issues, etc.
           if (id === g.humanId) {
@@ -1715,40 +1725,65 @@
       
       // If all players scored 0, pick a random eligible player as fallback
       // EXCEPT: Never pick human player with 0 score (who didn't play)
+      // ENDURANCE FIX: Skip fallback if authoritative winner already exists
       if (scoredEntries.length === 0) {
-        console.warn('[hoh] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
-        // Exclude human player who didn't play from fallback selection
-        const eligibleForFallback = elig.filter(id => {
-          if (id === g.humanId && !g.__humanPlayedHOH) {
-            console.info('[hoh] Excluding human from fallback - did not play');
-            return false;
+        // Check if we have an authoritative winner from endurance minigame
+        if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+          console.info(`[hoh] ✓ Authoritative winner exists (${g.__authoritativeWinner.playerId}), skipping random fallback`);
+          // Ensure the authoritative winner has a valid score
+          const authWinner = g.__authoritativeWinner.playerId;
+          if (!g.lastCompScores.has(authWinner) || g.lastCompScores.get(authWinner) === 0) {
+            console.warn(`[hoh] Authoritative winner ${authWinner} has no score, setting to ${g.__authoritativeWinner.score}`);
+            g.lastCompScores.set(authWinner, g.__authoritativeWinner.score);
           }
-          return true;
-        });
-        
-        if (eligibleForFallback.length === 0) {
-          console.error('[hoh] No eligible players for fallback winner - all players scored 0 and only human is eligible');
-          // Absolute fallback: pick first non-human player
-          const nonHuman = elig.find(id => id !== g.humanId);
-          if (nonHuman !== undefined) {
-            eligibleForFallback.push(nonHuman);
-          } else {
-            // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
-            // Give human a score anyway to avoid deadlock, but log as error
-            console.error('[hoh] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
-            eligibleForFallback.push(g.humanId);
+          scoredEntries.push([authWinner, g.lastCompScores.get(authWinner)]);
+        } else {
+          console.warn('[hoh] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
+          // Exclude human player who didn't play from fallback selection
+          const eligibleForFallback = elig.filter(id => {
+            if (id === g.humanId && !g.__humanPlayedHOH) {
+              console.info('[hoh] Excluding human from fallback - did not play');
+              return false;
+            }
+            return true;
+          });
+          
+          if (eligibleForFallback.length === 0) {
+            console.error('[hoh] No eligible players for fallback winner - all players scored 0 and only human is eligible');
+            // Absolute fallback: pick first non-human player
+            const nonHuman = elig.find(id => id !== g.humanId);
+            if (nonHuman !== undefined) {
+              eligibleForFallback.push(nonHuman);
+            } else {
+              // Extremely rare edge case: only human player is eligible (shouldn't happen in normal game)
+              // Give human a score anyway to avoid deadlock, but log as error
+              console.error('[hoh] CRITICAL: Only human player eligible and no AI players available. Assigning to human.');
+              eligibleForFallback.push(g.humanId);
+            }
           }
+          
+          const randomIndex = Math.floor((global.rng?.() || Math.random()) * eligibleForFallback.length);
+          const winner = eligibleForFallback[randomIndex];
+          // Give the random winner a minimal score > 0
+          g.lastCompScores.set(winner, 1);
+          scoredEntries.push([winner, 1]);
         }
-        
-        const randomIndex = Math.floor((global.rng?.() || Math.random()) * eligibleForFallback.length);
-        const winner = eligibleForFallback[randomIndex];
-        // Give the random winner a minimal score > 0
-        g.lastCompScores.set(winner, 1);
-        scoredEntries.push([winner, 1]);
       }
       
       const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
-      const winner = sortedEntries[0][0];
+      let winner = sortedEntries[0][0];
+      
+      // ENDURANCE FIX: Defensive check - warn if winner doesn't match authoritative winner
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        if (g.__authoritativeWinner.playerId !== winner) {
+          console.error(`[hoh] ⚠️ MISMATCH: Authoritative winner (${g.__authoritativeWinner.playerId}) differs from determined winner (${winner})!`);
+          console.error('[hoh] This should not happen - using authoritative winner');
+          // Override with authoritative winner
+          winner = g.__authoritativeWinner.playerId;
+        } else {
+          console.info(`[hoh] ✓ Winner ${winner} matches authoritative winner from endurance minigame`);
+        }
+      }
       
       // Update HOH state
       for (const p of g.players) p.hoh = false;
@@ -1811,6 +1846,12 @@
       }
 
       global.updateHud(); global.renderPanel();
+      
+      // ENDURANCE FIX: Clear authoritative winner after use
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        console.info('[hoh] Clearing authoritative winner flag');
+        delete g.__authoritativeWinner;
+      }
     } finally {
       g.__hohResolving = false;
     }
