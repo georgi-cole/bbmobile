@@ -195,7 +195,7 @@ Results:
 
 ### Manual Testing
 
-Created new test file: `test_hold_wall_eligibility_and_winner_fix.html`
+Created new test file: `manual_verify_hold_wall_fixes.html`
 
 Test scenarios:
 1. **HOH Eligibility - Normal Week**: Verify previous HOH is excluded
@@ -224,7 +224,7 @@ Test scenarios:
 ## Files Changed
 
 - `js/minigames/hold-wall.js` - Core fixes
-- `test_hold_wall_eligibility_and_winner_fix.html` - New test file
+- `manual_verify_hold_wall_fixes.html` - Manual verification guide
 
 ## Security Summary
 
