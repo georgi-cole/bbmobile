@@ -142,11 +142,18 @@
     let timerDiv = null;
     let distractorDiv = null;
     let inputSelects = [];
+    let reflashCount = 0; // Track number of reflashes for score penalty
+    let colorNameLabel = null; // Label to show color name during flash
     
     // Status display
     const status = document.createElement('div');
     status.style.cssText = 'font-size:0.9rem;color:#83bfff;min-height:25px;text-align:center;font-weight:bold;';
     status.textContent = 'Press Start to begin';
+    
+    // Color name label (for showing color name during flash)
+    colorNameLabel = document.createElement('div');
+    colorNameLabel.style.cssText = 'font-size:1rem;color:#83bfff;min-height:30px;text-align:center;font-weight:bold;margin-top:10px;';
+    colorNameLabel.textContent = '';
     
     // Sequence display area (created dynamically after Start)
     const sequenceContainer = document.createElement('div');
@@ -174,6 +181,14 @@
     const startBtn = document.createElement('button');
     startBtn.className = 'btn primary';
     startBtn.textContent = 'Start';
+    
+    // Reflash button
+    const reflashBtn = document.createElement('button');
+    reflashBtn.className = 'btn';
+    reflashBtn.textContent = 'Reflash (-10% score)';
+    reflashBtn.disabled = true;
+    reflashBtn.style.display = 'none';
+    reflashBtn.style.marginLeft = '10px';
     
     // Submit button
     const submitBtn = document.createElement('button');
@@ -273,7 +288,7 @@
       } else {
         // Card mode: animate sequence one by one
         const boxes = Array.from(sequenceDiv.children);
-        const interval = 650;
+        const interval = 1100; // Increased from 650ms to 1100ms for slower demonstration
         
         const showNext = () => {
           // Reset all boxes
@@ -283,16 +298,29 @@
           });
           
           if(sequenceIndex >= sequence.length){
+            // Hide color name label
+            if(colorNameLabel){
+              colorNameLabel.textContent = '';
+            }
             // Auto-hide after reveal duration
             setTimeout(() => {
               hideSequence();
-            }, diffSettings.revealDuration);
+            }, 800);
             return;
           }
           
           // Highlight current box with actual color
+          const currentColor = sequence[sequenceIndex];
           boxes[sequenceIndex].style.opacity = '1';
-          boxes[sequenceIndex].style.background = sequence[sequenceIndex];
+          boxes[sequenceIndex].style.background = currentColor;
+          
+          // Show color name below
+          if(colorNameLabel){
+            const colorName = colorNames[currentColor] || 'Unknown';
+            colorNameLabel.textContent = colorName;
+            colorNameLabel.style.color = currentColor;
+          }
+          
           sequenceIndex++;
           
           setTimeout(showNext, interval);
@@ -346,6 +374,8 @@
       acceptingInput = true;
       status.textContent = mode === 'pattern' ? 'Now match the pattern!' : 'Now repeat the sequence!';
       submitBtn.style.display = 'inline-block';
+      reflashBtn.style.display = 'inline-block';
+      reflashBtn.disabled = false;
       
       // Enable input UI
       if(mode === 'pattern'){
@@ -444,15 +474,22 @@
     function pickColor(color){
       if(!acceptingInput) return;
       
+      // Prevent picking more colors than the sequence length
+      if(inputIndex >= sequence.length){
+        status.textContent = '⚠️ You have guessed all colors. Press Submit!';
+        status.style.color = '#f59e0b';
+        return;
+      }
+      
+      const boxes = Array.from(sequenceDiv.children);
+      
       if(color === sequence[inputIndex]){
         correctMatches++;
-        inputIndex++;
         
         // Visual feedback - highlight the sequence box with color name
-        const boxes = Array.from(sequenceDiv.children);
-        if(boxes[inputIndex - 1]){
-          boxes[inputIndex - 1].style.opacity = '1';
-          boxes[inputIndex - 1].style.background = color;
+        if(boxes[inputIndex]){
+          boxes[inputIndex].style.opacity = '1';
+          boxes[inputIndex].style.background = color;
         }
         
         // Show color name feedback
@@ -460,12 +497,15 @@
         status.textContent = `✅ Correct: ${colorName}`;
         status.style.color = '#22c55e';
         
+        inputIndex++;
+        
         if(inputIndex === sequence.length){
           // Sequence complete!
           acceptingInput = false;
-          status.textContent = '✅ Perfect match!';
+          status.textContent = '✅ Perfect match! Press Submit!';
           status.style.color = '#22c55e';
           submitBtn.disabled = false;
+          reflashBtn.disabled = true;
           
           // Stop anti-cheat monitoring
           if(antiCheat){
@@ -473,17 +513,25 @@
           }
         }
       } else {
-        // Wrong color - track mistake and show color names
+        // Wrong color - track mistake, show correct color, and auto-populate
         mistakesMade++;
         
         const chosenColorName = colorNames[color] || 'Unknown';
-        const correctColorName = colorNames[sequence[inputIndex]] || 'Unknown';
+        const correctColor = sequence[inputIndex];
+        const correctColorName = colorNames[correctColor] || 'Unknown';
+        
+        // Auto-populate the correct color in the box
+        if(boxes[inputIndex]){
+          boxes[inputIndex].style.opacity = '1';
+          boxes[inputIndex].style.background = correctColor;
+        }
         
         if(mistakesMade >= diffSettings.allowedMistakes){
           acceptingInput = false;
           status.textContent = `❌ Game Over! You chose ${chosenColorName} but it was ${correctColorName}`;
           status.style.color = '#dc2626';
           submitBtn.disabled = false;
+          reflashBtn.disabled = true;
           
           // Stop anti-cheat monitoring
           if(antiCheat){
@@ -495,6 +543,14 @@
         }
         
         inputIndex++;
+        
+        // Check if all positions are filled after mistake
+        if(inputIndex === sequence.length){
+          acceptingInput = false;
+          status.textContent += '. Press Submit!';
+          submitBtn.disabled = false;
+          reflashBtn.disabled = true;
+        }
       }
     }
     
@@ -509,6 +565,38 @@
         showSequence();
         startBtn.style.display = 'none';
       }
+    });
+    
+    /**
+     * Reflash button handler - replay the sequence with 10% score penalty
+     */
+    reflashBtn.addEventListener('click', () => {
+      if(!acceptingInput) return;
+      
+      reflashCount++;
+      reflashBtn.disabled = true;
+      acceptingInput = false;
+      
+      // Reset input state but keep mistakes
+      inputIndex = 0;
+      
+      // Hide input buttons during replay
+      buttonDiv.innerHTML = '<div style="color:#95a9c0;font-size:0.9rem;">Watch again...</div>';
+      
+      // Reset sequence boxes
+      const boxes = Array.from(sequenceDiv.children);
+      boxes.forEach(box => {
+        box.style.opacity = '0.25';
+        box.style.background = '#2c3a4d';
+      });
+      
+      // Show warning about penalty
+      status.textContent = '⚠️ Reflashing... (-10% score penalty)';
+      status.style.color = '#f59e0b';
+      
+      // Replay the sequence
+      sequenceIndex = 0;
+      showSequence();
     });
     
     /**
@@ -558,6 +646,13 @@
       const penaltyAmount = mistakesMade * mistakePenalty;
       rawScore = Math.max(0, rawScore - penaltyAmount);
       
+      // Apply reflash penalty - 10% reduction per reflash
+      if(reflashCount > 0){
+        const reflashPenalty = 0.10 * reflashCount;
+        rawScore = Math.round(rawScore * (1 - reflashPenalty));
+        rawScore = Math.max(0, rawScore);
+      }
+      
       // Use MinigameScoring to calculate final score (SCALE=1000)
           const finalScore = g.MinigameScoring ? 
             g.MinigameScoring.calculateFinalScore({
@@ -569,16 +664,53 @@
             rawScore * 10; // Fallback: scale to 0-1000
       
       if(debugMode){
-        console.log(`[Memory${mode === 'pattern' ? 'Pattern' : 'Match'}] Debug - Correct:`, correctCount, '/', sequence.length, 'Mistakes:', mistakesMade, 'Raw score:', rawScore, 'Final score:', finalScore);
+        console.log(`[Memory${mode === 'pattern' ? 'Pattern' : 'Match'}] Debug - Correct:`, correctCount, '/', sequence.length, 'Mistakes:', mistakesMade, 'Reflashes:', reflashCount, 'Raw score:', rawScore, 'Final score:', finalScore);
       }
       
       onComplete(finalScore);
     });
     
+    // Create floating color emojis container (subtle background decoration)
+    const emojiContainer = document.createElement('div');
+    emojiContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden;opacity:0.15;';
+    
+    // Color emojis to float
+    const colorEmojis = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '🟤', '⚫', '⚪', '🔶', '🔷', '🟥', '🟦', '🟩', '🟨', '🟪', '🟧'];
+    
+    // Create floating emojis
+    for(let i = 0; i < 12; i++){
+      const emoji = document.createElement('div');
+      emoji.textContent = colorEmojis[Math.floor(Math.random() * colorEmojis.length)];
+      emoji.style.cssText = `
+        position:absolute;
+        font-size:${20 + Math.random() * 30}px;
+        left:${Math.random() * 100}%;
+        top:${Math.random() * 100}%;
+        animation:float-emoji ${8 + Math.random() * 8}s ease-in-out infinite;
+        animation-delay:${Math.random() * 5}s;
+      `;
+      emojiContainer.appendChild(emoji);
+    }
+    
+    // Add CSS animation for floating emojis
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes float-emoji {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(30px, -30px) rotate(90deg); }
+        50% { transform: translate(-20px, 20px) rotate(180deg); }
+        75% { transform: translate(20px, 30px) rotate(270deg); }
+      }
+    `;
+    document.head.appendChild(style);
+    
     // Assemble UI
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
     wrapper.appendChild(sequenceContainer);
+    if(mode === 'card' && colorNameLabel){
+      wrapper.appendChild(colorNameLabel);
+    }
     if(mode === 'pattern' && distractorDiv){
       wrapper.appendChild(distractorDiv);
     }
@@ -586,9 +718,14 @@
       wrapper.appendChild(timerDiv);
     }
     wrapper.appendChild(status);
-    wrapper.appendChild(startBtn);
+    const buttonRow = document.createElement('div');
+    buttonRow.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+    buttonRow.appendChild(startBtn);
+    buttonRow.appendChild(reflashBtn);
+    wrapper.appendChild(buttonRow);
     wrapper.appendChild(buttonDiv);
     wrapper.appendChild(submitBtn);
+    container.appendChild(emojiContainer);
     container.appendChild(wrapper);
   }
 
