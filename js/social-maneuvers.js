@@ -2996,6 +2996,25 @@
       console.info('[sm-zero-energy] ✓ Social launcher hidden');
     }
     
+    // Ensure battery blink animation is defined (fallback if CSS not loaded)
+    if (!document.getElementById('sm-zero-energy-styles')) {
+      const style = document.createElement('style');
+      style.id = 'sm-zero-energy-styles';
+      style.textContent = `
+        @keyframes sm-battery-blink {
+          0%, 100% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.1);
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
     // Create modal overlay
     const overlay = document.createElement('div');
     overlay.className = 'sm-zero-energy-modal-overlay';

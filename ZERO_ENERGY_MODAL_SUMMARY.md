@@ -92,8 +92,19 @@ This PR implements a new modal that appears when the player has 0 social energy 
 ### Phase Timer Handling
 - Stops timer on modal open (prevents far-future values)
 - Restarts timer if user chooses Recharge
-- Default duration: 180 seconds (3 minutes)
+- Default duration: 180 seconds (3 minutes) - defined in `SOCIAL_PHASE_DEFAULT_DURATION_SECONDS`
 - Properly sets both `game.endAt` and `game.phaseEndsAt`
+
+### Configuration Constants
+The implementation uses named constants for easy configuration:
+```javascript
+const ZERO_ENERGY_RECHARGE_REWARDS = {
+  energy: 5,
+  influence: 5,
+  information: 5
+};
+const SOCIAL_PHASE_DEFAULT_DURATION_SECONDS = 180; // 3 minutes
+```
 
 ### Accessibility
 - Keyboard navigation support
@@ -164,10 +175,20 @@ The Recharge button is designed as an anchor for future ad integration:
   3. On ad completion, grant resources
   4. Continue to social phase
 
+### Reward Configuration
+Reward amounts are defined in `ZERO_ENERGY_RECHARGE_REWARDS` constant:
+```javascript
+const ZERO_ENERGY_RECHARGE_REWARDS = {
+  energy: 5,
+  influence: 5,
+  information: 5
+};
+```
+
 ### Potential Improvements
-- Configurable reward amounts (currently hardcoded to 5)
 - Multiple ad types (video, banner, rewarded)
 - Daily ad limits
+- Variable reward amounts based on ad type
 - Alternative recharge methods (in-app purchases, achievements)
 - Analytics tracking for modal interactions
 
