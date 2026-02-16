@@ -28,6 +28,57 @@
     let gracePeriodTimer = null;
     const GRACE_PERIOD_MS = 2000; // Grace period before auto-dropping AFK players
     
+    // Narrative and difficulty state
+    let narrativeMessages = [];
+    let currentNarrative = '';
+    let difficultyLevel = 0;
+    let difficultyTimer = null;
+    let vibrationInterval = null;
+    
+    // Funny narrative lines for different events
+    const NARRATIVES = {
+      start: [
+        "Alright houseguests, grip that wall like your life depends on it... because it kinda does! 💪",
+        "Welcome to the wall of pain! Hope you all had a good breakfast! 🏋️",
+        "Time to see who's got the strength... and who's got the noodle arms! 🍝"
+      ],
+      holding: [
+        "You're doing great! Your arms definitely won't regret this tomorrow... 😅",
+        "Look at you, still hanging on! Literally! 🤩",
+        "The wall loves you... the wall won't let you go... 👻",
+        "Your grip strength is impressive! Have you been opening jars? 🫙"
+      ],
+      someone_dropped: [
+        "{name} has hit the ground! That's gonna leave a mark! 💥",
+        "And {name} is out! Don't worry, we have ice packs! 🧊",
+        "{name} couldn't hold on! The wall claims another victim! 😱",
+        "There goes {name}! Gravity: 1, Houseguest: 0! 🪂"
+      ],
+      difficulty: [
+        "Oh no! Production is spraying water! 💦",
+        "Someone turned on the wind machine! Hold tight! 🌪️",
+        "The wall is starting to tilt! This is getting spicy! 🌶️",
+        "Is that paint? Oh yes, it's paint time! 🎨",
+        "The wall is vibrating! Earthquake mode activated! 📳",
+        "Incoming call! Just kidding, focus on the wall! 📞"
+      ],
+      final_two: [
+        "We're down to TWO! This is getting intense! 🔥",
+        "Mano a mano! Who wants it more?! 💪",
+        "Two houseguests, one wall, zero mercy! 😤"
+      ],
+      victory: [
+        "WE HAVE A WINNER! What an incredible performance! 🏆",
+        "VICTORY! Your arms may be dead but your spirit is alive! 🎉",
+        "CHAMPION! You've conquered the wall! 👑"
+      ],
+      loss: [
+        "And you're down! Great effort though! 💔",
+        "Gravity wins this round! Better luck next time! 🌍",
+        "The wall claims another victim! At least you tried! 😢"
+      ]
+    };
+    
     // Detect competition type
     let compType = 'hoh'; // default
     if(g.game && g.game.phase){
@@ -57,7 +108,9 @@
         name: p.name,
         isPlayer: p.human || p.isPlayer || false,
         dropTimeMs: null,
-        avatarUrl: g.resolveAvatar ? g.resolveAvatar(p) : null
+        avatarUrl: g.resolveAvatar ? g.resolveAvatar(p) : null,
+        // Assign each AI a personal drop time (randomized between 10-120 seconds)
+        personalDropTime: p.human || p.isPlayer ? null : 10000 + Math.random() * 110000
       }));
       
       console.log(`[HoldWall] ${participants.length} participants for ${compType} competition`);
@@ -92,15 +145,11 @@
     
     // HUD
     const hud = document.createElement('div');
-    hud.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px;background:rgba(10,15,30,0.8);backdrop-filter:blur(4px);';
+    hud.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;background:rgba(10,15,30,0.8);backdrop-filter:blur(4px);';
     hud.innerHTML = `
       <div style="text-align:center;">
-        <div style="font-size:0.75rem;color:#95a9c0;text-transform:uppercase;margin-bottom:4px;">Time</div>
+        <div style="font-size:0.75rem;color:#95a9c0;text-transform:uppercase;margin-bottom:4px;">Elapsed</div>
         <div id="timeDisplay" style="font-size:1.3rem;font-weight:600;color:#83bfff;">0.0s</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:0.75rem;color:#95a9c0;text-transform:uppercase;margin-bottom:4px;">Score</div>
-        <div id="scoreDisplay" style="font-size:1.3rem;font-weight:600;color:#83bfff;">0</div>
       </div>
       <div style="text-align:center;">
         <div style="font-size:0.75rem;color:#95a9c0;text-transform:uppercase;margin-bottom:4px;">Remaining</div>
@@ -108,6 +157,13 @@
       </div>
     `;
     root.appendChild(hud);
+    
+    // Narrative box
+    const narrativeBox = document.createElement('div');
+    narrativeBox.id = 'narrativeBox';
+    narrativeBox.style.cssText = 'padding:12px 16px;background:linear-gradient(135deg,rgba(131,191,255,0.15),rgba(131,191,255,0.05));border-left:4px solid #83bfff;margin:0 16px;font-size:0.95rem;color:#e8f3ff;line-height:1.4;min-height:60px;display:flex;align-items:center;font-style:italic;';
+    narrativeBox.textContent = 'Get ready to hold on for dear life...';
+    root.appendChild(narrativeBox);
     
     // Game area
     const gameArea = document.createElement('div');
@@ -137,12 +193,70 @@
     renderParticipants();
     gameArea.appendChild(participantsDisplay);
     
-    // Wall panel
+    // Wall panel with enhanced styling
     const wallPanel = document.createElement('div');
     wallPanel.id = 'wallPanel';
-    wallPanel.style.cssText = 'width:100%;max-width:400px;height:180px;background:linear-gradient(180deg,#2a4a6a,#1a2a3a);border:4px solid #83bfff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:bold;cursor:grab;user-select:none;transition:all 0.2s;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
-    wallPanel.textContent = 'WALL';
+    wallPanel.style.cssText = `
+      width:100%;max-width:400px;height:200px;
+      background:linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%);
+      background-size:200% 200%;
+      border:5px solid #4a8faf;
+      border-radius:16px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:3.5rem;font-weight:900;
+      cursor:grab;user-select:none;
+      transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+      box-shadow:0 8px 32px rgba(0,0,0,0.6),inset 0 2px 8px rgba(255,255,255,0.1);
+      position:relative;overflow:hidden;
+      text-shadow:0 4px 12px rgba(0,0,0,0.8),0 2px 4px rgba(0,0,0,0.6);
+      letter-spacing:0.2em;
+      animation:wallPulse 3s ease-in-out infinite;
+    `;
+    
+    // Add texture overlay
+    const wallTexture = document.createElement('div');
+    wallTexture.style.cssText = `
+      position:absolute;inset:0;
+      background:repeating-linear-gradient(
+        90deg,
+        transparent 0px,
+        rgba(255,255,255,0.03) 1px,
+        transparent 2px,
+        transparent 10px
+      );
+      pointer-events:none;
+    `;
+    wallPanel.appendChild(wallTexture);
+    
+    const wallText = document.createElement('div');
+    wallText.textContent = 'WALL';
+    wallText.style.cssText = 'position:relative;z-index:1;color:#e8f3ff;';
+    wallPanel.appendChild(wallText);
+    
     gameArea.appendChild(wallPanel);
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes wallPulse {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+      }
+      @keyframes wallShake {
+        0%, 100% { transform: translateX(0) scale(0.98); }
+        25% { transform: translateX(-3px) scale(0.98); }
+        75% { transform: translateX(3px) scale(0.98); }
+      }
+      @keyframes flashScreen {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 0.3; }
+      }
+      @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+    `;
+    root.appendChild(style);
     
     // Status message
     const statusMsg = document.createElement('div');
@@ -201,13 +315,27 @@
     function startGame(){
       state = 'playing';
       startTime = Date.now();
-      statusMsg.textContent = 'Hold the wall!';
+      updateNarrative(NARRATIVES.start);
       
-      // Start AI drop simulation
+      // Start AI drop simulation with personalized drop times
       startAIDrops();
+      
+      // Start difficulty progression
+      startDifficulties();
       
       // Start game loop
       gameLoop();
+      
+      // Random narrative updates during gameplay
+      const narrativeInterval = setInterval(() => {
+        if(hasEnded || state !== 'playing'){
+          clearInterval(narrativeInterval);
+          return;
+        }
+        if(isHolding && Math.random() > 0.5){
+          updateNarrative(NARRATIVES.holding);
+        }
+      }, 8000 + Math.random() * 7000); // Every 8-15 seconds
       
       // AFK FIX: Start grace period timer
       // If human never starts holding within grace period, automatically drop them
@@ -225,8 +353,7 @@
               isPlayer: true
             });
             
-            statusMsg.textContent = 'You never held the wall!';
-            statusMsg.style.color = '#ff6b6b';
+            updateNarrative(["You never held the wall! What were you thinking?! 😱"]);
             
             // Check if game should end
             checkGameEnd();
@@ -235,63 +362,105 @@
       }, GRACE_PERIOD_MS);
     }
     
-    function startAIDrops(){
-      const dropInterval = 10000; // Check every 10 seconds
-      const baseProbability = 0.44; // 44% chance per check
-      
-      const dropTimer = setInterval(() => {
-        if(hasEnded || state !== 'playing'){
-          clearInterval(dropTimer);
-          return;
-        }
-        
-        selectAndDropCandidates(baseProbability);
-      }, dropInterval);
+    function updateNarrative(messages){
+      if(!messages || messages.length === 0) return;
+      const message = messages[Math.floor(Math.random() * messages.length)];
+      currentNarrative = message;
+      const narrativeBox = root.querySelector('#narrativeBox');
+      if(narrativeBox){
+        narrativeBox.textContent = message;
+        // Pulse effect
+        narrativeBox.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          narrativeBox.style.transform = 'scale(1)';
+        }, 200);
+      }
     }
     
-    function selectAndDropCandidates(probability){
-      if(isProcessingDrops || hasEnded) return;
+    function startDifficulties(){
+      // Progressive difficulty system
+      const difficulties = [
+        { time: 15000, action: applyWaterEffect, message: "Oh no! Production is spraying water! 💦" },
+        { time: 30000, action: applyWindEffect, message: "Someone turned on the wind machine! Hold tight! 🌪️" },
+        { time: 45000, action: applyVibration, message: "The wall is vibrating! Earthquake mode! 📳" },
+        { time: 60000, action: applyTiltEffect, message: "The wall is starting to tilt! 🌶️" },
+        { time: 75000, action: applyFlashEffect, message: "Bright lights! Don't let go! ✨" },
+        { time: 90000, action: applyCallEffect, message: "Incoming call! Just kidding! Focus! 📞" }
+      ];
       
-      // Get AI participants who haven't dropped
-      const aiParticipants = participants.filter(p => !p.isPlayer && p.dropTimeMs === null);
-      if(aiParticipants.length === 0) return;
-      
-      // Roll for each AI
-      const candidates = aiParticipants.filter(p => Math.random() < probability);
-      if(candidates.length === 0) return;
-      
-      // Apply competition-specific limits
-      const maxDrops = compType === 'pov' ? 1 : 2;
-      const selectedToDrop = candidates.slice(0, maxDrops);
-      
-      // Process drops sequentially
-      isProcessingDrops = true;
-      processSequentialDrops(selectedToDrop, () => {
-        isProcessingDrops = false;
+      difficulties.forEach(diff => {
+        setTimeout(() => {
+          if(!hasEnded && state === 'playing'){
+            updateNarrative([diff.message]);
+            diff.action();
+          }
+        }, diff.time);
       });
     }
     
-    function processSequentialDrops(dropList, callback){
-      if(dropList.length === 0){
-        if(callback) callback();
-        return;
+    function applyWaterEffect(){
+      // Visual: drips on screen
+      wallPanel.style.filter = 'blur(1px) brightness(0.9)';
+      setTimeout(() => {
+        if(state === 'playing') wallPanel.style.filter = 'none';
+      }, 3000);
+    }
+    
+    function applyWindEffect(){
+      // Tilt the wall slightly
+      wallPanel.style.transform = isHolding ? 'scale(0.98) rotate(-2deg)' : 'rotate(-2deg)';
+      setTimeout(() => {
+        if(state === 'playing') wallPanel.style.transform = isHolding ? 'scale(0.98)' : 'scale(1)';
+      }, 4000);
+    }
+    
+    function applyVibration(){
+      // Try to vibrate device (mobile only)
+      if(navigator.vibrate){
+        navigator.vibrate([200, 100, 200, 100, 200]);
       }
-      
-      const participant = dropList[0];
-      const remaining = dropList.slice(1);
-      
-      // Drop this participant
-      dropParticipant(participant);
-      
-      // Process next after stagger delay
-      if(remaining.length > 0){
-        const staggerDelay = 800 + Math.floor(Math.random() * 400); // 800-1200ms
-        setTimeout(() => {
-          processSequentialDrops(remaining, callback);
-        }, staggerDelay);
-      } else {
-        if(callback) callback();
-      }
+      // Visual shake
+      wallPanel.style.animation = 'wallShake 0.5s ease-in-out 5';
+      setTimeout(() => {
+        if(state === 'playing') wallPanel.style.animation = 'wallPulse 3s ease-in-out infinite';
+      }, 2500);
+    }
+    
+    function applyTiltEffect(){
+      wallPanel.style.transform = isHolding ? 'scale(0.98) rotate(3deg)' : 'rotate(3deg)';
+      setTimeout(() => {
+        if(state === 'playing') wallPanel.style.transform = isHolding ? 'scale(0.98)' : 'scale(1)';
+      }, 5000);
+    }
+    
+    function applyFlashEffect(){
+      // Screen flash
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:absolute;inset:0;background:white;z-index:50;animation:flashScreen 0.5s ease-out;pointer-events:none;';
+      root.appendChild(flash);
+      setTimeout(() => flash.remove(), 500);
+    }
+    
+    function applyCallEffect(){
+      // Simulate incoming call notification
+      const callNotif = document.createElement('div');
+      callNotif.style.cssText = 'position:absolute;top:80px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:12px 20px;border-radius:12px;font-size:0.9rem;z-index:60;box-shadow:0 4px 20px rgba(0,0,0,0.6);animation:slideDown 0.3s ease-out;';
+      callNotif.innerHTML = '📞 Mom is calling...';
+      root.appendChild(callNotif);
+      setTimeout(() => callNotif.remove(), 3000);
+    }
+    
+    function startAIDrops(){
+      // Schedule each AI participant to drop at their personal time
+      participants.forEach(p => {
+        if(!p.isPlayer && p.personalDropTime){
+          setTimeout(() => {
+            if(!hasEnded && state === 'playing' && p.dropTimeMs === null){
+              dropParticipant(p);
+            }
+          }, p.personalDropTime);
+        }
+      });
     }
     
     function dropParticipant(participant){
@@ -308,9 +477,21 @@
       
       console.log(`[HoldWall] ${participant.name} dropped at ${(dropTime/1000).toFixed(1)}s`);
       
+      // Update narrative when someone drops
+      if(!participant.isPlayer){
+        const messages = NARRATIVES.someone_dropped.map(msg => msg.replace('{name}', participant.name));
+        updateNarrative(messages);
+      }
+      
       // Update UI
       renderParticipants();
       updateRemaining();
+      
+      // Check for final two
+      const stillHolding = participants.filter(p => p.dropTimeMs === null);
+      if(stillHolding.length === 2){
+        updateNarrative(NARRATIVES.final_two);
+      }
       
       // Check if game should end
       checkGameEnd();
@@ -344,9 +525,10 @@
         isHolding = true;
         hasHumanStartedHolding = true; // AFK FIX: Track that human has started
         mouseDownTime = Date.now();
-        wallPanel.style.background = 'linear-gradient(180deg,#3a6a9a,#2a4a7a)';
+        wallPanel.style.background = 'linear-gradient(135deg,#2a6a9a 0%,#3a7aaa 25%,#2a5a8a 50%,#3a7aaa 75%,#2a6a9a 100%)';
         wallPanel.style.transform = 'scale(0.98)';
         wallPanel.style.cursor = 'grabbing';
+        wallPanel.style.borderColor = '#66ff66';
         statusMsg.textContent = 'Keep holding!';
         
         // AFK FIX: Clear grace period timer since they started holding
@@ -396,10 +578,12 @@
         });
         
         console.log(`[HoldWall] Player dropped at ${(dropTime/1000).toFixed(1)}s`);
+        updateNarrative(NARRATIVES.loss);
       }
       
-      wallPanel.style.background = 'linear-gradient(180deg,#2a4a6a,#1a2a3a)';
+      wallPanel.style.background = 'linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%)';
       wallPanel.style.transform = 'scale(1)';
+      wallPanel.style.borderColor = '#ff6b6b';
       statusMsg.textContent = 'You released!';
       
       // Mark remaining AI as still holding with current time
@@ -434,10 +618,13 @@
       score = 100; // Winner gets max score
       
       console.log(`[HoldWall] Player wins! Held for ${(victoryTime/1000).toFixed(1)}s`);
+      updateNarrative(NARRATIVES.victory);
       
       statusMsg.textContent = 'YOU WIN!';
       statusMsg.style.color = '#66ff66';
       statusMsg.style.fontSize = '2rem';
+      
+      wallPanel.style.borderColor = '#66ff66';
       
       // Build final standings with player first
       const playerParticipant = participants.find(p => p.isPlayer);
@@ -576,7 +763,6 @@
     
     function updateHUD(){
       root.querySelector('#timeDisplay').textContent = `${(timeElapsed / 1000).toFixed(1)}s`;
-      root.querySelector('#scoreDisplay').textContent = score;
     }
     
     function updateRemaining(){
