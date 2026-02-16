@@ -23,6 +23,11 @@
     let isProcessingDrops = false;
     let eliminationLog = [];
     
+    // AFK detection state
+    let hasHumanStartedHolding = false;
+    let gracePeriodTimer = null;
+    const GRACE_PERIOD_MS = 2000; // 2 seconds grace period
+    
     // Detect competition type
     let compType = 'hoh'; // default
     if(g.game && g.game.phase){
@@ -203,6 +208,31 @@
       
       // Start game loop
       gameLoop();
+      
+      // AFK FIX: Start grace period timer
+      // If human never starts holding within grace period, automatically drop them
+      gracePeriodTimer = setTimeout(() => {
+        if(!hasHumanStartedHolding && !hasEnded && state === 'playing'){
+          console.log('[HoldWall] Grace period expired - human never started holding, auto-dropping');
+          const playerParticipant = participants.find(p => p.isPlayer);
+          if(playerParticipant && playerParticipant.dropTimeMs === null){
+            // Mark player as dropped immediately
+            const dropTime = Date.now() - startTime;
+            playerParticipant.dropTimeMs = dropTime;
+            eliminationLog.push({
+              name: playerParticipant.name,
+              timeMs: dropTime,
+              isPlayer: true
+            });
+            
+            statusMsg.textContent = 'You never held the wall!';
+            statusMsg.style.color = '#ff6b6b';
+            
+            // Check if game should end
+            checkGameEnd();
+          }
+        }
+      }, GRACE_PERIOD_MS);
     }
     
     function startAIDrops(){
@@ -312,11 +342,18 @@
       
       if(!isHolding){
         isHolding = true;
+        hasHumanStartedHolding = true; // AFK FIX: Track that human has started
         mouseDownTime = Date.now();
         wallPanel.style.background = 'linear-gradient(180deg,#3a6a9a,#2a4a7a)';
         wallPanel.style.transform = 'scale(0.98)';
         wallPanel.style.cursor = 'grabbing';
         statusMsg.textContent = 'Keep holding!';
+        
+        // AFK FIX: Clear grace period timer since they started holding
+        if(gracePeriodTimer){
+          clearTimeout(gracePeriodTimer);
+          gracePeriodTimer = null;
+        }
       }
     }
     
@@ -334,6 +371,12 @@
       
       isHolding = false;
       hasEnded = true;
+      
+      // AFK FIX: Clear grace period timer if it's still running
+      if(gracePeriodTimer){
+        clearTimeout(gracePeriodTimer);
+        gracePeriodTimer = null;
+      }
       
       // Check if player was the last one standing before they released
       const stillHoldingBeforeRelease = participants.filter(p => p.dropTimeMs === null);
@@ -380,6 +423,12 @@
     function finalizeVictory(){
       if(hasEnded) return;
       hasEnded = true;
+      
+      // AFK FIX: Clear grace period timer if it's still running
+      if(gracePeriodTimer){
+        clearTimeout(gracePeriodTimer);
+        gracePeriodTimer = null;
+      }
       
       const victoryTime = Date.now() - startTime;
       score = 100; // Winner gets max score
