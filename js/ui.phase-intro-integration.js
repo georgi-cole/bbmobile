@@ -158,15 +158,24 @@
         // Check if we should show intro modal
         const shouldShowIntro = !g.__nominationsIntroShownThisPhase;
         
-        if (shouldShowIntro && typeof global.showNominationIntroModal === 'function') {
-          // Mark as shown BEFORE showing modal to prevent re-entry
-          g.__nominationsIntroShownThisPhase = true;
-          
+        if (shouldShowIntro) {
           try {
-            console.info('[phase-intro-integration] Showing nomination intro modal');
-            // Simply await the modal - no dual path, no custom event, no Promise.race
-            await global.showNominationIntroModal();
-            console.info('[phase-intro-integration] Nomination intro modal dismissed');
+            // Try NEW modal first
+            if (typeof global.NominationIntroModal?.show === 'function') {
+              // Mark as shown BEFORE showing modal to prevent re-entry
+              g.__nominationsIntroShownThisPhase = true;
+              console.info('[phase-intro-integration] Showing NEW nomination intro modal');
+              await global.NominationIntroModal.show();
+              console.info('[phase-intro-integration] NEW nomination intro modal dismissed');
+            }
+            // Fallback to OLD modal if new one not available
+            else if (typeof global.showNominationIntroModal === 'function') {
+              // Mark as shown BEFORE showing modal to prevent re-entry
+              g.__nominationsIntroShownThisPhase = true;
+              console.info('[phase-intro-integration] Showing OLD nomination intro modal (fallback)');
+              await global.showNominationIntroModal();
+              console.info('[phase-intro-integration] OLD nomination intro modal dismissed');
+            }
           } catch (e) {
             console.error('[phase-intro-integration] Error showing nominations intro modal:', e);
           }
