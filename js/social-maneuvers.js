@@ -2968,6 +2968,268 @@
     console.info('[sm-phase-skip] ✓ Timer stopped (endAt set to now)');
   }
   
+  /**
+   * Show modal when player has 0 social energy with SKIP and Recharge options
+   * @param {number} playerId - The player ID
+   */
+  function showZeroEnergyModal(playerId) {
+    const g = global.game;
+    if (!g) return;
+    
+    console.info(`[sm-zero-energy] Showing 0 energy modal for player ${playerId}`);
+    
+    // Stop the phase timer immediately
+    stopSocialPhaseTimer();
+    
+    // Hide social launcher to prevent UI conflicts
+    const socialLauncher = document.getElementById('socializeLauncher');
+    if (socialLauncher) {
+      socialLauncher.style.display = 'none';
+      console.info('[sm-zero-energy] ✓ Social launcher hidden');
+    }
+    
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'sm-zero-energy-modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 10, 18, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999999;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      padding: 20px;
+    `;
+    
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'sm-zero-energy-modal';
+    modal.style.cssText = `
+      background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
+      border: 3px solid #ff4444;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.95), 0 8px 24px -8px rgba(0, 0, 0, 0.8);
+      max-width: 480px;
+      width: 100%;
+      transform: scale(0.9);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    `;
+    
+    // Create battery icon (empty)
+    const batteryIcon = document.createElement('div');
+    batteryIcon.className = 'sm-zero-energy-battery-icon';
+    batteryIcon.style.cssText = `
+      font-size: 80px;
+      line-height: 1;
+      margin-bottom: 20px;
+      animation: sm-battery-blink 1s ease-in-out infinite;
+      opacity: 0.7;
+    `;
+    batteryIcon.textContent = '🔋';
+    
+    // Create title
+    const title = document.createElement('div');
+    title.className = 'sm-zero-energy-title';
+    title.style.cssText = `
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #ff4444;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    `;
+    title.textContent = 'No Social Energy';
+    
+    // Create message
+    const message = document.createElement('div');
+    message.className = 'sm-zero-energy-message';
+    message.style.cssText = `
+      font-size: 1rem;
+      color: #d5e0f0;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    `;
+    message.textContent = 'You have no energy remaining for social interactions.';
+    
+    // Create button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    `;
+    
+    // Create SKIP button
+    const skipButton = document.createElement('button');
+    skipButton.className = 'sm-zero-energy-button sm-skip-button';
+    skipButton.textContent = 'SKIP';
+    skipButton.style.cssText = `
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 2px solid #4a5a6a;
+      background: #2a3a4a;
+      color: #e0e8f0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 120px;
+      font-family: inherit;
+    `;
+    
+    // Create Recharge button (with movie ad icon)
+    const rechargeButton = document.createElement('button');
+    rechargeButton.className = 'sm-zero-energy-button sm-recharge-button';
+    rechargeButton.innerHTML = '🎬 Recharge';
+    rechargeButton.style.cssText = `
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 2px solid #ffa500;
+      background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+      color: #ffffff;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 120px;
+      font-family: inherit;
+    `;
+    
+    // Button hover effects
+    skipButton.addEventListener('mouseenter', () => {
+      skipButton.style.background = '#3a4a5a';
+      skipButton.style.borderColor = '#5a6a7a';
+    });
+    skipButton.addEventListener('mouseleave', () => {
+      skipButton.style.background = '#2a3a4a';
+      skipButton.style.borderColor = '#4a5a6a';
+    });
+    
+    rechargeButton.addEventListener('mouseenter', () => {
+      rechargeButton.style.background = 'linear-gradient(135deg, #ffa500 0%, #ff8c00 100%)';
+      rechargeButton.style.transform = 'scale(1.05)';
+    });
+    rechargeButton.addEventListener('mouseleave', () => {
+      rechargeButton.style.background = 'linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%)';
+      rechargeButton.style.transform = 'scale(1)';
+    });
+    
+    // Handle SKIP action
+    skipButton.addEventListener('click', () => {
+      console.info('[sm-zero-energy] SKIP clicked - advancing to next phase');
+      
+      // Fade out and remove modal
+      overlay.style.opacity = '0';
+      modal.style.transform = 'scale(0.95)';
+      
+      setTimeout(() => {
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+        
+        // Advance to next phase
+        if (typeof global.advancePhase === 'function') {
+          global.advancePhase();
+        } else if (typeof global.nextPhase === 'function') {
+          global.nextPhase();
+        } else {
+          console.warn('[sm-zero-energy] No advancePhase or nextPhase function available');
+        }
+        
+        // Clean up flags
+        if (g.__smSkipInProgress) {
+          delete g.__smSkipInProgress;
+        }
+      }, 250);
+    });
+    
+    // Handle Recharge action
+    rechargeButton.addEventListener('click', () => {
+      console.info('[sm-zero-energy] Recharge clicked - granting resources');
+      
+      // Grant 5 energy, 5 influence, 5 information
+      SocialResources.earn(playerId, {
+        energy: 5,
+        influence: 5,
+        information: 5
+      });
+      
+      console.info('[sm-zero-energy] ✓ Granted: 5 energy, 5 influence, 5 information');
+      
+      // Update bank balance for persistence
+      if (SocialEnergyBank) {
+        SocialEnergyBank.adjust(playerId, 5);
+      }
+      
+      // Fade out and remove modal
+      overlay.style.opacity = '0';
+      modal.style.transform = 'scale(0.95)';
+      
+      setTimeout(() => {
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+        
+        // Show social launcher and update HUD
+        if (socialLauncher) {
+          socialLauncher.style.display = '';
+        }
+        
+        if (global.SocializeMobile?.updateHUD) {
+          global.SocializeMobile.updateHUD();
+        }
+        
+        // Clean up flags
+        if (g.__smSkipInProgress) {
+          delete g.__smSkipInProgress;
+        }
+        
+        // Restart the phase timer if it exists
+        if (g.phaseTimerOwner === 'social-maneuvers') {
+          const duration = 180; // 3 minutes default
+          const now = Date.now();
+          g.endAt = now + (duration * 1000);
+          g.phaseEndsAt = g.endAt;
+          console.info('[sm-zero-energy] ✓ Phase timer restarted');
+        }
+      }, 250);
+    });
+    
+    // Assemble modal
+    modal.appendChild(batteryIcon);
+    modal.appendChild(title);
+    modal.appendChild(message);
+    buttonContainer.appendChild(skipButton);
+    buttonContainer.appendChild(rechargeButton);
+    modal.appendChild(buttonContainer);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // Trigger fade-in animation
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+      modal.style.transform = 'scale(1)';
+      modal.style.opacity = '1';
+      
+      // Focus skip button by default for accessibility
+      skipButton.focus();
+    });
+    
+    // Set idempotency flag
+    g.__smSkipInProgress = true;
+  }
+  
   function showEmptyEnergyOverlayAndSkip(playerId) {
     const g = global.game;
     const week = g?.week || 1;
@@ -3170,14 +3432,14 @@
       if(phaseEnergy <= 0) {
         console.info(`[sm-phase-skip] Human player has zero energy (${phaseEnergy}) - triggering auto-skip`);
         
-        // Run AI burst during the 3s overlay before skip
+        // Run AI burst during the modal interaction
         if(typeof global.SocialAIScheduler?.runEmptyEnergyBurst === 'function'){
           setTimeout(() => {
             global.SocialAIScheduler.runEmptyEnergyBurst();
-          }, 100); // Start burst quickly, completes before 3s overlay ends
+          }, 100); // Start burst quickly
         }
         
-        showEmptyEnergyOverlayAndSkip(humanId);
+        showZeroEnergyModal(humanId);
         return; // Exit early, don't set up normal phase
       }
     }
