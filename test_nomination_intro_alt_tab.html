@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Nomination Intro Modal - Alt-Tab Fix</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #0d151f;
+      color: #fff;
+    }
+    
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #5a9ff2;
+      transform: translateY(-2px);
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .success {
+      color: #4ade80;
+    }
+    
+    .error {
+      color: #f87171;
+    }
+    
+    .info {
+      color: #60a5fa;
+    }
+    
+    h1 {
+      color: #ffd700;
+    }
+    
+    h2 {
+      color: #8a9fb5;
+      font-size: 1.2rem;
+    }
+    
+    .warning-box {
+      background: rgba(255, 165, 0, 0.1);
+      border: 2px solid rgba(255, 165, 0, 0.4);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+    }
+    
+    .test-instructions {
+      background: rgba(100, 200, 255, 0.1);
+      border: 1px solid rgba(100, 200, 255, 0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔑 Nomination Intro Modal - Alt-Tab Fix Test</h1>
+  
+  <div class="warning-box">
+    <strong>⚠️ Test Purpose:</strong> This test validates that alt-tabbing away and back during the nomination intro modal does NOT cause crashes or freezes.
+    <br><br>
+    <strong>Expected Behavior:</strong>
+    <ul>
+      <li>No console errors about "Cannot read properties of null (reading 'style')"</li>
+      <li>Modal dismisses gracefully when tab is hidden</li>
+      <li>Game flow continues normally after returning to tab</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>Setup</h2>
+    <button onclick="initializeGame()">1. Initialize Game State</button>
+    <div id="setup-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Manual Alt-Tab Test</h2>
+    <div class="test-instructions">
+      <strong>Test Steps:</strong>
+      <ol>
+        <li>Click "Show Modal & Wait for Alt-Tab"</li>
+        <li>Immediately alt-tab to another window/tab (within 1 second)</li>
+        <li>Wait 3 seconds</li>
+        <li>Return to this tab</li>
+        <li>Check console for errors</li>
+      </ol>
+    </div>
+    <button onclick="testAltTabDuringAnimation()">Show Modal & Wait for Alt-Tab</button>
+    <div id="alttab-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Automated Visibility Change Test</h2>
+    <div class="test-instructions">
+      <strong>Test Steps:</strong>
+      <ol>
+        <li>Click "Test Visibility Change Simulation"</li>
+        <li>Script will show modal and simulate tab hiding</li>
+        <li>Modal should auto-dismiss with console warning</li>
+      </ol>
+    </div>
+    <button onclick="testVisibilityChangeSimulation()">Test Visibility Change Simulation</button>
+    <div id="visibility-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Cleanup Verification Test</h2>
+    <button onclick="testCleanupCancelsRAF()">Test RAF Cancellation on Cleanup</button>
+    <div id="cleanup-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Console Logs</h2>
+    <div class="info" style="font-size: 11px;">
+      Open browser DevTools Console (F12) to see detailed logs from the modal module.
+    </div>
+  </div>
+
+  <!-- Load game dependencies -->
+  <script src="js/utils.js"></script>
+  <script src="js/players.js"></script>
+  <script src="js/ai-scheduler.js"></script>
+  <script src="js/nomination-plea.js"></script>
+  <script src="js/nomination-intro-modal.js"></script>
+
+  <script>
+    // Initialize game state
+    function initializeGame() {
+      const status = document.getElementById('setup-status');
+      
+      try {
+        // Initialize minimal game state
+        window.game = {
+          humanId: 1,
+          hohId: 2,
+          week: 1,
+          cfg: {
+            useNewNominationModal: true  // Feature flag to enable new modal (vs legacy implementation)
+          },
+          __twistNomSlots: 2
+        };
+        
+        // Create players
+        window.players = [
+          { id: 1, name: 'Human Player', evicted: false, reputation: 0.6, affinity: {} },
+          { id: 2, name: 'HOH Player', evicted: false, reputation: 0.5, affinity: { 1: 0.4 } },
+          { id: 3, name: 'Player 3', evicted: false, reputation: 0.5, affinity: {} },
+          { id: 4, name: 'Player 4', evicted: false, reputation: 0.5, affinity: {} }
+        ];
+        
+        // Helper functions
+        window.getP = (id) => window.players.find(p => p.id === id);
+        window.alivePlayers = () => window.players.filter(p => !p.evicted);
+        
+        status.innerHTML = '<span class="success">✓ Game state initialized</span>';
+        console.log('[Test] Game initialized:', window.game);
+      } catch (err) {
+        status.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+        console.error('[Test] Init error:', err);
+      }
+    }
+    
+    // Test: Alt-tab during animation
+    async function testAltTabDuringAnimation() {
+      const status = document.getElementById('alttab-status');
+      
+      try {
+        status.innerHTML = '<span class="info">⏳ Showing modal... ALT-TAB NOW!</span>';
+        console.log('[Test] Showing modal - please alt-tab away NOW');
+        
+        // Show modal
+        const startTime = Date.now();
+        await window.NominationIntroModal.show();
+        const duration = Date.now() - startTime;
+        
+        // Check console for errors
+        const hasErrors = window.performance.getEntriesByType('mark').some(m => 
+          m.name.includes('error') || m.name.includes('null')
+        );
+        
+        status.innerHTML = `<span class="success">✓ Modal resolved after ${duration}ms. Check console for errors.</span>`;
+        console.log('[Test] Modal completed without crashes');
+      } catch (err) {
+        status.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+        console.error('[Test] Alt-tab test error:', err);
+      }
+    }
+    
+    // Test: Visibility change simulation
+    async function testVisibilityChangeSimulation() {
+      const status = document.getElementById('visibility-status');
+      
+      try {
+        status.innerHTML = '<span class="info">⏳ Showing modal...</span>';
+        
+        // Show modal (don't await yet)
+        const modalPromise = window.NominationIntroModal.show();
+        
+        // Wait for modal to be fully displayed
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        status.innerHTML = '<span class="info">⏳ Simulating tab hidden...</span>';
+        console.log('[Test] Dispatching visibilitychange event');
+        
+        // Simulate tab becoming hidden
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: function() { return true; }
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+        
+        // Wait for modal to dismiss
+        await modalPromise;
+        
+        // Reset hidden property
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: function() { return false; }
+        });
+        
+        status.innerHTML = '<span class="success">✓ Modal auto-dismissed on visibility change. Check console for warning.</span>';
+        console.log('[Test] Visibility change test completed');
+      } catch (err) {
+        status.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+        console.error('[Test] Visibility test error:', err);
+      }
+    }
+    
+    // Test: Cleanup cancels RAF
+    async function testCleanupCancelsRAF() {
+      const status = document.getElementById('cleanup-status');
+      
+      try {
+        status.innerHTML = '<span class="info">⏳ Testing RAF cancellation...</span>';
+        
+        // Show modal (don't await)
+        const modalPromise = window.NominationIntroModal.show();
+        
+        // Immediately dismiss (before RAF executes)
+        await new Promise(resolve => setTimeout(resolve, 10));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        
+        // Wait for modal to complete
+        await modalPromise;
+        
+        // Check if RAF warning appeared in console
+        status.innerHTML = '<span class="success">✓ RAF should be cancelled. Check console - should NOT see "RAF callback" warnings.</span>';
+        console.log('[Test] RAF cancellation test completed');
+      } catch (err) {
+        status.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+        console.error('[Test] Cleanup test error:', err);
+      }
+    }
+    
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test] Alt-Tab Fix Test Page Loaded');
+      console.log('[Test] Open DevTools Console to see detailed logs');
+    });
+  </script>
+</body>
+</html>

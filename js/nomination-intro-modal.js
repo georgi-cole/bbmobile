@@ -32,6 +32,7 @@
   let resolvePromise = null;
   let resolved = false;
   let failsafeTimeout = null;
+  let rafId = null;
 
   /**
    * Compute nomination risk for current player
@@ -110,6 +111,12 @@
     if (failsafeTimeout) {
       clearTimeout(failsafeTimeout);
       failsafeTimeout = null;
+    }
+
+    // Cancel pending RAF (prevents style access on removed DOM nodes after alt-tab)
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
     }
 
     // Abort all event listeners
@@ -749,14 +756,24 @@
         modal.setAttribute('tabindex', '-1');
         modal.focus();
 
-        // Animate in
-        requestAnimationFrame(() => {
+        // Animate in (with guards for alt-tab scenarios)
+        rafId = requestAnimationFrame(() => {
+          // Guard: Check if DOM nodes still exist and are connected
+          // If cleanup() ran during alt-tab, these may be null or disconnected
+          if (!overlayElement || !overlayElement.isConnected) {
+            console.warn('[NominationIntroModal] RAF callback: overlayElement removed/disconnected, skipping animation');
+            return;
+          }
+          const modalInRaf = overlayElement.querySelector('.nomination-intro-modal-container');
+          if (!modalInRaf || !modalInRaf.isConnected) {
+            console.warn('[NominationIntroModal] RAF callback: modal removed/disconnected, skipping animation');
+            return;
+          }
+
           overlayElement.style.opacity = '1';
-          if (!prefersReducedMotion) {
-            modal.style.transform = 'scale(1)';
-          } else {
-            modal.style.transform = 'scale(1)';
-            modal.style.transition = 'none';
+          modalInRaf.style.transform = 'scale(1)';
+          if (prefersReducedMotion) {
+            modalInRaf.style.transition = 'none';
           }
         });
 
@@ -779,6 +796,20 @@
         document.addEventListener('keydown', (e) => {
           if (e.key === 'Escape') {
             dismiss();
+          }
+        }, { signal: abortController.signal });
+
+        // Handle tab visibility changes (alt-tab protection)
+        // If user switches tabs while modal is showing, proactively dismiss
+        // to avoid returning to a broken intermediate state
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            // Tab became hidden while modal is showing
+            const vulnerableStates = [STATE.SHOWING, STATE.RISK_VIEW, STATE.PLEA];
+            if (vulnerableStates.includes(currentState)) {
+              console.warn('[NominationIntroModal] Tab hidden while modal active, dismissing to prevent freeze');
+              dismiss();
+            }
           }
         }, { signal: abortController.signal });
 
