@@ -2060,6 +2060,11 @@ console.info('[IntroScreen] Script executing – pre-init');
       return;
     }
 
+    // CRITICAL: Reset play button flag when showing intro screen
+    // This allows the player to restart after exiting from a game-over
+    playButtonClicked = false;
+    console.info('[IntroHub] Reset play button flag for new session');
+
     // Global idempotence guard - check flag but don't trust it blindly
     if (window.__bbHubShown) {
       console.warn('[IntroScreen] Global flag __bbHubShown is true but isVisible is false - resetting flag');

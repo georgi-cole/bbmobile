@@ -91,7 +91,23 @@
       return false;
     }
     
-    console.info(`[gameover-pr] Human player evicted pre-jury at placement ${playersLeftWhenEvicted} - queueing Game Over modal`);
+    console.info(`[gameover-pr] Human player evicted pre-jury at placement ${playersLeftWhenEvicted} - ending current run`);
+    
+    // CRITICAL: End the current run immediately to stop all background ticks
+    try {
+      if (global.GameLifecycle) {
+        global.GameLifecycle.endCurrentRun();
+        console.info('[gameover-pr] ✓ Ended current run via GameLifecycle');
+      } else {
+        // Fallback: set legacy termination flag
+        g.__terminated = true;
+        console.info('[gameover-pr] ✓ Set termination flag (GameLifecycle not available)');
+      }
+    } catch (e) {
+      console.warn('[gameover-pr] Failed to end current run:', e);
+      // Fallback: set legacy flag
+      g.__terminated = true;
+    }
     
     // Queue modal data to be shown after eviction animations complete
     g.__showGameOverModal = {
