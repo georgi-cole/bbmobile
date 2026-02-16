@@ -50,12 +50,12 @@
     const WALL_GRADIENT_DEFAULT = 'linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%)';
     const WALL_GRADIENT_HOLDING = 'linear-gradient(135deg,#2a6a9a 0%,#3a7aaa 25%,#2a5a8a 50%,#3a7aaa 75%,#2a6a9a 100%)';
     
-    // Narrative and difficulty state
-    let narrativeMessages = [];
-    let currentNarrative = '';
-    let difficultyLevel = 0;
-    let difficultyTimer = null;
-    let vibrationInterval = null;
+    // Timers and intervals for cleanup
+    let narrativeTimer = null;
+    let difficultyTimeouts = [];
+    let aiDropTimeouts = [];
+    let effectCleanupTimeouts = [];
+    let narrativePulseTimeout = null;
     
     // Funny narrative lines for different events
     const NARRATIVES = {
@@ -348,16 +348,23 @@
       // Start game loop
       gameLoop();
       
-      // Random narrative updates during gameplay
-      const narrativeInterval = setInterval(() => {
-        if(hasEnded || state !== 'playing'){
-          clearInterval(narrativeInterval);
-          return;
-        }
-        if(isHolding && Math.random() > 0.5){
-          updateNarrative(NARRATIVES.holding);
-        }
-      }, NARRATIVE_UPDATE_MIN_MS + Math.random() * NARRATIVE_UPDATE_RANGE_MS);
+      // Random narrative updates during gameplay with setTimeout chain for natural variation
+      function scheduleNextNarrative() {
+        if(hasEnded || state !== 'playing') return;
+        
+        const delay = NARRATIVE_UPDATE_MIN_MS + Math.random() * NARRATIVE_UPDATE_RANGE_MS;
+        narrativeTimer = setTimeout(() => {
+          if(hasEnded || state !== 'playing') return;
+          
+          if(isHolding && Math.random() > 0.5){
+            updateNarrative(NARRATIVES.holding);
+          }
+          
+          // Schedule next update with new random delay
+          scheduleNextNarrative();
+        }, delay);
+      }
+      scheduleNextNarrative();
       
       // AFK FIX: Start grace period timer
       // If human never starts holding within grace period, automatically drop them
@@ -387,14 +394,22 @@
     function updateNarrative(messages){
       if(!messages || messages.length === 0) return;
       const message = messages[Math.floor(Math.random() * messages.length)];
-      currentNarrative = message;
       const narrativeBox = root.querySelector('#narrativeBox');
       if(narrativeBox){
         narrativeBox.textContent = message;
-        // Pulse effect
+        // Pulse effect with cleanup
         narrativeBox.style.transform = 'scale(1.02)';
-        setTimeout(() => {
-          narrativeBox.style.transform = 'scale(1)';
+        
+        // Clear previous pulse timeout if exists
+        if(narrativePulseTimeout){
+          clearTimeout(narrativePulseTimeout);
+        }
+        
+        narrativePulseTimeout = setTimeout(() => {
+          if(narrativeBox && narrativeBox.parentNode){
+            narrativeBox.style.transform = 'scale(1)';
+          }
+          narrativePulseTimeout = null;
         }, 200);
       }
     }
@@ -411,29 +426,32 @@
       ];
       
       difficulties.forEach(diff => {
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           if(!hasEnded && state === 'playing'){
             updateNarrative([diff.message]);
             diff.action();
           }
         }, diff.time);
+        difficultyTimeouts.push(timeoutId);
       });
     }
     
     function applyWaterEffect(){
       // Visual: drips on screen
       wallPanel.style.filter = 'blur(1px) brightness(0.9)';
-      setTimeout(() => {
+      const cleanupTimeout = setTimeout(() => {
         if(state === 'playing') wallPanel.style.filter = 'none';
       }, 3000);
+      effectCleanupTimeouts.push(cleanupTimeout);
     }
     
     function applyWindEffect(){
       // Tilt the wall slightly
       wallPanel.style.transform = isHolding ? 'scale(0.98) rotate(-2deg)' : 'rotate(-2deg)';
-      setTimeout(() => {
+      const cleanupTimeout = setTimeout(() => {
         if(state === 'playing') wallPanel.style.transform = isHolding ? 'scale(0.98)' : 'scale(1)';
       }, 4000);
+      effectCleanupTimeouts.push(cleanupTimeout);
     }
     
     function applyVibration(){
@@ -443,16 +461,18 @@
       }
       // Visual shake
       wallPanel.style.animation = 'wallShake 0.5s ease-in-out 5';
-      setTimeout(() => {
+      const cleanupTimeout = setTimeout(() => {
         if(state === 'playing') wallPanel.style.animation = 'wallPulse 3s ease-in-out infinite';
       }, 2500);
+      effectCleanupTimeouts.push(cleanupTimeout);
     }
     
     function applyTiltEffect(){
       wallPanel.style.transform = isHolding ? 'scale(0.98) rotate(3deg)' : 'rotate(3deg)';
-      setTimeout(() => {
+      const cleanupTimeout = setTimeout(() => {
         if(state === 'playing') wallPanel.style.transform = isHolding ? 'scale(0.98)' : 'scale(1)';
       }, 5000);
+      effectCleanupTimeouts.push(cleanupTimeout);
     }
     
     function applyFlashEffect(){
@@ -460,7 +480,8 @@
       const flash = document.createElement('div');
       flash.style.cssText = 'position:absolute;inset:0;background:white;z-index:50;animation:flashScreen 0.5s ease-out;pointer-events:none;';
       root.appendChild(flash);
-      setTimeout(() => flash.remove(), 500);
+      const cleanupTimeout = setTimeout(() => flash.remove(), 500);
+      effectCleanupTimeouts.push(cleanupTimeout);
     }
     
     function applyCallEffect(){
@@ -469,18 +490,20 @@
       callNotif.style.cssText = 'position:absolute;top:80px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:12px 20px;border-radius:12px;font-size:0.9rem;z-index:60;box-shadow:0 4px 20px rgba(0,0,0,0.6);animation:slideDown 0.3s ease-out;';
       callNotif.innerHTML = '📞 Mom is calling...';
       root.appendChild(callNotif);
-      setTimeout(() => callNotif.remove(), 3000);
+      const cleanupTimeout = setTimeout(() => callNotif.remove(), 3000);
+      effectCleanupTimeouts.push(cleanupTimeout);
     }
     
     function startAIDrops(){
       // Schedule each AI participant to drop at their personal time
       participants.forEach(p => {
         if(!p.isPlayer && p.personalDropTime){
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             if(!hasEnded && state === 'playing' && p.dropTimeMs === null){
               dropParticipant(p);
             }
           }, p.personalDropTime);
+          aiDropTimeouts.push(timeoutId);
         }
       });
     }
@@ -570,17 +593,52 @@
       }
     }
     
+    function cleanupTimers(){
+      // Clear grace period timer
+      if(gracePeriodTimer){
+        clearTimeout(gracePeriodTimer);
+        gracePeriodTimer = null;
+      }
+      
+      // Clear narrative timer
+      if(narrativeTimer){
+        clearTimeout(narrativeTimer);
+        narrativeTimer = null;
+      }
+      
+      // Clear narrative pulse timeout
+      if(narrativePulseTimeout){
+        clearTimeout(narrativePulseTimeout);
+        narrativePulseTimeout = null;
+      }
+      
+      // Clear all difficulty timeouts
+      difficultyTimeouts.forEach(clearTimeout);
+      difficultyTimeouts = [];
+      
+      // Clear all AI drop timeouts
+      aiDropTimeouts.forEach(clearTimeout);
+      aiDropTimeouts = [];
+      
+      // Clear all effect cleanup timeouts
+      effectCleanupTimeouts.forEach(clearTimeout);
+      effectCleanupTimeouts = [];
+      
+      // Cancel animation frame
+      if(animationFrame){
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+    }
+    
     function endHold(){
       if(hasEnded) return;
       
       isHolding = false;
       hasEnded = true;
       
-      // AFK FIX: Clear grace period timer if it's still running
-      if(gracePeriodTimer){
-        clearTimeout(gracePeriodTimer);
-        gracePeriodTimer = null;
-      }
+      // Cleanup all timers
+      cleanupTimers();
       
       // Check if player was the last one standing before they released
       const stillHoldingBeforeRelease = participants.filter(p => p.dropTimeMs === null);
@@ -630,11 +688,8 @@
       if(hasEnded) return;
       hasEnded = true;
       
-      // AFK FIX: Clear grace period timer if it's still running
-      if(gracePeriodTimer){
-        clearTimeout(gracePeriodTimer);
-        gracePeriodTimer = null;
-      }
+      // Cleanup all timers
+      cleanupTimers();
       
       const victoryTime = Date.now() - startTime;
       score = 100; // Winner gets max score
