@@ -2950,6 +2950,14 @@
   // AUTO-SKIP WHEN ENERGY IS ZERO
   // ============================================================================
   
+  // Constants for zero energy modal rewards and timing
+  const ZERO_ENERGY_RECHARGE_REWARDS = {
+    energy: 5,
+    influence: 5,
+    information: 5
+  };
+  const SOCIAL_PHASE_DEFAULT_DURATION_SECONDS = 180; // 3 minutes
+  
   /**
    * Stop the Social phase timer to prevent countdown during auto-skip.
    * Sets endAt to now to prevent "far future" timer values.
@@ -3158,18 +3166,14 @@
     rechargeButton.addEventListener('click', () => {
       console.info('[sm-zero-energy] Recharge clicked - granting resources');
       
-      // Grant 5 energy, 5 influence, 5 information
-      SocialResources.earn(playerId, {
-        energy: 5,
-        influence: 5,
-        information: 5
-      });
+      // Grant resources using configured amounts
+      SocialResources.earn(playerId, ZERO_ENERGY_RECHARGE_REWARDS);
       
-      console.info('[sm-zero-energy] ✓ Granted: 5 energy, 5 influence, 5 information');
+      console.info(`[sm-zero-energy] ✓ Granted: ${ZERO_ENERGY_RECHARGE_REWARDS.energy} energy, ${ZERO_ENERGY_RECHARGE_REWARDS.influence} influence, ${ZERO_ENERGY_RECHARGE_REWARDS.information} information`);
       
       // Update bank balance for persistence
       if (SocialEnergyBank) {
-        SocialEnergyBank.adjust(playerId, 5);
+        SocialEnergyBank.adjust(playerId, ZERO_ENERGY_RECHARGE_REWARDS.energy);
       }
       
       // Fade out and remove modal
@@ -3197,9 +3201,8 @@
         
         // Restart the phase timer if it exists
         if (g.phaseTimerOwner === 'social-maneuvers') {
-          const duration = 180; // 3 minutes default
           const now = Date.now();
-          g.endAt = now + (duration * 1000);
+          g.endAt = now + (SOCIAL_PHASE_DEFAULT_DURATION_SECONDS * 1000);
           g.phaseEndsAt = g.endAt;
           console.info('[sm-zero-energy] ✓ Phase timer restarted');
         }
