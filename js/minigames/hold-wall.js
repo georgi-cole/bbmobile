@@ -28,6 +28,28 @@
     let gracePeriodTimer = null;
     const GRACE_PERIOD_MS = 2000; // Grace period before auto-dropping AFK players
     
+    // AI drop timing constants
+    const MIN_AI_DROP_TIME_MS = 10000; // 10 seconds
+    const MAX_AI_DROP_TIME_MS = 120000; // 120 seconds
+    const AI_DROP_TIME_RANGE_MS = MAX_AI_DROP_TIME_MS - MIN_AI_DROP_TIME_MS;
+    
+    // Narrative timing constants
+    const NARRATIVE_UPDATE_MIN_MS = 8000; // 8 seconds
+    const NARRATIVE_UPDATE_RANGE_MS = 7000; // 7 seconds (8-15 total)
+    
+    // Difficulty timing constants
+    const WATER_EFFECT_TIME_MS = 15000;
+    const WIND_EFFECT_TIME_MS = 30000;
+    const VIBRATION_EFFECT_TIME_MS = 45000;
+    const TILT_EFFECT_TIME_MS = 60000;
+    const FLASH_EFFECT_TIME_MS = 75000;
+    const CALL_EFFECT_TIME_MS = 90000;
+    
+    // Visual effect constants
+    const VIBRATION_PATTERN = [200, 100, 200, 100, 200];
+    const WALL_GRADIENT_DEFAULT = 'linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%)';
+    const WALL_GRADIENT_HOLDING = 'linear-gradient(135deg,#2a6a9a 0%,#3a7aaa 25%,#2a5a8a 50%,#3a7aaa 75%,#2a6a9a 100%)';
+    
     // Narrative and difficulty state
     let narrativeMessages = [];
     let currentNarrative = '';
@@ -110,7 +132,7 @@
         dropTimeMs: null,
         avatarUrl: g.resolveAvatar ? g.resolveAvatar(p) : null,
         // Assign each AI a personal drop time (randomized between 10-120 seconds)
-        personalDropTime: p.human || p.isPlayer ? null : 10000 + Math.random() * 110000
+        personalDropTime: p.human || p.isPlayer ? null : MIN_AI_DROP_TIME_MS + Math.random() * AI_DROP_TIME_RANGE_MS
       }));
       
       console.log(`[HoldWall] ${participants.length} participants for ${compType} competition`);
@@ -335,7 +357,7 @@
         if(isHolding && Math.random() > 0.5){
           updateNarrative(NARRATIVES.holding);
         }
-      }, 8000 + Math.random() * 7000); // Every 8-15 seconds
+      }, NARRATIVE_UPDATE_MIN_MS + Math.random() * NARRATIVE_UPDATE_RANGE_MS);
       
       // AFK FIX: Start grace period timer
       // If human never starts holding within grace period, automatically drop them
@@ -380,12 +402,12 @@
     function startDifficulties(){
       // Progressive difficulty system
       const difficulties = [
-        { time: 15000, action: applyWaterEffect, message: "Oh no! Production is spraying water! 💦" },
-        { time: 30000, action: applyWindEffect, message: "Someone turned on the wind machine! Hold tight! 🌪️" },
-        { time: 45000, action: applyVibration, message: "The wall is vibrating! Earthquake mode! 📳" },
-        { time: 60000, action: applyTiltEffect, message: "The wall is starting to tilt! 🌶️" },
-        { time: 75000, action: applyFlashEffect, message: "Bright lights! Don't let go! ✨" },
-        { time: 90000, action: applyCallEffect, message: "Incoming call! Just kidding! Focus! 📞" }
+        { time: WATER_EFFECT_TIME_MS, action: applyWaterEffect, message: "Oh no! Production is spraying water! 💦" },
+        { time: WIND_EFFECT_TIME_MS, action: applyWindEffect, message: "Someone turned on the wind machine! Hold tight! 🌪️" },
+        { time: VIBRATION_EFFECT_TIME_MS, action: applyVibration, message: "The wall is vibrating! Earthquake mode! 📳" },
+        { time: TILT_EFFECT_TIME_MS, action: applyTiltEffect, message: "The wall is starting to tilt! 🌶️" },
+        { time: FLASH_EFFECT_TIME_MS, action: applyFlashEffect, message: "Bright lights! Don't let go! ✨" },
+        { time: CALL_EFFECT_TIME_MS, action: applyCallEffect, message: "Incoming call! Just kidding! Focus! 📞" }
       ];
       
       difficulties.forEach(diff => {
@@ -417,7 +439,7 @@
     function applyVibration(){
       // Try to vibrate device (mobile only)
       if(navigator.vibrate){
-        navigator.vibrate([200, 100, 200, 100, 200]);
+        navigator.vibrate(VIBRATION_PATTERN);
       }
       // Visual shake
       wallPanel.style.animation = 'wallShake 0.5s ease-in-out 5';
@@ -525,7 +547,7 @@
         isHolding = true;
         hasHumanStartedHolding = true; // AFK FIX: Track that human has started
         mouseDownTime = Date.now();
-        wallPanel.style.background = 'linear-gradient(135deg,#2a6a9a 0%,#3a7aaa 25%,#2a5a8a 50%,#3a7aaa 75%,#2a6a9a 100%)';
+        wallPanel.style.background = WALL_GRADIENT_HOLDING;
         wallPanel.style.transform = 'scale(0.98)';
         wallPanel.style.cursor = 'grabbing';
         wallPanel.style.borderColor = '#66ff66';
@@ -581,7 +603,7 @@
         updateNarrative(NARRATIVES.loss);
       }
       
-      wallPanel.style.background = 'linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%)';
+      wallPanel.style.background = WALL_GRADIENT_DEFAULT;
       wallPanel.style.transform = 'scale(1)';
       wallPanel.style.borderColor = '#ff6b6b';
       statusMsg.textContent = 'You released!';
