@@ -159,18 +159,19 @@
         const shouldShowIntro = !g.__nominationsIntroShownThisPhase;
         
         if (shouldShowIntro) {
-          // Mark as shown BEFORE showing modal to prevent re-entry
-          g.__nominationsIntroShownThisPhase = true;
-          
           try {
             // Try NEW modal first
             if (typeof global.NominationIntroModal?.show === 'function') {
+              // Mark as shown BEFORE showing modal to prevent re-entry
+              g.__nominationsIntroShownThisPhase = true;
               console.info('[phase-intro-integration] Showing NEW nomination intro modal');
               await global.NominationIntroModal.show();
               console.info('[phase-intro-integration] NEW nomination intro modal dismissed');
             }
             // Fallback to OLD modal if new one not available
             else if (typeof global.showNominationIntroModal === 'function') {
+              // Mark as shown BEFORE showing modal to prevent re-entry
+              g.__nominationsIntroShownThisPhase = true;
               console.info('[phase-intro-integration] Showing OLD nomination intro modal (fallback)');
               await global.showNominationIntroModal();
               console.info('[phase-intro-integration] OLD nomination intro modal dismissed');
