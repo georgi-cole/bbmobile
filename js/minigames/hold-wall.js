@@ -26,7 +26,7 @@
     // AFK detection state
     let hasHumanStartedHolding = false;
     let gracePeriodTimer = null;
-    const GRACE_PERIOD_MS = 2000; // 2 seconds grace period
+    const GRACE_PERIOD_MS = 2000; // 2-second (2000ms) grace period
     
     // Detect competition type
     let compType = 'hoh'; // default

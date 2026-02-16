@@ -1668,7 +1668,7 @@
           // If an endurance minigame has marked an authoritative winner, skip generating AI scores
           // This prevents the fallback logic from overriding the endurance winner
           if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
-            console.debug(`[hoh] ✓ Idempotency: Blocking score generation for player ${id} - authoritative winner (${g.__authoritativeWinner.playerId}) already set`);
+            console.debug(`[hoh] ✓ Guard: Blocking score generation for player ${id} - authoritative winner (${g.__authoritativeWinner.playerId}) already set`);
             // Set 0 score for non-winners in endurance competitions
             g.lastCompScores.set(id, 0);
             continue;
@@ -1780,7 +1780,7 @@
         if (g.__authoritativeWinner.playerId !== winner) {
           console.error(`[hoh] ⚠️ MISMATCH: Authoritative winner (${g.__authoritativeWinner.playerId}) differs from determined winner (${winner})!`);
           console.error('[hoh] This should not happen - using authoritative winner');
-          console.debug('[hoh] ✓ Idempotency: Preventing fallback winner override - applying authoritative winner');
+          console.debug('[hoh] ✓ Error Recovery: Preventing fallback winner override - applying authoritative winner');
           // Override with authoritative winner
           winner = g.__authoritativeWinner.playerId;
         } else {

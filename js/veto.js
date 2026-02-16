@@ -1252,7 +1252,7 @@
       if(g.__authoritativeWinner.playerId !== global.game.vetoHolder){
         console.error('[veto] ⚠️ MISMATCH: Authoritative winner (' + g.__authoritativeWinner.playerId + ') differs from determined winner (' + global.game.vetoHolder + ')!');
         console.error('[veto] This should not happen - using authoritative winner');
-        console.debug('[veto] ✓ Idempotency: Preventing fallback winner override - applying authoritative winner');
+        console.debug('[veto] ✓ Error Recovery: Preventing fallback winner override - applying authoritative winner');
         // Override with authoritative winner
         global.game.vetoHolder = g.__authoritativeWinner.playerId;
       } else {
