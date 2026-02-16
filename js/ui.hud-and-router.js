@@ -1796,6 +1796,11 @@ header.innerHTML = `
   }
   function startOpeningSequence(){
     const game=g.game; if(!game) return;
+    
+    // Reset flags at the start of opening sequence (for fresh season starts)
+    game.__openingAdvanced = false;
+    game.__openingFinished = false;
+    
     game.phase='opening'; updateHud(); g.renderPanel?.();
     g.tv?.say?.('Season Premiere');
     try{ g.setMusic?.('theme_opening', true); }catch{}
@@ -1806,12 +1811,16 @@ header.innerHTML = `
     // Previously had reality-TV style intro (IntroShow) and classic dual-card intro
     console.info('[opening] Skipping intro sequences, proceeding directly to gameplay');
     
-    // Brief delay to allow phase transition, then finish opening
+    // FIX: Advance immediately on next tick to prevent soft-lock on Season Premiere screen
+    // This ensures the game never remains in 'opening' long enough to show/stick on the UI
+    // Changed from 500ms to 0ms for deterministic immediate advancement
     setTimeout(() => {
-      if (game.phase === 'opening') {
+      if (game.phase === 'opening' && !game.__openingAdvanced) {
+        console.info('[opening] Auto-advancing to intermission (forced immediate advancement)');
+        game.__openingAdvanced = true; // Prevent double-advancement
         g.finishOpening();
       }
-    }, 500);
+    }, 0);
   }
   g.startOpeningSequence = startOpeningSequence;
   function skipIntro(userTriggered){
@@ -1826,9 +1835,17 @@ header.innerHTML = `
   g.skipIntro = skipIntro;
   function finishOpening(){
     const game=g.game; if(!game) return;
+    
     // Prevent duplicate calls if already marked as early finished
     if(game.__introEarlyFinished && game.__introEarlyFinishCalled) return;
     if(game.__introEarlyFinished) game.__introEarlyFinishCalled = true;
+    
+    // Additional guard: prevent double-advancement if already called
+    if(game.__openingFinished) {
+      console.info('[opening] finishOpening already called, skipping duplicate');
+      return;
+    }
+    game.__openingFinished = true;
     
     skipIntro(false);
     // Old card removed - now handled by showWeekIntroModal in ui.week-intro.js

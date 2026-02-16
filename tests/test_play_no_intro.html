@@ -320,16 +320,16 @@
           log(`✓ Phase correctly set to 'opening'`, 'success');
         }
         
-        // Step 7: Wait for timeout (should be ~500ms)
-        log('Waiting for finishOpening to be called (~500ms)...', 'info');
-        await delay(600);
+        // Step 7: Wait for timeout (should be immediate - 0ms next tick)
+        log('Waiting for finishOpening to be called (should be immediate)...', 'info');
+        await delay(100); // Increased slightly for safety but much less than 600ms
         
         // Step 8: Verify finishOpening was called
         if (!finishOpeningCalled) {
-          log('❌ FAIL: finishOpening() was not called within 600ms', 'error');
+          log('❌ FAIL: finishOpening() was not called within 100ms', 'error');
           testPassed = false;
         } else {
-          log('✓ finishOpening() was called as expected', 'success');
+          log('✓ finishOpening() was called immediately as expected', 'success');
         }
         
         // Step 9: Check that IntroShow.play was NOT called (tracked in setup)
