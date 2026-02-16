@@ -133,62 +133,62 @@
     </div>
   </div>
 
-  <script type="module">
-    import HoldWallModule from './js/minigames/hold-wall.js';
-    
-    // Mock global game object
-    window.global = {
-      game: {
-        players: [
-          { id: 1, name: 'Alice', human: true, evicted: false },
-          { id: 2, name: 'Bob', evicted: false },
-          { id: 3, name: 'Charlie', evicted: false },
-          { id: 4, name: 'Diana', evicted: false }
-        ],
-        humanId: 1,
-        phase: 'hoh',
-        week: 2,
-        lastCompScores: new Map(),
-        cfg: {}
-      },
-      getP: function(id) {
-        return this.game.players.find(p => p.id === id);
-      },
-      alivePlayers: function() {
-        return this.game.players.filter(p => !p.evicted);
-      },
-      safeName: function(id) {
-        const p = this.getP(id);
-        return p ? p.name : String(id);
-      },
-      resolveAvatar: function(p) {
-        return null; // No avatars for this test
-      }
+  <!-- Load hold-wall.js as a script (IIFE that registers window.MiniGames.holdWall) -->
+  <script src="./js/minigames/hold-wall.js"></script>
+  
+  <script>
+    // Mock game object (hold-wall.js reads from window.game, not window.global.game)
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', human: true, evicted: false },
+        { id: 2, name: 'Bob', evicted: false },
+        { id: 3, name: 'Charlie', evicted: false },
+        { id: 4, name: 'Diana', evicted: false }
+      ],
+      humanId: 1,
+      phase: 'hoh',
+      week: 2,
+      lastCompScores: new Map(),
+      cfg: {}
     };
     
-    window.HoldWallModule = HoldWallModule;
+    // Mock global namespace functions
+    window.global = window.global || {};
+    window.global.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    window.global.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    window.global.safeName = function(id) {
+      const p = window.global.getP(id);
+      return p ? p.name : String(id);
+    };
+    window.global.resolveAvatar = function(p) {
+      return null; // No avatars for this test
+    };
     
     // Test functions
     window.testHOHPhase = function() {
-      window.global.game.phase = 'hoh';
+      window.game.phase = 'hoh';
       const result = testPhaseDetection('hoh', 'HOH');
       displayResult(result);
     };
     
     window.testPOVPhase = function() {
-      window.global.game.phase = 'veto_comp';
+      window.game.phase = 'veto_comp';
       const result = testPhaseDetection('veto_comp', 'POV (veto_comp)');
       displayResult(result);
     };
     
     window.testVetoPhase = function() {
-      window.global.game.phase = 'veto';
+      window.game.phase = 'veto';
       const result = testPhaseDetection('veto', 'POV (veto)');
       displayResult(result);
     };
     
     window.testLegacyPOVPhase = function() {
-      window.global.game.phase = 'pov';
+      window.game.phase = 'pov';
       const result = testPhaseDetection('pov', 'POV (legacy pov)');
       displayResult(result);
     };
@@ -211,24 +211,25 @@
       const mockComplete = (score) => {
         capturedData = {
           score,
-          authWinner: window.global.game.__authoritativeWinner
+          authWinner: window.game.__authoritativeWinner
         };
       };
       
       // Reset authoritative winner
-      delete window.global.game.__authoritativeWinner;
-      window.global.game.lastCompScores = new Map();
+      delete window.game.__authoritativeWinner;
+      window.game.lastCompScores = new Map();
       
       try {
-        // Render the minigame
-        HoldWallModule.render(tempContainer, mockComplete);
+        // Render the minigame (use window.MiniGames.holdWall.render, not ES module import)
+        window.MiniGames.holdWall.render(tempContainer, mockComplete);
         
         // Check logs for phase detection
         const detectionLog = logs.find(log => log.includes('[HoldWall] Detected competition type:'));
         
         // Check if authoritative winner would be set correctly
         const expectedCompType = (phase === 'hoh') ? 'hoh' : 'pov';
-        const detectedCorrectly = detectionLog && detectionLog.includes(`type: ${expectedCompType}`);
+        // Fix: actual log format is "competition type: pov", not "type: pov"
+        const detectedCorrectly = !!(detectionLog && detectionLog.includes(`competition type: ${expectedCompType}`));
         
         // Cleanup
         tempContainer.remove();
@@ -278,15 +279,15 @@
     }
     
     window.runHOHGame = function() {
-      window.global.game.phase = 'hoh';
-      window.global.game.__authoritativeWinner = null;
-      window.global.game.lastCompScores = new Map();
+      window.game.phase = 'hoh';
+      window.game.__authoritativeWinner = null;
+      window.game.lastCompScores = new Map();
       
       const container = document.getElementById('gameContainer');
       container.innerHTML = '<div style="color: #83bfff; margin-bottom: 10px;">Running HOH Game...</div>';
       
-      HoldWallModule.render(container, (score) => {
-        const authWinner = window.global.game.__authoritativeWinner;
+      window.MiniGames.holdWall.render(container, (score) => {
+        const authWinner = window.game.__authoritativeWinner;
         const resultDiv = document.createElement('div');
         resultDiv.className = 'result ' + (authWinner && authWinner.compType === 'hoh' ? 'success' : 'error');
         resultDiv.innerHTML = `
@@ -300,15 +301,15 @@
     };
     
     window.runPOVGame = function() {
-      window.global.game.phase = 'veto_comp';
-      window.global.game.__authoritativeWinner = null;
-      window.global.game.lastCompScores = new Map();
+      window.game.phase = 'veto_comp';
+      window.game.__authoritativeWinner = null;
+      window.game.lastCompScores = new Map();
       
       const container = document.getElementById('gameContainer');
       container.innerHTML = '<div style="color: #83bfff; margin-bottom: 10px;">Running POV Game (phase: veto_comp)...</div>';
       
-      HoldWallModule.render(container, (score) => {
-        const authWinner = window.global.game.__authoritativeWinner;
+      window.MiniGames.holdWall.render(container, (score) => {
+        const authWinner = window.game.__authoritativeWinner;
         const resultDiv = document.createElement('div');
         resultDiv.className = 'result ' + (authWinner && authWinner.compType === 'pov' ? 'success' : 'error');
         resultDiv.innerHTML = `
