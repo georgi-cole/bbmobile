@@ -112,17 +112,17 @@
 ## Accessibility Features
 
 ### Keyboard Navigation
-- Modal traps focus
 - SKIP button gets default focus
 - Tab cycles through buttons
 - Enter/Space activates focused button
-- Escape closes modal (if Cancel button exists)
+- Escape key triggers SKIP action
 
 ### Screen Readers
-- Modal has role="dialog"
-- Title has appropriate heading level
+- Modal has role="dialog" and aria-modal="true"
+- Title has id for aria-labelledby reference
+- Message has id for aria-describedby reference
 - Buttons have descriptive labels
-- Modal overlay has aria-label
+- Battery icon has aria-hidden="true"
 
 ## Z-Index Hierarchy
 ```

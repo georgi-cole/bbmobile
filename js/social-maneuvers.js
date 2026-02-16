@@ -2984,6 +2984,13 @@
     const g = global.game;
     if (!g) return;
     
+    // Idempotency guard: avoid creating multiple overlays if already skipping
+    if (g.__smSkipInProgress) {
+      console.info('[sm-zero-energy] Skip already in progress, not showing another modal');
+      return;
+    }
+    g.__smSkipInProgress = true;
+    
     console.info(`[sm-zero-energy] Showing 0 energy modal for player ${playerId}`);
     
     // Stop the phase timer immediately
@@ -3036,6 +3043,10 @@
     // Create modal content
     const modal = document.createElement('div');
     modal.className = 'sm-zero-energy-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'sm-zero-energy-title');
+    modal.setAttribute('aria-describedby', 'sm-zero-energy-message');
     modal.style.cssText = `
       background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
       border: 3px solid #ff4444;
@@ -3054,6 +3065,7 @@
     // Create battery icon (empty)
     const batteryIcon = document.createElement('div');
     batteryIcon.className = 'sm-zero-energy-battery-icon';
+    batteryIcon.setAttribute('aria-hidden', 'true');
     batteryIcon.style.cssText = `
       font-size: 80px;
       line-height: 1;
@@ -3065,6 +3077,7 @@
     
     // Create title
     const title = document.createElement('div');
+    title.id = 'sm-zero-energy-title';
     title.className = 'sm-zero-energy-title';
     title.style.cssText = `
       font-size: 1.8rem;
@@ -3079,6 +3092,7 @@
     
     // Create message
     const message = document.createElement('div');
+    message.id = 'sm-zero-energy-message';
     message.className = 'sm-zero-energy-message';
     message.style.cssText = `
       font-size: 1rem;
@@ -3118,7 +3132,7 @@
     // Create Recharge button (with movie ad icon)
     const rechargeButton = document.createElement('button');
     rechargeButton.className = 'sm-zero-energy-button sm-recharge-button';
-    rechargeButton.innerHTML = '🎬 Recharge';
+    rechargeButton.textContent = '🎬 Recharge';
     rechargeButton.style.cssText = `
       padding: 12px 24px;
       font-size: 0.95rem;
@@ -3152,8 +3166,28 @@
       rechargeButton.style.transform = 'scale(1)';
     });
     
+    // Shared cleanup function for both handlers
+    let keydownHandlerAttached = false;
+    const handleEscapeKey = (e) => {
+      if (e.key === 'Escape' && !skipButton.disabled) {
+        e.preventDefault();
+        skipButton.click();
+      }
+    };
+    
+    const cleanupHandler = () => {
+      if (keydownHandlerAttached) {
+        document.removeEventListener('keydown', handleEscapeKey);
+        keydownHandlerAttached = false;
+      }
+    };
+    
     // Handle SKIP action
     skipButton.addEventListener('click', () => {
+      // Disable buttons immediately to prevent double-click
+      skipButton.disabled = true;
+      rechargeButton.disabled = true;
+      
       console.info('[sm-zero-energy] SKIP clicked - advancing to next phase');
       
       // Fade out and remove modal
@@ -3161,6 +3195,7 @@
       modal.style.transform = 'scale(0.95)';
       
       setTimeout(() => {
+        cleanupHandler();
         if (overlay.parentNode) {
           overlay.parentNode.removeChild(overlay);
         }
@@ -3183,23 +3218,24 @@
     
     // Handle Recharge action
     rechargeButton.addEventListener('click', () => {
+      // Disable buttons immediately to prevent double-click
+      skipButton.disabled = true;
+      rechargeButton.disabled = true;
+      
       console.info('[sm-zero-energy] Recharge clicked - granting resources');
       
       // Grant resources using configured amounts
+      // Note: SocialResources.earn() already updates SocialEnergyBank internally
       SocialResources.earn(playerId, ZERO_ENERGY_RECHARGE_REWARDS);
       
       console.info(`[sm-zero-energy] ✓ Granted: ${ZERO_ENERGY_RECHARGE_REWARDS.energy} energy, ${ZERO_ENERGY_RECHARGE_REWARDS.influence} influence, ${ZERO_ENERGY_RECHARGE_REWARDS.information} information`);
-      
-      // Update bank balance for persistence
-      if (SocialEnergyBank) {
-        SocialEnergyBank.adjust(playerId, ZERO_ENERGY_RECHARGE_REWARDS.energy);
-      }
       
       // Fade out and remove modal
       overlay.style.opacity = '0';
       modal.style.transform = 'scale(0.95)';
       
       setTimeout(() => {
+        cleanupHandler();
         if (overlay.parentNode) {
           overlay.parentNode.removeChild(overlay);
         }
@@ -3238,6 +3274,10 @@
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     
+    // Attach Escape key handler for keyboard accessibility
+    document.addEventListener('keydown', handleEscapeKey);
+    keydownHandlerAttached = true;
+    
     // Trigger fade-in animation
     requestAnimationFrame(() => {
       overlay.style.opacity = '1';
@@ -3247,9 +3287,6 @@
       // Focus skip button by default for accessibility
       skipButton.focus();
     });
-    
-    // Set idempotency flag
-    g.__smSkipInProgress = true;
   }
   
   // LEGACY: Old auto-skip overlay (replaced by showZeroEnergyModal)
