@@ -26,7 +26,7 @@
     // AFK detection state
     let hasHumanStartedHolding = false;
     let gracePeriodTimer = null;
-    const GRACE_PERIOD_MS = 2000; // 2-second (2000ms) grace period
+    const GRACE_PERIOD_MS = 2000; // Grace period before auto-dropping AFK players
     
     // Detect competition type
     let compType = 'hoh'; // default
