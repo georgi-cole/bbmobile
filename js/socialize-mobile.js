@@ -322,11 +322,9 @@
       return;
     }
     
+    // Note: 0 energy check removed - handled by showZeroEnergyModal at phase start
+    // Get resources for display
     const res = getResourceState();
-    if (res.energy <= 0) {
-      global.addLog?.('No energy remaining for social actions.', 'warn');
-      return;
-    }
 
     // Pause phase timer when modal opens
     if (global.SocialManeuvers?.pausePhaseTimer) {
