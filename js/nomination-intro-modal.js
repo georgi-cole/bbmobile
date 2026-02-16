@@ -764,18 +764,16 @@
             console.warn('[NominationIntroModal] RAF callback: overlayElement removed/disconnected, skipping animation');
             return;
           }
-          const modalEl = overlayElement.querySelector('.nomination-intro-modal-container');
-          if (!modalEl || !modalEl.isConnected) {
+          const modalInRaf = overlayElement.querySelector('.nomination-intro-modal-container');
+          if (!modalInRaf || !modalInRaf.isConnected) {
             console.warn('[NominationIntroModal] RAF callback: modal removed/disconnected, skipping animation');
             return;
           }
 
           overlayElement.style.opacity = '1';
-          if (!prefersReducedMotion) {
-            modalEl.style.transform = 'scale(1)';
-          } else {
-            modalEl.style.transform = 'scale(1)';
-            modalEl.style.transition = 'none';
+          modalInRaf.style.transform = 'scale(1)';
+          if (prefersReducedMotion) {
+            modalInRaf.style.transition = 'none';
           }
         });
 
