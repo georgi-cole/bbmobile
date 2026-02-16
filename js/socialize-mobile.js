@@ -323,6 +323,8 @@
     }
     
     // Note: 0 energy check removed - handled by showZeroEnergyModal at phase start
+    // Get resources for display
+    const res = getResourceState();
 
     // Pause phase timer when modal opens
     if (global.SocialManeuvers?.pausePhaseTimer) {

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Zero Energy Modal</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0a0e1a;
+      color: #e0e8f0;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a2332;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    
+    h1 {
+      color: #4fc3f7;
+      margin-top: 0;
+    }
+    
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #0f1520;
+      border-radius: 8px;
+      border-left: 4px solid #4fc3f7;
+    }
+    
+    button {
+      padding: 12px 24px;
+      margin: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #2196f3;
+      color: white;
+    }
+    
+    button:hover {
+      background: #1976d2;
+      transform: translateY(-2px);
+    }
+    
+    .info {
+      padding: 12px;
+      background: rgba(255,193,7,0.1);
+      border-left: 3px solid #ffc107;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .status {
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    
+    .status.success {
+      background: rgba(76,175,80,0.2);
+      color: #66bb6a;
+    }
+    
+    .status.info {
+      background: rgba(33,150,243,0.2);
+      color: #42a5f5;
+    }
+    
+    @keyframes sm-battery-blink {
+      0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🔋 Zero Energy Modal Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Scenario</h2>
+      <p>This test demonstrates the new 0 social energy modal that appears when a player has no social energy at the start of the social phase.</p>
+      
+      <div class="info">
+        <strong>Features:</strong>
+        <ul>
+          <li>🔋 Empty battery icon with blinking animation</li>
+          <li>⏭️ SKIP button - advances to next phase</li>
+          <li>🎬 Recharge button - grants +5 energy, +5 influence, +5 information</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Controls</h2>
+      <button onclick="testZeroEnergyModal()">Show Zero Energy Modal</button>
+      <button onclick="setEnergyToZero()">Set Energy to 0 (then start social phase)</button>
+      <button onclick="checkCurrentEnergy()">Check Current Energy</button>
+      <button onclick="resetEnergy()">Reset Energy to 5</button>
+    </div>
+    
+    <div class="test-section">
+      <h2>Status</h2>
+      <div id="statusLog"></div>
+    </div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+  
+  <script>
+    // Initialize game state
+    window.game = window.game || {};
+    window.game.humanId = 1;
+    window.game.week = 1;
+    window.game.cfg = { enableSocialManeuvers: true };
+    window.game.phase = 'social_intermission';
+    window.game.phaseTimerOwner = 'social-maneuvers';
+    
+    // Mock functions
+    window.advancePhase = function() {
+      logStatus('advancePhase() called - would advance to next phase', 'success');
+    };
+    
+    window.nextPhase = function() {
+      logStatus('nextPhase() called - would advance to next phase', 'success');
+    };
+    
+    window.getP = function(id) {
+      return { id: id, name: `Player ${id}`, evicted: false };
+    };
+    
+    window.alivePlayers = function() {
+      return [
+        { id: 1, name: 'Player 1', evicted: false },
+        { id: 2, name: 'Player 2', evicted: false },
+        { id: 3, name: 'Player 3', evicted: false }
+      ];
+    };
+    
+    window.safeName = function(id) {
+      return `Player ${id}`;
+    };
+    
+    // Helper functions for testing
+    function logStatus(message, type = 'info') {
+      const log = document.getElementById('statusLog');
+      const entry = document.createElement('div');
+      entry.className = `status ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.insertBefore(entry, log.firstChild);
+      
+      // Keep only last 10 entries
+      while (log.children.length > 10) {
+        log.removeChild(log.lastChild);
+      }
+    }
+    
+    function testZeroEnergyModal() {
+      logStatus('Showing zero energy modal...', 'info');
+      
+      // Initialize Social Maneuvers if not already done
+      if (window.SocialManeuvers && window.SocialManeuvers.SocialResources) {
+        window.SocialManeuvers.SocialResources.init(window.game.humanId);
+      }
+      
+      // Call the modal directly
+      if (window.SocialManeuvers && window.SocialManeuvers._testShowZeroEnergyModal) {
+        window.SocialManeuvers._testShowZeroEnergyModal(window.game.humanId);
+      } else {
+        // Try to access the function through the module
+        const script = document.querySelector('script[src*="social-maneuvers"]');
+        if (script) {
+          logStatus('Testing via manual trigger...', 'info');
+          // Create a test scenario by setting energy to 0 and triggering phase start
+          setEnergyToZero();
+          setTimeout(() => {
+            if (window.SocialManeuvers && window.SocialManeuvers.onSocialPhaseStart) {
+              window.SocialManeuvers.onSocialPhaseStart();
+            }
+          }, 100);
+        } else {
+          logStatus('Could not find modal function - trying alternative method', 'info');
+          // Alternative: create the modal inline for testing
+          showTestModal();
+        }
+      }
+    }
+    
+    function showTestModal() {
+      // Recreate the modal for testing purposes
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(4, 10, 18, 0.92);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999999;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+        padding: 20px;
+      `;
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
+        border: 3px solid #ff4444;
+        border-radius: 16px;
+        padding: 32px;
+        text-align: center;
+        box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.95);
+        max-width: 480px;
+        width: 100%;
+        transform: scale(0.9);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      `;
+      
+      modal.innerHTML = `
+        <div style="font-size: 80px; margin-bottom: 20px; animation: sm-battery-blink 1s ease-in-out infinite;">🔋</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #ff4444; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">No Social Energy</div>
+        <div style="font-size: 1rem; color: #d5e0f0; margin-bottom: 28px;">You have no energy remaining for social interactions.</div>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button onclick="handleSkip(this)" style="padding: 12px 24px; border: 2px solid #4a5a6a; background: #2a3a4a; color: #e0e8f0; border-radius: 10px; cursor: pointer; min-width: 120px;">SKIP</button>
+          <button onclick="handleRecharge(this)" style="padding: 12px 24px; border: 2px solid #ffa500; background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%); color: #ffffff; border-radius: 10px; cursor: pointer; min-width: 120px;">🎬 Recharge</button>
+        </div>
+      `;
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      
+      requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        modal.style.transform = 'scale(1)';
+        modal.style.opacity = '1';
+      });
+      
+      window.currentTestOverlay = overlay;
+      logStatus('Test modal displayed', 'success');
+    }
+    
+    function handleSkip(btn) {
+      logStatus('SKIP button clicked', 'success');
+      const overlay = window.currentTestOverlay || btn.closest('[style*="z-index: 9999999"]');
+      if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 250);
+      }
+      logStatus('Would advance to next phase', 'info');
+    }
+    
+    function handleRecharge(btn) {
+      logStatus('Recharge button clicked', 'success');
+      logStatus('Granted: +5 energy, +5 influence, +5 information', 'success');
+      
+      if (window.SocialManeuvers && window.SocialManeuvers.SocialResources) {
+        window.SocialManeuvers.SocialResources.earn(window.game.humanId, {
+          energy: 5,
+          influence: 5,
+          information: 5
+        });
+      }
+      
+      const overlay = window.currentTestOverlay || btn.closest('[style*="z-index: 9999999"]');
+      if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 250);
+      }
+      
+      setTimeout(() => checkCurrentEnergy(), 300);
+    }
+    
+    function setEnergyToZero() {
+      if (window.SocialManeuvers && window.SocialManeuvers.SocialResources) {
+        window.SocialManeuvers.SocialResources.init(window.game.humanId);
+        const current = window.SocialManeuvers.SocialResources.get(window.game.humanId, 'energy');
+        if (current > 0) {
+          window.SocialManeuvers.SocialResources.spend(window.game.humanId, { energy: current });
+        }
+        logStatus('Energy set to 0', 'success');
+      } else {
+        logStatus('SocialManeuvers not loaded', 'info');
+      }
+    }
+    
+    function checkCurrentEnergy() {
+      if (window.SocialManeuvers && window.SocialManeuvers.SocialResources) {
+        window.SocialManeuvers.SocialResources.init(window.game.humanId);
+        const resources = window.SocialManeuvers.SocialResources.getAll(window.game.humanId);
+        logStatus(`Current resources: ⚡${resources.energy} 🤝${resources.influence} 💡${resources.information}`, 'info');
+      } else {
+        logStatus('SocialManeuvers not loaded', 'info');
+      }
+    }
+    
+    function resetEnergy() {
+      if (window.SocialManeuvers && window.SocialManeuvers.SocialResources) {
+        window.SocialManeuvers.SocialResources.init(window.game.humanId);
+        window.SocialManeuvers.SocialResources.earn(window.game.humanId, { energy: 5 });
+        logStatus('Energy reset to 5', 'success');
+        checkCurrentEnergy();
+      } else {
+        logStatus('SocialManeuvers not loaded', 'info');
+      }
+    }
+    
+    // Initialize on load
+    window.addEventListener('load', () => {
+      logStatus('Test page loaded', 'success');
+      logStatus('Click "Show Zero Energy Modal" to test the modal', 'info');
+    });
+  </script>
+</body>
+</html>

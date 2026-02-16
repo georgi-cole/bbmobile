@@ -3230,6 +3230,9 @@
     g.__smSkipInProgress = true;
   }
   
+  // LEGACY: Old auto-skip overlay (replaced by showZeroEnergyModal)
+  // Kept for potential rollback or debugging purposes
+  // eslint-disable-next-line no-unused-vars
   function showEmptyEnergyOverlayAndSkip(playerId) {
     const g = global.game;
     const week = g?.week || 1;
