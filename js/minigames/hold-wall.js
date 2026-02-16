@@ -395,7 +395,7 @@
       // If human never starts holding within grace period, automatically drop them
       gracePeriodTimer = setTimeout(() => {
         if(!hasHumanStartedHolding && !hasEnded && state === 'playing'){
-          console.log('[HoldWall] Grace period expired - human never started holding, auto-dropping');
+          console.log('[HoldWall] ⚠️ AFK DETECTION: Grace period expired - human never started holding, auto-dropping');
           const playerParticipant = participants.find(p => p.isPlayer);
           if(playerParticipant && playerParticipant.dropTimeMs === null){
             // Mark player as dropped immediately
@@ -409,9 +409,13 @@
             
             updateNarrative(["You never held the wall! What were you thinking?! 😱"]);
             
+            console.log(`[HoldWall] ✓ AFK Player dropped at ${(dropTime/1000).toFixed(1)}s - will NOT be eligible to win`);
+            
             // Check if game should end
             checkGameEnd();
           }
+        } else if(hasHumanStartedHolding){
+          console.log('[HoldWall] ✓ Grace period check: Human started holding, no AFK drop needed');
         }
       }, GRACE_PERIOD_MS);
     }
@@ -601,10 +605,13 @@
         wallPanel.style.borderColor = '#66ff66';
         statusMsg.textContent = 'Keep holding!';
         
+        console.log('[HoldWall] ✓ Human started holding - AFK prevention successful');
+        
         // AFK FIX: Clear grace period timer since they started holding
         if(gracePeriodTimer){
           clearTimeout(gracePeriodTimer);
           gracePeriodTimer = null;
+          console.log('[HoldWall] ✓ Grace period timer cleared - human is active');
         }
       }
     }

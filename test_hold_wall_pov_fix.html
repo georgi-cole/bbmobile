@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold The Wall - POV Phase Fix Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .result {
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    
+    .success {
+      background: rgba(102, 255, 102, 0.1);
+      border-left: 3px solid #66ff66;
+      color: #66ff66;
+    }
+    
+    .error {
+      background: rgba(255, 102, 102, 0.1);
+      border-left: 3px solid #ff6666;
+      color: #ff6666;
+    }
+    
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 3px solid #83bfff;
+      color: #83bfff;
+    }
+    
+    #gameContainer {
+      min-height: 600px;
+      background: rgba(26, 35, 50, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hold The Wall - POV Phase Detection Fix Test</h1>
+    <p style="text-align: center; color: #95a9c0; margin-bottom: 30px;">
+      Testing that Hold The Wall correctly identifies POV competitions and sets authoritative winner
+    </p>
+    
+    <div class="section">
+      <h2>Test Scenarios</h2>
+      <p style="color: #95a9c0; margin-bottom: 15px;">
+        This test verifies that the POV phase detection bug is fixed:
+      </p>
+      <div class="info">
+        <strong>Bug:</strong> Hold The Wall was checking for phase === 'pov', but actual POV phase is 'veto_comp'<br>
+        <strong>Fix:</strong> Now checks for phase === 'veto_comp' || 'veto' || 'pov'<br>
+        <strong>Impact:</strong> Authoritative winner is now correctly set for POV competitions
+      </div>
+      
+      <button class="btn" onclick="testHOHPhase()">Test 1: HOH Phase Detection</button>
+      <button class="btn" onclick="testPOVPhase()">Test 2: POV Phase Detection (veto_comp)</button>
+      <button class="btn" onclick="testVetoPhase()">Test 3: Veto Phase Detection</button>
+      <button class="btn" onclick="testLegacyPOVPhase()">Test 4: Legacy POV Phase</button>
+      
+      <div id="results" style="margin-top: 20px;"></div>
+    </div>
+    
+    <div class="section">
+      <h2>Live Game Test</h2>
+      <p style="color: #95a9c0; margin-bottom: 15px;">
+        Run actual Hold The Wall minigame to verify:
+      </p>
+      <button class="btn" onclick="runHOHGame()">Run HOH Game</button>
+      <button class="btn" onclick="runPOVGame()">Run POV Game</button>
+      <button class="btn" onclick="clearGame()">Clear</button>
+      <div id="gameContainer"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import HoldWallModule from './js/minigames/hold-wall.js';
+    
+    // Mock global game object
+    window.global = {
+      game: {
+        players: [
+          { id: 1, name: 'Alice', human: true, evicted: false },
+          { id: 2, name: 'Bob', evicted: false },
+          { id: 3, name: 'Charlie', evicted: false },
+          { id: 4, name: 'Diana', evicted: false }
+        ],
+        humanId: 1,
+        phase: 'hoh',
+        week: 2,
+        lastCompScores: new Map(),
+        cfg: {}
+      },
+      getP: function(id) {
+        return this.game.players.find(p => p.id === id);
+      },
+      alivePlayers: function() {
+        return this.game.players.filter(p => !p.evicted);
+      },
+      safeName: function(id) {
+        const p = this.getP(id);
+        return p ? p.name : String(id);
+      },
+      resolveAvatar: function(p) {
+        return null; // No avatars for this test
+      }
+    };
+    
+    window.HoldWallModule = HoldWallModule;
+    
+    // Test functions
+    window.testHOHPhase = function() {
+      window.global.game.phase = 'hoh';
+      const result = testPhaseDetection('hoh', 'HOH');
+      displayResult(result);
+    };
+    
+    window.testPOVPhase = function() {
+      window.global.game.phase = 'veto_comp';
+      const result = testPhaseDetection('veto_comp', 'POV (veto_comp)');
+      displayResult(result);
+    };
+    
+    window.testVetoPhase = function() {
+      window.global.game.phase = 'veto';
+      const result = testPhaseDetection('veto', 'POV (veto)');
+      displayResult(result);
+    };
+    
+    window.testLegacyPOVPhase = function() {
+      window.global.game.phase = 'pov';
+      const result = testPhaseDetection('pov', 'POV (legacy pov)');
+      displayResult(result);
+    };
+    
+    function testPhaseDetection(phase, label) {
+      const logs = [];
+      const originalLog = console.log;
+      console.log = (...args) => {
+        logs.push(args.join(' '));
+        originalLog(...args);
+      };
+      
+      // Create a temporary container
+      const tempContainer = document.createElement('div');
+      tempContainer.style.display = 'none';
+      document.body.appendChild(tempContainer);
+      
+      // Mock onComplete to capture result
+      let capturedData = null;
+      const mockComplete = (score) => {
+        capturedData = {
+          score,
+          authWinner: window.global.game.__authoritativeWinner
+        };
+      };
+      
+      // Reset authoritative winner
+      delete window.global.game.__authoritativeWinner;
+      window.global.game.lastCompScores = new Map();
+      
+      try {
+        // Render the minigame
+        HoldWallModule.render(tempContainer, mockComplete);
+        
+        // Check logs for phase detection
+        const detectionLog = logs.find(log => log.includes('[HoldWall] Detected competition type:'));
+        
+        // Check if authoritative winner would be set correctly
+        const expectedCompType = (phase === 'hoh') ? 'hoh' : 'pov';
+        const detectedCorrectly = detectionLog && detectionLog.includes(`type: ${expectedCompType}`);
+        
+        // Cleanup
+        tempContainer.remove();
+        console.log = originalLog;
+        
+        return {
+          label,
+          phase,
+          expectedCompType,
+          detectedCorrectly,
+          detectionLog: detectionLog || 'No detection log found',
+          passed: detectedCorrectly
+        };
+      } catch (error) {
+        console.log = originalLog;
+        tempContainer.remove();
+        return {
+          label,
+          phase,
+          error: error.message,
+          passed: false
+        };
+      }
+    }
+    
+    function displayResult(result) {
+      const resultsDiv = document.getElementById('results');
+      const resultEl = document.createElement('div');
+      resultEl.className = `result ${result.passed ? 'success' : 'error'}`;
+      
+      if (result.error) {
+        resultEl.innerHTML = `
+          <strong>${result.label}:</strong> ❌ ERROR<br>
+          Phase: ${result.phase}<br>
+          Error: ${result.error}
+        `;
+      } else {
+        resultEl.innerHTML = `
+          <strong>${result.label}:</strong> ${result.passed ? '✅ PASS' : '❌ FAIL'}<br>
+          Phase: ${result.phase}<br>
+          Expected compType: ${result.expectedCompType}<br>
+          Detection Log: ${result.detectionLog}
+        `;
+      }
+      
+      resultsDiv.appendChild(resultEl);
+    }
+    
+    window.runHOHGame = function() {
+      window.global.game.phase = 'hoh';
+      window.global.game.__authoritativeWinner = null;
+      window.global.game.lastCompScores = new Map();
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<div style="color: #83bfff; margin-bottom: 10px;">Running HOH Game...</div>';
+      
+      HoldWallModule.render(container, (score) => {
+        const authWinner = window.global.game.__authoritativeWinner;
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'result ' + (authWinner && authWinner.compType === 'hoh' ? 'success' : 'error');
+        resultDiv.innerHTML = `
+          <strong>HOH Game Complete</strong><br>
+          Score: ${score}<br>
+          Authoritative Winner: ${authWinner ? JSON.stringify(authWinner, null, 2) : 'Not set'}<br>
+          <strong>Result:</strong> ${authWinner && authWinner.compType === 'hoh' ? '✅ Correctly set compType to "hoh"' : '❌ compType incorrect or not set'}
+        `;
+        container.appendChild(resultDiv);
+      });
+    };
+    
+    window.runPOVGame = function() {
+      window.global.game.phase = 'veto_comp';
+      window.global.game.__authoritativeWinner = null;
+      window.global.game.lastCompScores = new Map();
+      
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<div style="color: #83bfff; margin-bottom: 10px;">Running POV Game (phase: veto_comp)...</div>';
+      
+      HoldWallModule.render(container, (score) => {
+        const authWinner = window.global.game.__authoritativeWinner;
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'result ' + (authWinner && authWinner.compType === 'pov' ? 'success' : 'error');
+        resultDiv.innerHTML = `
+          <strong>POV Game Complete</strong><br>
+          Score: ${score}<br>
+          Authoritative Winner: ${authWinner ? JSON.stringify(authWinner, null, 2) : 'Not set'}<br>
+          <strong>Result:</strong> ${authWinner && authWinner.compType === 'pov' ? '✅ Correctly set compType to "pov"' : '❌ compType incorrect or not set'}
+        `;
+        container.appendChild(resultDiv);
+      });
+    };
+    
+    window.clearGame = function() {
+      document.getElementById('gameContainer').innerHTML = '';
+    };
+  </script>
+</body>
+</html>
