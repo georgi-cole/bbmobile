@@ -109,7 +109,7 @@
       </p>
       <div class="info">
         <strong>Bug:</strong> Hold The Wall was checking for phase === 'pov', but actual POV phase is 'veto_comp'<br>
-        <strong>Fix:</strong> Now checks for phase === 'veto_comp' || 'veto' || 'pov'<br>
+        <strong>Fix:</strong> Now checks for (phase === 'veto_comp' || phase === 'veto' || phase === 'pov')<br>
         <strong>Impact:</strong> Authoritative winner is now correctly set for POV competitions
       </div>
       
