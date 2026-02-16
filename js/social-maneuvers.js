@@ -3180,6 +3180,10 @@
         document.removeEventListener('keydown', handleEscapeKey);
         keydownHandlerAttached = false;
       }
+      // Reset idempotency flag for belt-and-suspenders safety
+      if (g.__smSkipInProgress) {
+        delete g.__smSkipInProgress;
+      }
     };
     
     // Handle SKIP action
