@@ -26,7 +26,7 @@
     // AFK detection state
     let hasHumanStartedHolding = false;
     let gracePeriodTimer = null;
-    const GRACE_PERIOD_MS = 2000; // Grace period before auto-dropping AFK players
+    const GRACE_PERIOD_MS = 3000; // Grace period before auto-dropping AFK players (3 seconds)
     
     // AI drop timing constants
     const MIN_AI_DROP_TIME_MS = 10000; // 10 seconds
@@ -407,9 +407,18 @@
               isPlayer: true
             });
             
+            // AFK FIX: Disable wall interaction and provide clear UI feedback
+            wallPanel.style.cursor = 'not-allowed';
+            wallPanel.style.opacity = '0.5';
+            wallPanel.style.filter = 'grayscale(100%)';
+            wallPanel.style.pointerEvents = 'none';
+            statusMsg.textContent = 'You were dropped for being AFK!';
+            statusMsg.style.color = '#ff4444';
+            
             updateNarrative(["You never held the wall! What were you thinking?! 😱"]);
             
             console.log(`[HoldWall] ✓ AFK Player dropped at ${(dropTime/1000).toFixed(1)}s - will NOT be eligible to win`);
+            console.log('[HoldWall] ✓ Wall disabled - human cannot interact after AFK drop');
             
             // Check if game should end
             checkGameEnd();
@@ -593,6 +602,14 @@
     
     function handleMouseDown(e){
       if(state !== 'playing' || hasEnded) return;
+      
+      // AFK FIX: Prevent interaction if human has been AFK-dropped
+      const playerParticipant = participants.find(p => p.isPlayer);
+      if(playerParticipant && playerParticipant.dropTimeMs !== null){
+        console.log('[HoldWall] Ignoring click - human was already dropped for AFK');
+        return;
+      }
+      
       e.preventDefault();
       
       if(!isHolding){
