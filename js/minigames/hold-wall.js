@@ -772,6 +772,19 @@
       
       const finalTime = Date.now() - startTime;
       
+      // CRITICAL: Ensure any participant who never started is marked as dropped with score 0
+      // This prevents AFK/non-starter participants from winning by doing nothing
+      participants.forEach(p => {
+        if (p.dropTimeMs === null) {
+          // Participant is still marked as "holding" but never actually started
+          // Check if they're the human player who never pressed the wall
+          if (p.isPlayer && !hasHumanStartedHolding) {
+            console.warn(`[HoldWall] ⚠ Marking non-starter (${p.name}) as dropped - cannot win by inactivity`);
+            p.dropTimeMs = 0; // Mark as dropped at time 0
+          }
+        }
+      });
+      
       // Build final standings: still holding first, then eliminated in reverse order
       const stillHolding = participants.filter(p => p.dropTimeMs === null);
       const dropped = participants.filter(p => p.dropTimeMs !== null);
@@ -854,12 +867,28 @@
           
           // Secondary: also try window.game (may be proxied by GameGuard)
           try {
-            if (g.game) g.game.__authoritativeWinner = authWinner;
+            if (g) g.__authoritativeWinner = authWinner;
           } catch(e) { 
             // GameGuard may block this - ignore error
           }
           
-          console.log(`[HoldWall] ✓ Authoritative winner set on window AND window.game: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
+          console.info(`[HoldWall] ✓ Authoritative winner set on window and window.game: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
+          
+          // Immediately call atomic helper if available to apply winner in competitions context
+          if (typeof window.__applyAuthoritativeWinner === 'function') {
+            try {
+              const applied = window.__applyAuthoritativeWinner(authWinner);
+              if (applied) {
+                console.info(`[HoldWall] ✓ __applyAuthoritativeWinner successfully applied for Player ${winnerParticipant.id}`);
+              } else {
+                console.warn(`[HoldWall] ⚠ __applyAuthoritativeWinner returned false for Player ${winnerParticipant.id}`);
+              }
+            } catch(e) {
+              console.error('[HoldWall] Error calling __applyAuthoritativeWinner:', e);
+            }
+          } else {
+            console.debug('[HoldWall] __applyAuthoritativeWinner not available (will be applied in finishCompPhase)');
+          }
         }
       }
       
