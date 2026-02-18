@@ -47,8 +47,8 @@
     
     // Visual effect constants
     const VIBRATION_PATTERN = [200, 100, 200, 100, 200];
-    const WALL_GRADIENT_DEFAULT = 'linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%)';
-    const WALL_GRADIENT_HOLDING = 'linear-gradient(135deg,#2a6a9a 0%,#3a7aaa 25%,#2a5a8a 50%,#3a7aaa 75%,#2a6a9a 100%)';
+    const WALL_GRADIENT_DEFAULT = 'linear-gradient(135deg,#2a4a5a 0%,#3a5a6a 25%,#2a3a4a 50%,#3a5a6a 75%,#2a4a5a 100%)';
+    const WALL_GRADIENT_HOLDING = 'linear-gradient(135deg,#3a6a8a 0%,#4a7a9a 25%,#3a5a7a 50%,#4a7a9a 75%,#3a6a8a 100%)';
     
     // Timers and intervals for cleanup
     let narrativeTimer = null;
@@ -104,7 +104,10 @@
     // Detect competition type
     let compType = 'hoh'; // default
     if(g.game && g.game.phase){
-      compType = g.game.phase === 'pov' ? 'pov' : 'hoh';
+      // POV competitions use phase 'veto_comp', 'veto', or 'pov'
+      const phase = g.game.phase;
+      compType = (phase === 'veto_comp' || phase === 'veto' || phase === 'pov') ? 'pov' : 'hoh';
+      console.log(`[HoldWall] Detected competition type: ${compType} (phase: ${phase})`);
     }
     
     // Initialize participants
@@ -215,38 +218,60 @@
     renderParticipants();
     gameArea.appendChild(participantsDisplay);
     
-    // Wall panel with enhanced styling
+    // Wall panel with enhanced brick wall styling
     const wallPanel = document.createElement('div');
     wallPanel.id = 'wallPanel';
     wallPanel.style.cssText = `
       width:100%;max-width:400px;height:200px;
-      background:linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%);
+      background:linear-gradient(135deg,#2a4a5a 0%,#3a5a6a 25%,#2a3a4a 50%,#3a5a6a 75%,#2a4a5a 100%);
       background-size:200% 200%;
-      border:5px solid #4a8faf;
-      border-radius:16px;
+      border:6px solid #3a5a6a;
+      border-radius:12px;
       display:flex;align-items:center;justify-content:center;
       font-size:3.5rem;font-weight:900;
       cursor:grab;user-select:none;
       transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-      box-shadow:0 8px 32px rgba(0,0,0,0.6),inset 0 2px 8px rgba(255,255,255,0.1);
+      box-shadow:
+        0 8px 32px rgba(0,0,0,0.7),
+        inset 0 2px 4px rgba(255,255,255,0.1),
+        inset 0 -2px 4px rgba(0,0,0,0.3);
       position:relative;overflow:hidden;
-      text-shadow:0 4px 12px rgba(0,0,0,0.8),0 2px 4px rgba(0,0,0,0.6);
+      text-shadow:0 4px 12px rgba(0,0,0,0.9),0 2px 4px rgba(0,0,0,0.7);
       letter-spacing:0.2em;
       animation:wallPulse 3s ease-in-out infinite;
     `;
     
-    // Add texture overlay
+    // Add brick texture overlay to make it look more wall-like
     const wallTexture = document.createElement('div');
     wallTexture.style.cssText = `
       position:absolute;inset:0;
-      background:repeating-linear-gradient(
-        90deg,
-        transparent 0px,
-        rgba(255,255,255,0.03) 1px,
-        transparent 2px,
-        transparent 10px
-      );
+      background:
+        /* Horizontal mortar lines */
+        repeating-linear-gradient(
+          0deg,
+          transparent 0px,
+          transparent 38px,
+          rgba(0,0,0,0.3) 38px,
+          rgba(0,0,0,0.3) 40px
+        ),
+        /* Vertical mortar lines (offset pattern for brick effect) */
+        repeating-linear-gradient(
+          90deg,
+          transparent 0px,
+          transparent 78px,
+          rgba(0,0,0,0.25) 78px,
+          rgba(0,0,0,0.25) 80px
+        ),
+        /* Brick texture detail */
+        repeating-linear-gradient(
+          90deg,
+          transparent 0px,
+          rgba(255,255,255,0.02) 1px,
+          transparent 2px,
+          transparent 8px
+        );
       pointer-events:none;
+      opacity:0.8;
     `;
     wallPanel.appendChild(wallTexture);
     
@@ -370,7 +395,7 @@
       // If human never starts holding within grace period, automatically drop them
       gracePeriodTimer = setTimeout(() => {
         if(!hasHumanStartedHolding && !hasEnded && state === 'playing'){
-          console.log('[HoldWall] Grace period expired - human never started holding, auto-dropping');
+          console.log('[HoldWall] ⚠️ AFK DETECTION: Grace period expired - human never started holding, auto-dropping');
           const playerParticipant = participants.find(p => p.isPlayer);
           if(playerParticipant && playerParticipant.dropTimeMs === null){
             // Mark player as dropped immediately
@@ -384,9 +409,13 @@
             
             updateNarrative(["You never held the wall! What were you thinking?! 😱"]);
             
+            console.log(`[HoldWall] ✓ AFK Player dropped at ${(dropTime/1000).toFixed(1)}s - will NOT be eligible to win`);
+            
             // Check if game should end
             checkGameEnd();
           }
+        } else if(hasHumanStartedHolding){
+          console.log('[HoldWall] ✓ Grace period check: Human started holding, no AFK drop needed');
         }
       }, GRACE_PERIOD_MS);
     }
@@ -576,10 +605,13 @@
         wallPanel.style.borderColor = '#66ff66';
         statusMsg.textContent = 'Keep holding!';
         
+        console.log('[HoldWall] ✓ Human started holding - AFK prevention successful');
+        
         // AFK FIX: Clear grace period timer since they started holding
         if(gracePeriodTimer){
           clearTimeout(gracePeriodTimer);
           gracePeriodTimer = null;
+          console.log('[HoldWall] ✓ Grace period timer cleared - human is active');
         }
       }
     }

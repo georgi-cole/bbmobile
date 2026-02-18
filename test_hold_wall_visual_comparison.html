@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold The Wall - Visual Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+    }
+    
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+    
+    .panel {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .panel h2 {
+      color: #83bfff;
+      margin-top: 0;
+      text-align: center;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .wall-demo {
+      width: 100%;
+      max-width: 400px;
+      height: 200px;
+      margin: 20px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+      font-weight: 900;
+      cursor: grab;
+      user-select: none;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      position: relative;
+      overflow: hidden;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,0.7);
+      letter-spacing: 0.2em;
+      border-radius: 12px;
+    }
+    
+    .wall-old {
+      background: linear-gradient(135deg,#1a4d6d 0%,#2a5a7a 25%,#1a3d5d 50%,#2a5a7a 75%,#1a4d6d 100%);
+      border: 5px solid #4a8faf;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 2px 8px rgba(255,255,255,0.1);
+    }
+    
+    .wall-new {
+      background: linear-gradient(135deg,#2a4a5a 0%,#3a5a6a 25%,#2a3a4a 50%,#3a5a6a 75%,#2a4a5a 100%);
+      border: 6px solid #3a5a6a;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7), inset 0 2px 4px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .wall-text {
+      position: relative;
+      z-index: 1;
+      color: #e8f3ff;
+    }
+    
+    .texture-old {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent 0px,
+        rgba(255,255,255,0.03) 1px,
+        transparent 2px,
+        transparent 10px
+      );
+      pointer-events: none;
+    }
+    
+    .texture-new {
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent 0px,
+          transparent 38px,
+          rgba(0,0,0,0.3) 38px,
+          rgba(0,0,0,0.3) 40px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent 0px,
+          transparent 78px,
+          rgba(0,0,0,0.25) 78px,
+          rgba(0,0,0,0.25) 80px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent 0px,
+          rgba(255,255,255,0.02) 1px,
+          transparent 2px,
+          transparent 8px
+        );
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    
+    .features {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+    }
+    
+    .features li {
+      padding: 8px 0;
+      color: #95a9c0;
+      border-bottom: 1px solid rgba(44, 58, 77, 0.5);
+    }
+    
+    .features li:last-child {
+      border-bottom: none;
+    }
+    
+    .features li strong {
+      color: #83bfff;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin: 5px;
+    }
+    
+    .badge-new {
+      background: rgba(102, 255, 102, 0.2);
+      color: #66ff66;
+      border: 1px solid #66ff66;
+    }
+    
+    .badge-improved {
+      background: rgba(131, 191, 255, 0.2);
+      color: #83bfff;
+      border: 1px solid #83bfff;
+    }
+    
+    .narrative-box {
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(131,191,255,0.15), rgba(131,191,255,0.05));
+      border-left: 4px solid #83bfff;
+      margin: 20px 0;
+      font-size: 0.95rem;
+      color: #e8f3ff;
+      line-height: 1.4;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      font-style: italic;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hold The Wall - Visual Improvements</h1>
+    <p class="subtitle">Comparing old vs new wall styling and showing enhanced features</p>
+    
+    <div class="comparison">
+      <div class="panel">
+        <h2>Before (Old Wall)</h2>
+        <div class="wall-demo wall-old">
+          <div class="texture-old"></div>
+          <div class="wall-text">WALL</div>
+        </div>
+        <ul class="features">
+          <li><strong>Gradient:</strong> Blue-teal gradient</li>
+          <li><strong>Texture:</strong> Simple vertical lines</li>
+          <li><strong>Border:</strong> 5px solid blue border</li>
+          <li><strong>Appearance:</strong> Generic panel look</li>
+        </ul>
+      </div>
+      
+      <div class="panel">
+        <h2>After (New Brick Wall) <span class="badge badge-new">IMPROVED</span></h2>
+        <div class="wall-demo wall-new">
+          <div class="texture-new"></div>
+          <div class="wall-text">WALL</div>
+        </div>
+        <ul class="features">
+          <li><strong>Gradient:</strong> Gray concrete-like colors</li>
+          <li><strong>Texture:</strong> Brick pattern with mortar lines</li>
+          <li><strong>Border:</strong> 6px solid gray border</li>
+          <li><strong>Appearance:</strong> Realistic wall texture</li>
+          <li><strong>Shadows:</strong> Enhanced depth with inset shadows</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="panel">
+      <h2>Key Fixes Implemented</h2>
+      
+      <div style="margin: 20px 0;">
+        <h3 style="color: #83bfff; font-size: 1.1rem; margin-bottom: 10px;">
+          1. POV Winner Mismatch Fix <span class="badge badge-new">CRITICAL FIX</span>
+        </h3>
+        <p style="color: #95a9c0; line-height: 1.6;">
+          <strong>Problem:</strong> Hold The Wall was checking for phase === 'pov', but actual POV phase is 'veto_comp'.<br>
+          <strong>Impact:</strong> Authoritative winner was marked as 'hoh' even during POV competitions, causing random fallback logic to run.<br>
+          <strong>Fix:</strong> Now checks for 'veto_comp' OR 'veto' OR 'pov' phases, correctly setting authoritative winner for POV.
+        </p>
+      </div>
+      
+      <div style="margin: 20px 0;">
+        <h3 style="color: #83bfff; font-size: 1.1rem; margin-bottom: 10px;">
+          2. AFK Detection <span class="badge badge-improved">ENHANCED</span>
+        </h3>
+        <p style="color: #95a9c0; line-height: 1.6;">
+          <strong>Feature:</strong> 2-second grace period to detect if human never clicks to hold the wall.<br>
+          <strong>Behavior:</strong> If human doesn't start holding, they're auto-dropped at 2 seconds.<br>
+          <strong>Result:</strong> AFK player drops earliest (2s) and gets score 0, cannot win by idling.<br>
+          <strong>Enhancement:</strong> Added clear console logging to track AFK detection and prevention.
+        </p>
+      </div>
+      
+      <div style="margin: 20px 0;">
+        <h3 style="color: #83bfff; font-size: 1.1rem; margin-bottom: 10px;">
+          3. Narration Box <span class="badge badge-improved">ALREADY PRESENT</span>
+        </h3>
+        <div class="narrative-box">
+          "Alright houseguests, grip that wall like your life depends on it... because it kinda does! 💪"
+        </div>
+        <p style="color: #95a9c0; line-height: 1.6;">
+          The narration box was already implemented and working. It displays contextual messages during gameplay,
+          including when players drop, difficulty increases, and when there are final two contestants.
+        </p>
+      </div>
+      
+      <div style="margin: 20px 0;">
+        <h3 style="color: #83bfff; font-size: 1.1rem; margin-bottom: 10px;">
+          4. Enhanced Wall Visuals <span class="badge badge-new">NEW</span>
+        </h3>
+        <p style="color: #95a9c0; line-height: 1.6;">
+          <strong>Changes:</strong><br>
+          • Brick pattern texture with horizontal mortar lines (every 38px)<br>
+          • Vertical mortar lines (every 78px) for realistic brick layout<br>
+          • Gray concrete-like gradient colors instead of blue<br>
+          • Enhanced shadow depth with multiple inset shadows<br>
+          • All CSS-based for excellent performance
+        </p>
+      </div>
+    </div>
+    
+    <div class="panel" style="margin-top: 30px;">
+      <h2>Testing Checklist</h2>
+      <ul class="features">
+        <li><strong>✅ HOH Competition:</strong> Winner correctly assigned via authoritative winner system</li>
+        <li><strong>✅ POV Competition:</strong> Phase detection now recognizes 'veto_comp' phase correctly</li>
+        <li><strong>✅ AFK Detection:</strong> Human auto-dropped if they never hold the wall (2s grace period)</li>
+        <li><strong>✅ Visual Improvements:</strong> Brick texture and concrete colors make wall look more realistic</li>
+        <li><strong>✅ Narration Box:</strong> Already implemented and displays contextual messages</li>
+        <li><strong>⏳ Manual Testing:</strong> Need to verify in actual game scenarios</li>
+        <li><strong>⏳ Code Review:</strong> Request automated review before finalizing</li>
+        <li><strong>⏳ Security Scan:</strong> Run CodeQL before finalizing</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
