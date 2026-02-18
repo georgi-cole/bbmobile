@@ -15,7 +15,8 @@
     CHECK_RISK_ENERGY_COST: 10,  // Energy required to check risk
     PLEA_ENERGY_COST: 5,         // Energy required to make a plea
     RECHARGE_ENERGY_AMOUNT: 5,   // Energy awarded from ad recharge
-    VISIBILITY_THRESHOLD_MS: 500 // Minimum visibility time before allowing visibility-dismiss
+    VISIBILITY_THRESHOLD_MS: 500, // Minimum visibility time before allowing visibility-dismiss
+    NOMS_MODAL_MAX_PAUSE_MS: 30000 // Watchdog timeout for pause (30 seconds)
   };
 
   // State machine states
@@ -39,6 +40,161 @@
   let rafId = null;
   let modalShowTime = 0; // Timestamp when modal became visible
   let currentRiskData = null; // Cached risk data for post-plea update
+  
+  // Pause and watchdog state
+  let pauseHandle = null; // Handle for releasing pause
+  let watchdogTimer = null; // Watchdog timeout ID
+  let modalAdActive = false; // Flag indicating ad is currently playing
+
+  /**
+   * Initialize local pause refcount fallback if needed
+   * This provides a safety net when PauseController is not available
+   */
+  function initLocalPauseFallback() {
+    if (!global.__modalTimerPause) {
+      global.__modalTimerPause = {
+        refCount: 0,
+        owners: new Set()
+      };
+    }
+  }
+
+  /**
+   * Request a phase timer pause
+   * Prefers PauseController if available, falls back to local refcount
+   * @returns {Object} pauseHandle - Object with release() method
+   */
+  function requestPause() {
+    console.info('[NominationIntroModal] Requesting pause');
+    
+    const ownerId = 'modal:nomination-intro';
+    let usedPauseController = false;
+    
+    // Try PauseController first
+    try {
+      if (global.PauseController && typeof global.PauseController.pause === 'function') {
+        global.PauseController.pause(ownerId);
+        usedPauseController = true;
+        console.info('[NominationIntroModal] Pause requested via PauseController');
+      }
+    } catch (err) {
+      console.warn('[NominationIntroModal] PauseController.pause failed:', err);
+      usedPauseController = false;
+    }
+    
+    // Fallback to local refcount mechanism
+    if (!usedPauseController) {
+      initLocalPauseFallback();
+      global.__modalTimerPause.refCount++;
+      global.__modalTimerPause.owners.add(ownerId);
+      console.info(`[NominationIntroModal] Pause requested via local fallback (refCount: ${global.__modalTimerPause.refCount})`);
+    }
+    
+    // Start watchdog timer
+    startWatchdog();
+    
+    // Return handle for release
+    return {
+      ownerId: ownerId,
+      usedPauseController: usedPauseController,
+      released: false,
+      release: function() {
+        releasePause(this);
+      }
+    };
+  }
+
+  /**
+   * Release a phase timer pause
+   * Idempotent - safe to call multiple times
+   * @param {Object} handle - The pause handle returned by requestPause()
+   */
+  function releasePause(handle) {
+    if (!handle || handle.released) {
+      return; // Already released or invalid
+    }
+    
+    console.info('[NominationIntroModal] Releasing pause');
+    
+    // Mark as released to prevent double-release
+    handle.released = true;
+    
+    // Clear watchdog
+    clearWatchdog();
+    
+    // Release via PauseController if that's what we used
+    if (handle.usedPauseController) {
+      try {
+        if (global.PauseController && typeof global.PauseController.resume === 'function') {
+          global.PauseController.resume(handle.ownerId);
+          console.info('[NominationIntroModal] Pause released via PauseController');
+        }
+      } catch (err) {
+        console.warn('[NominationIntroModal] PauseController.resume failed:', err);
+      }
+    } else {
+      // Release via local fallback
+      if (global.__modalTimerPause) {
+        global.__modalTimerPause.refCount = Math.max(0, global.__modalTimerPause.refCount - 1);
+        global.__modalTimerPause.owners.delete(handle.ownerId);
+        console.info(`[NominationIntroModal] Pause released via local fallback (refCount: ${global.__modalTimerPause.refCount})`);
+      }
+    }
+  }
+
+  /**
+   * Start watchdog timer to auto-release pause after timeout
+   * Default timeout from CONFIG.NOMS_MODAL_MAX_PAUSE_MS (30s)
+   */
+  function startWatchdog() {
+    // Clear any existing watchdog
+    clearWatchdog();
+    
+    // Get timeout from game config or use default
+    const g = global.game;
+    const timeout = g?.cfg?.NOMS_MODAL_MAX_PAUSE_MS || CONFIG.NOMS_MODAL_MAX_PAUSE_MS;
+    
+    console.info(`[NominationIntroModal] Starting watchdog timer (${timeout}ms)`);
+    
+    watchdogTimer = setTimeout(() => {
+      console.warn('[NominationIntroModal] Watchdog timeout - auto-releasing pause');
+      
+      // Auto-release the pause
+      if (pauseHandle && !pauseHandle.released) {
+        releasePause(pauseHandle);
+        pauseHandle = null;
+        
+        // Show non-blocking toast to user
+        showToast('Timer resumed to keep the game moving', 3000);
+      }
+      
+      watchdogTimer = null;
+    }, timeout);
+  }
+
+  /**
+   * Clear watchdog timer
+   * Idempotent - safe to call multiple times
+   */
+  function clearWatchdog() {
+    if (watchdogTimer) {
+      clearTimeout(watchdogTimer);
+      watchdogTimer = null;
+      console.info('[NominationIntroModal] Watchdog timer cleared');
+    }
+  }
+
+  /**
+   * Extend or reset watchdog timer
+   * Used during ad playback to prevent premature timeout
+   */
+  function extendWatchdog() {
+    if (watchdogTimer) {
+      console.info('[NominationIntroModal] Extending watchdog timer');
+      clearWatchdog();
+      startWatchdog();
+    }
+  }
 
   /**
    * Compute nomination risk for current player
@@ -224,6 +380,19 @@
   function cleanup() {
     console.info('[NominationIntroModal] Cleanup starting');
 
+    // Release pause if still held
+    if (pauseHandle && !pauseHandle.released) {
+      try {
+        releasePause(pauseHandle);
+      } catch (err) {
+        console.error('[NominationIntroModal] Error releasing pause during cleanup:', err);
+      }
+      pauseHandle = null;
+    }
+
+    // Clear watchdog timer
+    clearWatchdog();
+
     // Clear failsafe timeout
     if (failsafeTimeout) {
       clearTimeout(failsafeTimeout);
@@ -259,6 +428,9 @@
     if (g) {
       g.__nominationPleaActive = false;
     }
+
+    // Clear ad active flag
+    modalAdActive = false;
 
     // Reset module state to IDLE for next show
     currentState = STATE.IDLE;
@@ -447,6 +619,12 @@
     console.info('[NominationIntroModal] Starting recharge flow');
 
     try {
+      // Set ad active flag
+      modalAdActive = true;
+      
+      // Extend watchdog during ad playback
+      extendWatchdog();
+      
       // Call the ad hook (global.showAdReward)
       if (typeof global.showAdReward === 'function') {
         const result = await global.showAdReward();
@@ -472,6 +650,9 @@
       console.error('[NominationIntroModal] Recharge error:', err);
       showToast('Unable to recharge energy at this time');
       return false;
+    } finally {
+      // Clear ad active flag
+      modalAdActive = false;
     }
   }
 
@@ -848,6 +1029,14 @@
     console.info('[NominationIntroModal] Showing modal');
     currentState = STATE.SHOWING;
     resolved = false;
+
+    // Request pause for phase timer
+    try {
+      pauseHandle = requestPause();
+    } catch (err) {
+      console.error('[NominationIntroModal] Error requesting pause:', err);
+      // Continue without pause if request fails
+    }
 
     return new Promise((resolve) => {
       resolvePromise = resolve;
@@ -1327,6 +1516,12 @@
         // This prevents accidental dismissal on quick alt-tab
         document.addEventListener('visibilitychange', () => {
           if (document.hidden) {
+            // Don't dismiss during ad playback
+            if (modalAdActive) {
+              console.info('[NominationIntroModal] Tab hidden during ad playback, not dismissing');
+              return;
+            }
+            
             // Check if modal has been visible long enough
             const visibleDuration = Date.now() - modalShowTime;
             if (visibleDuration < CONFIG.VISIBILITY_THRESHOLD_MS) {
@@ -1342,6 +1537,42 @@
             }
           }
         }, { signal: abortController.signal });
+
+        // Listen for phase changes (server-driven) to close modal immediately
+        // This ensures modal doesn't block game flow when phase advances
+        const handlePhaseChange = () => {
+          const currentPhase = global.game?.phase;
+          console.info(`[NominationIntroModal] Phase changed to ${currentPhase}, dismissing modal`);
+          dismiss();
+        };
+        
+        // Try to use game event bus if available
+        if (global.game?.bus && typeof global.game.bus.on === 'function') {
+          global.game.bus.on('phase:change', handlePhaseChange);
+          global.game.bus.on('phase:advanced', handlePhaseChange);
+          
+          // Cleanup listener when modal closes
+          abortController.signal.addEventListener('abort', () => {
+            if (global.game?.bus && typeof global.game.bus.off === 'function') {
+              global.game.bus.off('phase:change', handlePhaseChange);
+              global.game.bus.off('phase:advanced', handlePhaseChange);
+            }
+          });
+        } else {
+          // Fallback: poll for phase change
+          const initialPhase = global.game?.phase;
+          const phaseCheckInterval = setInterval(() => {
+            if (global.game?.phase && global.game.phase !== initialPhase) {
+              handlePhaseChange();
+              clearInterval(phaseCheckInterval);
+            }
+          }, 500);
+          
+          // Cleanup polling when modal closes
+          abortController.signal.addEventListener('abort', () => {
+            clearInterval(phaseCheckInterval);
+          });
+        }
 
         // Failsafe timeout - guarantee resolution within configured time
         failsafeTimeout = setTimeout(() => {
