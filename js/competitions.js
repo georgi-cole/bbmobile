@@ -403,6 +403,15 @@
   function generateSyntheticOpponents(humanId, humanScore) {
     const g = global.game;
     if (!global.OpponentSynth) return;
+    
+    // Don't generate synthetic scores if authoritative winner already set
+    // Endurance games (hold-wall) set their own scores for all participants
+    // Check BOTH locations for authoritative winner (window direct + window.game)
+    const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
+    if (authWinner) {
+      console.info('[OpponentSynth] Skipping - authoritative winner already set by endurance minigame');
+      return;
+    }
 
     // Determine which phase we're in and get eligible opponents
     let eligibleOpponents = [];
@@ -1667,8 +1676,10 @@
           // ENDURANCE FIX: Check for authoritative winner before generating fallback scores
           // If an endurance minigame has marked an authoritative winner, skip generating AI scores
           // This prevents the fallback logic from overriding the endurance winner
-          if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
-            console.debug(`[hoh] ✓ Guard: Blocking score generation for player ${id} - authoritative winner (${g.__authoritativeWinner.playerId}) already set`);
+          // Check BOTH locations for authoritative winner (window direct + window.game)
+          const authCheck = window.__authoritativeWinner || g.__authoritativeWinner;
+          if (authCheck && authCheck.compType === 'hoh') {
+            console.debug(`[hoh] ✓ Guard: Blocking score generation for player ${id} - authoritative winner (${authCheck.playerId}) already set`);
             // Set 0 score for non-winners in endurance competitions
             g.lastCompScores.set(id, 0);
             continue;
@@ -1715,9 +1726,12 @@
       // ENDURANCE FIX: Check for authoritative winner BEFORE reveal
       // If an endurance minigame has marked an authoritative winner, inject their score
       // as the highest score so the reveal shows the correct winner
+      // Check BOTH locations for authoritative winner (window direct + window.game)
+      const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
+      
       let winner;
-      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
-        winner = g.__authoritativeWinner.playerId;
+      if (authWinner && authWinner.compType === 'hoh') {
+        winner = authWinner.playerId;
         console.info(`[hoh] ✓ Using authoritative winner from endurance minigame: ${winner}`);
         
         // Ensure the authoritative winner has the highest score in lastCompScores
@@ -1729,13 +1743,15 @@
           }
         }
         // Set authoritative winner's score to be highest (use their actual score if higher)
-        const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+        const authScore = Math.max(authWinner.score || 100, maxScore + 1);
         g.lastCompScores.set(winner, authScore);
         console.debug(`[hoh] Injected authoritative winner score: ${authScore} (max was ${maxScore})`);
         
         // ENDURANCE FIX: Clear authoritative winner flag immediately after use
         // This prevents it from affecting later phases or competitions
+        // Clear BOTH locations
         console.debug('[hoh] Clearing authoritative winner flag after use');
+        delete window.__authoritativeWinner;
         delete g.__authoritativeWinner;
       } else {
         // No authoritative winner - use score-based determination
@@ -1813,8 +1829,9 @@
       console.info(`[hoh] ✓ ASSERTION PASSED: HOH correctly assigned to player ${winner}`);
       
       // ASSERTION: Verify authoritative winner flag was cleared
-      if (g.__authoritativeWinner) {
-        console.error(`[hoh] ASSERTION FAILED: Authoritative winner flag was not cleared! Stale data: ${JSON.stringify(g.__authoritativeWinner)}`);
+      if (g.__authoritativeWinner || window.__authoritativeWinner) {
+        const staleData = g.__authoritativeWinner || window.__authoritativeWinner;
+        console.error(`[hoh] ASSERTION FAILED: Authoritative winner flag was not cleared! Stale data: ${JSON.stringify(staleData)}`);
       }
 
       // Structured competition summary log
