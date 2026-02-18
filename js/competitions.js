@@ -1738,7 +1738,7 @@
         console.debug('[hoh] Clearing authoritative winner flag after use');
         delete g.__authoritativeWinner;
       } else {
-        // No authoritative winner - generate fallback scores if needed
+        // No authoritative winner - use score-based determination
         console.debug('[hoh] No authoritative winner, using score-based determination');
       }
 
