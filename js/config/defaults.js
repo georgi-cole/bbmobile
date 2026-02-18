@@ -137,6 +137,17 @@
   // This prevents config drift where different modules reference different config objects
   function ensureGameCfg(){
     const g = global.game = global.game || {};
+    
+    // IDEMPOTENCY GUARD: If config is already initialized with all required keys,
+    // skip re-initialization to prevent unnecessary object creation and GameGuard merges
+    // Only reinitialize if config is missing or has fewer keys than defaults (corrupted)
+    if(g.cfg && typeof g.cfg === 'object' && Object.keys(g.cfg).length >= Object.keys(DEFAULT_CFG).length * 0.8){
+      // Config looks valid, just ensure aliases are set
+      global.cfg = g.cfg;
+      return g.cfg;
+    }
+    
+    // Config is missing or incomplete, initialize it
     // Merge order: DEFAULT_CFG (base) -> existing config (from state.js) -> stored config (user overrides)
     const cfg = Object.assign({}, DEFAULT_CFG, g.cfg || {}, loadStoredCfg());
     

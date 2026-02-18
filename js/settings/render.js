@@ -602,6 +602,12 @@
 
   // Open settings modal
   function openSettingsModal(){
+    // Ensure core services are initialized before opening settings
+    // This handles the edge case where Settings is opened before StartupFlow.init() completes
+    if(global.StartupFlow && typeof global.StartupFlow.initCoreServices === 'function'){
+      global.StartupFlow.initCoreServices();
+    }
+    
     if(Config.ensureGameCfg) Config.ensureGameCfg();
     
     // Pause game when settings modal opens (defensive check)

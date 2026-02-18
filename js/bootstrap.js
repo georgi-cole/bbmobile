@@ -185,6 +185,15 @@
       setTimeout(buildCastInternal, 30);
       return;
     }
+    
+    // IDEMPOTENCY GUARD: If players already exist and initialized, skip rebuild
+    // This prevents double-initialization race conditions when buildCast() is called
+    // multiple times in quick succession (e.g., from enterGameFromIntro and buildMainScreen)
+    if(g.players && g.players.length > 0 && g.players[0] && typeof g.players[0].id !== 'undefined'){
+      console.info('[buildCast] Players already initialized, skipping rebuild');
+      return;
+    }
+    
     g.players.length = 0;
 
     const humanName=(g.cfg?.humanName || document.getElementById('humanName')?.value || 'You').trim();

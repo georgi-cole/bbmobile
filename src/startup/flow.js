@@ -59,6 +59,7 @@
   /**
    * Initialize core services needed before main screen.
    * This includes event bus, settings, and background theme service.
+   * IDEMPOTENT: Safe to call multiple times (e.g., from init() and Settings modal)
    */
   function initCoreServices() {
     // Guard against duplicate initialization
@@ -103,6 +104,8 @@
           return true;
         }
       };
+    } else {
+      console.info('[StartupFlow] bbGameBus already exists, skipping creation');
     }
 
     bus = g.bbGameBus;
@@ -1265,6 +1268,7 @@
 
   g.StartupFlow = {
     init,
+    initCoreServices,  // Export for defensive calls from Settings modal
     startupSequence,
     buildMainScreen,
     preloadIntroBackground,

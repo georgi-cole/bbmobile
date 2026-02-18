@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Settings Before Play Freeze Bug Fix</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 20px; 
+      background: #f5f5f5;
+    }
+    .test-panel { 
+      border: 2px solid #333; 
+      padding: 20px; 
+      margin: 10px 0; 
+      background: white;
+      border-radius: 8px;
+    }
+    .test-panel h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .pass { 
+      color: green; 
+      font-weight: bold; 
+      padding: 5px 0;
+    }
+    .fail { 
+      color: red; 
+      font-weight: bold; 
+      padding: 5px 0;
+    }
+    .info { 
+      color: blue; 
+      padding: 3px 0;
+    }
+    .warn { 
+      color: orange; 
+      padding: 3px 0;
+    }
+    button { 
+      padding: 12px 24px; 
+      margin: 5px; 
+      font-size: 16px; 
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #log { 
+      background: #f9f9f9; 
+      padding: 15px; 
+      max-height: 500px; 
+      overflow-y: auto; 
+      font-family: 'Courier New', monospace; 
+      font-size: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    #results {
+      min-height: 100px;
+    }
+    .step-indicator {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      background: #007bff;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 24px;
+      margin-right: 8px;
+      font-weight: bold;
+    }
+    .summary {
+      background: #e7f3ff;
+      padding: 15px;
+      border-left: 4px solid #007bff;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Settings Before Play - Freeze Bug Fix Test</h1>
+  
+  <div class="test-panel">
+    <h2>📋 Test Scenario</h2>
+    <p>This test reproduces the bug where opening Settings before pressing Play causes the game to freeze on "Season Premiere" screen.</p>
+    <ol>
+      <li><strong>Before fix:</strong> Config reinitializes, players cleared/recreated multiple times, race condition → freeze</li>
+      <li><strong>After fix:</strong> Config idempotent, buildCast idempotent, core services defensive → smooth start</li>
+    </ol>
+  </div>
+  
+  <div class="test-panel">
+    <h2>🎮 Test Controls</h2>
+    <p><span class="step-indicator">1</span><button id="btnSimulateSettings">Simulate Settings Open</button></p>
+    <p><span class="step-indicator">2</span><button id="btnSimulatePlay">Simulate Play Button</button></p>
+    <p><span class="step-indicator">3</span><button id="btnCheckState">Check Final State</button></p>
+    <button id="btnReset" style="background: #6c757d;">Reset Test</button>
+  </div>
+  
+  <div class="test-panel">
+    <h2>✅ Test Results</h2>
+    <div id="results"></div>
+  </div>
+  
+  <div class="test-panel">
+    <h2>📜 Console Log</h2>
+    <div id="log"></div>
+  </div>
+  
+  <script>
+    // Intercept console to show in UI
+    const logDiv = document.getElementById('log');
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    const originalInfo = console.info;
+    
+    function addLog(type, ...args) {
+      const line = document.createElement('div');
+      const color = {
+        error: 'red',
+        warn: 'orange',
+        info: 'blue',
+        log: 'black'
+      }[type] || 'black';
+      
+      line.style.color = color;
+      line.style.padding = '2px 0';
+      line.textContent = `[${type.toUpperCase()}] ${args.map(a => 
+        typeof a === 'object' ? JSON.stringify(a) : String(a)
+      ).join(' ')}`;
+      
+      logDiv.appendChild(line);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addLog('log', ...args);
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addLog('warn', ...args);
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addLog('error', ...args);
+    };
+    
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      addLog('info', ...args);
+    };
+  </script>
+  
+  <!-- Load actual game modules in order (same as index.html) -->
+  <script src="src/telemetry/telemetry-core.js"></script>
+  
+  <!-- GameGuard (same as in index.html) -->
+  <script>
+  (function guardGame(){
+    const original = window.game || (window.game = {});
+    Object.defineProperty(window, 'game', {
+      configurable: true,
+      get(){ return original; },
+      set(v){
+        if (v && typeof v === 'object'){
+          console.warn('[GameGuard] Merging new properties into window.game instead of replacing');
+          Object.assign(original, v);
+        } else {
+          console.warn('[GameGuard] Ignored non-object game replacement');
+        }
+      }
+    });
+    original.cfg = original.cfg || {};
+    console.info('[GameGuard] window.game protected from destructive reassignment');
+  })();
+  </script>
+  
+  <!-- Core modules -->
+  <script src="js/state.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="src/startup/deferredGuards.js"></script>
+  <script src="src/startup/flow.js"></script>
+  <script src="js/bootstrap.js"></script>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    let testState = {
+      settingsOpened: false,
+      playPressed: false,
+      checks: []
+    };
+    
+    function showResult(msg, isPass) {
+      const line = document.createElement('div');
+      line.className = isPass ? 'pass' : 'fail';
+      line.innerHTML = (isPass ? '✓ PASS: ' : '✗ FAIL: ') + msg;
+      resultsDiv.appendChild(line);
+      testState.checks.push({ msg, pass: isPass });
+    }
+    
+    function showInfo(msg) {
+      const line = document.createElement('div');
+      line.className = 'info';
+      line.innerHTML = 'ℹ ' + msg;
+      resultsDiv.appendChild(line);
+    }
+    
+    function showWarn(msg) {
+      const line = document.createElement('div');
+      line.className = 'warn';
+      line.innerHTML = '⚠ ' + msg;
+      resultsDiv.appendChild(line);
+    }
+    
+    // Test 1: Simulate Settings Open (before Play is pressed)
+    document.getElementById('btnSimulateSettings').addEventListener('click', () => {
+      resultsDiv.innerHTML = '';
+      showInfo('<strong>Step 1: Simulating Settings modal open (before game start)...</strong>');
+      
+      try {
+        // Check initial state
+        const initialPlayers = window.game?.players?.length || 0;
+        const initialBus = !!window.bbGameBus;
+        
+        showInfo(`Before Settings: Players=${initialPlayers}, bbGameBus=${initialBus}`);
+        
+        // This is what happens when Settings modal is opened
+        if (typeof window.Config !== 'undefined' && typeof window.Config.ensureGameCfg === 'function') {
+          // Call ensureGameCfg() multiple times to test idempotency
+          const cfg1 = window.Config.ensureGameCfg();
+          const cfg2 = window.Config.ensureGameCfg();
+          const cfg3 = window.Config.ensureGameCfg();
+          
+          if (cfg1 === cfg2 && cfg2 === cfg3) {
+            showResult('Config.ensureGameCfg() is idempotent (returns same object)', true);
+          } else {
+            showResult('Config.ensureGameCfg() creates new objects on each call', false);
+          }
+          
+          showInfo(`Config has ${Object.keys(cfg1).length} keys`);
+        } else {
+          showResult('Config.ensureGameCfg() not available', false);
+        }
+        
+        // Check if core services still exist after config reload
+        if (window.bbGameBus) {
+          showResult('bbGameBus still exists after Config.ensureGameCfg()', true);
+        } else {
+          showResult('bbGameBus missing after Config.ensureGameCfg()', false);
+        }
+        
+        if (window.game && window.game.cfg) {
+          showResult('window.game.cfg exists', true);
+        } else {
+          showResult('window.game.cfg missing', false);
+        }
+        
+        // Check if players were affected
+        const afterPlayers = window.game?.players?.length || 0;
+        if (afterPlayers === initialPlayers) {
+          showResult(`Players array unchanged (${afterPlayers} players)`, true);
+        } else {
+          showResult(`Players array changed: ${initialPlayers} → ${afterPlayers}`, false);
+        }
+        
+        testState.settingsOpened = true;
+        showInfo('<strong>✓ Step 1 complete. Proceed to Step 2.</strong>');
+        
+      } catch (err) {
+        showResult(`Settings simulation failed: ${err.message}`, false);
+        console.error(err);
+      }
+    });
+    
+    // Test 2: Simulate Play Button (after Settings was opened)
+    document.getElementById('btnSimulatePlay').addEventListener('click', () => {
+      if (!testState.settingsOpened) {
+        showResult('Please run Step 1 (Simulate Settings Open) first', false);
+        return;
+      }
+      
+      resultsDiv.innerHTML = '';
+      showInfo('<strong>Step 2: Simulating Play button press (after Settings)...</strong>');
+      
+      try {
+        // Check prerequisites
+        if (!window.StartupFlow) {
+          showResult('StartupFlow not available', false);
+          return;
+        }
+        
+        if (!window.DeferredGuards) {
+          showResult('DeferredGuards not available', false);
+          return;
+        }
+        
+        // Simulate the Play button flow (from enterGameFromIntro)
+        console.info('[TEST] === Simulating Play Button ===');
+        
+        // Step 1: Call buildCast (should defer)
+        const beforePlayers = window.game?.players?.length || 0;
+        showInfo(`Before buildCast: ${beforePlayers} players`);
+        
+        if (typeof window.buildCast === 'function') {
+          window.buildCast();
+          showInfo('buildCast() called (deferred if game not ready)');
+        }
+        
+        // Step 2: Mark game ready and flush deferred tasks
+        window.DeferredGuards.markGameReady();
+        showResult('DeferredGuards.markGameReady() called', true);
+        
+        window.DeferredGuards.flushDeferredTasks();
+        showResult('DeferredGuards.flushDeferredTasks() called', true);
+        
+        // Check if players were created
+        const afterFlush = window.game?.players?.length || 0;
+        if (afterFlush > 0) {
+          showResult(`Players created: ${afterFlush} players`, true);
+        } else {
+          showResult('No players created after flush', false);
+        }
+        
+        // Step 3: Call buildCast again (should be idempotent)
+        if (typeof window.buildCast === 'function') {
+          window.buildCast();
+          showInfo('buildCast() called again (should skip if players exist)');
+        }
+        
+        const afterSecondCall = window.game?.players?.length || 0;
+        if (afterSecondCall === afterFlush && afterFlush > 0) {
+          showResult('buildCast() is idempotent (players not recreated)', true);
+        } else if (afterSecondCall === 0) {
+          showResult('Players were cleared by second buildCast() call', false);
+        } else {
+          showWarn(`Player count changed: ${afterFlush} → ${afterSecondCall}`);
+        }
+        
+        // Check core services
+        if (window.bbGameBus) {
+          showResult('bbGameBus available for game start', true);
+        } else {
+          showResult('bbGameBus missing - FREEZE LIKELY', false);
+        }
+        
+        if (window.BackgroundTheme) {
+          showResult('BackgroundTheme available', true);
+        } else {
+          showWarn('BackgroundTheme missing (might not be loaded yet)');
+        }
+        
+        testState.playPressed = true;
+        showInfo('<strong>✓ Step 2 complete. Proceed to Step 3 to verify final state.</strong>');
+        
+      } catch (err) {
+        showResult(`Play simulation failed: ${err.message}`, false);
+        console.error(err);
+      }
+    });
+    
+    // Test 3: Check Final State
+    document.getElementById('btnCheckState').addEventListener('click', () => {
+      resultsDiv.innerHTML = '';
+      showInfo('<strong>Step 3: Checking final game state...</strong>');
+      
+      const checks = [
+        { name: 'window.game exists', value: !!window.game },
+        { name: 'window.game.cfg exists', value: !!window.game?.cfg },
+        { name: 'window.bbGameBus exists', value: !!window.bbGameBus },
+        { name: 'window.StartupFlow exists', value: !!window.StartupFlow },
+        { name: 'window.DeferredGuards exists', value: !!window.DeferredGuards },
+        { name: 'Players array has players', value: (window.game?.players?.length || 0) > 0 },
+      ];
+      
+      checks.forEach(check => {
+        showResult(check.name, check.value);
+      });
+      
+      // Show detailed state
+      showInfo('<strong>Detailed State:</strong>');
+      showInfo(`• Players: ${window.game?.players?.length || 0}`);
+      showInfo(`• Phase: ${window.game?.phase || 'undefined'}`);
+      showInfo(`• Config keys: ${Object.keys(window.game?.cfg || {}).length}`);
+      
+      if (window.DeferredGuards) {
+        const state = window.DeferredGuards.getState();
+        showInfo(`• Game ready: ${state.gameReadyToStart}`);
+        showInfo(`• Game started: ${state.gameStarted}`);
+        showInfo(`• Deferred tasks: ${state.deferredTaskCount}`);
+      }
+      
+      // Show summary
+      const passedChecks = checks.filter(c => c.value).length;
+      const totalChecks = checks.length;
+      
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = 'summary';
+      summaryDiv.innerHTML = `
+        <h3 style="margin-top:0">📊 Test Summary</h3>
+        <p><strong>Checks passed: ${passedChecks}/${totalChecks}</strong></p>
+        ${passedChecks === totalChecks 
+          ? '<p style="color: green; font-weight: bold;">✓ All checks passed! The freeze bug appears to be fixed.</p>'
+          : '<p style="color: red; font-weight: bold;">✗ Some checks failed. The bug may still exist.</p>'
+        }
+      `;
+      resultsDiv.appendChild(summaryDiv);
+    });
+    
+    // Reset
+    document.getElementById('btnReset').addEventListener('click', () => {
+      location.reload();
+    });
+    
+    // Initialize test
+    setTimeout(() => {
+      showInfo('<strong>Test page loaded and ready</strong>');
+      showInfo('Bootstrap should have initialized StartupFlow and core services');
+      
+      // Check initial state
+      const initialChecks = [
+        { name: 'StartupFlow initialized', value: !!window.StartupFlow },
+        { name: 'DeferredGuards initialized', value: !!window.DeferredGuards },
+        { name: 'bbGameBus created', value: !!window.bbGameBus },
+        { name: 'Config loaded', value: !!window.Config }
+      ];
+      
+      const passed = initialChecks.filter(c => c.value).length;
+      if (passed === initialChecks.length) {
+        showResult('Initial state OK: All core services initialized', true);
+        showInfo('<strong>✓ Ready to test. Start with Step 1.</strong>');
+      } else {
+        showResult(`Initial state INCOMPLETE: ${passed}/${initialChecks.length} services ready`, false);
+        initialChecks.forEach(check => {
+          if (!check.value) {
+            showWarn(`Missing: ${check.name}`);
+          }
+        });
+      }
+    }, 1500); // Wait for all deferred scripts to load
+  </script>
+</body>
+</html>
