@@ -18,7 +18,8 @@
     "test:pov-carousel": "node tests/verify_pov_carousel.mjs",
     "test:pause-integration": "node tests/verify_pause_integration.mjs",
     "test:background-theme": "node scripts/test-background-theme.mjs",
-    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social && npm run test:pov-carousel && npm run test:pause-integration && npm run test:background-theme",
+    "test:hold-wall-hoh": "node scripts/test-hold-wall-hoh-winner.mjs",
+    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social && npm run test:pov-carousel && npm run test:pause-integration && npm run test:background-theme && npm run test:hold-wall-hoh",
     "build:progression": "cd src/progression && tsc",
     "typecheck:progression": "cd src/progression && tsc --noEmit"
   },
