@@ -2984,6 +2984,12 @@
     const g = global.game;
     if (!g) return;
     
+    // PAUSE GUARD: Block zero energy modal during pause
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[sm-zero-energy] showZeroEnergyModal blocked: game is paused');
+      return;
+    }
+    
     // Idempotency guard: avoid creating multiple overlays if already skipping
     if (g.__smSkipInProgress) {
       console.info('[sm-zero-energy] Skip already in progress, not showing another modal');
@@ -3295,6 +3301,12 @@
     const g = global.game;
     const week = g?.week || 1;
     
+    // PAUSE GUARD: Block empty energy overlay during pause
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[sm-phase-skip] showEmptyEnergyOverlayAndSkip blocked: game is paused');
+      return;
+    }
+    
     // Idempotency guard: prevent double execution
     if(g.__smSkipInProgress) {
       console.warn('[sm-phase-skip] Skip already in progress - ignoring duplicate call');
@@ -3358,6 +3370,29 @@
     
     // Auto-advance after 3 seconds
     setTimeout(() => {
+      // PAUSE GUARD: Check if paused before advancing
+      if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+        console.info('[sm-phase-skip] Auto-advance blocked: game is paused. Will defer until resume.');
+        // Defer the advance: schedule to run when game resumes
+        if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+          global.game.bus.once('game:resumed', () => {
+            console.info('[sm-phase-skip] Game resumed, executing deferred auto-advance');
+            wrapper.remove();
+            // Advance to next phase
+            if (typeof global.advancePhase === 'function') {
+              global.advancePhase();
+            } else if (typeof global.nextPhase === 'function') {
+              global.nextPhase();
+            } else {
+              console.warn('[sm-phase-skip] No advancePhase or nextPhase function available');
+            }
+            // Clean up idempotency flag after phase advance
+            if(g) g.__smSkipInProgress = false;
+          });
+        }
+        return;
+      }
+      
       wrapper.remove();
       console.info(`[sm-phase-skip] Auto-advancing to next phase`);
       

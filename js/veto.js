@@ -1055,6 +1055,19 @@
       return;
     }
     
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[veto] finishVetoComp blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          console.info('[veto] Game resumed, retrying finishVetoComp');
+          finishVetoComp();
+        });
+      }
+      return;
+    }
+    
     // Guard: prevent multiple calls and re-entry
     // This guard ensures finishVetoComp only runs once even if called multiple times
     if (g.__finishVetoCompCalled || g.__vetoResolving) {

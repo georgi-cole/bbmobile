@@ -1686,10 +1686,26 @@
         return true;
       }
       if(typeof global.advancePhase === 'function'){
-        setTimeout(() => { console.info('[ImmediateResults] Manual advancePhase() after fallback 1s'); global.advancePhase(); }, ONE_SECOND);
+        setTimeout(() => { 
+          // PAUSE GUARD: Check if paused before executing
+          if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+            console.info('[ImmediateResults] advancePhase blocked in setTimeout: game is paused');
+            return;
+          }
+          console.info('[ImmediateResults] Manual advancePhase() after fallback 1s'); 
+          global.advancePhase(); 
+        }, ONE_SECOND);
         return true;
       } else if(typeof global.defaultAdvance === 'function'){
-        setTimeout(() => { console.info('[ImmediateResults] Manual defaultAdvance() after fallback 1s'); global.defaultAdvance(g.phase); }, ONE_SECOND);
+        setTimeout(() => { 
+          // PAUSE GUARD: Check if paused before executing
+          if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+            console.info('[ImmediateResults] defaultAdvance blocked in setTimeout: game is paused');
+            return;
+          }
+          console.info('[ImmediateResults] Manual defaultAdvance() after fallback 1s'); 
+          global.defaultAdvance(g.phase); 
+        }, ONE_SECOND);
         return true;
       }
       console.warn('[ImmediateResults] No phase shortening API available');
@@ -1702,6 +1718,19 @@
 
   function resolveCompetitionPhaseIfNeeded(){
     try{
+      // PAUSE GUARD: Block resolution while game is paused
+      if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+        console.info('[ImmediateResults] resolveCompetitionPhaseIfNeeded blocked: game is paused');
+        // Defer resolution: schedule to run when game resumes
+        if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+          global.game.bus.once('game:resumed', () => {
+            console.info('[ImmediateResults] Game resumed, retrying resolveCompetitionPhaseIfNeeded');
+            resolveCompetitionPhaseIfNeeded();
+          });
+        }
+        return;
+      }
+      
       if(g.__fastAdvancingCompetition){
         console.info('[ImmediateResults] Resolution already in progress, skipping duplicate');
         return;

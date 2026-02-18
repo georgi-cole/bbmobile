@@ -483,6 +483,12 @@
   }
 
   function maybeFinishComp() {
+    // PAUSE GUARD: Block auto-finish while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[comp] maybeFinishComp blocked: game is paused');
+      return;
+    }
+    
     const g = global.game; const alive = global.alivePlayers();
     let eligible = alive.map(p => p.id);
     // Week-based eligibility: only filter out player if they were HOH in previous week
@@ -1650,6 +1656,20 @@
   async function finishCompPhase() {
     const g = global.game; if (g.phase !== 'hoh') return;
     if (g.__hohResolved || g.__hohResolving) return;
+    
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[hoh] finishCompPhase blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          console.info('[hoh] Game resumed, retrying finishCompPhase');
+          finishCompPhase();
+        });
+      }
+      return;
+    }
+    
     g.__hohResolving = true;
     try {
       g.__hohResolved = true;
@@ -2323,6 +2343,19 @@
   async function finishF3P1() {
     const g = global.game; if (g.phase !== 'final3_comp1') return;
     
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[F3P1] finishF3P1 blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          console.info('[F3P1] Game resumed, retrying finishF3P1');
+          finishF3P1();
+        });
+      }
+      return;
+    }
+    
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
       global.SpectatorView.cleanup();
@@ -2620,6 +2653,19 @@
 
   async function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
+    
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[F3P2] finishF3P2 blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          console.info('[F3P2] Game resumed, retrying finishF3P2');
+          finishF3P2();
+        });
+      }
+      return;
+    }
     
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
@@ -2963,6 +3009,19 @@
 
   async function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
+    
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[F3P3] finishF3P3 blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          console.info('[F3P3] Game resumed, retrying finishF3P3');
+          finishF3P3();
+        });
+      }
+      return;
+    }
     
     // Clean up SpectatorView if it exists (legacy/fallback)
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
