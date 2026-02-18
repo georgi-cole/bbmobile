@@ -2,6 +2,15 @@
 // Clean-room rebuild of nomination ceremony intro modal with proper state machine
 // Fixes: freeze after interaction, resolve-after-remove, dual-path resume, leaked listeners
 // Design: Single responsibility, finite state machine, guaranteed resolution
+//
+// PAUSE + WATCHDOG SYSTEM:
+// - Pauses phase timer when modal is shown to prevent player interruption
+// - Uses PauseController if available, falls back to local refcount mechanism
+// - Watchdog timer (30s default) auto-releases pause to prevent indefinite halt
+// - Special handling for ad flow: extends watchdog, ignores visibility changes
+// - Server-first design: modal always closes on phase change, never blocks game
+// - All pause operations wrapped in try/catch for safety
+// - Idempotent release ensures no double-release errors
 
 (function(global) {
   'use strict';
