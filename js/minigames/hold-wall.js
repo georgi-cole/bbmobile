@@ -684,16 +684,19 @@
       if(hasEnded) return;
       
       isHolding = false;
-      hasEnded = true;
       
-      // Cleanup all timers
-      cleanupTimers();
-      
-      // Check if player was the last one standing before they released
-      const stillHoldingBeforeRelease = participants.filter(p => p.dropTimeMs === null);
-      if(stillHoldingBeforeRelease.length === 1 && stillHoldingBeforeRelease[0].isPlayer){
-        console.log('[HoldWall] Player was last standing before release - should not happen in normal flow');
+      // BUG FIX: Check if player is last standing BEFORE any other logic
+      const stillHolding = participants.filter(p => p.dropTimeMs === null);
+      if(stillHolding.length === 1 && stillHolding[0].isPlayer){
+        // Human is the last person standing - they WIN!
+        console.log('[HoldWall] Human is last standing - VICTORY!');
+        finalizeVictory();
+        return; // Exit immediately - game is over
       }
+      
+      // BUG FIX: Human is NOT the last standing - they are dropping
+      // Do NOT set hasEnded yet - game continues with AI
+      // Do NOT call cleanupTimers() - AI drop timers must continue!
       
       const dropTime = Date.now() - startTime;
       const playerParticipant = participants.find(p => p.isPlayer);
@@ -715,7 +718,7 @@
       wallPanel.style.borderColor = '#ff6b6b';
       statusMsg.textContent = 'You released!';
       
-      // ENDURANCE FIX: Don't force-drop remaining AI - let their timers continue naturally
+      // BUG FIX: Let AI drop timers continue naturally
       // The last AI standing should be the true winner
       // Update displays to show human dropped
       renderParticipants();
@@ -838,7 +841,9 @@
         // Store winner player ID for HOH/POV determination
         const winnerParticipant = participantsByName.get(standings[0].name);
         if(winnerParticipant && winnerParticipant.id !== undefined){
-          g.__authoritativeWinner = {
+          // BUG FIX: Store on g.game (window.game), not g (window)
+          // competitions.js reads from g.__authoritativeWinner where g = window.game
+          g.game.__authoritativeWinner = {
             playerId: winnerParticipant.id,
             score: standings[0].score,
             minigame: gameId,

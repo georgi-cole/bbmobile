@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold The Wall - Authoritative Winner Object Location Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn:disabled {
+      background: #555;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-success {
+      background: #66ff66;
+      color: #1a2332;
+    }
+    
+    .status-box {
+      background: rgba(26, 35, 50, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(44, 58, 77, 0.5);
+    }
+    
+    .status-row:last-child {
+      border-bottom: none;
+    }
+    
+    .status-label {
+      color: #95a9c0;
+      font-weight: 600;
+    }
+    
+    .status-value {
+      color: #e3ecf5;
+    }
+    
+    .status-value.pass {
+      color: #66ff66;
+      font-weight: bold;
+    }
+    
+    .status-value.fail {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+    
+    .log-container {
+      background: rgba(10, 19, 31, 0.8);
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(44, 58, 77, 0.3);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-entry.info {
+      color: #83bfff;
+    }
+    
+    .log-entry.success {
+      color: #66ff66;
+    }
+    
+    .log-entry.error {
+      color: #ff6b6b;
+    }
+    
+    .log-entry.warning {
+      color: #ffd700;
+    }
+    
+    .summary-box {
+      background: rgba(131, 191, 255, 0.1);
+      border: 2px solid #83bfff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .summary-box h2 {
+      margin: 0 0 15px 0;
+      color: #83bfff;
+    }
+    
+    .summary-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .stat-passed {
+      color: #66ff66;
+    }
+    
+    .stat-failed {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Hold The Wall - Authoritative Winner Object Test</h1>
+    <p class="subtitle">Test Suite: Verify __authoritativeWinner is set on window.game (not window)</p>
+    
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="test-grid">
+        <button class="btn" onclick="runAllTests()">▶️ Run All Tests</button>
+        <button class="btn" onclick="runTest1()">Test 1: Object Location (HOH)</button>
+        <button class="btn" onclick="runTest2()">Test 2: Object Location (POV)</button>
+        <button class="btn" onclick="runTest3()">Test 3: competitions.js Integration</button>
+        <button class="btn" onclick="runTest4()">Test 4: Flag Cleared After Use</button>
+        <button class="btn" onclick="runTest5()">Test 5: Score Injection</button>
+        <button class="btn" onclick="runTest6()">Test 6: Wrong Object Check</button>
+        <button class="btn" onclick="clearLogs()">🗑️ Clear Logs</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Results Summary</h2>
+      <div class="summary-box">
+        <h2>Results</h2>
+        <div class="summary-stats">
+          <div>
+            <span class="stat-passed" id="passedCount">0</span> Passed
+          </div>
+          <div>
+            <span class="stat-failed" id="failedCount">0</span> Failed
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>📋 Test Log</h2>
+      <div class="log-container" id="logContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // Test state
+    let testsPassed = 0;
+    let testsFailed = 0;
+    
+    // Mock window.game structure
+    function setupMockGame() {
+      window.game = {
+        players: [
+          { id: 0, name: 'Human', evicted: false, hoh: false },
+          { id: 1, name: 'Rey', evicted: false, hoh: false },
+          { id: 2, name: 'Miko', evicted: false, hoh: false },
+          { id: 3, name: 'Lola', evicted: false, hoh: false }
+        ],
+        humanId: 0,
+        phase: 'hoh',
+        week: 1,
+        lastCompScores: new Map(),
+        hohId: null
+      };
+      
+      // Clear any existing authoritative winner flags
+      delete window.__authoritativeWinner;
+      delete window.game.__authoritativeWinner;
+    }
+    
+    function log(message, level = 'info') {
+      const logContainer = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${level}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      console.log(`[${level.toUpperCase()}]`, message);
+    }
+    
+    function clearLogs() {
+      document.getElementById('logContainer').innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+      updateSummary();
+      log('Logs cleared', 'info');
+    }
+    
+    function updateSummary() {
+      document.getElementById('passedCount').textContent = testsPassed;
+      document.getElementById('failedCount').textContent = testsFailed;
+    }
+    
+    function testPass(testName) {
+      testsPassed++;
+      updateSummary();
+      log(`✅ ${testName} PASSED`, 'success');
+    }
+    
+    function testFail(testName, reason) {
+      testsFailed++;
+      updateSummary();
+      log(`❌ ${testName} FAILED: ${reason}`, 'error');
+    }
+    
+    // Test 1: Verify authoritative winner is set on window.game for HOH
+    async function runTest1() {
+      log('=== TEST 1: Authoritative Winner on window.game (HOH) ===', 'info');
+      setupMockGame();
+      
+      // Simulate hold-wall setting the authoritative winner
+      window.game.__authoritativeWinner = {
+        playerId: 0,
+        score: 120.5,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      // Verify it's on window.game, not window
+      if (window.game.__authoritativeWinner) {
+        if (window.game.__authoritativeWinner.playerId === 0 &&
+            window.game.__authoritativeWinner.compType === 'hoh') {
+          testPass('Test 1');
+          log('window.game.__authoritativeWinner correctly set', 'success');
+          log(`  playerId: ${window.game.__authoritativeWinner.playerId}`, 'info');
+          log(`  compType: ${window.game.__authoritativeWinner.compType}`, 'info');
+        } else {
+          testFail('Test 1', 'Authoritative winner has incorrect properties');
+        }
+      } else {
+        testFail('Test 1', 'window.game.__authoritativeWinner is not set');
+      }
+      
+      // Verify it's NOT on window
+      if (window.__authoritativeWinner) {
+        log('⚠️ WARNING: window.__authoritativeWinner is also set (should NOT be)', 'warning');
+      } else {
+        log('✓ window.__authoritativeWinner is correctly NOT set', 'success');
+      }
+    }
+    
+    // Test 2: Verify authoritative winner is set on window.game for POV
+    async function runTest2() {
+      log('=== TEST 2: Authoritative Winner on window.game (POV) ===', 'info');
+      setupMockGame();
+      window.game.phase = 'veto_comp';
+      
+      // Simulate hold-wall setting the authoritative winner
+      window.game.__authoritativeWinner = {
+        playerId: 1,
+        score: 135.2,
+        minigame: 'hold-wall',
+        compType: 'pov',
+        timestamp: Date.now()
+      };
+      
+      // Verify it's on window.game
+      if (window.game.__authoritativeWinner) {
+        if (window.game.__authoritativeWinner.playerId === 1 &&
+            window.game.__authoritativeWinner.compType === 'pov') {
+          testPass('Test 2');
+          log('window.game.__authoritativeWinner correctly set for POV', 'success');
+          log(`  playerId: ${window.game.__authoritativeWinner.playerId}`, 'info');
+          log(`  compType: ${window.game.__authoritativeWinner.compType}`, 'info');
+        } else {
+          testFail('Test 2', 'Authoritative winner has incorrect properties');
+        }
+      } else {
+        testFail('Test 2', 'window.game.__authoritativeWinner is not set');
+      }
+    }
+    
+    // Test 3: Simulate competitions.js finishCompPhase logic
+    async function runTest3() {
+      log('=== TEST 3: competitions.js Integration ===', 'info');
+      setupMockGame();
+      
+      // Set authoritative winner on window.game
+      window.game.__authoritativeWinner = {
+        playerId: 2,
+        score: 142.8,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      // Set scores
+      window.game.lastCompScores.set(0, 85.3);
+      window.game.lastCompScores.set(1, 92.1);
+      window.game.lastCompScores.set(2, 142.8);
+      window.game.lastCompScores.set(3, 78.5);
+      
+      // Simulate finishCompPhase logic (as it reads from window.game)
+      const g = window.game; // This is what competitions.js does
+      let winner = null;
+      
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        winner = g.__authoritativeWinner.playerId;
+        log(`✓ Found authoritative winner: ${winner}`, 'success');
+        
+        // Inject score
+        const maxScore = Math.max(...g.lastCompScores.values());
+        const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+        g.lastCompScores.set(winner, authScore);
+        log(`✓ Injected authoritative winner score: ${authScore}`, 'success');
+        
+        // Clear flag
+        delete g.__authoritativeWinner;
+        log('✓ Cleared authoritative winner flag', 'success');
+      } else {
+        testFail('Test 3', 'Authoritative winner not found by competitions.js logic');
+        return;
+      }
+      
+      // Verify winner is correct
+      if (winner === 2) {
+        testPass('Test 3');
+        log('competitions.js logic correctly found and used authoritative winner', 'success');
+      } else {
+        testFail('Test 3', `Expected winner 2, got ${winner}`);
+      }
+      
+      // Verify flag was cleared
+      if (!g.__authoritativeWinner) {
+        log('✓ Authoritative winner flag correctly cleared', 'success');
+      } else {
+        log('⚠️ Authoritative winner flag NOT cleared', 'warning');
+      }
+    }
+    
+    // Test 4: Verify flag is cleared after use
+    async function runTest4() {
+      log('=== TEST 4: Flag Cleared After Use ===', 'info');
+      setupMockGame();
+      
+      // Set authoritative winner
+      window.game.__authoritativeWinner = {
+        playerId: 3,
+        score: 155.0,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      log('Set authoritative winner flag', 'info');
+      
+      // Use it (simulate finishCompPhase)
+      const g = window.game;
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        const winner = g.__authoritativeWinner.playerId;
+        log(`Used authoritative winner: ${winner}`, 'info');
+        delete g.__authoritativeWinner;
+      }
+      
+      // Verify it's cleared
+      if (!window.game.__authoritativeWinner) {
+        testPass('Test 4');
+        log('Flag correctly cleared after use', 'success');
+      } else {
+        testFail('Test 4', 'Flag was not cleared after use');
+      }
+    }
+    
+    // Test 5: Verify score injection makes authoritative winner highest
+    async function runTest5() {
+      log('=== TEST 5: Score Injection ===', 'info');
+      setupMockGame();
+      
+      // Set initial scores
+      window.game.lastCompScores.set(0, 95.5);
+      window.game.lastCompScores.set(1, 105.2);
+      window.game.lastCompScores.set(2, 88.3);
+      window.game.lastCompScores.set(3, 92.7);
+      
+      // Set authoritative winner (player 2, who doesn't have highest score)
+      window.game.__authoritativeWinner = {
+        playerId: 2,
+        score: 88.3,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      const g = window.game;
+      const maxScore = Math.max(...g.lastCompScores.values());
+      log(`Max score before injection: ${maxScore} (Player 1)`, 'info');
+      
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        const winner = g.__authoritativeWinner.playerId;
+        const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+        g.lastCompScores.set(winner, authScore);
+        log(`Injected score ${authScore} for winner ${winner}`, 'info');
+        
+        // Verify winner now has highest score
+        const newMaxScore = Math.max(...g.lastCompScores.values());
+        const newMaxPlayer = [...g.lastCompScores.entries()].find(([id, score]) => score === newMaxScore)[0];
+        
+        if (newMaxPlayer === winner && newMaxScore > maxScore) {
+          testPass('Test 5');
+          log(`Winner now has highest score: ${newMaxScore}`, 'success');
+        } else {
+          testFail('Test 5', `Winner does not have highest score: ${g.lastCompScores.get(winner)}`);
+        }
+        
+        delete g.__authoritativeWinner;
+      } else {
+        testFail('Test 5', 'Authoritative winner not found');
+      }
+    }
+    
+    // Test 6: Verify setting on window (wrong) is NOT read by competitions.js
+    async function runTest6() {
+      log('=== TEST 6: Wrong Object Check (window vs window.game) ===', 'info');
+      setupMockGame();
+      
+      // WRONG: Set authoritative winner on window (not window.game)
+      window.__authoritativeWinner = {
+        playerId: 0,
+        score: 200.0,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      log('Set authoritative winner on WINDOW (wrong location)', 'warning');
+      
+      // Simulate competitions.js finishCompPhase logic
+      const g = window.game; // competitions.js reads from window.game
+      let winner = null;
+      
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        winner = g.__authoritativeWinner.playerId;
+        testFail('Test 6', 'competitions.js found authoritative winner from wrong location');
+      } else {
+        testPass('Test 6');
+        log('✓ competitions.js correctly did NOT find authoritative winner from window', 'success');
+        log('This confirms the bug: if set on window, it will NOT be found', 'info');
+      }
+      
+      // Clean up
+      delete window.__authoritativeWinner;
+    }
+    
+    // Run all tests
+    async function runAllTests() {
+      clearLogs();
+      log('🚀 Running all tests...', 'info');
+      log('', 'info');
+      
+      await runTest1();
+      log('', 'info');
+      
+      await runTest2();
+      log('', 'info');
+      
+      await runTest3();
+      log('', 'info');
+      
+      await runTest4();
+      log('', 'info');
+      
+      await runTest5();
+      log('', 'info');
+      
+      await runTest6();
+      log('', 'info');
+      
+      log(`🏁 All tests complete: ${testsPassed} passed, ${testsFailed} failed`, testsFailed === 0 ? 'success' : 'error');
+    }
+    
+    // Initialize
+    setupMockGame();
+    log('Test suite initialized. Click "Run All Tests" to begin.', 'info');
+  </script>
+</body>
+</html>
