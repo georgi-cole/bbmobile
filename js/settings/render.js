@@ -25,8 +25,8 @@
 
   // HTML escape utility
   function escapeHtml(s){
-    return String(s).replace(/[&<>\"]/g, function(c){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c] || c;
+    return String(s).replace(/[&<>"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] || c;
     });
   }
 
@@ -499,7 +499,7 @@
     
     Array.prototype.forEach.call(modal.querySelectorAll('[data-key]'), function(inp){
       const k = inp.getAttribute('data-key');
-      if(!cfg.hasOwnProperty(k)) return;
+      if(!Object.prototype.hasOwnProperty.call(cfg, k)) return;
       
       if(inp.type === 'checkbox'){
         inp.checked = !!cfg[k];
@@ -686,7 +686,9 @@
       if(target){
         try{
           target.focus();
-        }catch(e){}
+        }catch(e){
+          // Ignore focus errors
+        }
       }
     }, 20);
   }
