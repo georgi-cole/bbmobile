@@ -1687,9 +1687,20 @@
       }
       if(typeof global.advancePhase === 'function'){
         setTimeout(() => { 
-          // PAUSE GUARD: Check if paused before executing
+          // PAUSE GUARD: Check if paused before executing, defer if needed
           if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-            console.info('[ImmediateResults] advancePhase blocked in setTimeout: game is paused');
+            console.info('[ImmediateResults][pause-guard] advancePhase blocked in setTimeout: game is paused');
+            // Defer execution: schedule to run when game resumes
+            if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+              global.game.bus.once('game:resumed', () => {
+                if (!global.game || global.game.__terminated) {
+                  console.info('[ImmediateResults][pause-guard] Deferred advancePhase aborted: game is terminated');
+                  return;
+                }
+                console.info('[ImmediateResults][pause-guard] Game resumed, executing deferred advancePhase');
+                global.advancePhase();
+              });
+            }
             return;
           }
           console.info('[ImmediateResults] Manual advancePhase() after fallback 1s'); 
@@ -1698,9 +1709,20 @@
         return true;
       } else if(typeof global.defaultAdvance === 'function'){
         setTimeout(() => { 
-          // PAUSE GUARD: Check if paused before executing
+          // PAUSE GUARD: Check if paused before executing, defer if needed
           if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-            console.info('[ImmediateResults] defaultAdvance blocked in setTimeout: game is paused');
+            console.info('[ImmediateResults][pause-guard] defaultAdvance blocked in setTimeout: game is paused');
+            // Defer execution: schedule to run when game resumes
+            if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+              global.game.bus.once('game:resumed', () => {
+                if (!global.game || global.game.__terminated) {
+                  console.info('[ImmediateResults][pause-guard] Deferred defaultAdvance aborted: game is terminated');
+                  return;
+                }
+                console.info('[ImmediateResults][pause-guard] Game resumed, executing deferred defaultAdvance');
+                global.defaultAdvance(g.phase);
+              });
+            }
             return;
           }
           console.info('[ImmediateResults] Manual defaultAdvance() after fallback 1s'); 
@@ -1718,13 +1740,24 @@
 
   function resolveCompetitionPhaseIfNeeded(){
     try{
+      // TERMINATION GUARD: Do not attempt to resolve competition phases if the game is terminated
+      if (global.game && global.game.__terminated) {
+        console.info('[ImmediateResults][pause-guard] resolveCompetitionPhaseIfNeeded aborted: game is terminated');
+        return;
+      }
+
       // PAUSE GUARD: Block resolution while game is paused
       if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-        console.info('[ImmediateResults] resolveCompetitionPhaseIfNeeded blocked: game is paused');
+        console.info('[ImmediateResults][pause-guard] resolveCompetitionPhaseIfNeeded blocked: game is paused');
         // Defer resolution: schedule to run when game resumes
         if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
           global.game.bus.once('game:resumed', () => {
-            console.info('[ImmediateResults] Game resumed, retrying resolveCompetitionPhaseIfNeeded');
+            // Re-check termination before retrying resolution
+            if (global.game && global.game.__terminated) {
+              console.info('[ImmediateResults][pause-guard] Deferred resolveCompetitionPhaseIfNeeded aborted: game is terminated');
+              return;
+            }
+            console.info('[ImmediateResults][pause-guard] Game resumed, retrying resolveCompetitionPhaseIfNeeded');
             resolveCompetitionPhaseIfNeeded();
           });
         }

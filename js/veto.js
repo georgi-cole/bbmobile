@@ -1057,11 +1057,17 @@
     
     // PAUSE GUARD: Block competition resolution while game is paused
     if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-      console.info('[veto] finishVetoComp blocked: game is paused');
+      console.info('[veto][pause-guard] finishVetoComp blocked: game is paused');
       // Defer resolution: schedule to run when game resumes
       if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
         global.game.bus.once('game:resumed', () => {
-          console.info('[veto] Game resumed, retrying finishVetoComp');
+          var resumedGame = global.game;
+          // Only retry if the game is still in a valid veto_comp state
+          if (!resumedGame || resumedGame.phase !== 'veto_comp') {
+            console.info('[veto][pause-guard] Game resumed but veto_comp is no longer active - skipping finishVetoComp retry');
+            return;
+          }
+          console.info('[veto][pause-guard] Game resumed, retrying finishVetoComp');
           finishVetoComp();
         });
       }

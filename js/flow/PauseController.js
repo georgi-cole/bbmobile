@@ -307,7 +307,14 @@
             console.error('[PauseController] Error calling phase timeout callback:', err);
           }
         } else if (callback !== null && callback !== undefined) {
-          console.warn('[PauseController] Stored phaseTimeoutCallback is not a function:', typeof callback);
+          console.warn(
+            '[PauseController] Stored phaseTimeoutCallback is not a function.',
+            {
+              type: typeof callback,
+              value: callback,
+              debugHint: 'phaseTimeoutCallback should always be a function. Check where PauseController.pause/resume timer state is configured.'
+            }
+          );
         }
       } else {
         // Timer has time remaining, restore with adjusted endAt

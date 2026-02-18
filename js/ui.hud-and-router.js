@@ -2484,11 +2484,16 @@ header.innerHTML = `
   function defaultAdvance(phase){
     // PAUSE GUARD: Block phase advancement while game is paused
     if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-      console.info('[defaultAdvance] Blocked: game is paused');
+      console.info('[defaultAdvance][pause-guard] Blocked: game is paused');
       // Defer advancement: schedule to run when game resumes
       if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
         global.game.bus.once('game:resumed', () => {
-          console.info('[defaultAdvance] Game resumed, retrying defaultAdvance');
+          // TERMINATION GUARD: ensure game is still valid before retrying
+          if (!global.game || global.game.__terminated) {
+            console.info('[defaultAdvance][pause-guard] Skipping deferred advance: game is not active');
+            return;
+          }
+          console.info('[defaultAdvance][pause-guard] Game resumed, retrying defaultAdvance');
           defaultAdvance(phase);
         });
       }

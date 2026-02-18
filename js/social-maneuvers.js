@@ -2986,7 +2986,7 @@
     
     // PAUSE GUARD: Block zero energy modal during pause
     if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-      console.info('[sm-zero-energy] showZeroEnergyModal blocked: game is paused');
+      console.info('[sm-zero-energy][pause-guard] showZeroEnergyModal blocked: game is paused');
       return;
     }
     
@@ -3303,7 +3303,7 @@
     
     // PAUSE GUARD: Block empty energy overlay during pause
     if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-      console.info('[sm-phase-skip] showEmptyEnergyOverlayAndSkip blocked: game is paused');
+      console.info('[sm-phase-skip][pause-guard] showEmptyEnergyOverlayAndSkip blocked: game is paused');
       return;
     }
     
@@ -3372,11 +3372,18 @@
     setTimeout(() => {
       // PAUSE GUARD: Check if paused before advancing
       if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
-        console.info('[sm-phase-skip] Auto-advance blocked: game is paused. Will defer until resume.');
+        console.info('[sm-phase-skip][pause-guard] Auto-advance blocked: game is paused. Will defer until resume.');
         // Defer the advance: schedule to run when game resumes
         if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
           global.game.bus.once('game:resumed', () => {
-            console.info('[sm-phase-skip] Game resumed, executing deferred auto-advance');
+            // TERMINATION GUARD: ensure game is still valid before retrying
+            if (!global.game || global.game.__terminated) {
+              console.info('[sm-phase-skip][pause-guard] Deferred auto-advance aborted: game is terminated');
+              wrapper.remove();
+              if(g) g.__smSkipInProgress = false;
+              return;
+            }
+            console.info('[sm-phase-skip][pause-guard] Game resumed, executing deferred auto-advance');
             wrapper.remove();
             // Advance to next phase
             if (typeof global.advancePhase === 'function') {
