@@ -3192,7 +3192,7 @@
       skipButton.disabled = true;
       rechargeButton.disabled = true;
       
-      console.info('[sm-zero-energy] SKIP clicked - advancing to next phase');
+      console.info('[sm-zero-energy] SKIP clicked - ending social phase and advancing');
       
       // Fade out and remove modal
       overlay.style.opacity = '0';
@@ -3204,14 +3204,9 @@
           overlay.parentNode.removeChild(overlay);
         }
         
-        // Advance to next phase
-        if (typeof global.advancePhase === 'function') {
-          global.advancePhase();
-        } else if (typeof global.nextPhase === 'function') {
-          global.nextPhase();
-        } else {
-          console.warn('[sm-zero-energy] No advancePhase or nextPhase function available');
-        }
+        // End social phase properly and advance to next phase
+        // This calls onSocialPhaseEnd() and then advances to next phase
+        endSocialPhaseNow('skip');
         
         // Clean up flags
         if (g.__smSkipInProgress) {
@@ -3424,9 +3419,9 @@
       console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
     }
 
-    // 3. If reason is 'continue', advance to next phase immediately
-    if(reason === 'continue'){
-      console.info('[social-maneuvers] ⏩ Advancing to next phase immediately after OK');
+    // 3. If reason is 'continue' or 'skip', advance to next phase immediately
+    if(reason === 'continue' || reason === 'skip'){
+      console.info(`[social-maneuvers] ⏩ Advancing to next phase immediately (reason: ${reason})`);
       
       // Immediately advance the phase by calling global phase advancement functions
       try {
