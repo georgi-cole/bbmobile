@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings Freeze Fix - Visual Summary</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 18px;
+      margin-bottom: 40px;
+    }
+    .section {
+      margin: 30px 0;
+      padding: 20px;
+      border-left: 4px solid #667eea;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .section h2 {
+      color: #667eea;
+      margin-top: 0;
+    }
+    .problem {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+    }
+    .problem h2 {
+      color: #856404;
+    }
+    .solution {
+      background: #d4edda;
+      border-left-color: #28a745;
+    }
+    .solution h2 {
+      color: #155724;
+    }
+    .flow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px 0;
+      gap: 20px;
+    }
+    .flow-box {
+      flex: 1;
+      padding: 20px;
+      background: white;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .flow-box.bad {
+      border-color: #dc3545;
+      background: #f8d7da;
+    }
+    .flow-box.good {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+    .arrow {
+      font-size: 24px;
+      color: #667eea;
+    }
+    .code {
+      font-family: 'Courier New', monospace;
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    .highlight {
+      background: #ffc107;
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+    .stat-box {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .stat-number {
+      font-size: 48px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .stat-label {
+      color: #666;
+      margin-top: 10px;
+    }
+    .checkmark {
+      color: #28a745;
+      font-size: 20px;
+    }
+    ul {
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Settings Before Play - Freeze Bug Fix</h1>
+    <p class="subtitle">Comprehensive fix for initialization race condition</p>
+    
+    <div class="section problem">
+      <h2>❌ Problem: Race Condition Causing Freeze</h2>
+      <p><strong>User Experience:</strong> Game freezes on "Week 1 – Season Premiere" screen when Settings is opened before Play button</p>
+      
+      <div class="flow">
+        <div class="flow-box bad">
+          <strong>1. Open Settings</strong><br>
+          Config reinitialized
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-box bad">
+          <strong>2. Press Play</strong><br>
+          buildCast() called
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-box bad">
+          <strong>3. Players Created</strong><br>
+          Deferred task executes
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-box bad">
+          <strong>4. Players CLEARED!</strong><br>
+          buildCast() called again 💥
+        </div>
+      </div>
+      
+      <p><strong>Root Cause:</strong></p>
+      <ul>
+        <li>buildCast() called twice in quick succession</li>
+        <li>Second call clears players array: <code class="highlight">g.players.length = 0</code></li>
+        <li>Config.ensureGameCfg() creates new objects every time</li>
+        <li>Race condition → MobileRoster timeout → freeze</li>
+      </ul>
+    </div>
+    
+    <div class="section solution">
+      <h2>✅ Solution: Idempotent Initialization</h2>
+      
+      <p><strong>Fix 1: Make buildCastInternal() Idempotent</strong></p>
+      <div class="code">
+// NEW: Check if players already initialized<br>
+if(g.players && g.players.length > 0 && g.players[0].id){<br>
+  console.info('[buildCast] Players already initialized, skipping');<br>
+  return; // <span class="highlight">Skip rebuild!</span><br>
+}<br>
+g.players.length = 0; // Only clear if rebuilding
+      </div>
+      
+      <p><strong>Fix 2: Make Config.ensureGameCfg() Idempotent</strong></p>
+      <div class="code">
+// NEW: Check if config already valid<br>
+if(g.cfg && Object.keys(g.cfg).length >= DEFAULT_CFG_SIZE * 0.8){<br>
+  return g.cfg; // <span class="highlight">Return existing config!</span><br>
+}<br>
+// Only recreate if missing/corrupted
+      </div>
+      
+      <div class="flow">
+        <div class="flow-box good">
+          <strong>1. Open Settings</strong><br>
+          Config already valid ✓
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-box good">
+          <strong>2. Press Play</strong><br>
+          buildCast() defers ✓
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-box good">
+          <strong>3. Players Created</strong><br>
+          First buildCast() ✓
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-box good">
+          <strong>4. Players Preserved</strong><br>
+          Second call skipped ✓
+        </div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>📊 Changes Summary</h2>
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-number">5</div>
+          <div class="stat-label">Files Changed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">0</div>
+          <div class="stat-label">Breaking Changes</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">✓</div>
+          <div class="stat-label">All Tests Pass</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">0</div>
+          <div class="stat-label">Security Issues</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>✅ Testing Completed</h2>
+      <ul>
+        <li><span class="checkmark">✓</span> test:runtime - PASSED</li>
+        <li><span class="checkmark">✓</span> test:minigames - PASSED</li>
+        <li><span class="checkmark">✓</span> CodeQL security scan - 0 vulnerabilities</li>
+        <li><span class="checkmark">✓</span> test_settings_before_play_freeze.html created</li>
+        <li><span class="checkmark">✓</span> Comprehensive documentation added</li>
+      </ul>
+    </div>
+    
+    <div class="section">
+      <h2>🎯 Impact</h2>
+      <ul>
+        <li><strong>Bug Fixed:</strong> Settings → Play flow now works smoothly</li>
+        <li><strong>Performance:</strong> Improved (less object creation)</li>
+        <li><strong>Code Quality:</strong> Better defensive programming</li>
+        <li><strong>Backward Compatible:</strong> No breaking changes</li>
+      </ul>
+    </div>
+    
+    <div class="section" style="text-align: center; border: 3px solid #28a745;">
+      <h2 style="color: #28a745;">✨ Ready for Review & Merge! ✨</h2>
+      <p style="font-size: 18px; margin: 20px 0;">
+        All tests pass, security scan clear, comprehensive documentation included.
+      </p>
+      <p style="color: #666;">
+        <strong>Files to Review:</strong><br>
+        js/bootstrap.js | js/config/defaults.js | js/settings/render.js | src/startup/flow.js<br>
+        test_settings_before_play_freeze.html | SETTINGS_FREEZE_FIX_SUMMARY.md
+      </p>
+    </div>
+  </div>
+</body>
+</html>
