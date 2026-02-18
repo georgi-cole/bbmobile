@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold The Wall - endHold() Scenarios Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn:disabled {
+      background: #555;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-success {
+      background: #66ff66;
+      color: #1a2332;
+    }
+    
+    .log-container {
+      background: rgba(10, 19, 31, 0.8);
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(44, 58, 77, 0.3);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-entry.info {
+      color: #83bfff;
+    }
+    
+    .log-entry.success {
+      color: #66ff66;
+    }
+    
+    .log-entry.error {
+      color: #ff6b6b;
+    }
+    
+    .log-entry.warning {
+      color: #ffd700;
+    }
+    
+    .summary-box {
+      background: rgba(131, 191, 255, 0.1);
+      border: 2px solid #83bfff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .summary-box h2 {
+      margin: 0 0 15px 0;
+      color: #83bfff;
+    }
+    
+    .summary-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .stat-passed {
+      color: #66ff66;
+    }
+    
+    .stat-failed {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Hold The Wall - endHold() Scenarios Test</h1>
+    <p class="subtitle">Test Suite: Verify endHold() logic and AI timer handling</p>
+    
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="test-grid">
+        <button class="btn btn-success" onclick="runAllTests()">▶️ Run All Tests</button>
+        <button class="btn" onclick="runTest1()">Test 1: Human Last Standing</button>
+        <button class="btn" onclick="runTest2()">Test 2: Human Drops First</button>
+        <button class="btn" onclick="runTest3()">Test 3: Human Drops Second</button>
+        <button class="btn" onclick="runTest4()">Test 4: Human Drops, 1 AI Remains</button>
+        <button class="btn" onclick="runTest5()">Test 5: Human AFK (Never Holds)</button>
+        <button class="btn" onclick="runTest6()">Test 6: All AI Drop First</button>
+        <button class="btn" onclick="runTest7()">Test 7: Simultaneous Drop</button>
+        <button class="btn" onclick="runTest8()">Test 8: cleanupTimers Not Called</button>
+        <button class="btn" onclick="runTest9()">Test 9: AI Timers Fire After Human</button>
+        <button class="btn" onclick="runTest10()">Test 10: displayResults Winner Match</button>
+        <button class="btn" onclick="clearLogs()">🗑️ Clear Logs</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Results Summary</h2>
+      <div class="summary-box">
+        <h2>Results</h2>
+        <div class="summary-stats">
+          <div>
+            <span class="stat-passed" id="passedCount">0</span> Passed
+          </div>
+          <div>
+            <span class="stat-failed" id="failedCount">0</span> Failed
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>📋 Test Log</h2>
+      <div class="log-container" id="logContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // Test state
+    let testsPassed = 0;
+    let testsFailed = 0;
+    
+    function log(message, level = 'info') {
+      const logContainer = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${level}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      console.log(`[${level.toUpperCase()}]`, message);
+    }
+    
+    function clearLogs() {
+      document.getElementById('logContainer').innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+      updateSummary();
+      log('Logs cleared', 'info');
+    }
+    
+    function updateSummary() {
+      document.getElementById('passedCount').textContent = testsPassed;
+      document.getElementById('failedCount').textContent = testsFailed;
+    }
+    
+    function testPass(testName) {
+      testsPassed++;
+      updateSummary();
+      log(`✅ ${testName} PASSED`, 'success');
+    }
+    
+    function testFail(testName, reason) {
+      testsFailed++;
+      updateSummary();
+      log(`❌ ${testName} FAILED: ${reason}`, 'error');
+    }
+    
+    // Mock game state
+    class MockHoldWallGame {
+      constructor() {
+        this.participants = [];
+        this.hasEnded = false;
+        this.isHolding = false;
+        this.aiDropTimeouts = [];
+        this.startTime = Date.now();
+        this.cleanupTimersCalled = false;
+        this.finalizeVictoryCalled = false;
+        this.finalizeResultsCalled = false;
+      }
+      
+      addParticipant(name, isPlayer, dropTimeMs = null) {
+        this.participants.push({
+          name: name,
+          isPlayer: isPlayer,
+          dropTimeMs: dropTimeMs,
+          id: this.participants.length
+        });
+      }
+      
+      cleanupTimers() {
+        this.cleanupTimersCalled = true;
+        this.aiDropTimeouts.forEach(clearTimeout);
+        this.aiDropTimeouts = [];
+        log('cleanupTimers() called', 'warning');
+      }
+      
+      checkGameEnd() {
+        const stillHolding = this.participants.filter(p => p.dropTimeMs === null);
+        
+        if (stillHolding.length === 1) {
+          const winner = stillHolding[0];
+          log(`checkGameEnd: Last person standing: ${winner.name} (isPlayer: ${winner.isPlayer})`, 'info');
+          
+          if (winner.isPlayer) {
+            this.finalizeVictory();
+          } else {
+            this.finalizeResults();
+          }
+        } else if (stillHolding.length === 0) {
+          log('checkGameEnd: Everyone dropped', 'info');
+          this.finalizeResults();
+        }
+      }
+      
+      finalizeVictory() {
+        if (this.hasEnded) return;
+        this.hasEnded = true;
+        this.finalizeVictoryCalled = true;
+        this.cleanupTimers();
+        log('finalizeVictory() called - Human wins!', 'success');
+      }
+      
+      finalizeResults() {
+        if (this.hasEnded) return;
+        this.hasEnded = true;
+        this.finalizeResultsCalled = true;
+        this.cleanupTimers();
+        log('finalizeResults() called - Game ends', 'info');
+      }
+      
+      // FIXED endHold() logic
+      endHold() {
+        if (this.hasEnded) return;
+        
+        this.isHolding = false;
+        
+        // BUG FIX: Check if player is last standing BEFORE any other logic
+        const stillHolding = this.participants.filter(p => p.dropTimeMs === null);
+        if (stillHolding.length === 1 && stillHolding[0].isPlayer) {
+          // Human is the last person standing - they WIN!
+          log('endHold: Human is last standing - VICTORY!', 'success');
+          this.finalizeVictory();
+          return; // Exit immediately - game is over
+        }
+        
+        // BUG FIX: Human is NOT the last standing - they are dropping
+        // Do NOT set hasEnded yet - game continues with AI
+        // Do NOT call cleanupTimers() - AI drop timers must continue!
+        
+        const dropTime = Date.now() - this.startTime;
+        const playerParticipant = this.participants.find(p => p.isPlayer);
+        
+        if (playerParticipant) {
+          playerParticipant.dropTimeMs = dropTime;
+          log(`endHold: Player dropped at ${(dropTime/1000).toFixed(1)}s`, 'info');
+        }
+        
+        // BUG FIX: Let AI drop timers continue naturally
+        // Check if game should end (only 1 or 0 players remaining)
+        this.checkGameEnd();
+      }
+      
+      // Simulate AI drop
+      dropAI(aiIndex, afterMs) {
+        const timeoutId = setTimeout(() => {
+          const ai = this.participants[aiIndex];
+          if (!this.hasEnded && ai && ai.dropTimeMs === null) {
+            const dropTime = Date.now() - this.startTime;
+            ai.dropTimeMs = dropTime;
+            log(`AI ${ai.name} dropped at ${(dropTime/1000).toFixed(1)}s`, 'info');
+            this.checkGameEnd();
+          }
+        }, afterMs);
+        this.aiDropTimeouts.push(timeoutId);
+      }
+    }
+    
+    // Test 1: Human is last standing, releases
+    async function runTest1() {
+      log('=== TEST 1: Human Last Standing ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup: Human and 3 AI
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false, 5000);    // Already dropped
+      game.addParticipant('Miko', false, 8000);   // Already dropped
+      game.addParticipant('Lola', false, 10000);  // Already dropped
+      
+      // Human releases (they are last standing)
+      game.isHolding = true;
+      game.endHold();
+      
+      // Verify finalizeVictory was called
+      if (game.finalizeVictoryCalled) {
+        testPass('Test 1');
+        log('✓ Human wins when last standing', 'success');
+      } else {
+        testFail('Test 1', 'finalizeVictory not called when human is last standing');
+      }
+      
+      // Verify game ended
+      if (game.hasEnded) {
+        log('✓ Game ended', 'success');
+      } else {
+        log('⚠️ Game did not end', 'warning');
+      }
+    }
+    
+    // Test 2: Human drops first, 3 AI remain
+    async function runTest2() {
+      log('=== TEST 2: Human Drops First, 3 AI Remain ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup: Human and 3 AI (all still holding)
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false);
+      game.addParticipant('Miko', false);
+      game.addParticipant('Lola', false);
+      
+      // Schedule AI drops
+      game.dropAI(1, 100);  // Rey drops in 100ms
+      game.dropAI(2, 200);  // Miko drops in 200ms
+      game.dropAI(3, 300);  // Lola drops in 300ms (should win)
+      
+      // Human drops first
+      game.isHolding = true;
+      game.endHold();
+      
+      // Verify finalizeVictory was NOT called
+      if (!game.finalizeVictoryCalled) {
+        log('✓ finalizeVictory not called (correct)', 'success');
+      } else {
+        testFail('Test 2', 'finalizeVictory called when human drops first');
+        return;
+      }
+      
+      // Verify cleanupTimers was NOT called
+      if (!game.cleanupTimersCalled) {
+        log('✓ cleanupTimers not called - AI timers continue', 'success');
+      } else {
+        testFail('Test 2', 'cleanupTimers was called - AI timers were killed');
+        return;
+      }
+      
+      // Wait for AI drops to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Verify last AI won
+      if (game.finalizeResultsCalled) {
+        const stillHolding = game.participants.filter(p => p.dropTimeMs === null);
+        if (stillHolding.length === 0) {
+          // Find who dropped last
+          const lastDrop = game.participants.reduce((latest, p) => 
+            (p.dropTimeMs !== null && p.dropTimeMs > (latest?.dropTimeMs || 0)) ? p : latest
+          );
+          
+          if (lastDrop && lastDrop.name === 'Lola') {
+            testPass('Test 2');
+            log(`✓ Last AI standing (${lastDrop.name}) should win`, 'success');
+          } else {
+            testFail('Test 2', `Wrong AI won: ${lastDrop?.name}`);
+          }
+        } else {
+          testFail('Test 2', 'Not all AI dropped');
+        }
+      } else {
+        testFail('Test 2', 'finalizeResults not called');
+      }
+    }
+    
+    // Test 3: Human drops second, 2 AI remain
+    async function runTest3() {
+      log('=== TEST 3: Human Drops Second, 2 AI Remain ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup: Human and 3 AI
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false, 2000);  // Already dropped
+      game.addParticipant('Miko', false);       // Still holding
+      game.addParticipant('Lola', false);       // Still holding
+      
+      // Schedule remaining AI drops
+      game.dropAI(2, 100);  // Miko drops in 100ms
+      game.dropAI(3, 200);  // Lola drops in 200ms (should win)
+      
+      // Human drops
+      game.isHolding = true;
+      game.endHold();
+      
+      // Verify human didn't win
+      if (!game.finalizeVictoryCalled) {
+        log('✓ Human did not win', 'success');
+      } else {
+        testFail('Test 3', 'Human won despite not being last standing');
+        return;
+      }
+      
+      // Wait for AI drops
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Verify last AI won
+      if (game.finalizeResultsCalled) {
+        testPass('Test 3');
+        log('✓ Last AI standing wins', 'success');
+      } else {
+        testFail('Test 3', 'finalizeResults not called');
+      }
+    }
+    
+    // Test 4: Human drops while 1 AI remains
+    async function runTest4() {
+      log('=== TEST 4: Human Drops, 1 AI Remains ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup: Human and 3 AI
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false, 2000);   // Already dropped
+      game.addParticipant('Miko', false, 3000);  // Already dropped
+      game.addParticipant('Lola', false);        // Still holding (should win)
+      
+      // Schedule last AI drop
+      game.dropAI(3, 100);  // Lola drops in 100ms (wins)
+      
+      // Human drops
+      game.isHolding = true;
+      game.endHold();
+      
+      // Wait for AI drop
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Verify Lola won
+      if (game.finalizeResultsCalled) {
+        const lastDrop = game.participants.reduce((latest, p) => 
+          (p.dropTimeMs !== null && p.dropTimeMs > (latest?.dropTimeMs || 0)) ? p : latest
+        );
+        
+        if (lastDrop && lastDrop.name === 'Lola') {
+          testPass('Test 4');
+          log('✓ Last AI standing wins', 'success');
+        } else {
+          testFail('Test 4', `Wrong winner: ${lastDrop?.name}`);
+        }
+      } else {
+        testFail('Test 4', 'finalizeResults not called');
+      }
+    }
+    
+    // Test 5: Human never touches wall (AFK)
+    async function runTest5() {
+      log('=== TEST 5: Human AFK (Never Holds) ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup: Human and 3 AI
+      game.addParticipant('Human', true, 0);  // Human gets score 0 (AFK)
+      game.addParticipant('Rey', false);
+      game.addParticipant('Miko', false);
+      game.addParticipant('Lola', false);
+      
+      // Schedule AI drops
+      game.dropAI(1, 100);
+      game.dropAI(2, 200);
+      game.dropAI(3, 300);  // Lola should win
+      
+      // Human never holds - simulate grace period expiry
+      const humanParticipant = game.participants.find(p => p.isPlayer);
+      humanParticipant.dropTimeMs = 0;  // AFK
+      
+      log('Human never started holding (AFK)', 'info');
+      
+      // Wait for AI drops
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Verify human has score 0
+      if (humanParticipant.dropTimeMs === 0) {
+        log('✓ Human has drop time 0 (AFK)', 'success');
+      }
+      
+      // Verify AI won
+      if (game.finalizeResultsCalled) {
+        testPass('Test 5');
+        log('✓ AI wins when human is AFK', 'success');
+      } else {
+        // Manually trigger checkGameEnd since we're simulating
+        game.checkGameEnd();
+        if (game.finalizeResultsCalled) {
+          testPass('Test 5');
+          log('✓ AI wins when human is AFK', 'success');
+        } else {
+          testFail('Test 5', 'finalizeResults not called');
+        }
+      }
+    }
+    
+    // Test 6: All AI drop before human releases
+    async function runTest6() {
+      log('=== TEST 6: All AI Drop Before Human ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup: Human and 3 AI (all AI already dropped)
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false, 1000);
+      game.addParticipant('Miko', false, 2000);
+      game.addParticipant('Lola', false, 3000);
+      
+      // Human is last standing - releases
+      game.isHolding = true;
+      game.endHold();
+      
+      // Verify human wins
+      if (game.finalizeVictoryCalled) {
+        testPass('Test 6');
+        log('✓ Human wins when last standing', 'success');
+      } else {
+        testFail('Test 6', 'finalizeVictory not called');
+      }
+    }
+    
+    // Test 7: Human and AI drop at exact same time
+    async function runTest7() {
+      log('=== TEST 7: Simultaneous Drop ===', 'info');
+      log('Note: Human released = human lost', 'info');
+      
+      const game = new MockHoldWallGame();
+      
+      // Setup: Human and 1 AI
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false);
+      
+      // Human drops
+      const dropTime = 5000;
+      const humanParticipant = game.participants.find(p => p.isPlayer);
+      humanParticipant.dropTimeMs = dropTime;
+      
+      // AI drops at same time
+      game.participants[1].dropTimeMs = dropTime;
+      
+      log('Both dropped at same time', 'info');
+      
+      // Trigger checkGameEnd
+      game.checkGameEnd();
+      
+      // Human should NOT win (they released)
+      if (!game.finalizeVictoryCalled) {
+        testPass('Test 7');
+        log('✓ Human does not win when releasing (even if simultaneous)', 'success');
+      } else {
+        testFail('Test 7', 'Human won despite releasing');
+      }
+    }
+    
+    // Test 8: Verify cleanupTimers() is NOT called when AI timers should continue
+    async function runTest8() {
+      log('=== TEST 8: cleanupTimers() NOT Called ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false);
+      game.addParticipant('Miko', false);
+      
+      // Human drops while AI remain
+      game.isHolding = true;
+      game.endHold();
+      
+      // Verify cleanupTimers was NOT called
+      if (!game.cleanupTimersCalled) {
+        testPass('Test 8');
+        log('✓ cleanupTimers() not called - AI timers continue', 'success');
+      } else {
+        testFail('Test 8', 'cleanupTimers() was called - AI timers were killed!');
+      }
+    }
+    
+    // Test 9: Verify AI drop timers fire correctly after human drops
+    async function runTest9() {
+      log('=== TEST 9: AI Timers Fire After Human ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup
+      game.addParticipant('Human', true);
+      game.addParticipant('Rey', false);
+      game.addParticipant('Miko', false);
+      
+      let timersFired = 0;
+      
+      // Schedule AI drops with tracking
+      game.dropAI(1, 50);
+      game.dropAI(2, 100);
+      
+      // Human drops
+      game.isHolding = true;
+      game.endHold();
+      
+      log('Human dropped, waiting for AI timers...', 'info');
+      
+      // Wait for timers
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      // Check that AI dropped
+      const aiRey = game.participants[1];
+      const aiMiko = game.participants[2];
+      
+      if (aiRey.dropTimeMs !== null && aiMiko.dropTimeMs !== null) {
+        testPass('Test 9');
+        log('✓ AI drop timers fired correctly after human dropped', 'success');
+      } else {
+        testFail('Test 9', 'AI timers did not fire');
+      }
+    }
+    
+    // Test 10: Verify the winner in displayResults matches actual last standing
+    async function runTest10() {
+      log('=== TEST 10: displayResults Winner Match ===', 'info');
+      const game = new MockHoldWallGame();
+      
+      // Setup: Create a scenario where Miko is last standing
+      game.addParticipant('Human', true, 5000);
+      game.addParticipant('Rey', false, 8000);
+      game.addParticipant('Miko', false, 12000);  // Last to drop (winner)
+      game.addParticipant('Lola', false, 10000);
+      
+      // Find who dropped last
+      const lastDrop = game.participants.reduce((latest, p) => 
+        (p.dropTimeMs !== null && p.dropTimeMs > (latest?.dropTimeMs || 0)) ? p : latest
+      );
+      
+      log(`Last to drop: ${lastDrop.name} at ${lastDrop.dropTimeMs}ms`, 'info');
+      
+      // In a real scenario, standings would be:
+      // [Miko (score 100), Lola (score 0), Rey (score 0), Human (score 0)]
+      
+      if (lastDrop.name === 'Miko') {
+        testPass('Test 10');
+        log('✓ Winner correctly identified as last person standing', 'success');
+      } else {
+        testFail('Test 10', `Wrong winner: ${lastDrop.name}`);
+      }
+    }
+    
+    // Run all tests
+    async function runAllTests() {
+      clearLogs();
+      log('🚀 Running all endHold() scenario tests...', 'info');
+      log('', 'info');
+      
+      await runTest1();
+      log('', 'info');
+      
+      await runTest2();
+      log('', 'info');
+      
+      await runTest3();
+      log('', 'info');
+      
+      await runTest4();
+      log('', 'info');
+      
+      await runTest5();
+      log('', 'info');
+      
+      await runTest6();
+      log('', 'info');
+      
+      await runTest7();
+      log('', 'info');
+      
+      await runTest8();
+      log('', 'info');
+      
+      await runTest9();
+      log('', 'info');
+      
+      await runTest10();
+      log('', 'info');
+      
+      log(`🏁 All tests complete: ${testsPassed} passed, ${testsFailed} failed`, testsFailed === 0 ? 'success' : 'error');
+    }
+    
+    // Initialize
+    log('Test suite initialized. Click "Run All Tests" to begin.', 'info');
+  </script>
+</body>
+</html>

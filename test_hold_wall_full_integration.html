@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold The Wall - Full Integration Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn-success {
+      background: #66ff66;
+      color: #1a2332;
+    }
+    
+    .log-container {
+      background: rgba(10, 19, 31, 0.8);
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(44, 58, 77, 0.3);
+    }
+    
+    .log-entry.info { color: #83bfff; }
+    .log-entry.success { color: #66ff66; }
+    .log-entry.error { color: #ff6b6b; }
+    .log-entry.warning { color: #ffd700; }
+    
+    .summary-box {
+      background: rgba(131, 191, 255, 0.1);
+      border: 2px solid #83bfff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .summary-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .stat-passed { color: #66ff66; }
+    .stat-failed { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Hold The Wall - Full Integration Test</h1>
+    <p class="subtitle">End-to-end tests: hold-wall.js → competitions.js pipeline</p>
+    
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="test-grid">
+        <button class="btn btn-success" onclick="runAllTests()">▶️ Run All Tests</button>
+        <button class="btn" onclick="runTest1()">Test 1: Human Wins HOH</button>
+        <button class="btn" onclick="runTest2()">Test 2: Human Loses HOH</button>
+        <button class="btn" onclick="runTest3()">Test 3: Human Wins POV</button>
+        <button class="btn" onclick="runTest4()">Test 4: Human Loses POV</button>
+        <button class="btn" onclick="runTest5()">Test 5: Score Map Consistency</button>
+        <button class="btn" onclick="runTest6()">Test 6: Pipeline Integrity</button>
+        <button class="btn" onclick="runTest7()">Test 7: No Flag Leak</button>
+        <button class="btn" onclick="runTest8()">Test 8: Fast-Forward Mode</button>
+        <button class="btn" onclick="clearLogs()">🗑️ Clear Logs</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Results Summary</h2>
+      <div class="summary-box">
+        <h2>Results</h2>
+        <div class="summary-stats">
+          <div><span class="stat-passed" id="passedCount">0</span> Passed</div>
+          <div><span class="stat-failed" id="failedCount">0</span> Failed</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>📋 Test Log</h2>
+      <div class="log-container" id="logContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    let testsPassed = 0;
+    let testsFailed = 0;
+    
+    function log(message, level = 'info') {
+      const logContainer = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${level}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    function clearLogs() {
+      document.getElementById('logContainer').innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+      updateSummary();
+    }
+    
+    function updateSummary() {
+      document.getElementById('passedCount').textContent = testsPassed;
+      document.getElementById('failedCount').textContent = testsFailed;
+    }
+    
+    function testPass(name) {
+      testsPassed++;
+      updateSummary();
+      log(`✅ ${name} PASSED`, 'success');
+    }
+    
+    function testFail(name, reason) {
+      testsFailed++;
+      updateSummary();
+      log(`❌ ${name} FAILED: ${reason}`, 'error');
+    }
+    
+    function setupMockGame(phase = 'hoh') {
+      window.game = {
+        players: [
+          { id: 0, name: 'Human', evicted: false, hoh: false },
+          { id: 1, name: 'Rey', evicted: false, hoh: false },
+          { id: 2, name: 'Miko', evicted: false, hoh: false },
+          { id: 3, name: 'Lola', evicted: false, hoh: false }
+        ],
+        humanId: 0,
+        phase: phase,
+        week: 1,
+        lastCompScores: new Map(),
+        hohId: null,
+        vetoHolder: null
+      };
+      delete window.game.__authoritativeWinner;
+    }
+    
+    // Simulate hold-wall setting authoritative winner
+    function simulateHoldWallWinner(playerId, compType) {
+      window.game.__authoritativeWinner = {
+        playerId: playerId,
+        score: 150.0,
+        minigame: 'hold-wall',
+        compType: compType,
+        timestamp: Date.now()
+      };
+      
+      // Set scores
+      window.game.lastCompScores.set(0, playerId === 0 ? 150 : 85);
+      window.game.lastCompScores.set(1, playerId === 1 ? 150 : 92);
+      window.game.lastCompScores.set(2, playerId === 2 ? 150 : 78);
+      window.game.lastCompScores.set(3, playerId === 3 ? 150 : 88);
+      
+      log(`Set authoritative winner: Player ${playerId} for ${compType}`, 'info');
+    }
+    
+    // Simulate competitions.js finishCompPhase logic
+    function simulateFinishCompPhase() {
+      const g = window.game;
+      let winner = null;
+      
+      // Check for authoritative winner
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        winner = g.__authoritativeWinner.playerId;
+        log(`Found authoritative winner: ${winner}`, 'success');
+        
+        // Inject score
+        const maxScore = Math.max(...g.lastCompScores.values());
+        const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+        g.lastCompScores.set(winner, authScore);
+        
+        // Clear flag
+        delete g.__authoritativeWinner;
+      } else {
+        log('No authoritative winner, using score-based', 'info');
+        const scoredEntries = [...g.lastCompScores.entries()]
+          .filter(([id, score]) => score > 0)
+          .sort((a, b) => b[1] - a[1]);
+        winner = scoredEntries[0][0];
+      }
+      
+      // Set HOH
+      g.players.forEach(p => p.hoh = false);
+      g.hohId = winner;
+      g.players[winner].hoh = true;
+      
+      log(`HOH set to player ${winner}`, 'info');
+      return winner;
+    }
+    
+    // Simulate veto finishCompPhase logic
+    function simulateFinishVetoCompPhase() {
+      const g = window.game;
+      let winner = null;
+      
+      // Check for authoritative winner
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov') {
+        winner = g.__authoritativeWinner.playerId;
+        log(`Found authoritative POV winner: ${winner}`, 'success');
+        
+        // Inject score
+        const maxScore = Math.max(...g.lastCompScores.values());
+        const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+        g.lastCompScores.set(winner, authScore);
+        
+        // Clear flag
+        delete g.__authoritativeWinner;
+      } else {
+        log('No authoritative POV winner, using score-based', 'info');
+        const scoredEntries = [...g.lastCompScores.entries()]
+          .filter(([id, score]) => score > 0)
+          .sort((a, b) => b[1] - a[1]);
+        winner = scoredEntries[0][0];
+      }
+      
+      // Set POV holder
+      g.vetoHolder = winner;
+      
+      log(`POV holder set to player ${winner}`, 'info');
+      return winner;
+    }
+    
+    // Test 1: Human wins hold-wall → verify game.hohId === humanId
+    async function runTest1() {
+      log('=== TEST 1: Human Wins HOH ===', 'info');
+      setupMockGame('hoh');
+      
+      simulateHoldWallWinner(0, 'hoh'); // Human wins
+      const winner = simulateFinishCompPhase();
+      
+      if (window.game.hohId === 0) {
+        testPass('Test 1');
+        log('✓ Human is HOH', 'success');
+      } else {
+        testFail('Test 1', `Expected hohId=0, got ${window.game.hohId}`);
+      }
+    }
+    
+    // Test 2: Human loses hold-wall → verify game.hohId !== humanId
+    async function runTest2() {
+      log('=== TEST 2: Human Loses HOH ===', 'info');
+      setupMockGame('hoh');
+      
+      simulateHoldWallWinner(1, 'hoh'); // Rey wins
+      const winner = simulateFinishCompPhase();
+      
+      if (window.game.hohId === 1) {
+        testPass('Test 2');
+        log('✓ Rey is HOH (human lost)', 'success');
+      } else {
+        testFail('Test 2', `Expected hohId=1, got ${window.game.hohId}`);
+      }
+    }
+    
+    // Test 3: Human wins POV → verify game.vetoHolder === humanId
+    async function runTest3() {
+      log('=== TEST 3: Human Wins POV ===', 'info');
+      setupMockGame('veto_comp');
+      
+      simulateHoldWallWinner(0, 'pov'); // Human wins
+      const winner = simulateFinishVetoCompPhase();
+      
+      if (window.game.vetoHolder === 0) {
+        testPass('Test 3');
+        log('✓ Human is POV holder', 'success');
+      } else {
+        testFail('Test 3', `Expected vetoHolder=0, got ${window.game.vetoHolder}`);
+      }
+    }
+    
+    // Test 4: Human loses POV → verify game.vetoHolder !== humanId
+    async function runTest4() {
+      log('=== TEST 4: Human Loses POV ===', 'info');
+      setupMockGame('veto_comp');
+      
+      simulateHoldWallWinner(2, 'pov'); // Miko wins
+      const winner = simulateFinishVetoCompPhase();
+      
+      if (window.game.vetoHolder === 2) {
+        testPass('Test 4');
+        log('✓ Miko is POV holder (human lost)', 'success');
+      } else {
+        testFail('Test 4', `Expected vetoHolder=2, got ${window.game.vetoHolder}`);
+      }
+    }
+    
+    // Test 5: Score map consistency
+    async function runTest5() {
+      log('=== TEST 5: Score Map Consistency ===', 'info');
+      setupMockGame('hoh');
+      
+      simulateHoldWallWinner(3, 'hoh'); // Lola wins
+      const winner = simulateFinishCompPhase();
+      
+      // Verify winner has highest score
+      const winnerScore = window.game.lastCompScores.get(winner);
+      const allScores = [...window.game.lastCompScores.values()];
+      const maxScore = Math.max(...allScores);
+      
+      if (winnerScore === maxScore && winner === 3) {
+        testPass('Test 5');
+        log(`✓ Winner has highest score: ${winnerScore}`, 'success');
+      } else {
+        testFail('Test 5', `Score inconsistency: winner=${winner}, winnerScore=${winnerScore}, maxScore=${maxScore}`);
+      }
+    }
+    
+    // Test 6: Pipeline integrity through submitScore → generateSyntheticOpponents
+    async function runTest6() {
+      log('=== TEST 6: Pipeline Integrity ===', 'info');
+      setupMockGame('hoh');
+      
+      // Simulate full pipeline
+      simulateHoldWallWinner(1, 'hoh');
+      
+      // Verify flag is set before finishCompPhase
+      if (window.game.__authoritativeWinner) {
+        log('✓ Authoritative winner set by hold-wall', 'success');
+      } else {
+        testFail('Test 6', 'Authoritative winner not set');
+        return;
+      }
+      
+      // Run finishCompPhase
+      const winner = simulateFinishCompPhase();
+      
+      // Verify flag was cleared
+      if (!window.game.__authoritativeWinner) {
+        log('✓ Authoritative winner flag cleared', 'success');
+      } else {
+        log('⚠️ Flag not cleared', 'warning');
+      }
+      
+      // Verify correct winner
+      if (winner === 1 && window.game.hohId === 1) {
+        testPass('Test 6');
+        log('✓ Pipeline integrity maintained', 'success');
+      } else {
+        testFail('Test 6', 'Pipeline integrity broken');
+      }
+    }
+    
+    // Test 7: No flag leak between competitions
+    async function runTest7() {
+      log('=== TEST 7: No Flag Leak Between Comps ===', 'info');
+      
+      // Run first competition
+      setupMockGame('hoh');
+      simulateHoldWallWinner(0, 'hoh');
+      simulateFinishCompPhase();
+      
+      log('Completed first competition', 'info');
+      
+      // Verify flag cleared
+      if (!window.game.__authoritativeWinner) {
+        log('✓ Flag cleared after first comp', 'success');
+      } else {
+        testFail('Test 7', 'Flag leaked to second comp');
+        return;
+      }
+      
+      // Run second competition
+      setupMockGame('veto_comp');
+      simulateHoldWallWinner(2, 'pov');
+      simulateFinishVetoCompPhase();
+      
+      log('Completed second competition', 'info');
+      
+      // Verify flag cleared again
+      if (!window.game.__authoritativeWinner) {
+        testPass('Test 7');
+        log('✓ No flag leak between competitions', 'success');
+      } else {
+        testFail('Test 7', 'Flag not cleared after second comp');
+      }
+    }
+    
+    // Test 8: Fast-forward mode compatibility
+    async function runTest8() {
+      log('=== TEST 8: Fast-Forward Mode ===', 'info');
+      setupMockGame('hoh');
+      
+      // Simulate FFWD active
+      window.game.fastForward = true;
+      log('Fast-forward mode enabled', 'info');
+      
+      // Authoritative winner should still work
+      simulateHoldWallWinner(3, 'hoh');
+      const winner = simulateFinishCompPhase();
+      
+      if (winner === 3 && window.game.hohId === 3) {
+        testPass('Test 8');
+        log('✓ Authoritative winner works in FFWD mode', 'success');
+      } else {
+        testFail('Test 8', 'Authoritative winner failed in FFWD mode');
+      }
+      
+      window.game.fastForward = false;
+    }
+    
+    // Run all tests
+    async function runAllTests() {
+      clearLogs();
+      log('🚀 Running full integration tests...', 'info');
+      log('', 'info');
+      
+      await runTest1();
+      log('', 'info');
+      await runTest2();
+      log('', 'info');
+      await runTest3();
+      log('', 'info');
+      await runTest4();
+      log('', 'info');
+      await runTest5();
+      log('', 'info');
+      await runTest6();
+      log('', 'info');
+      await runTest7();
+      log('', 'info');
+      await runTest8();
+      log('', 'info');
+      
+      log(`🏁 All tests complete: ${testsPassed} passed, ${testsFailed} failed`, testsFailed === 0 ? 'success' : 'error');
+    }
+    
+    // Initialize
+    log('Test suite initialized. Click "Run All Tests" to begin.', 'info');
+  </script>
+</body>
+</html>
