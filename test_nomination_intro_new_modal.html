@@ -117,6 +117,16 @@
     <div id="cleanup-status" class="status"></div>
   </div>
 
+  <div class="test-section">
+    <h2>⏸️ Pause & Watchdog Tests</h2>
+    <button onclick="testPauseRequest()">Test 14: Pause Requested on Modal Show</button>
+    <button onclick="testPauseRelease()">Test 15: Pause Released on Dismiss</button>
+    <button onclick="testWatchdogTimeout()">Test 16: Watchdog Auto-Resume (30s) ⏱️</button>
+    <button onclick="testAdFlowPause()">Test 17: Ad Flow Extends Watchdog</button>
+    <button onclick="testVisibilityDuringAd()">Test 18: Visibility Change During Ad</button>
+    <div id="pause-status" class="status"></div>
+  </div>
+
   <!-- Load required modules -->
   <script>
     // Global shim
@@ -419,9 +429,347 @@
         log('cleanup-status', 'No orphaned modals detected', 'success');
       }
     }
+
+    // ========================================================================
+    // PAUSE & WATCHDOG TESTS
+    // ========================================================================
+
+    async function testPauseRequest() {
+      clearLog('pause-status');
+      log('pause-status', 'Test 14: Testing pause request on modal show...', 'info');
+      
+      // Setup monitoring
+      let pauseCalled = false;
+      let pauseOwner = null;
+      
+      // Mock or observe PauseController
+      const originalPause = window.PauseController?.pause;
+      if (window.PauseController) {
+        window.PauseController.pause = function(ownerId) {
+          pauseCalled = true;
+          pauseOwner = ownerId;
+          log('pause-status', `✓ PauseController.pause() called with owner: ${ownerId}`, 'success');
+          if (originalPause) originalPause.call(this, ownerId);
+        };
+      }
+      
+      // Also check local fallback
+      const initialRefCount = window.__modalTimerPause?.refCount || 0;
+      
+      try {
+        // Show modal briefly
+        const promise = window.NominationIntroModal.show();
+        
+        // Wait a moment for pause to be requested
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verify pause was requested
+        if (pauseCalled) {
+          log('pause-status', '✓ Pause requested via PauseController', 'success');
+        } else if (window.__modalTimerPause && window.__modalTimerPause.refCount > initialRefCount) {
+          log('pause-status', `✓ Pause requested via local fallback (refCount: ${window.__modalTimerPause.refCount})`, 'success');
+        } else {
+          log('pause-status', '✗ Pause was NOT requested!', 'error');
+        }
+        
+        // Manually dismiss modal
+        const overlay = document.querySelector('.phase-intro-overlay');
+        if (overlay) overlay.click();
+        
+        await promise;
+        log('pause-status', 'Test 14 completed', 'success');
+      } catch (err) {
+        log('pause-status', `Error: ${err.message}`, 'error');
+      } finally {
+        // Restore original
+        if (window.PauseController && originalPause) {
+          window.PauseController.pause = originalPause;
+        }
+      }
+    }
+
+    async function testPauseRelease() {
+      clearLog('pause-status');
+      log('pause-status', 'Test 15: Testing pause release on dismiss...', 'info');
+      
+      // Setup monitoring
+      let resumeCalled = false;
+      let resumeOwner = null;
+      
+      // Mock or observe PauseController
+      const originalResume = window.PauseController?.resume;
+      if (window.PauseController) {
+        window.PauseController.resume = function(ownerId) {
+          resumeCalled = true;
+          resumeOwner = ownerId;
+          log('pause-status', `✓ PauseController.resume() called with owner: ${ownerId}`, 'success');
+          if (originalResume) originalResume.call(this, ownerId);
+        };
+      }
+      
+      const initialRefCount = window.__modalTimerPause?.refCount || 0;
+      
+      try {
+        // Show and immediately dismiss modal
+        const promise = window.NominationIntroModal.show();
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Dismiss
+        const overlay = document.querySelector('.phase-intro-overlay');
+        if (overlay) overlay.click();
+        
+        await promise;
+        
+        // Wait for cleanup
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        // Verify pause was released
+        if (resumeCalled) {
+          log('pause-status', '✓ Pause released via PauseController', 'success');
+        } else if (window.__modalTimerPause && window.__modalTimerPause.refCount === initialRefCount) {
+          log('pause-status', `✓ Pause released via local fallback (refCount: ${window.__modalTimerPause.refCount})`, 'success');
+        } else {
+          log('pause-status', '✗ Pause was NOT released!', 'error');
+        }
+        
+        log('pause-status', 'Test 15 completed', 'success');
+      } catch (err) {
+        log('pause-status', `Error: ${err.message}`, 'error');
+      } finally {
+        // Restore original
+        if (window.PauseController && originalResume) {
+          window.PauseController.resume = originalResume;
+        }
+      }
+    }
+
+    async function testWatchdogTimeout() {
+      clearLog('pause-status');
+      log('pause-status', 'Test 16: Testing watchdog auto-resume (30 seconds)...', 'info');
+      log('pause-status', '⏱️ DO NOT DISMISS THE MODAL. Wait for automatic timeout.', 'info');
+      log('pause-status', 'This test will take ~30 seconds to complete...', 'info');
+      
+      // Override config for faster testing (5 seconds instead of 30)
+      const originalTimeout = window.game?.cfg?.NOMS_MODAL_MAX_PAUSE_MS;
+      if (window.game && window.game.cfg) {
+        window.game.cfg.NOMS_MODAL_MAX_PAUSE_MS = 5000; // 5 seconds for testing
+      }
+      
+      let watchdogFired = false;
+      
+      try {
+        const startTime = Date.now();
+        
+        // Show modal
+        const promise = window.NominationIntroModal.show();
+        
+        // Watch for toast message indicating watchdog fired
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+              if (node.textContent && node.textContent.includes('Timer resumed')) {
+                watchdogFired = true;
+                log('pause-status', '✓ Watchdog fired! Toast message displayed.', 'success');
+              }
+            }
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Wait for watchdog (5 seconds + 1 second buffer)
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        
+        observer.disconnect();
+        
+        const elapsed = Date.now() - startTime;
+        
+        if (watchdogFired) {
+          log('pause-status', `✓ Watchdog timeout triggered after ~${Math.round(elapsed / 1000)}s`, 'success');
+        } else {
+          log('pause-status', `✗ Watchdog did NOT fire after ${Math.round(elapsed / 1000)}s`, 'error');
+        }
+        
+        // Dismiss if still showing
+        const overlay = document.querySelector('.phase-intro-overlay');
+        if (overlay) overlay.click();
+        
+        await promise.catch(() => {}); // Ignore errors
+        
+        log('pause-status', 'Test 16 completed', 'success');
+      } catch (err) {
+        log('pause-status', `Error: ${err.message}`, 'error');
+      } finally {
+        // Restore original timeout
+        if (window.game && window.game.cfg && originalTimeout !== undefined) {
+          window.game.cfg.NOMS_MODAL_MAX_PAUSE_MS = originalTimeout;
+        }
+      }
+    }
+
+    async function testAdFlowPause() {
+      clearLog('pause-status');
+      log('pause-status', 'Test 17: Testing ad flow extends watchdog...', 'info');
+      
+      // Stub global.showAdReward
+      const originalShowAdReward = window.global?.showAdReward;
+      let adCalled = false;
+      
+      window.global = window.global || window;
+      window.global.showAdReward = async function() {
+        adCalled = true;
+        log('pause-status', '✓ Ad reward called', 'info');
+        // Simulate ad taking 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return { rewarded: true, amount: 5 };
+      };
+      
+      try {
+        // Show modal
+        const promise = window.NominationIntroModal.show();
+        
+        // Wait for modal to render
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Find and click recharge button if visible
+        const rechargeButton = Array.from(document.querySelectorAll('button'))
+          .find(btn => btn.textContent.includes('Recharge Energy'));
+        
+        if (rechargeButton) {
+          log('pause-status', 'Clicking recharge button...', 'info');
+          rechargeButton.click();
+          
+          // Wait for ad to complete
+          await new Promise(resolve => setTimeout(resolve, 2500));
+          
+          if (adCalled) {
+            log('pause-status', '✓ Ad flow completed successfully', 'success');
+          } else {
+            log('pause-status', '✗ Ad was not called', 'error');
+          }
+        } else {
+          log('pause-status', 'Recharge button not found (player may not be eligible)', 'info');
+        }
+        
+        // Dismiss
+        const overlay = document.querySelector('.phase-intro-overlay');
+        if (overlay) overlay.click();
+        
+        await promise.catch(() => {});
+        
+        log('pause-status', 'Test 17 completed', 'success');
+      } catch (err) {
+        log('pause-status', `Error: ${err.message}`, 'error');
+      } finally {
+        // Restore original
+        if (originalShowAdReward !== undefined) {
+          window.global.showAdReward = originalShowAdReward;
+        } else if (window.global) {
+          delete window.global.showAdReward;
+        }
+      }
+    }
+
+    async function testVisibilityDuringAd() {
+      clearLog('pause-status');
+      log('pause-status', 'Test 18: Testing visibility change during ad playback...', 'info');
+      
+      // Stub global.showAdReward
+      const originalShowAdReward = window.global?.showAdReward;
+      let modalDismissedDuringAd = false;
+      
+      window.global = window.global || window;
+      window.global.showAdReward = async function() {
+        log('pause-status', 'Ad started, simulating tab hide...', 'info');
+        
+        // Wait a moment
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Simulate tab becoming hidden
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: function() { return true; }
+        });
+        
+        // Dispatch visibilitychange event
+        const event = new Event('visibilitychange');
+        document.dispatchEvent(event);
+        
+        // Check if modal still exists
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const modalStillExists = document.querySelector('.phase-intro-overlay') !== null;
+        
+        if (modalStillExists) {
+          log('pause-status', '✓ Modal NOT dismissed during ad (correct!)', 'success');
+        } else {
+          log('pause-status', '✗ Modal WAS dismissed during ad (incorrect!)', 'error');
+          modalDismissedDuringAd = true;
+        }
+        
+        // Restore visibility
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: function() { return false; }
+        });
+        
+        // Simulate ad completing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return { rewarded: true, amount: 5 };
+      };
+      
+      try {
+        // Show modal
+        const promise = window.NominationIntroModal.show();
+        
+        // Wait for modal
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Find and click recharge button if visible
+        const rechargeButton = Array.from(document.querySelectorAll('button'))
+          .find(btn => btn.textContent.includes('Recharge Energy'));
+        
+        if (rechargeButton) {
+          log('pause-status', 'Clicking recharge button...', 'info');
+          rechargeButton.click();
+          
+          // Wait for ad and test to complete
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          if (!modalDismissedDuringAd) {
+            log('pause-status', '✓ Test passed: modal stayed open during ad', 'success');
+          }
+        } else {
+          log('pause-status', 'Recharge button not found (player may not be eligible)', 'info');
+        }
+        
+        // Dismiss if still showing
+        const overlay = document.querySelector('.phase-intro-overlay');
+        if (overlay) overlay.click();
+        
+        await promise.catch(() => {});
+        
+        log('pause-status', 'Test 18 completed', 'success');
+      } catch (err) {
+        log('pause-status', `Error: ${err.message}`, 'error');
+      } finally {
+        // Restore original
+        if (originalShowAdReward !== undefined) {
+          window.global.showAdReward = originalShowAdReward;
+        } else if (window.global) {
+          delete window.global.showAdReward;
+        }
+        
+        // Restore document.hidden
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: function() { return document.visibilityState === 'hidden'; }
+        });
+      }
+    }
   </script>
   
   <!-- Load the modules in correct order -->
+  <script src="js/flow/PauseController.js"></script>
   <script src="js/nomination-plea.js"></script>
   <script src="js/nomination-intro-modal.js"></script>
   <script src="js/ui.phase-intro-modals.js"></script>

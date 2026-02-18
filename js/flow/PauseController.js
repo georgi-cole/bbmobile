@@ -26,6 +26,10 @@
     }
   };
 
+  // Timer freeze interval - continuously extends game.endAt while paused
+  let timerFreezeInterval = null;
+  const TIMER_FREEZE_INTERVAL_MS = 200; // Match the tick interval in ui.hud-and-router.js
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PUBLIC API
   // ═══════════════════════════════════════════════════════════════════════════
@@ -74,6 +78,9 @@
 
     // Capture timer state
     captureTimerState();
+
+    // Start timer freeze interval to continuously extend game.endAt
+    startTimerFreeze();
 
     // Pause PhaseTimerBridge if available
     if (global.PhaseTimerBridge && typeof global.PhaseTimerBridge.handleSuspend === 'function') {
@@ -150,6 +157,9 @@
 
     // Clear global flag
     game.isGloballyPaused = false;
+
+    // Stop timer freeze interval
+    stopTimerFreeze();
 
     // Restore timer state
     restoreTimerState();
@@ -315,6 +325,49 @@
 
     // Clear stored remaining time
     game.pausedTimeRemaining = null;
+  }
+
+  /**
+   * Start timer freeze interval - continuously extends game.endAt while paused
+   * This prevents background phase timeout checks from triggering
+   */
+  function startTimerFreeze() {
+    // Clear any existing interval
+    if (timerFreezeInterval) {
+      clearInterval(timerFreezeInterval);
+      timerFreezeInterval = null;
+    }
+
+    // Start interval to continuously extend timer
+    timerFreezeInterval = setInterval(() => {
+      const game = global.game;
+      if (!game || !pauseState.isPaused) {
+        // Stop if no longer paused
+        stopTimerFreeze();
+        return;
+      }
+
+      // Extend endAt and phaseEndsAt to freeze time
+      if (game.endAt && typeof game.endAt === 'number') {
+        game.endAt += TIMER_FREEZE_INTERVAL_MS;
+      }
+      if (game.phaseEndsAt && typeof game.phaseEndsAt === 'number') {
+        game.phaseEndsAt += TIMER_FREEZE_INTERVAL_MS;
+      }
+    }, TIMER_FREEZE_INTERVAL_MS);
+
+    console.info('[PauseController] Started timer freeze interval');
+  }
+
+  /**
+   * Stop timer freeze interval
+   */
+  function stopTimerFreeze() {
+    if (timerFreezeInterval) {
+      clearInterval(timerFreezeInterval);
+      timerFreezeInterval = null;
+      console.info('[PauseController] Stopped timer freeze interval');
+    }
   }
 
   /**
