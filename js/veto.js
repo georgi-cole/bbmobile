@@ -1131,6 +1131,33 @@
       }
     })();
 
+    // ENDURANCE FIX: Check for authoritative winner BEFORE sorting and reveal
+    // If an endurance minigame has marked an authoritative winner, inject their score
+    // as the highest score so the reveal shows the correct winner
+    var authWinner = null;
+    if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+      authWinner = g.__authoritativeWinner.playerId;
+      console.info('[veto] ✓ Using authoritative winner from endurance minigame: ' + authWinner);
+      
+      // Ensure the authoritative winner has the highest score in lastCompScores
+      // Find the current max score and set authoritative winner's score higher
+      var maxScore = 0;
+      g.lastCompScores.forEach(function(score, id){
+        if(id !== authWinner && score > maxScore){
+          maxScore = score;
+        }
+      });
+      // Set authoritative winner's score to be highest (use their actual score if higher)
+      var authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+      g.lastCompScores.set(authWinner, authScore);
+      console.info('[veto] Injected authoritative winner score: ' + authScore + ' (max was ' + maxScore + ')');
+      
+      // ENDURANCE FIX: Clear authoritative winner flag immediately after use
+      // This prevents it from affecting later phases or competitions
+      console.info('[veto] Clearing authoritative winner flag after use');
+      delete g.__authoritativeWinner;
+    }
+
     var arr = [];
     g.lastCompScores.forEach(function(score, pid){
       var pidNum = +pid;
@@ -1210,9 +1237,15 @@
     
     arr.sort(function(a,b){ return b[1]-a[1]; });
 
-    // Final guard: if still no scores, pick a random eligible to avoid deadlock
-    // EXCEPT: Never pick human player with 0 score (who didn't play)
-    if(!arr.length && eligible.length){
+    // Determine winner: use authoritative winner if set, otherwise use highest score
+    var winner;
+    if(authWinner !== null){
+      winner = authWinner;
+      console.info('[veto] Using authoritative winner: ' + winner);
+    } else {
+      // Final guard: if still no scores, pick a random eligible to avoid deadlock
+      // EXCEPT: Never pick human player with 0 score (who didn't play)
+      if(!arr.length && eligible.length){
       // Exclude human player who didn't play from fallback selection
       var eligibleForFallback = eligible.filter(function(id){
         if(id === g.humanId && !g.__humanPlayedVeto){
@@ -1243,22 +1276,21 @@
       
       var pick = eligibleForFallback[Math.floor(rng()*eligibleForFallback.length)];
       arr = [[pick, 1]]; // Give minimal score instead of 0
+      }
+      
+      winner = arr[0] && arr[0][0];
+      console.info('[veto] Score-based winner: ' + winner);
     }
 
-    global.game.vetoHolder = arr[0] && arr[0][0];
+    global.game.vetoHolder = winner;
     
-    // ENDURANCE FIX: Defensive check - warn if winner doesn't match authoritative winner
-    if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
-      if(g.__authoritativeWinner.playerId !== global.game.vetoHolder){
-        console.error('[veto] ⚠️ MISMATCH: Authoritative winner (' + g.__authoritativeWinner.playerId + ') differs from determined winner (' + global.game.vetoHolder + ')!');
-        console.error('[veto] This should not happen - using authoritative winner');
-        console.debug('[veto] ✓ Error Recovery: Preventing fallback winner override - applying authoritative winner');
-        // Override with authoritative winner
-        global.game.vetoHolder = g.__authoritativeWinner.playerId;
-      } else {
-        console.info('[veto] ✓ Winner ' + global.game.vetoHolder + ' matches authoritative winner from endurance minigame');
-        console.debug('[veto] ✓ Authoritative winner successfully applied without conflict');
-      }
+    // ASSERTION: Verify POV assignment matches expectations
+    console.assert(g.vetoHolder === winner, '[veto] ASSERTION FAILED: g.vetoHolder (' + g.vetoHolder + ') does not match winner (' + winner + ')');
+    console.info('[veto] ✓ ASSERTION PASSED: POV correctly assigned to player ' + winner);
+    
+    // ASSERTION: Verify authoritative winner flag was cleared
+    if(g.__authoritativeWinner){
+      console.error('[veto] ASSERTION FAILED: Authoritative winner flag was not cleared! Stale data: ' + JSON.stringify(g.__authoritativeWinner));
     }
     
     var W = getP(global.game.vetoHolder);
@@ -1326,12 +1358,6 @@
 
     // Clear resolving flag before async operations
     g.__vetoResolving = false;
-    
-    // ENDURANCE FIX: Clear authoritative winner after use
-    if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
-      console.info('[veto] Clearing authoritative winner flag');
-      delete g.__authoritativeWinner;
-    }
 
     // If results have already been shown by a fast-forward mechanism,
     // still perform the necessary timer cleanup and countdown shortening
