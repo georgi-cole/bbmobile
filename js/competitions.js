@@ -573,6 +573,12 @@
   }
 
   function maybeFinishComp() {
+    // PAUSE GUARD: Block auto-finish while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[comp][pause-guard] maybeFinishComp blocked: game is paused');
+      return;
+    }
+    
     const g = global.game; const alive = global.alivePlayers();
     let eligible = alive.map(p => p.id);
     // Week-based eligibility: only filter out player if they were HOH in previous week
@@ -1793,6 +1799,31 @@
   async function finishCompPhase() {
     const g = global.game; if (g.phase !== 'hoh') return;
     if (g.__hohResolved || g.__hohResolving) return;
+    
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[hoh][pause-guard] finishCompPhase blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          const gResumed = global.game;
+          // TERMINATION GUARD: ensure game is still valid before retrying
+          if (!gResumed || gResumed.__terminated) {
+            console.info('[hoh][pause-guard] Game resumed event ignored: game is terminated or missing');
+            return;
+          }
+          // PHASE GUARD: only retry if we are still in HOH phase
+          if (gResumed.phase !== 'hoh') {
+            console.info('[hoh][pause-guard] Game resumed event ignored: phase changed to', gResumed.phase);
+            return;
+          }
+          console.info('[hoh][pause-guard] Game resumed, retrying finishCompPhase');
+          finishCompPhase();
+        });
+      }
+      return;
+    }
+    
     g.__hohResolving = true;
     try {
       g.__hohResolved = true;
@@ -2482,6 +2513,30 @@
   async function finishF3P1() {
     const g = global.game; if (g.phase !== 'final3_comp1') return;
     
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[F3P1][pause-guard] finishF3P1 blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          const currentGame = global.game;
+          // TERMINATION GUARD: ensure game is still valid before retrying
+          if (!currentGame || currentGame.__terminated) {
+            console.info('[F3P1][pause-guard] Game resumed handler aborted: game is terminated or missing');
+            return;
+          }
+          // PHASE GUARD: only retry if still in the expected phase
+          if (currentGame.phase !== 'final3_comp1') {
+            console.info('[F3P1][pause-guard] Game resumed handler aborted: phase is now', currentGame.phase);
+            return;
+          }
+          console.info('[F3P1][pause-guard] Game resumed, retrying finishF3P1');
+          finishF3P1();
+        });
+      }
+      return;
+    }
+    
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
       global.SpectatorView.cleanup();
@@ -2779,6 +2834,33 @@
 
   async function finishF3P2() {
     const g = global.game; if (g.phase !== 'final3_comp2') return;
+    
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[F3P2][pause-guard] finishF3P2 blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          const g2 = global.game;
+          // Ensure game is still in a valid state before retrying
+          if (!g2) {
+            console.info('[F3P2][pause-guard] Skipping deferred finishF3P2: game object no longer available');
+            return;
+          }
+          if (g2.__terminated === true) {
+            console.info('[F3P2][pause-guard] Skipping deferred finishF3P2: game has been terminated');
+            return;
+          }
+          if (g2.phase !== 'final3_comp2') {
+            console.info('[F3P2][pause-guard] Skipping deferred finishF3P2: phase is now', g2.phase);
+            return;
+          }
+          console.info('[F3P2][pause-guard] Game resumed, retrying finishF3P2');
+          finishF3P2();
+        });
+      }
+      return;
+    }
     
     // Clean up SpectatorView if it exists
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {
@@ -3122,6 +3204,24 @@
 
   async function finishF3P3() {
     const g = global.game; if (g.phase !== 'final3_comp3') return;
+    
+    // PAUSE GUARD: Block competition resolution while game is paused
+    if (global.PauseController && typeof global.PauseController.isPaused === 'function' && global.PauseController.isPaused()) {
+      console.info('[F3P3][pause-guard] finishF3P3 blocked: game is paused');
+      // Defer resolution: schedule to run when game resumes
+      if (global.game && global.game.bus && typeof global.game.bus.once === 'function') {
+        global.game.bus.once('game:resumed', () => {
+          // TERMINATION GUARD: ensure game is still valid before retrying
+          if (!global.game || global.game.__terminated) {
+            console.info('[F3P3][pause-guard] Game terminated while paused; skipping finishF3P3 retry');
+            return;
+          }
+          console.info('[F3P3][pause-guard] Game resumed, retrying finishF3P3');
+          finishF3P3();
+        });
+      }
+      return;
+    }
     
     // Clean up SpectatorView if it exists (legacy/fallback)
     if (global.SpectatorView && typeof global.SpectatorView.cleanup === 'function') {

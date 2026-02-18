@@ -295,15 +295,26 @@
         console.info('[PauseController] Timer expired during pause, triggering immediate timeout');
         
         // Trigger phase timeout callback immediately
-        if (typeof pauseState.timerState.phaseTimeoutCallback === 'function') {
+        // SAFETY: Validate callback exists AND is a function before calling
+        const callback = pauseState.timerState.phaseTimeoutCallback;
+        if (callback && typeof callback === 'function') {
           try {
             // Use setTimeout to avoid blocking and allow UI updates
             setTimeout(() => {
-              pauseState.timerState.phaseTimeoutCallback();
+              callback();
             }, 10);
           } catch (err) {
             console.error('[PauseController] Error calling phase timeout callback:', err);
           }
+        } else if (callback !== null && callback !== undefined) {
+          console.warn(
+            '[PauseController] Stored phaseTimeoutCallback is not a function.',
+            {
+              type: typeof callback,
+              value: callback,
+              debugHint: 'phaseTimeoutCallback should always be a function. Check where PauseController.pause/resume timer state is configured.'
+            }
+          );
         }
       } else {
         // Timer has time remaining, restore with adjusted endAt
