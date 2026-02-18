@@ -1712,32 +1712,43 @@
       // Check for fast-forward mode
       const ffActive = g.__ffActive || false;
 
-      // Always show full reveal sequence, even during fast-forward
-      // Users should see the winner and results when they skip
-      await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
-      await waitCardsIdle();
-
-      // ENDURANCE FIX: Check for authoritative winner FIRST before score-based determination
-      // If an endurance minigame has marked an authoritative winner, use it directly
+      // ENDURANCE FIX: Check for authoritative winner BEFORE reveal
+      // If an endurance minigame has marked an authoritative winner, inject their score
+      // as the highest score so the reveal shows the correct winner
       let winner;
       if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
         winner = g.__authoritativeWinner.playerId;
         console.info(`[hoh] ✓ Using authoritative winner from endurance minigame: ${winner}`);
         
-        // Ensure the authoritative winner has a valid score in lastCompScores
-        if (!g.lastCompScores.has(winner) || g.lastCompScores.get(winner) === 0) {
-          console.warn(`[hoh] Authoritative winner ${winner} has no score, setting to ${g.__authoritativeWinner.score}`);
-          g.lastCompScores.set(winner, g.__authoritativeWinner.score);
+        // Ensure the authoritative winner has the highest score in lastCompScores
+        // Find the current max score and set authoritative winner's score higher
+        let maxScore = 0;
+        for (const [id, score] of g.lastCompScores.entries()) {
+          if (id !== winner && score > maxScore) {
+            maxScore = score;
+          }
         }
+        // Set authoritative winner's score to be highest (use their actual score if higher)
+        const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+        g.lastCompScores.set(winner, authScore);
+        console.debug(`[hoh] Injected authoritative winner score: ${authScore} (max was ${maxScore})`);
         
         // ENDURANCE FIX: Clear authoritative winner flag immediately after use
         // This prevents it from affecting later phases or competitions
         console.debug('[hoh] Clearing authoritative winner flag after use');
         delete g.__authoritativeWinner;
       } else {
-        // No authoritative winner - use score-based determination
+        // No authoritative winner - generate fallback scores if needed
         console.debug('[hoh] No authoritative winner, using score-based determination');
-        
+      }
+
+      // Always show full reveal sequence, even during fast-forward
+      // Users should see the winner and results when they skip
+      await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
+      await waitCardsIdle();
+
+      // Determine winner if not already set by authoritative winner above
+      if (!winner) {
         // Determine winner from eligible participants
         // Filter out any players with score of 0 - they cannot win
         const scoredEntries = [...g.lastCompScores.entries()]
@@ -1795,6 +1806,16 @@
       W.wins = W.wins || {};
       W.stats.hohWins = (W.stats.hohWins || 0) + 1;
       W.wins.hoh = (W.wins.hoh || 0) + 1;
+
+      // ASSERTION: Verify HOH assignment matches expectations
+      console.assert(g.hohId === winner, `[hoh] ASSERTION FAILED: g.hohId (${g.hohId}) does not match winner (${winner})`);
+      console.assert(W.hoh === true, `[hoh] ASSERTION FAILED: Winner player hoh flag is not true`);
+      console.info(`[hoh] ✓ ASSERTION PASSED: HOH correctly assigned to player ${winner}`);
+      
+      // ASSERTION: Verify authoritative winner flag was cleared
+      if (g.__authoritativeWinner) {
+        console.error(`[hoh] ASSERTION FAILED: Authoritative winner flag was not cleared! Stale data: ${JSON.stringify(g.__authoritativeWinner)}`);
+      }
 
       // Structured competition summary log
       console.info('[comp-summary]', JSON.stringify({

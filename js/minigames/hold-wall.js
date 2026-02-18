@@ -715,22 +715,14 @@
       wallPanel.style.borderColor = '#ff6b6b';
       statusMsg.textContent = 'You released!';
       
-      // Mark remaining AI as still holding with current time
-      const stillHoldingAI = participants.filter(p => !p.isPlayer && p.dropTimeMs === null);
-      stillHoldingAI.forEach(p => {
-        p.dropTimeMs = dropTime;
-        eliminationLog.push({
-          name: p.name,
-          timeMs: dropTime,
-          isPlayer: false
-        });
-      });
-      
-      // Update displays
+      // ENDURANCE FIX: Don't force-drop remaining AI - let their timers continue naturally
+      // The last AI standing should be the true winner
+      // Update displays to show human dropped
       renderParticipants();
       updateRemaining();
       
-      finalizeResults();
+      // Check if game should end (only 1 or 0 players remaining)
+      checkGameEnd();
     }
     
     function finalizeVictory(){
@@ -828,7 +820,8 @@
       
       // Store results globally
       if(g.lastCompScores){
-        const scoresMap = new Map();
+        // ENDURANCE FIX: Don't replace the entire Map - just update scores for participants
+        // This prevents submitScore() from failing and maintains CompLocks integrity
         
         // OPTIMIZATION: Create lookup map to avoid O(n²) complexity
         const participantsByName = new Map(participants.map(p => [p.name, p]));
@@ -837,10 +830,9 @@
           // Find the participant to get their player ID
           const participant = participantsByName.get(s.name);
           if(participant && participant.id !== undefined){
-            scoresMap.set(participant.id, s.score);
+            g.lastCompScores.set(participant.id, s.score);
           }
         });
-        g.lastCompScores = scoresMap;
         
         // ENDURANCE FIX: Mark winner as authoritative to prevent override by fallback logic
         // Store winner player ID for HOH/POV determination
