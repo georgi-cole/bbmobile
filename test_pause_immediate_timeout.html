@@ -111,9 +111,9 @@
   <p>
     This test reproduces the expired-during-pause case:
     <ol>
-      <li>Start a short timer (5 seconds)</li>
-      <li>Open settings (pause)</li>
-      <li>Wait past timer expiry</li>
+      <li>Start a short timer (3 seconds)</li>
+      <li>Open settings after 1 second (pause with 2 seconds remaining)</li>
+      <li>Wait 4 seconds past timer expiry</li>
       <li>Close settings (resume)</li>
       <li>Assert no exceptions and that callback fired</li>
     </ol>
@@ -128,7 +128,7 @@
 
   <div class="test-section">
     <h2>Timer Display</h2>
-    <div class="timer-display" id="timer-display">5</div>
+    <div class="timer-display" id="timer-display">3</div>
     <div>
       <button id="run-test" class="primary">▶ Run Test</button>
       <button id="reset-test" class="danger">Reset</button>
@@ -254,8 +254,8 @@
       log('=== Starting Test ===', 'info');
       
       try {
-        // Step 1: Start a short timer (5 seconds)
-        const timerDuration = 5000; // 5 seconds
+        // Step 1: Start a short timer (3 seconds)
+        const timerDuration = 3000; // 3 seconds
         const startTime = Date.now();
         window.game.endAt = startTime + timerDuration;
         window.game.phaseEndsAt = startTime + timerDuration;
@@ -265,7 +265,7 @@
         };
         
         testState.timerStarted = true;
-        log('Step 1: Timer started (5 seconds)', 'info');
+        log('Step 1: Timer started (3 seconds)', 'info');
         
         // Update display
         let elapsed = 0;
@@ -288,9 +288,9 @@
         testState.pausedWhileRunning = true;
         log('Step 2: Paused (settings opened)', 'info');
         
-        // Step 3: Wait 6 seconds (past timer expiry)
-        log('Step 3: Waiting 6 seconds for timer to expire during pause...', 'info');
-        await sleep(6000);
+        // Step 3: Wait 4 seconds (past timer expiry - timer only had 2 seconds left)
+        log('Step 3: Waiting 4 seconds for timer to expire during pause...', 'info');
+        await sleep(4000);
         
         log('Step 4: Resuming (settings closed)...', 'info');
         
@@ -342,7 +342,7 @@
       };
       document.getElementById('test-results').innerHTML = '';
       updateTestStatus('Ready to start', 'info');
-      updateTimerDisplay(5);
+      updateTimerDisplay(3);
       log('Test reset', 'info');
     });
 
