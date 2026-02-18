@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Enhanced Nomination Intro Modal</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #0d151f;
+      color: #fff;
+    }
+    
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #5a9ff2;
+      transform: translateY(-2px);
+    }
+    
+    button.success {
+      background: #44aa44;
+    }
+    
+    button.error {
+      background: #cc4444;
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .success {
+      color: #4ade80;
+    }
+    
+    .error {
+      color: #f87171;
+    }
+    
+    .info {
+      color: #60a5fa;
+    }
+    
+    .warning {
+      color: #fbbf24;
+    }
+    
+    h1 {
+      color: #ffd700;
+    }
+    
+    h2 {
+      color: #8a9fb5;
+      font-size: 1.2rem;
+    }
+    
+    .energy-display {
+      background: rgba(107, 93, 214, 0.2);
+      border: 1px solid rgba(107, 93, 214, 0.4);
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔑 Enhanced Nomination Intro Modal Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Setup</h2>
+    <button onclick="initializeGame()">Initialize Game State</button>
+    <button onclick="setHighEnergy()">Set High Energy (20)</button>
+    <button onclick="setLowEnergy()">Set Low Energy (3)</button>
+    <button onclick="setNoEnergy()">Set No Energy (0)</button>
+    <button onclick="setHighRiskScenario()">Set High Risk Scenario</button>
+    <button onclick="setLowRiskScenario()">Set Low Risk Scenario</button>
+    <button onclick="setAnnouncementMode()">Set Announcement Mode (<=4 players)</button>
+    <div id="setup-status" class="status"></div>
+    <div id="energy-display" class="energy-display">Current Energy: <span id="energy-value">10</span></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Energy Gating Tests</h2>
+    <button onclick="testCheckRiskWithEnergy()">Test 1: Check Risk (Sufficient Energy)</button>
+    <button onclick="testCheckRiskWithoutEnergy()">Test 2: Check Risk (Insufficient Energy - Show Recharge)</button>
+    <button onclick="testRechargeFlow()">Test 3: Recharge Flow (Ad Hook)</button>
+    <button onclick="testTooltipAccessibility()">Test 4: Tooltip on Hover/Focus</button>
+    <div id="energy-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Risk Categorization Tests</h2>
+    <button onclick="testRiskCategories()">Test 5: Risk Categories (Unknown to Extreme)</button>
+    <button onclick="testHighRiskPleaButton()">Test 6: High Risk Shows Plea Button</button>
+    <button onclick="testLowRiskNoPlea()">Test 7: Low Risk No Plea Button</button>
+    <div id="risk-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Plea Integration Tests</h2>
+    <button onclick="testPleaWithEnergy()">Test 8: Make Plea (Sufficient Energy)</button>
+    <button onclick="testPleaWithoutEnergy()">Test 9: Make Plea (Insufficient Energy - Recharge)</button>
+    <button onclick="testPleaUpdatesRisk()">Test 10: Plea Updates Risk Rating</button>
+    <button onclick="testPleaForcesPhase()">Test 11: Plea Forces Phase Advance</button>
+    <div id="plea-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Announcement Mode Tests</h2>
+    <button onclick="testAnnouncementMode()">Test 12: Announcement Mode (4 Players)</button>
+    <button onclick="testAnnouncementModeNoButtons()">Test 13: No Interactive Buttons in Announcement</button>
+    <div id="announcement-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Phase Forcing Tests</h2>
+    <button onclick="testDismissalForcesPhase()">Test 14: Dismissal Forces Phase Advance</button>
+    <button onclick="testEventDispatched()">Test 15: bb:noms:intro:dismissed Event</button>
+    <div id="phase-status" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>State Management Tests</h2>
+    <button onclick="testRepeatedShows()">Test 16: Repeated Shows (State Leak Test)</button>
+    <button onclick="testVisibilityProtection()">Test 17: Visibility Change Protection (500ms)</button>
+    <button onclick="testCleanupResets()">Test 18: Cleanup Resets All State</button>
+    <div id="state-status" class="status"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script>
+    // Global shim
+    window.global = window;
+    
+    // Initialize game state with Social Maneuvers energy system
+    window.game = {
+      humanId: 'p1',
+      hohId: 'p2',
+      phase: 'nominations',
+      week: 3,
+      houseReputation: 0.5,
+      __sm_bankEnergy: new Map(),
+      cfg: {
+        useNewNominationModal: true
+      }
+    };
+    
+    // Mock SocialManeuvers energy bank
+    window.SocialManeuvers = {
+      SocialEnergyBank: {
+        get: (playerId) => {
+          return window.game.__sm_bankEnergy.get(playerId) || 0;
+        },
+        set: (playerId, amount) => {
+          window.game.__sm_bankEnergy.set(playerId, Math.max(0, amount));
+          updateEnergyDisplay();
+          return amount;
+        },
+        adjust: (playerId, delta) => {
+          const current = window.game.__sm_bankEnergy.get(playerId) || 0;
+          const newAmount = Math.max(0, current + delta);
+          window.game.__sm_bankEnergy.set(playerId, newAmount);
+          updateEnergyDisplay();
+          return newAmount;
+        }
+      }
+    };
+    
+    // Initialize energy
+    window.game.__sm_bankEnergy.set('p1', 10);
+    
+    // Mock showAdReward hook (simulates ad viewing)
+    window.showAdReward = async () => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          // Simulate successful ad view
+          resolve({
+            rewarded: true,
+            amount: 5
+          });
+        }, 500);
+      });
+    };
+    
+    // Mock players
+    window.players = [
+      { id: 'p1', name: 'Alice', evicted: false, affinity: { p2: 0.5 }, reputation: 0.5, threat: 0.6 },
+      { id: 'p2', name: 'Bob (HOH)', evicted: false, affinity: { p1: 0.5 }, reputation: 0.4, threat: 0.5 },
+      { id: 'p3', name: 'Charlie', evicted: false, affinity: {}, reputation: 0.6, threat: 0.7 },
+      { id: 'p4', name: 'Diana', evicted: false, affinity: {}, reputation: 0.3, threat: 0.4 },
+      { id: 'p5', name: 'Eve', evicted: false, affinity: {}, reputation: 0.5, threat: 0.5 },
+      { id: 'p6', name: 'Frank', evicted: false, affinity: {}, reputation: 0.4, threat: 0.6 }
+    ];
+    
+    // Helper functions
+    window.getP = (id) => window.players.find(p => p.id === id);
+    window.alivePlayers = () => window.players.filter(p => !p.evicted);
+    
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type;
+      el.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+    
+    function clearLog(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+    
+    function updateEnergyDisplay() {
+      const energy = window.SocialManeuvers.SocialEnergyBank.get('p1');
+      document.getElementById('energy-value').textContent = energy;
+    }
+    
+    // Setup functions
+    function initializeGame() {
+      clearLog('setup-status');
+      window.game.humanId = 'p1';
+      window.game.hohId = 'p2';
+      window.game.phase = 'nominations';
+      window.game.__sm_bankEnergy.set('p1', 10);
+      window.players.forEach(p => p.evicted = false);
+      // Reset to 6 players
+      window.players = window.players.slice(0, 6);
+      log('setup-status', 'Game state initialized: 6 players, Player p1 (Alice), HOH p2 (Bob), 10 energy', 'success');
+      updateEnergyDisplay();
+    }
+    
+    function setHighEnergy() {
+      clearLog('setup-status');
+      window.SocialManeuvers.SocialEnergyBank.set('p1', 20);
+      log('setup-status', 'Energy set to 20 (can afford Check and Plea)', 'success');
+    }
+    
+    function setLowEnergy() {
+      clearLog('setup-status');
+      window.SocialManeuvers.SocialEnergyBank.set('p1', 3);
+      log('setup-status', 'Energy set to 3 (cannot afford Check, must Recharge)', 'warning');
+    }
+    
+    function setNoEnergy() {
+      clearLog('setup-status');
+      window.SocialManeuvers.SocialEnergyBank.set('p1', 0);
+      log('setup-status', 'Energy set to 0 (must Recharge)', 'error');
+    }
+    
+    function setHighRiskScenario() {
+      clearLog('setup-status');
+      const player = window.getP('p1');
+      const hoh = window.getP('p2');
+      player.threat = 0.9;
+      player.reputation = 0.9;
+      hoh.affinity.p1 = 0.1; // Poor relationship
+      player.affinity.p2 = 0.1;
+      window.game.houseReputation = 0.2;
+      log('setup-status', 'High risk scenario: high threat (0.9), poor HOH relationship (0.1), low house rep (0.2)', 'warning');
+    }
+    
+    function setLowRiskScenario() {
+      clearLog('setup-status');
+      const player = window.getP('p1');
+      const hoh = window.getP('p2');
+      player.threat = 0.2;
+      player.reputation = 0.2;
+      hoh.affinity.p1 = 0.9; // Strong relationship
+      player.affinity.p2 = 0.9;
+      window.game.houseReputation = 0.8;
+      log('setup-status', 'Low risk scenario: low threat (0.2), strong HOH relationship (0.9), high house rep (0.8)', 'success');
+    }
+    
+    function setAnnouncementMode() {
+      clearLog('setup-status');
+      // Evict players to get down to 4
+      window.players[4].evicted = true;
+      window.players[5].evicted = true;
+      log('setup-status', 'Announcement mode: 4 players remaining (read-only modal)', 'info');
+    }
+    
+    // Energy Gating Tests
+    async function testCheckRiskWithEnergy() {
+      clearLog('energy-status');
+      setHighEnergy();
+      log('energy-status', 'Test 1: Opening modal with sufficient energy (20)...', 'info');
+      log('energy-status', 'Expected: Check button should be enabled and clickable', 'info');
+      log('energy-status', 'Click "Check My Risk" to proceed', 'info');
+      
+      try {
+        await window.NominationIntroModal.show();
+        const finalEnergy = window.SocialManeuvers.SocialEnergyBank.get('p1');
+        log('energy-status', `Test completed. Final energy: ${finalEnergy}`, finalEnergy >= 0 ? 'success' : 'error');
+      } catch (err) {
+        log('energy-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testCheckRiskWithoutEnergy() {
+      clearLog('energy-status');
+      setLowEnergy();
+      log('energy-status', 'Test 2: Opening modal with insufficient energy (3)...', 'info');
+      log('energy-status', 'Expected: Recharge button should appear instead of Check button', 'info');
+      log('energy-status', 'Look for ▶️ Recharge button', 'warning');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('energy-status', 'Test completed', 'success');
+      } catch (err) {
+        log('energy-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testRechargeFlow() {
+      clearLog('energy-status');
+      setLowEnergy();
+      log('energy-status', 'Test 3: Testing recharge flow...', 'info');
+      log('energy-status', 'Opening modal, click Recharge button', 'info');
+      log('energy-status', 'Expected: Ad hook called, +5 energy, button switches to Check', 'info');
+      
+      try {
+        const startEnergy = window.SocialManeuvers.SocialEnergyBank.get('p1');
+        await window.NominationIntroModal.show();
+        const endEnergy = window.SocialManeuvers.SocialEnergyBank.get('p1');
+        log('energy-status', `Start energy: ${startEnergy}, End energy: ${endEnergy}`, 'info');
+        log('energy-status', 'Test completed', 'success');
+      } catch (err) {
+        log('energy-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testTooltipAccessibility() {
+      clearLog('energy-status');
+      setHighEnergy();
+      log('energy-status', 'Test 4: Testing tooltip accessibility...', 'info');
+      log('energy-status', 'Opening modal, hover over Check button to see tooltip', 'info');
+      log('energy-status', 'Expected: Tooltip shows "Costs 10 energy. Recharge available via ads."', 'info');
+      log('energy-status', 'Tooltip should work on hover, focus, and touch (long-press on mobile)', 'info');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('energy-status', 'Test completed', 'success');
+      } catch (err) {
+        log('energy-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    // Risk Categorization Tests
+    async function testRiskCategories() {
+      clearLog('risk-status');
+      log('risk-status', 'Test 5: Testing risk categories...', 'info');
+      log('risk-status', 'Will test different risk scenarios and show category labels', 'info');
+      
+      const scenarios = [
+        { name: 'Very Low Risk', threat: 0.1, affinity: 0.9, rep: 0.9 },
+        { name: 'Medium Risk', threat: 0.5, affinity: 0.5, rep: 0.5 },
+        { name: 'High Risk', threat: 0.8, affinity: 0.2, rep: 0.3 },
+        { name: 'Extreme Risk', threat: 0.95, affinity: 0.05, rep: 0.1 }
+      ];
+      
+      for (const scenario of scenarios) {
+        const player = window.getP('p1');
+        const hoh = window.getP('p2');
+        player.threat = scenario.threat;
+        player.reputation = scenario.threat;
+        hoh.affinity.p1 = scenario.affinity;
+        player.affinity.p2 = scenario.affinity;
+        window.game.houseReputation = scenario.rep;
+        
+        log('risk-status', `--- Testing ${scenario.name} ---`, 'info');
+        log('risk-status', `Settings: threat=${scenario.threat}, affinity=${scenario.affinity}, rep=${scenario.rep}`, 'info');
+        log('risk-status', 'Opening modal... Click Check My Risk to see category', 'info');
+        
+        try {
+          setHighEnergy();
+          await window.NominationIntroModal.show();
+          log('risk-status', `${scenario.name} tested successfully`, 'success');
+        } catch (err) {
+          log('risk-status', `Error in ${scenario.name}: ${err.message}`, 'error');
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    async function testHighRiskPleaButton() {
+      clearLog('risk-status');
+      setHighRiskScenario();
+      setHighEnergy();
+      log('risk-status', 'Test 6: Testing high risk scenario with plea button...', 'info');
+      log('risk-status', 'Expected: After checking risk, "Make a Plea to HOH" button appears', 'info');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('risk-status', 'Test completed - did plea button appear?', 'success');
+      } catch (err) {
+        log('risk-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testLowRiskNoPlea() {
+      clearLog('risk-status');
+      setLowRiskScenario();
+      setHighEnergy();
+      log('risk-status', 'Test 7: Testing low risk scenario...', 'info');
+      log('risk-status', 'Expected: After checking risk, NO plea button (only OK)', 'info');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('risk-status', 'Test completed - plea button should NOT have appeared', 'success');
+      } catch (err) {
+        log('risk-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    // Plea Integration Tests
+    async function testPleaWithEnergy() {
+      clearLog('plea-status');
+      setHighRiskScenario();
+      setHighEnergy();
+      log('plea-status', 'Test 8: Testing plea with sufficient energy...', 'info');
+      log('plea-status', 'Check risk, then click "Make a Plea to HOH"', 'info');
+      log('plea-status', 'Expected: -5 energy deducted, plea modal opens', 'info');
+      
+      const startEnergy = window.SocialManeuvers.SocialEnergyBank.get('p1');
+      try {
+        await window.NominationIntroModal.show();
+        const endEnergy = window.SocialManeuvers.SocialEnergyBank.get('p1');
+        log('plea-status', `Energy change: ${startEnergy} -> ${endEnergy}`, 'info');
+        log('plea-status', 'Test completed', 'success');
+      } catch (err) {
+        log('plea-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testPleaWithoutEnergy() {
+      clearLog('plea-status');
+      setHighRiskScenario();
+      window.SocialManeuvers.SocialEnergyBank.set('p1', 7); // Just enough for Check, not Plea
+      log('plea-status', 'Test 9: Testing plea with insufficient energy (7 total, 5 needed)...', 'info');
+      log('plea-status', 'Check risk (costs 10 - wait, need recharge first!)', 'warning');
+      log('plea-status', 'Actually setting to 12 to afford Check, leaving 2 for plea attempt', 'info');
+      window.SocialManeuvers.SocialEnergyBank.set('p1', 12);
+      updateEnergyDisplay();
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('plea-status', 'Test completed', 'success');
+      } catch (err) {
+        log('plea-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testPleaUpdatesRisk() {
+      clearLog('plea-status');
+      setHighRiskScenario();
+      setHighEnergy();
+      log('plea-status', 'Test 10: Testing that plea updates risk rating...', 'info');
+      log('plea-status', 'Check risk (should be high/very high/extreme)', 'info');
+      log('plea-status', 'Make plea, watch for updated risk category in toast', 'info');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('plea-status', 'Check toast message for updated risk category', 'success');
+      } catch (err) {
+        log('plea-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testPleaForcesPhase() {
+      clearLog('plea-status');
+      setHighRiskScenario();
+      setHighEnergy();
+      log('plea-status', 'Test 11: Testing phase forcing after plea...', 'info');
+      log('plea-status', 'After plea completes, check console for phase advance logs', 'info');
+      
+      const oldPhaseEnd = window.game.phaseEndsAt || window.game.endAt;
+      try {
+        await window.NominationIntroModal.show();
+        const newPhaseEnd = window.game.phaseEndsAt || window.game.endAt;
+        if (newPhaseEnd && newPhaseEnd !== oldPhaseEnd) {
+          log('plea-status', `Phase end time updated: ${oldPhaseEnd || 'none'} -> ${newPhaseEnd}`, 'success');
+        } else {
+          log('plea-status', 'Phase end time may have been updated (check console)', 'info');
+        }
+      } catch (err) {
+        log('plea-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    // Announcement Mode Tests
+    async function testAnnouncementMode() {
+      clearLog('announcement-status');
+      setAnnouncementMode();
+      log('announcement-status', 'Test 12: Testing announcement mode (4 players)...', 'info');
+      log('announcement-status', 'Expected: Read-only modal, no interactive buttons', 'info');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('announcement-status', 'Announcement mode tested', 'success');
+      } catch (err) {
+        log('announcement-status', `Error: ${err.message}`, 'error');
+      }
+      
+      // Reset player count
+      initializeGame();
+    }
+    
+    async function testAnnouncementModeNoButtons() {
+      clearLog('announcement-status');
+      setAnnouncementMode();
+      log('announcement-status', 'Test 13: Verifying no buttons in announcement mode...', 'info');
+      log('announcement-status', 'Manual check: Should see NO Check/Recharge/Plea buttons', 'warning');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('announcement-status', 'Did you confirm no interactive buttons appeared?', 'info');
+      } catch (err) {
+        log('announcement-status', `Error: ${err.message}`, 'error');
+      }
+      
+      initializeGame();
+    }
+    
+    // Phase Forcing Tests
+    async function testDismissalForcesPhase() {
+      clearLog('phase-status');
+      initializeGame();
+      log('phase-status', 'Test 14: Testing phase forcing on dismissal...', 'info');
+      log('phase-status', 'Click outside modal to dismiss, check console for phase logs', 'info');
+      
+      const oldPhaseEnd = window.game.phaseEndsAt || window.game.endAt;
+      try {
+        await window.NominationIntroModal.show();
+        const newPhaseEnd = window.game.phaseEndsAt || window.game.endAt;
+        log('phase-status', `Phase state: ${oldPhaseEnd || 'none'} -> ${newPhaseEnd || 'none'}`, 'info');
+        log('phase-status', 'Check console for "[NominationIntroModal] Forcing phase advance" logs', 'success');
+      } catch (err) {
+        log('phase-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testEventDispatched() {
+      clearLog('phase-status');
+      initializeGame();
+      log('phase-status', 'Test 15: Testing bb:noms:intro:dismissed event...', 'info');
+      
+      let eventFired = false;
+      const handler = (e) => {
+        eventFired = true;
+        log('phase-status', `Event fired! Detail: ${JSON.stringify(e.detail)}`, 'success');
+      };
+      
+      window.addEventListener('bb:noms:intro:dismissed', handler, { once: true });
+      
+      try {
+        await window.NominationIntroModal.show();
+        if (eventFired) {
+          log('phase-status', 'Event successfully dispatched', 'success');
+        } else {
+          log('phase-status', 'Event may not have fired (check console)', 'warning');
+        }
+      } catch (err) {
+        log('phase-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    // State Management Tests
+    async function testRepeatedShows() {
+      clearLog('state-status');
+      initializeGame();
+      log('state-status', 'Test 16: Testing repeated shows (state leak test)...', 'info');
+      log('state-status', 'Will show modal 3 times in succession', 'info');
+      
+      try {
+        for (let i = 1; i <= 3; i++) {
+          log('state-status', `--- Show #${i} ---`, 'info');
+          await window.NominationIntroModal.show();
+          log('state-status', `Show #${i} completed`, 'success');
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        log('state-status', 'All 3 shows completed successfully - no state leak!', 'success');
+      } catch (err) {
+        log('state-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testVisibilityProtection() {
+      clearLog('state-status');
+      initializeGame();
+      log('state-status', 'Test 17: Testing visibility change protection...', 'info');
+      log('state-status', 'Open modal, then switch tabs quickly (within 500ms)', 'warning');
+      log('state-status', 'Expected: Modal should NOT dismiss on quick tab switch', 'info');
+      log('state-status', 'Try alt-tabbing after 1 second - modal SHOULD dismiss', 'info');
+      
+      try {
+        await window.NominationIntroModal.show();
+        log('state-status', 'Modal dismissed', 'success');
+      } catch (err) {
+        log('state-status', `Error: ${err.message}`, 'error');
+      }
+    }
+    
+    async function testCleanupResets() {
+      clearLog('state-status');
+      initializeGame();
+      log('state-status', 'Test 18: Testing cleanup resets all state...', 'info');
+      log('state-status', 'Checking for leaked DOM nodes and event listeners', 'info');
+      
+      const overlaysBefore = document.querySelectorAll('.phase-intro-overlay').length;
+      const stylesBefore = document.querySelectorAll('style').length;
+      
+      try {
+        await window.NominationIntroModal.show();
+        
+        const overlaysAfter = document.querySelectorAll('.phase-intro-overlay').length;
+        const stylesAfter = document.querySelectorAll('style').length;
+        
+        log('state-status', `Overlays: ${overlaysBefore} -> ${overlaysAfter}`, overlaysBefore === overlaysAfter ? 'success' : 'error');
+        log('state-status', `Style elements: ${stylesBefore} -> ${stylesAfter}`, stylesBefore === stylesAfter ? 'success' : 'error');
+        
+        if (overlaysAfter === overlaysBefore && stylesAfter === stylesBefore) {
+          log('state-status', 'Cleanup successful - no leaked DOM nodes', 'success');
+        } else {
+          log('state-status', 'Possible DOM node leak detected', 'error');
+        }
+      } catch (err) {
+        log('state-status', `Error: ${err.message}`, 'error');
+      }
+    }
+  </script>
+  
+  <!-- Load NominationPlea module -->
+  <script src="js/nomination-plea.js"></script>
+  
+  <!-- Load NominationIntroModal module -->
+  <script src="js/nomination-intro-modal.js"></script>
+  
+  <script>
+    // Initialize energy display
+    updateEnergyDisplay();
+    
+    // Log module load status
+    console.info('[Test] NominationIntroModal loaded:', typeof window.NominationIntroModal);
+    console.info('[Test] NominationPlea loaded:', typeof window.NominationPlea);
+    console.info('[Test] SocialManeuvers mock loaded:', typeof window.SocialManeuvers);
+  </script>
+</body>
+</html>
