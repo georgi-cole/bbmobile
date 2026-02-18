@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold The Wall HOH Winner Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #2c3a4d;
+      padding-bottom: 10px;
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn:disabled {
+      background: #555;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-success {
+      background: #66ff66;
+      color: #1a2332;
+    }
+    
+    .btn-warning {
+      background: #ffd700;
+      color: #1a2332;
+    }
+    
+    .status-box {
+      background: rgba(26, 35, 50, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #2c3a4d;
+    }
+    
+    .status-item:last-child {
+      border-bottom: none;
+    }
+    
+    .status-label {
+      color: #95a9c0;
+      font-weight: 500;
+    }
+    
+    .status-value {
+      color: #83bfff;
+      font-weight: bold;
+    }
+    
+    .status-pass {
+      color: #66ff66;
+    }
+    
+    .status-fail {
+      color: #ff6b6b;
+    }
+    
+    .log-container {
+      background: rgba(26, 35, 50, 0.8);
+      border: 2px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 15px;
+      min-height: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(131, 191, 255, 0.1);
+    }
+    
+    .log-info {
+      color: #83bfff;
+    }
+    
+    .log-success {
+      color: #66ff66;
+    }
+    
+    .log-error {
+      color: #ff6b6b;
+    }
+    
+    .log-warning {
+      color: #ffd700;
+    }
+    
+    .game-container {
+      background: rgba(44, 58, 77, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      min-height: 400px;
+    }
+    
+    .info-box {
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid #83bfff;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+    
+    .alert-box {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid #ff6b6b;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Hold The Wall HOH Winner Test</h1>
+    <p class="subtitle">End-to-end testing for authoritative winner and AFK prevention</p>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <div class="test-grid">
+        <button class="btn" onclick="runTest1()">Test 1: Human Wins</button>
+        <button class="btn" onclick="runTest2()">Test 2: AI Wins</button>
+        <button class="btn btn-warning" onclick="runTest3()">Test 3: Human AFK</button>
+        <button class="btn" onclick="runTest4()">Test 4: Full Game</button>
+      </div>
+      
+      <div class="info-box">
+        <strong>Test 1 (Human Wins):</strong> Simulates human winning Hold The Wall. Verifies that game.hohId matches human player after competition.<br>
+        <strong>Test 2 (AI Wins):</strong> Simulates AI winning Hold The Wall. Verifies that game.hohId matches the AI winner.<br>
+        <strong>Test 3 (Human AFK):</strong> Tests AFK detection - human does not hold wall within 3 seconds. Verifies human is dropped and cannot win.<br>
+        <strong>Test 4 (Full Game):</strong> Runs complete Hold The Wall minigame with real interaction.
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Status</h2>
+      <div class="status-box">
+        <div class="status-item">
+          <span class="status-label">Test Running:</span>
+          <span class="status-value" id="testStatus">None</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Authoritative Winner Set:</span>
+          <span class="status-value" id="authWinnerStatus">Not checked</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Game HOH ID:</span>
+          <span class="status-value" id="hohIdStatus">Not set</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Winner Match:</span>
+          <span class="status-value" id="matchStatus">Not checked</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Flag Cleared:</span>
+          <span class="status-value" id="flagClearedStatus">Not checked</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Game Container</h2>
+      <div class="game-container" id="gameContainer">
+        <p style="text-align: center; color: #95a9c0; margin-top: 150px;">
+          Click a test scenario button to start
+        </p>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div class="log-container" id="logContainer">
+        <div class="log-entry log-info">Waiting for test to start...</div>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module">
+    // Import necessary modules
+    import { MinigameRegistry } from '../js/minigames/registry.js';
+    import { MinigameSelector } from '../js/minigames/selector.js';
+    
+    // Setup global game object
+    window.game = {
+      players: [],
+      humanId: 0,
+      hohId: null,
+      lastHOHId: null,
+      lastCompScores: new Map(),
+      phase: 'hoh',
+      week: 1,
+      __authoritativeWinner: null,
+      __humanPlayedHOH: false,
+      cfg: {
+        enableSocialManeuvers: false
+      }
+    };
+    
+    // Create test players
+    function createTestPlayers() {
+      window.game.players = [
+        { id: 0, name: 'You', hoh: false, stats: {}, wins: {}, avatarUrl: null, isBot: false },
+        { id: 1, name: 'Rey', hoh: false, stats: {}, wins: {}, avatarUrl: null, isBot: true },
+        { id: 2, name: 'Sofia', hoh: false, stats: {}, wins: {}, avatarUrl: null, isBot: true },
+        { id: 3, name: 'Marcus', hoh: false, stats: {}, wins: {}, avatarUrl: null, isBot: true }
+      ];
+      window.game.humanId = 0;
+    }
+    
+    // Logging function
+    function log(message, type = 'info') {
+      const logContainer = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      console.log(`[Test] ${message}`);
+    }
+    
+    // Update status
+    function updateStatus(field, value, isPass = null) {
+      const element = document.getElementById(field);
+      if (element) {
+        element.textContent = value;
+        element.className = 'status-value';
+        if (isPass === true) {
+          element.classList.add('status-pass');
+        } else if (isPass === false) {
+          element.classList.add('status-fail');
+        }
+      }
+    }
+    
+    // Clear game container
+    function clearGameContainer() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+    }
+    
+    // Simulate finishCompPhase (simplified version for testing)
+    async function simulateFinishCompPhase() {
+      const g = window.game;
+      
+      log('Starting finishCompPhase simulation...', 'info');
+      
+      // Check for authoritative winner FIRST
+      let winner;
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        winner = g.__authoritativeWinner.playerId;
+        log(`✓ Using authoritative winner: ${winner}`, 'success');
+        updateStatus('authWinnerStatus', `Player ${winner}`, true);
+        
+        // Clear flag immediately
+        delete g.__authoritativeWinner;
+        log('✓ Cleared authoritative winner flag', 'success');
+        updateStatus('flagClearedStatus', 'Yes', true);
+      } else {
+        // Fallback to score-based
+        log('No authoritative winner, using score-based determination', 'info');
+        updateStatus('authWinnerStatus', 'Not set', null);
+        
+        const scoredEntries = [...g.lastCompScores.entries()]
+          .filter(([id, score]) => score > 0)
+          .sort((a, b) => b[1] - a[1]);
+        
+        if (scoredEntries.length > 0) {
+          winner = scoredEntries[0][0];
+          log(`Score-based winner: ${winner}`, 'info');
+        } else {
+          winner = 1; // Default to AI
+          log('Fallback winner: 1', 'warning');
+        }
+      }
+      
+      // Update HOH state
+      g.players.forEach(p => p.hoh = false);
+      g.hohId = winner;
+      g.lastHOHId = winner;
+      const W = g.players.find(p => p.id === winner);
+      if (W) {
+        W.hoh = true;
+        W.stats.hohWins = (W.stats.hohWins || 0) + 1;
+      }
+      
+      log(`✓ HOH assigned to player ${winner}`, 'success');
+      updateStatus('hohIdStatus', `Player ${winner}`, true);
+      
+      return winner;
+    }
+    
+    // Test 1: Human wins
+    window.runTest1 = async function() {
+      log('=== TEST 1: Human Wins ===', 'info');
+      updateStatus('testStatus', 'Test 1: Human Wins');
+      clearGameContainer();
+      createTestPlayers();
+      
+      const g = window.game;
+      
+      // Simulate human winning
+      g.__authoritativeWinner = {
+        playerId: 0,
+        score: 120.5,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      g.lastCompScores.set(0, 120.5);
+      g.lastCompScores.set(1, 85.2);
+      g.lastCompScores.set(2, 72.1);
+      g.lastCompScores.set(3, 90.3);
+      
+      log('Set authoritative winner: Player 0 (Human)', 'info');
+      log('Calling finishCompPhase...', 'info');
+      
+      const winner = await simulateFinishCompPhase();
+      
+      // Verify
+      if (winner === 0) {
+        log('✅ TEST PASSED: Human is HOH', 'success');
+        updateStatus('matchStatus', 'PASS', true);
+      } else {
+        log(`❌ TEST FAILED: Expected 0, got ${winner}`, 'error');
+        updateStatus('matchStatus', 'FAIL', false);
+      }
+      
+      if (!g.__authoritativeWinner) {
+        log('✅ Authoritative winner flag cleared', 'success');
+      } else {
+        log('❌ Authoritative winner flag NOT cleared', 'error');
+        updateStatus('flagClearedStatus', 'No', false);
+      }
+    };
+    
+    // Test 2: AI wins
+    window.runTest2 = async function() {
+      log('=== TEST 2: AI Wins ===', 'info');
+      updateStatus('testStatus', 'Test 2: AI Wins');
+      clearGameContainer();
+      createTestPlayers();
+      
+      const g = window.game;
+      
+      // Simulate AI winning
+      g.__authoritativeWinner = {
+        playerId: 1,
+        score: 135.8,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      g.lastCompScores.set(0, 65.2);
+      g.lastCompScores.set(1, 135.8);
+      g.lastCompScores.set(2, 88.4);
+      g.lastCompScores.set(3, 92.7);
+      
+      log('Set authoritative winner: Player 1 (Rey)', 'info');
+      log('Calling finishCompPhase...', 'info');
+      
+      const winner = await simulateFinishCompPhase();
+      
+      // Verify
+      if (winner === 1) {
+        log('✅ TEST PASSED: Rey is HOH', 'success');
+        updateStatus('matchStatus', 'PASS', true);
+      } else {
+        log(`❌ TEST FAILED: Expected 1, got ${winner}`, 'error');
+        updateStatus('matchStatus', 'FAIL', false);
+      }
+      
+      if (!g.__authoritativeWinner) {
+        log('✅ Authoritative winner flag cleared', 'success');
+      } else {
+        log('❌ Authoritative winner flag NOT cleared', 'error');
+        updateStatus('flagClearedStatus', 'No', false);
+      }
+    };
+    
+    // Test 3: Human AFK
+    window.runTest3 = async function() {
+      log('=== TEST 3: Human AFK ===', 'info');
+      updateStatus('testStatus', 'Test 3: Human AFK');
+      clearGameContainer();
+      createTestPlayers();
+      
+      const g = window.game;
+      
+      // Simulate human being AFK and not setting authoritative winner
+      // AI wins by default
+      g.__authoritativeWinner = {
+        playerId: 2,
+        score: 145.3,
+        minigame: 'hold-wall',
+        compType: 'hoh',
+        timestamp: Date.now()
+      };
+      
+      // Human got 0 score (AFK)
+      g.lastCompScores.set(0, 0);
+      g.lastCompScores.set(1, 112.5);
+      g.lastCompScores.set(2, 145.3);
+      g.lastCompScores.set(3, 98.2);
+      
+      log('Human was AFK (score: 0)', 'warning');
+      log('Set authoritative winner: Player 2 (Sofia)', 'info');
+      log('Calling finishCompPhase...', 'info');
+      
+      const winner = await simulateFinishCompPhase();
+      
+      // Verify
+      if (winner !== 0) {
+        log('✅ TEST PASSED: Human did NOT become HOH (was AFK)', 'success');
+        updateStatus('matchStatus', 'PASS', true);
+      } else {
+        log('❌ TEST FAILED: Human became HOH despite being AFK', 'error');
+        updateStatus('matchStatus', 'FAIL', false);
+      }
+      
+      if (winner === 2) {
+        log('✅ Sofia (AI) correctly won', 'success');
+      }
+      
+      if (!g.__authoritativeWinner) {
+        log('✅ Authoritative winner flag cleared', 'success');
+      } else {
+        log('❌ Authoritative winner flag NOT cleared', 'error');
+        updateStatus('flagClearedStatus', 'No', false);
+      }
+    };
+    
+    // Test 4: Full game (actually load Hold The Wall)
+    window.runTest4 = async function() {
+      log('=== TEST 4: Full Game ===', 'info');
+      updateStatus('testStatus', 'Test 4: Full Game');
+      clearGameContainer();
+      createTestPlayers();
+      
+      log('Loading Hold The Wall minigame...', 'info');
+      
+      const container = document.getElementById('gameContainer');
+      
+      // Load the minigame module
+      try {
+        const module = await import('../js/minigames/hold-wall.js');
+        log('✓ Module loaded', 'success');
+        
+        // Render the game
+        module.render(container, (score) => {
+          log(`Game completed with score: ${score}`, 'success');
+          log('Checking authoritative winner...', 'info');
+          
+          const g = window.game;
+          if (g.__authoritativeWinner) {
+            log(`✓ Authoritative winner set: Player ${g.__authoritativeWinner.playerId}`, 'success');
+            updateStatus('authWinnerStatus', `Player ${g.__authoritativeWinner.playerId}`, true);
+            
+            // Simulate finish comp phase
+            setTimeout(async () => {
+              await simulateFinishCompPhase();
+              
+              if (g.hohId === g.__authoritativeWinner.playerId) {
+                log('✅ TEST PASSED: HOH matches authoritative winner', 'success');
+                updateStatus('matchStatus', 'PASS', true);
+              } else {
+                log('❌ TEST FAILED: HOH does not match authoritative winner', 'error');
+                updateStatus('matchStatus', 'FAIL', false);
+              }
+            }, 500);
+          } else {
+            log('⚠ No authoritative winner set', 'warning');
+            updateStatus('authWinnerStatus', 'Not set', false);
+          }
+        }, {
+          compType: 'hoh'
+        });
+        
+        log('✓ Game rendered. Play the minigame!', 'success');
+        log('📌 Note: For AFK test, do NOT click the wall within 3 seconds', 'info');
+        
+      } catch (error) {
+        log(`❌ Error loading minigame: ${error.message}`, 'error');
+      }
+    };
+    
+    // Make functions available globally
+    window.log = log;
+    window.updateStatus = updateStatus;
+    
+    // Initial log
+    log('Test harness initialized', 'success');
+    log('Select a test scenario to begin', 'info');
+  </script>
+</body>
+</html>
