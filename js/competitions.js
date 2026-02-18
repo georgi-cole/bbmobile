@@ -1845,7 +1845,6 @@
       }
 
       global.updateHud(); global.renderPanel();
-      }
     } finally {
       g.__hohResolving = false;
     }
