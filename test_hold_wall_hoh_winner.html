@@ -328,8 +328,36 @@
       let winner;
       if (authWinner && authWinner.compType === 'hoh') {
         winner = authWinner.playerId;
-        log(`✓ Using authoritative winner: ${winner}`, 'success');
-        updateStatus('authWinnerStatus', `Player ${winner}`, true);
+        const isLastStanding = authWinner.isLastStanding === true;
+        log(`✓ Using authoritative winner: ${winner}${isLastStanding ? ' (LAST STANDING)' : ''}`, 'success');
+        updateStatus('authWinnerStatus', `Player ${winner}${isLastStanding ? ' (LAST STANDING)' : ''}`, true);
+        
+        // For last-standing competitions, verify win probabilities
+        if (isLastStanding) {
+          log('✓ Last-standing winner detected - checking win probabilities', 'info');
+          if (g.lastCompProbabilities) {
+            const winnerProb = g.lastCompProbabilities.get(winner);
+            if (winnerProb === 1.0) {
+              log(`✓ Winner probability correctly set to 1.0`, 'success');
+            } else {
+              log(`⚠ Winner probability is ${winnerProb}, expected 1.0`, 'warning');
+            }
+            
+            // Check all others are 0.0
+            let allOthersZero = true;
+            for (const [id, prob] of g.lastCompProbabilities.entries()) {
+              if (id !== winner && prob !== 0.0) {
+                allOthersZero = false;
+                log(`⚠ Player ${id} has probability ${prob}, expected 0.0`, 'warning');
+              }
+            }
+            if (allOthersZero) {
+              log('✓ All other players have probability 0.0', 'success');
+            }
+          } else {
+            log('⚠ lastCompProbabilities not set for last-standing winner', 'warning');
+          }
+        }
         
         // Clear flag immediately (both locations)
         delete window.__authoritativeWinner;
@@ -379,21 +407,30 @@
       
       const g = window.game;
       
-      // Simulate human winning
+      // Simulate human winning with isLastStanding flag
       g.__authoritativeWinner = {
         playerId: 0,
         score: 120.5,
         minigame: 'hold-wall',
         compType: 'hoh',
+        isLastStanding: true,
         timestamp: Date.now()
       };
+      
+      // Initialize lastCompProbabilities to simulate what __applyAuthoritativeWinner would do
+      g.lastCompProbabilities = new Map();
+      g.lastCompProbabilities.set(0, 1.0);
+      g.lastCompProbabilities.set(1, 0.0);
+      g.lastCompProbabilities.set(2, 0.0);
+      g.lastCompProbabilities.set(3, 0.0);
       
       g.lastCompScores.set(0, 120.5);
       g.lastCompScores.set(1, 85.2);
       g.lastCompScores.set(2, 72.1);
       g.lastCompScores.set(3, 90.3);
       
-      log('Set authoritative winner: Player 0 (Human)', 'info');
+      log('Set authoritative winner: Player 0 (Human) with isLastStanding=true', 'info');
+      log('Set win probabilities: 0=1.0, others=0.0', 'info');
       log('Calling finishCompPhase...', 'info');
       
       const winner = await simulateFinishCompPhase();
@@ -427,21 +464,30 @@
       
       const g = window.game;
       
-      // Simulate AI winning
+      // Simulate AI winning with isLastStanding flag
       g.__authoritativeWinner = {
         playerId: 1,
         score: 135.8,
         minigame: 'hold-wall',
         compType: 'hoh',
+        isLastStanding: true,
         timestamp: Date.now()
       };
+      
+      // Initialize lastCompProbabilities to simulate what __applyAuthoritativeWinner would do
+      g.lastCompProbabilities = new Map();
+      g.lastCompProbabilities.set(0, 0.0);
+      g.lastCompProbabilities.set(1, 1.0);
+      g.lastCompProbabilities.set(2, 0.0);
+      g.lastCompProbabilities.set(3, 0.0);
       
       g.lastCompScores.set(0, 65.2);
       g.lastCompScores.set(1, 135.8);
       g.lastCompScores.set(2, 88.4);
       g.lastCompScores.set(3, 92.7);
       
-      log('Set authoritative winner: Player 1 (Rey)', 'info');
+      log('Set authoritative winner: Player 1 (Rey) with isLastStanding=true', 'info');
+      log('Set win probabilities: 1=1.0, others=0.0', 'info');
       log('Calling finishCompPhase...', 'info');
       
       const winner = await simulateFinishCompPhase();
@@ -482,8 +528,16 @@
         score: 145.3,
         minigame: 'hold-wall',
         compType: 'hoh',
+        isLastStanding: true,
         timestamp: Date.now()
       };
+      
+      // Initialize lastCompProbabilities to simulate what __applyAuthoritativeWinner would do
+      g.lastCompProbabilities = new Map();
+      g.lastCompProbabilities.set(0, 0.0);
+      g.lastCompProbabilities.set(1, 0.0);
+      g.lastCompProbabilities.set(2, 1.0);
+      g.lastCompProbabilities.set(3, 0.0);
       
       // Human got 0 score (AFK)
       g.lastCompScores.set(0, 0);
@@ -492,7 +546,8 @@
       g.lastCompScores.set(3, 98.2);
       
       log('Human was AFK (score: 0)', 'warning');
-      log('Set authoritative winner: Player 2 (Sofia)', 'info');
+      log('Set authoritative winner: Player 2 (Sofia) with isLastStanding=true', 'info');
+      log('Set win probabilities: 2=1.0, others=0.0', 'info');
       log('Calling finishCompPhase...', 'info');
       
       const winner = await simulateFinishCompPhase();

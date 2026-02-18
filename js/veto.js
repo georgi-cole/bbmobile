@@ -1141,7 +1141,8 @@
     var authCheck = window.__authoritativeWinner || g.__authoritativeWinner;
     if(authCheck && authCheck.compType === 'pov'){
       authWinner = authCheck.playerId;
-      console.info('[veto] ✓ Using authoritative winner from endurance minigame: ' + authWinner);
+      var isLastStanding = authCheck.isLastStanding === true;
+      console.info('[veto] ✓ Using authoritative winner from minigame: Player ' + authWinner + (isLastStanding ? ' (isLastStanding=true)' : ''));
       
       // Ensure the authoritative winner has the highest score in lastCompScores
       // Find the current max score and set authoritative winner's score higher
@@ -1155,6 +1156,17 @@
       var authScore = Math.max(authCheck.score || 100, maxScore + 1);
       g.lastCompScores.set(authWinner, authScore);
       console.info('[veto] Injected authoritative winner score: ' + authScore + ' (max was ' + maxScore + ')');
+      
+      // For last-standing competitions, set deterministic win probabilities
+      if (isLastStanding && typeof global.__applyAuthoritativeWinner === 'function') {
+        try {
+          // Apply win probabilities via helper (sets winner to 1.0, others to 0.0)
+          global.__applyAuthoritativeWinner(authCheck);
+          console.info('[veto] ✓ Applied authoritative win probabilities for last-standing winner ' + authWinner);
+        } catch (e) {
+          console.warn('[veto] __applyAuthoritativeWinner call failed (non-fatal):', e);
+        }
+      }
       
       // ENDURANCE FIX: Clear authoritative winner flag immediately after use
       // This prevents it from affecting later phases or competitions
