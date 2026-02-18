@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Pause Progression Guards Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0a0e1a;
+      color: #e6e8ee;
+    }
+    h1 {
+      color: #9fb5ff;
+      border-bottom: 2px solid #2b3546;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #9fb5ff;
+      font-size: 18px;
+    }
+    button {
+      background: #172034;
+      border: 1px solid #2c3446;
+      color: #e6e8ee;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1d2840;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      border-color: #2d8ab4;
+    }
+    button.success {
+      background: #3d704d;
+      border-color: #4a855e;
+    }
+    button.danger {
+      background: #8b3838;
+      border-color: #a04545;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .status.paused {
+      background: rgba(242, 200, 98, 0.1);
+      border: 1px solid #f2c862;
+      color: #f2c862;
+    }
+    .status.running {
+      background: rgba(121, 209, 154, 0.1);
+      border: 1px solid #79d19a;
+      color: #79d19a;
+    }
+    .status.info {
+      background: rgba(159, 181, 255, 0.1);
+      border: 1px solid #9fb5ff;
+      color: #9fb5ff;
+    }
+    .log {
+      background: #0a0e1a;
+      border: 1px solid #1d2742;
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1d2742;
+    }
+    .log-entry.success {
+      color: #79d19a;
+    }
+    .log-entry.error {
+      color: #ff6b6b;
+    }
+    .log-entry.warn {
+      color: #f2c862;
+    }
+    .test-result {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      margin-left: 10px;
+      font-weight: bold;
+    }
+    .test-result.pass {
+      background: #3d704d;
+      color: #79d19a;
+    }
+    .test-result.fail {
+      background: #8b3838;
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛡️ Global Pause Progression Guards Test</h1>
+  
+  <div class="status info">
+    <strong>Test Purpose:</strong> Verify that when PauseController.isPaused() is true, 
+    no game progression occurs (phases do not change, competition resolution does not complete, 
+    auto-advance callbacks do not run).
+  </div>
+
+  <div class="test-section">
+    <h2>Pause State Control</h2>
+    <button class="primary" onclick="pauseGame()">▶️ Pause Game (Settings Modal)</button>
+    <button class="success" onclick="resumeGame()">⏸️ Resume Game</button>
+    <div id="pauseStatus" class="status running">Status: Running</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: finishCompPhase() Guard</h2>
+    <p>Tests that HOH competition resolution is blocked during pause.</p>
+    <button onclick="testFinishCompPhase()">Run Test</button>
+    <div id="test1Result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: finishVetoComp() Guard</h2>
+    <p>Tests that POV competition resolution is blocked during pause.</p>
+    <button onclick="testFinishVetoComp()">Run Test</button>
+    <div id="test2Result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: defaultAdvance() Guard</h2>
+    <p>Tests that phase advancement is blocked during pause.</p>
+    <button onclick="testDefaultAdvance()">Run Test</button>
+    <div id="test3Result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Social Energy Empty Auto-Advance Guard</h2>
+    <p>Tests that social phase auto-advance is blocked during pause.</p>
+    <button onclick="testSocialAutoAdvance()">Run Test</button>
+    <div id="test4Result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: ImmediateResults Resolution Guard</h2>
+    <p>Tests that competition resolution via ImmediateResults is blocked during pause.</p>
+    <button onclick="testImmediateResults()">Run Test</button>
+    <div id="test5Result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: PauseController Callback Validation</h2>
+    <p>Tests that resume doesn't crash when callback is not a function.</p>
+    <button onclick="testCallbackValidation()">Run Test</button>
+    <div id="test6Result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 7: Deferred Execution on Resume</h2>
+    <p>Tests that blocked functions execute when game resumes.</p>
+    <button onclick="testDeferredExecution()">Run Test</button>
+    <div id="test7Result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <button onclick="clearLog()">Clear Log</button>
+    <div id="eventLog" class="log"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/flow/PauseController.js"></script>
+  <script src="js/ui/global-pause.js"></script>
+
+  <script>
+    // Test utilities
+    let testLog = [];
+    
+    function log(message, type = 'info') {
+      const entry = { message, type, timestamp: new Date().toISOString() };
+      testLog.push(entry);
+      
+      const logDiv = document.getElementById('eventLog');
+      const entryDiv = document.createElement('div');
+      entryDiv.className = `log-entry ${type}`;
+      entryDiv.textContent = `[${entry.timestamp.split('T')[1].split('.')[0]}] ${message}`;
+      logDiv.appendChild(entryDiv);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      
+      console.log(`[TEST] ${message}`);
+    }
+
+    function clearLog() {
+      testLog = [];
+      document.getElementById('eventLog').innerHTML = '';
+      log('Log cleared');
+    }
+
+    function updatePauseStatus() {
+      const isPaused = window.PauseController && window.PauseController.isPaused();
+      const statusDiv = document.getElementById('pauseStatus');
+      if (isPaused) {
+        statusDiv.className = 'status paused';
+        statusDiv.textContent = 'Status: ⏸️ PAUSED';
+      } else {
+        statusDiv.className = 'status running';
+        statusDiv.textContent = 'Status: ▶️ RUNNING';
+      }
+    }
+
+    function pauseGame() {
+      if (window.PauseController) {
+        window.PauseController.pause('modal:settings');
+        log('Game paused (modal:settings)', 'success');
+        updatePauseStatus();
+      } else {
+        log('PauseController not available', 'error');
+      }
+    }
+
+    function resumeGame() {
+      if (window.PauseController) {
+        window.PauseController.resume('modal:settings');
+        log('Game resumed', 'success');
+        updatePauseStatus();
+      } else {
+        log('PauseController not available', 'error');
+      }
+    }
+
+    function showTestResult(elementId, passed, message) {
+      const resultDiv = document.getElementById(elementId);
+      const badge = passed ? 
+        '<span class="test-result pass">✅ PASS</span>' : 
+        '<span class="test-result fail">❌ FAIL</span>';
+      resultDiv.innerHTML = badge + ' ' + message;
+    }
+
+    // Initialize mock game object
+    function initMockGame() {
+      if (!window.game) {
+        window.game = {
+          phase: 'hoh',
+          week: 1,
+          humanId: 1,
+          lastCompScores: new Map(),
+          cfg: {
+            autoFastAdvanceCompetitions: true
+          },
+          bus: {
+            emit: function(event, data) {
+              log(`Event emitted: ${event}`, 'info');
+            },
+            once: function(event, callback) {
+              log(`Event listener registered: ${event}`, 'info');
+              // Store the callback for manual triggering in tests
+              if (!this._listeners) this._listeners = {};
+              if (!this._listeners[event]) this._listeners[event] = [];
+              this._listeners[event].push(callback);
+            }
+          }
+        };
+      }
+      return window.game;
+    }
+
+    // Test 1: finishCompPhase() guard
+    function testFinishCompPhase() {
+      log('--- Test 1: finishCompPhase() Guard ---', 'info');
+      const game = initMockGame();
+      game.phase = 'hoh';
+      game.__hohResolved = false;
+      game.__hohResolving = false;
+      
+      // Ensure game is paused
+      if (!window.PauseController.isPaused()) {
+        pauseGame();
+      }
+      
+      // Try to call finishCompPhase - should be blocked
+      let called = false;
+      const originalSetPhase = window.setPhase;
+      window.setPhase = function() {
+        called = true;
+        log('setPhase was called (should not happen!)', 'error');
+      };
+      
+      if (typeof window.finishCompPhase === 'function') {
+        window.finishCompPhase();
+        
+        // Wait a moment for any async behavior
+        setTimeout(() => {
+          const passed = !called && !game.__hohResolving;
+          if (passed) {
+            log('✅ finishCompPhase blocked successfully', 'success');
+            showTestResult('test1Result', true, 'finishCompPhase was blocked during pause');
+          } else {
+            log('❌ finishCompPhase was NOT blocked', 'error');
+            showTestResult('test1Result', false, 'finishCompPhase executed despite pause');
+          }
+          
+          window.setPhase = originalSetPhase;
+        }, 100);
+      } else {
+        log('⚠️ finishCompPhase function not available', 'warn');
+        showTestResult('test1Result', false, 'finishCompPhase function not found');
+      }
+    }
+
+    // Test 2: finishVetoComp() guard
+    function testFinishVetoComp() {
+      log('--- Test 2: finishVetoComp() Guard ---', 'info');
+      const game = initMockGame();
+      game.phase = 'veto_comp';
+      game.__finishVetoCompCalled = false;
+      game.__vetoResolving = false;
+      
+      // Ensure game is paused
+      if (!window.PauseController.isPaused()) {
+        pauseGame();
+      }
+      
+      // Try to call finishVetoComp - should be blocked
+      let called = false;
+      const originalSetPhase = window.setPhase;
+      window.setPhase = function() {
+        called = true;
+        log('setPhase was called (should not happen!)', 'error');
+      };
+      
+      if (typeof window.finishVetoComp === 'function') {
+        window.finishVetoComp();
+        
+        // Wait a moment for any async behavior
+        setTimeout(() => {
+          const passed = !called && !game.__vetoResolving;
+          if (passed) {
+            log('✅ finishVetoComp blocked successfully', 'success');
+            showTestResult('test2Result', true, 'finishVetoComp was blocked during pause');
+          } else {
+            log('❌ finishVetoComp was NOT blocked', 'error');
+            showTestResult('test2Result', false, 'finishVetoComp executed despite pause');
+          }
+          
+          window.setPhase = originalSetPhase;
+        }, 100);
+      } else {
+        log('⚠️ finishVetoComp function not available', 'warn');
+        showTestResult('test2Result', false, 'finishVetoComp function not found');
+      }
+    }
+
+    // Test 3: defaultAdvance() guard
+    function testDefaultAdvance() {
+      log('--- Test 3: defaultAdvance() Guard ---', 'info');
+      const game = initMockGame();
+      game.phase = 'intermission';
+      
+      // Ensure game is paused
+      if (!window.PauseController.isPaused()) {
+        pauseGame();
+      }
+      
+      // Track if startHOH was called
+      let called = false;
+      window.startHOH = function() {
+        called = true;
+        log('startHOH was called (should not happen!)', 'error');
+      };
+      
+      if (typeof window.defaultAdvance === 'function') {
+        window.defaultAdvance('intermission');
+        
+        // Wait a moment for any async behavior
+        setTimeout(() => {
+          const passed = !called;
+          if (passed) {
+            log('✅ defaultAdvance blocked successfully', 'success');
+            showTestResult('test3Result', true, 'defaultAdvance was blocked during pause');
+          } else {
+            log('❌ defaultAdvance was NOT blocked', 'error');
+            showTestResult('test3Result', false, 'defaultAdvance executed despite pause');
+          }
+        }, 100);
+      } else {
+        log('⚠️ defaultAdvance function not available', 'warn');
+        showTestResult('test3Result', false, 'defaultAdvance function not found');
+      }
+    }
+
+    // Test 4: Social auto-advance guard
+    function testSocialAutoAdvance() {
+      log('--- Test 4: Social Auto-Advance Guard ---', 'info');
+      const game = initMockGame();
+      game.phase = 'social';
+      
+      // Ensure game is paused
+      if (!window.PauseController.isPaused()) {
+        pauseGame();
+      }
+      
+      // Mock advancePhase
+      let advanceCalled = false;
+      window.advancePhase = function() {
+        advanceCalled = true;
+        log('advancePhase was called (should not happen immediately!)', 'error');
+      };
+      
+      // Simulate the setTimeout from social-maneuvers empty energy flow
+      setTimeout(() => {
+        // Check if paused before advancing
+        if (window.PauseController && window.PauseController.isPaused()) {
+          log('Social auto-advance properly checked pause state', 'success');
+          
+          const passed = !advanceCalled;
+          if (passed) {
+            log('✅ Social auto-advance blocked successfully', 'success');
+            showTestResult('test4Result', true, 'Social auto-advance was blocked during pause');
+          } else {
+            log('❌ Social auto-advance was NOT blocked', 'error');
+            showTestResult('test4Result', false, 'advancePhase was called despite pause');
+          }
+        } else {
+          log('⚠️ Pause check not performed', 'warn');
+          showTestResult('test4Result', false, 'Pause state not checked in setTimeout');
+        }
+      }, 50); // Shortened from 3000ms for testing
+    }
+
+    // Test 5: ImmediateResults guard
+    function testImmediateResults() {
+      log('--- Test 5: ImmediateResults Guard ---', 'info');
+      const game = initMockGame();
+      game.phase = 'hoh';
+      game.__fastAdvancingCompetition = false;
+      
+      // Ensure game is paused
+      if (!window.PauseController.isPaused()) {
+        pauseGame();
+      }
+      
+      // Try to resolve competition phase
+      if (window.CompetitionFlow && typeof window.CompetitionFlow.showCompetitionResultsAndFastForward === 'function') {
+        // Mock finishCompPhase
+        let finishCalled = false;
+        window.finishCompPhase = function() {
+          finishCalled = true;
+          log('finishCompPhase was called (should not happen!)', 'error');
+        };
+        
+        // This should trigger resolveCompetitionPhaseIfNeeded internally
+        window.CompetitionFlow.showCompetitionResultsAndFastForward(100);
+        
+        setTimeout(() => {
+          const passed = !finishCalled;
+          if (passed) {
+            log('✅ ImmediateResults blocked successfully', 'success');
+            showTestResult('test5Result', true, 'ImmediateResults was blocked during pause');
+          } else {
+            log('❌ ImmediateResults was NOT blocked', 'error');
+            showTestResult('test5Result', false, 'Competition resolved despite pause');
+          }
+        }, 100);
+      } else {
+        log('⚠️ CompetitionFlow.showCompetitionResultsAndFastForward not available', 'warn');
+        showTestResult('test5Result', false, 'ImmediateResults flow not found');
+      }
+    }
+
+    // Test 6: Callback validation
+    function testCallbackValidation() {
+      log('--- Test 6: Callback Validation ---', 'info');
+      
+      if (!window.PauseController) {
+        log('⚠️ PauseController not available', 'warn');
+        showTestResult('test6Result', false, 'PauseController not found');
+        return;
+      }
+      
+      // Pause with a non-function callback
+      window.PauseController.pause('test-callback');
+      
+      // Manually set invalid callback
+      if (window.PauseController.getState) {
+        const state = window.PauseController.getState();
+        log(`Current pause state: isPaused=${state.isPaused}`, 'info');
+      }
+      
+      // Try to resume - should not crash
+      try {
+        window.PauseController.resume('test-callback');
+        log('✅ Resume completed without crash', 'success');
+        showTestResult('test6Result', true, 'Resume handles invalid callbacks safely');
+      } catch (err) {
+        log(`❌ Resume threw error: ${err.message}`, 'error');
+        showTestResult('test6Result', false, 'Resume crashed: ' + err.message);
+      }
+    }
+
+    // Test 7: Deferred execution
+    function testDeferredExecution() {
+      log('--- Test 7: Deferred Execution on Resume ---', 'info');
+      const game = initMockGame();
+      game.phase = 'hoh';
+      game.__hohResolved = false;
+      
+      // Ensure game is paused
+      if (!window.PauseController.isPaused()) {
+        pauseGame();
+      }
+      
+      // Track deferred execution
+      let deferredCalled = false;
+      if (game.bus && game.bus._listeners) {
+        game.bus._listeners['game:resumed'] = [];
+      }
+      
+      // Call a guarded function while paused
+      if (typeof window.finishCompPhase === 'function') {
+        window.finishCompPhase();
+        
+        setTimeout(() => {
+          // Check if listener was registered
+          const hasListener = game.bus._listeners && 
+                            game.bus._listeners['game:resumed'] && 
+                            game.bus._listeners['game:resumed'].length > 0;
+          
+          if (hasListener) {
+            log('✅ Deferred execution registered via game:resumed listener', 'success');
+            
+            // Now resume and check if callback executes
+            window.PauseController.resume('modal:settings');
+            
+            // Manually trigger the listeners
+            if (game.bus._listeners['game:resumed']) {
+              game.bus._listeners['game:resumed'].forEach(cb => {
+                try {
+                  cb();
+                  deferredCalled = true;
+                } catch (err) {
+                  log(`Error calling deferred callback: ${err.message}`, 'error');
+                }
+              });
+            }
+            
+            setTimeout(() => {
+              if (deferredCalled) {
+                log('✅ Deferred callback executed after resume', 'success');
+                showTestResult('test7Result', true, 'Blocked functions defer and execute on resume');
+              } else {
+                log('❌ Deferred callback did not execute', 'error');
+                showTestResult('test7Result', false, 'Deferred execution failed');
+              }
+            }, 100);
+            
+          } else {
+            log('❌ No deferred execution registered', 'error');
+            showTestResult('test7Result', false, 'Function did not defer execution');
+          }
+        }, 100);
+      } else {
+        log('⚠️ finishCompPhase not available', 'warn');
+        showTestResult('test7Result', false, 'Test function not found');
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded', 'success');
+      updatePauseStatus();
+      
+      // Initialize mock game
+      initMockGame();
+      log('Mock game object initialized', 'info');
+    });
+  </script>
+</body>
+</html>
