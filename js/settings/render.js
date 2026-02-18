@@ -609,9 +609,17 @@
       try{
         // Use normalized ID 'settings' (PauseManager will add 'modal:' prefix internally)
         global.game.pauseManager.open('settings');
-        console.info('[settings/render] Paused game for settings modal');
+        console.info('[settings/render] Paused game for settings modal via PauseManager');
       }catch(err){
         console.error('[settings/render] Failed to pause game for settings modal:', err);
+      }
+    } else if(global.PauseController && typeof global.PauseController.pause === 'function'){
+      // Fallback to PauseController if PauseManager not available
+      try{
+        global.PauseController.pause('settings');
+        console.info('[settings/render] Paused game for settings modal via PauseController (fallback)');
+      }catch(err){
+        console.error('[settings/render] Failed to pause game via PauseController:', err);
       }
     }
     
@@ -693,9 +701,17 @@
       try{
         // Use normalized ID 'settings' (PauseManager will add 'modal:' prefix internally)
         global.game.pauseManager.close('settings');
-        console.info('[settings/render] Resumed game after settings modal closed');
+        console.info('[settings/render] Resumed game after settings modal closed via PauseManager');
       }catch(err){
         console.error('[settings/render] Failed to resume game after settings modal:', err);
+      }
+    } else if(global.PauseController && typeof global.PauseController.resume === 'function'){
+      // Fallback to PauseController if PauseManager not available
+      try{
+        global.PauseController.resume('settings');
+        console.info('[settings/render] Resumed game after settings modal closed via PauseController (fallback)');
+      }catch(err){
+        console.error('[settings/render] Failed to resume game via PauseController:', err);
       }
     }
   }

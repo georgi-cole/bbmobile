@@ -70,13 +70,31 @@
         // Normalize the modal ID to prevent double-prefixing
         const normalizedId = normalizeModalId(id);
         
+        // Check if already open to avoid duplicate pause calls
+        const alreadyOpen = openModals.has(normalizedId);
+        if (alreadyOpen) {
+          if (window.console && typeof window.console.warn === 'function') {
+            console.warn('[PauseManager] Modal already open:', normalizedId);
+          }
+          return;
+        }
+        
         const wasPaused = openModals.size > 0;
         openModals.add(normalizedId);
+        
+        // Log telemetry
+        if (window.console && typeof window.console.info === 'function') {
+          console.info('[PauseManager] Opening modal:', normalizedId, '→ owner: modal:' + normalizedId);
+        }
         
         // Always add owner to PauseController with 'modal:' prefix
         // (PauseController expects owner IDs like 'modal:settings')
         if (window.PauseController && typeof window.PauseController.pause === 'function') {
           window.PauseController.pause('modal:' + normalizedId);
+        } else {
+          if (window.console && typeof window.console.warn === 'function') {
+            console.warn('[PauseManager] PauseController not available for pause');
+          }
         }
         
         if (!wasPaused && openModals.size > 0) {
@@ -84,7 +102,7 @@
         }
       } catch (err) {
         if (window.console && typeof window.console.error === 'function') {
-          console.error('[PauseManager] open', err);
+          console.error('[PauseManager] open error:', err);
         }
       }
     }
@@ -96,12 +114,27 @@
         // Normalize the modal ID to prevent double-prefixing
         const normalizedId = normalizeModalId(id);
         
-        if (!openModals.has(normalizedId)) return;
+        if (!openModals.has(normalizedId)) {
+          if (window.console && typeof window.console.warn === 'function') {
+            console.warn('[PauseManager] Attempted to close modal that was not open:', normalizedId);
+          }
+          return;
+        }
+        
         openModals.delete(normalizedId);
+        
+        // Log telemetry
+        if (window.console && typeof window.console.info === 'function') {
+          console.info('[PauseManager] Closing modal:', normalizedId, '→ owner: modal:' + normalizedId);
+        }
         
         // Always resume with 'modal:' prefix to match the pause call
         if (window.PauseController && typeof window.PauseController.resume === 'function') {
           window.PauseController.resume('modal:' + normalizedId);
+        } else {
+          if (window.console && typeof window.console.warn === 'function') {
+            console.warn('[PauseManager] PauseController not available for resume');
+          }
         }
         
         if (openModals.size === 0) {
@@ -109,7 +142,7 @@
         }
       } catch (err) {
         if (window.console && typeof window.console.error === 'function') {
-          console.error('[PauseManager] close', err);
+          console.error('[PauseManager] close error:', err);
         }
       }
     }

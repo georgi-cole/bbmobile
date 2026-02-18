@@ -1,7 +1,7 @@
 // More Options Menu - integrates with GlobalPauseController
 
 export const MoreOptionsMenu = (() => {
-  const id = 'modal:more-options';
+  const id = 'more-options'; // Use normalized ID without 'modal:' prefix
   let el = null;
 
   function init() {
