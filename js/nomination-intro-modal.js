@@ -11,7 +11,11 @@
     FAILSAFE_TIMEOUT_MS: 10000,  // Absolute maximum time before force-resolve
     DISMISS_ANIMATION_MS: 300,   // Modal fade-out animation duration
     TOAST_DURATION_MS: 2000,     // Toast notification auto-dismiss time
-    PLEA_DELAY_BEFORE_DISMISS_MS: 500  // Delay before dismissing after plea completes
+    PLEA_DELAY_BEFORE_DISMISS_MS: 500,  // Delay before dismissing after plea completes
+    CHECK_RISK_ENERGY_COST: 10,  // Energy required to check risk
+    PLEA_ENERGY_COST: 5,         // Energy required to make a plea
+    RECHARGE_ENERGY_AMOUNT: 5,   // Energy awarded from ad recharge
+    VISIBILITY_THRESHOLD_MS: 500 // Minimum visibility time before allowing visibility-dismiss
   };
 
   // State machine states
@@ -33,6 +37,8 @@
   let resolved = false;
   let failsafeTimeout = null;
   let rafId = null;
+  let modalShowTime = 0; // Timestamp when modal became visible
+  let currentRiskData = null; // Cached risk data for post-plea update
 
   /**
    * Compute nomination risk for current player
@@ -60,44 +66,155 @@
     
     const slots = Math.max(2, Math.min(4, g.__twistNomSlots || 2));
     
-    // Base chance: probability based on slots and available targets
-    let base = Math.round((slots / Math.max(1, availableTargets.length)) * 100);
-    base = Math.max(6, Math.min(90, base));
-
-    // Affinity/bond effect: check relationship between HOH and player
-    const bond = hoh.affinity?.[player.id] ?? player.affinity?.[hoh.id] ?? 0.5;
-    const affinityEffect = (0.5 - bond) * 0.8; // Friendly = negative (lowers risk), enemy = positive (raises risk)
-
-    // Reputation/threat effect: higher threat increases risk
-    if (typeof player.reputation === 'undefined') {
-      player.reputation = player.threat ?? 0.5;
-    }
-    const rep = player.reputation;
-    const repEffect = (rep - 0.5) * 0.6;
-
-    // Calculate adjusted risk
-    let risk = base * (1 + affinityEffect + repEffect);
+    // Enhanced risk algorithm per requirements
+    // Base from player threat (0..1) * 60
+    const threat = player.threat ?? player.reputation ?? 0.5;
+    const threatComponent = threat * 60;
     
-    // Smooth toward base to avoid extreme swings
-    risk = risk * 0.7 + base * 0.3;
+    // HOH affinity component: (1 - affinity) * 25
+    const affinity = hoh.affinity?.[player.id] ?? player.affinity?.[hoh.id] ?? 0.5;
+    const affinityComponent = (1 - affinity) * 25;
     
-    // Clamp and round
-    risk = Math.max(5, Math.min(95, Math.round(risk)));
+    // House reputation component: (1 - reputation) * 15
+    const houseRep = g.houseReputation ?? global.houseReputation ?? 0.5;
+    const reputationComponent = (1 - houseRep) * 15;
+    
+    // Random variance: -5 to +5
+    const randomVariance = (Math.random() * 10) - 5;
+    
+    // Calculate total risk
+    let risk = threatComponent + affinityComponent + reputationComponent + randomVariance;
+    
+    // Clamp to 0..100
+    risk = Math.max(0, Math.min(100, Math.round(risk)));
 
-    // Generate explanation
-    let explanation = `Base chance: ${base}%`;
-    if (bond < 0.4) {
-      explanation += ` | Strong relationship reduces risk`;
-    } else if (bond > 0.6) {
-      explanation += ` | Weak relationship increases risk`;
+    // Generate contextual explanation
+    let explanation = '';
+    if (threat > 0.6) {
+      explanation += 'High threat level increases risk. ';
+    } else if (threat < 0.4) {
+      explanation += 'Low threat level reduces risk. ';
     }
-    if (rep > 0.6) {
-      explanation += ` | High threat level increases risk`;
-    } else if (rep < 0.4) {
-      explanation += ` | Low threat level reduces risk`;
+    
+    if (affinity < 0.4) {
+      explanation += 'Strong relationship with HOH reduces risk. ';
+    } else if (affinity > 0.6) {
+      explanation += 'Weak relationship with HOH increases risk. ';
+    }
+    
+    if (houseRep < 0.4) {
+      explanation += 'Poor house reputation increases risk.';
+    } else if (houseRep > 0.6) {
+      explanation += 'Good house reputation reduces risk.';
+    }
+    
+    if (!explanation) {
+      explanation = 'Your position in the house is moderate.';
     }
 
-    return { risk, explanation, base, bond, reputation: rep };
+    return { risk, explanation, threat, affinity, houseReputation: houseRep };
+  }
+
+  /**
+   * Map numeric risk (0-100) to categorical label
+   * @param {number} risk - Numeric risk value
+   * @returns {Object} { category, description }
+   */
+  function getRiskCategory(risk) {
+    if (risk < 10) {
+      return { category: 'unknown', description: 'Your risk is currently unknown', color: '#8a9fb5' };
+    } else if (risk < 20) {
+      return { category: 'very low', description: 'You are very unlikely to be nominated', color: '#44ff88' };
+    } else if (risk < 35) {
+      return { category: 'low', description: 'You have a low chance of being nominated', color: '#77ff55' };
+    } else if (risk < 55) {
+      return { category: 'medium', description: 'You have a moderate chance of being nominated', color: '#ffaa44' };
+    } else if (risk < 70) {
+      return { category: 'high', description: 'You have a high chance of being nominated', color: '#ff8844' };
+    } else if (risk < 85) {
+      return { category: 'very high', description: 'You are very likely to be nominated', color: '#ff5544' };
+    } else {
+      return { category: 'extreme', description: 'You are almost certainly being nominated', color: '#ff4444' };
+    }
+  }
+
+  /**
+   * Check if risk level requires plea option
+   * @param {number} risk - Numeric risk value
+   * @returns {boolean}
+   */
+  function isHighRisk(risk) {
+    return risk >= 55; // high, very high, or extreme
+  }
+
+  /**
+   * Get player social energy
+   * @param {number} playerId - Player ID
+   * @returns {number} Current energy
+   */
+  function getPlayerEnergy(playerId) {
+    // Try SocialManeuvers energy bank first
+    if (global.SocialManeuvers?.SocialEnergyBank?.get) {
+      return global.SocialManeuvers.SocialEnergyBank.get(playerId);
+    }
+    
+    // Fallback to SocialResources
+    if (global.SocialManeuvers?.SocialResources?.get) {
+      return global.SocialManeuvers.SocialResources.get(playerId, 'energy') || 0;
+    }
+    
+    // Default fallback
+    return 5;
+  }
+
+  /**
+   * Deduct player social energy
+   * @param {number} playerId - Player ID
+   * @param {number} amount - Amount to deduct
+   * @returns {boolean} Success
+   */
+  function deductPlayerEnergy(playerId, amount) {
+    // Try SocialManeuvers energy bank first
+    if (global.SocialManeuvers?.SocialEnergyBank?.adjust) {
+      const newEnergy = global.SocialManeuvers.SocialEnergyBank.adjust(playerId, -amount);
+      console.info(`[NominationIntroModal] Deducted ${amount} energy from player ${playerId}, new balance: ${newEnergy}`);
+      return true;
+    }
+    
+    // Fallback to SocialResources
+    if (global.SocialManeuvers?.SocialResources?.adjust) {
+      global.SocialManeuvers.SocialResources.adjust(playerId, 'energy', -amount);
+      console.info(`[NominationIntroModal] Deducted ${amount} energy from player ${playerId} via SocialResources`);
+      return true;
+    }
+    
+    console.warn('[NominationIntroModal] Unable to deduct energy - no energy system available');
+    return false;
+  }
+
+  /**
+   * Add player social energy
+   * @param {number} playerId - Player ID
+   * @param {number} amount - Amount to add
+   * @returns {boolean} Success
+   */
+  function addPlayerEnergy(playerId, amount) {
+    // Try SocialManeuvers energy bank first
+    if (global.SocialManeuvers?.SocialEnergyBank?.adjust) {
+      const newEnergy = global.SocialManeuvers.SocialEnergyBank.adjust(playerId, amount);
+      console.info(`[NominationIntroModal] Added ${amount} energy to player ${playerId}, new balance: ${newEnergy}`);
+      return true;
+    }
+    
+    // Fallback to SocialResources
+    if (global.SocialManeuvers?.SocialResources?.adjust) {
+      global.SocialManeuvers.SocialResources.adjust(playerId, 'energy', amount);
+      console.info(`[NominationIntroModal] Added ${amount} energy to player ${playerId} via SocialResources`);
+      return true;
+    }
+    
+    console.warn('[NominationIntroModal] Unable to add energy - no energy system available');
+    return false;
   }
 
   /**
@@ -137,7 +254,20 @@
     }
     styleElement = null;
 
-    console.info('[NominationIntroModal] Cleanup complete');
+    // Clear plea active flag
+    const g = global.game;
+    if (g) {
+      g.__nominationPleaActive = false;
+    }
+
+    // Reset module state to IDLE for next show
+    currentState = STATE.IDLE;
+    resolved = false;
+    resolvePromise = null;
+    modalShowTime = 0;
+    currentRiskData = null;
+
+    console.info('[NominationIntroModal] Cleanup complete - state reset to IDLE');
   }
 
   /**
@@ -163,6 +293,7 @@
 
   /**
    * Dismiss modal - animates out, resolves promise, then cleans up
+   * Also forces phase advance if needed
    */
   function dismiss() {
     if (currentState === STATE.DISMISSING || currentState === STATE.DONE) {
@@ -187,10 +318,76 @@
       }
     }
 
+    // Dispatch dismissal event
+    try {
+      const event = new CustomEvent('bb:noms:intro:dismissed', {
+        detail: { timestamp: Date.now() }
+      });
+      window.dispatchEvent(event);
+      console.info('[NominationIntroModal] Dispatched bb:noms:intro:dismissed event');
+    } catch (err) {
+      console.error('[NominationIntroModal] Error dispatching event:', err);
+    }
+
+    // Force phase advance to nominations
+    forcePhaseAdvance();
+
     // Cleanup after animation (or immediately if no animation)
     setTimeout(() => {
       cleanup();
     }, CONFIG.DISMISS_ANIMATION_MS);
+  }
+
+  /**
+   * Force phase advance to nominations
+   * Sets timer to 1 second if phase cannot advance immediately
+   */
+  function forcePhaseAdvance() {
+    const g = global.game;
+    if (!g) return;
+
+    console.info('[NominationIntroModal] Forcing phase advance to nominations');
+
+    // Try to set phase directly if setPhase is available
+    if (typeof g.setPhase === 'function') {
+      try {
+        // Set to nominations phase with 1 second timer
+        g.setPhase('nominations', 1);
+        console.info('[NominationIntroModal] Set phase to nominations with 1s timer');
+        return;
+      } catch (err) {
+        console.warn('[NominationIntroModal] Error calling setPhase:', err);
+      }
+    }
+
+    // Fallback: try to shorten current phase timer to 1 second
+    if (g.phaseEndsAt || g.endAt) {
+      const now = Date.now();
+      const targetEndTime = now + 1000; // 1 second from now
+      
+      if (g.phaseEndsAt) {
+        g.phaseEndsAt = targetEndTime;
+      }
+      if (g.endAt) {
+        g.endAt = targetEndTime;
+      }
+      
+      console.info('[NominationIntroModal] Set phase end time to 1s from now');
+      return;
+    }
+
+    // Last resort: try global phase advance functions
+    if (typeof global.schedulePhaseAdvanceIn === 'function') {
+      try {
+        global.schedulePhaseAdvanceIn(1000);
+        console.info('[NominationIntroModal] Scheduled phase advance in 1s');
+        return;
+      } catch (err) {
+        console.warn('[NominationIntroModal] Error scheduling phase advance:', err);
+      }
+    }
+
+    console.warn('[NominationIntroModal] Unable to force phase advance - no suitable method found');
   }
 
   /**
@@ -234,7 +431,52 @@
   }
 
   /**
-   * Show risk result view
+   * Handle ad recharge flow
+   * Calls global.showAdReward hook and awards energy on success
+   * @returns {Promise<boolean>} Success status
+   */
+  async function handleRecharge() {
+    const g = global.game;
+    const humanId = g?.humanId;
+    
+    if (!humanId) {
+      showToast('Unable to recharge energy');
+      return false;
+    }
+
+    console.info('[NominationIntroModal] Starting recharge flow');
+
+    try {
+      // Call the ad hook (global.showAdReward)
+      if (typeof global.showAdReward === 'function') {
+        const result = await global.showAdReward();
+        
+        if (result && result.rewarded) {
+          // Award energy
+          const amount = result.amount || CONFIG.RECHARGE_ENERGY_AMOUNT;
+          addPlayerEnergy(humanId, amount);
+          showToast(`+${amount} social energy! You're recharged.`, 2500);
+          return true;
+        } else {
+          showToast('Ad viewing cancelled');
+          return false;
+        }
+      } else {
+        // Fallback for testing: auto-award energy
+        console.warn('[NominationIntroModal] global.showAdReward not available, using fallback');
+        addPlayerEnergy(humanId, CONFIG.RECHARGE_ENERGY_AMOUNT);
+        showToast(`+${CONFIG.RECHARGE_ENERGY_AMOUNT} social energy! You're recharged.`, 2500);
+        return true;
+      }
+    } catch (err) {
+      console.error('[NominationIntroModal] Recharge error:', err);
+      showToast('Unable to recharge energy at this time');
+      return false;
+    }
+  }
+
+  /**
+   * Show risk result view with categorical labels
    */
   function showRiskView() {
     if (currentState !== STATE.SHOWING) return;
@@ -243,6 +485,8 @@
     currentState = STATE.RISK_VIEW;
 
     const riskData = computeNominationRisk();
+    currentRiskData = riskData; // Cache for post-plea update
+    const riskCategory = getRiskCategory(riskData.risk);
     const content = overlayElement.querySelector('#nomination-modal-content');
     
     if (!content) return;
@@ -273,30 +517,45 @@
     titleEl.textContent = 'Your Nomination Risk';
     content.appendChild(titleEl);
 
-    // Risk percentage
-    const riskPercentEl = document.createElement('div');
-    riskPercentEl.style.cssText = `
-      font-size: 3rem;
+    // Risk category label (instead of percentage)
+    const riskLabelEl = document.createElement('div');
+    riskLabelEl.style.cssText = `
+      font-size: 2.5rem;
       font-weight: 700;
-      color: ${riskData.risk > 70 ? '#ff4444' : riskData.risk > 40 ? '#ffaa44' : '#44ff88'};
+      color: ${riskCategory.color};
       margin: 10px 0;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     `;
-    riskPercentEl.textContent = `${riskData.risk}%`;
-    content.appendChild(riskPercentEl);
+    riskLabelEl.textContent = riskCategory.category;
+    content.appendChild(riskLabelEl);
 
-    // Tip text
+    // Category description
+    const descEl = document.createElement('p');
+    descEl.style.cssText = `
+      font-size: 1.1rem;
+      color: #b2c2d5;
+      line-height: 1.6;
+      margin: 10px 0 8px 0;
+      font-weight: 500;
+    `;
+    descEl.textContent = riskCategory.description;
+    content.appendChild(descEl);
+
+    // Contextual explanation
     const tipEl = document.createElement('p');
     tipEl.style.cssText = `
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #8a9fb5;
-      line-height: 1.6;
+      line-height: 1.5;
       margin: 10px 0 20px 0;
       max-width: 400px;
       margin-left: auto;
       margin-right: auto;
+      font-style: italic;
     `;
-    tipEl.textContent = 'This estimate considers your relationships, threat level, and available nomination slots.';
+    tipEl.textContent = riskData.explanation;
     content.appendChild(tipEl);
 
     // Buttons container
@@ -308,34 +567,76 @@
       margin-top: 24px;
     `;
 
-    // Make a deal button (plea)
-    const pleaButton = document.createElement('button');
-    pleaButton.textContent = 'Make a Deal with HOH';
-    pleaButton.style.cssText = `
-      padding: 14px 28px;
-      font-size: 1rem;
-      font-weight: 600;
-      background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-      color: #1a2f44;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
-    `;
-    pleaButton.addEventListener('mouseenter', () => {
-      pleaButton.style.transform = 'translateY(-2px)';
-      pleaButton.style.boxShadow = '0 6px 16px rgba(255, 215, 0, 0.4)';
-    }, { signal: abortController.signal });
-    pleaButton.addEventListener('mouseleave', () => {
-      pleaButton.style.transform = 'translateY(0)';
-      pleaButton.style.boxShadow = '0 4px 12px rgba(255, 215, 0, 0.3)';
-    }, { signal: abortController.signal });
-    pleaButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      handlePleaFlow();
-    }, { signal: abortController.signal });
-    buttonsContainer.appendChild(pleaButton);
+    // Make a plea button (only for high/very high/extreme risk)
+    if (isHighRisk(riskData.risk)) {
+      const g = global.game;
+      const humanId = g?.humanId;
+      const currentEnergy = getPlayerEnergy(humanId);
+      const canAffordPlea = currentEnergy >= CONFIG.PLEA_ENERGY_COST;
+
+      if (canAffordPlea) {
+        const pleaButton = document.createElement('button');
+        pleaButton.textContent = `Make a Plea to HOH (${CONFIG.PLEA_ENERGY_COST} energy)`;
+        pleaButton.style.cssText = `
+          padding: 14px 28px;
+          font-size: 1rem;
+          font-weight: 600;
+          background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+          color: #1a2f44;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        `;
+        pleaButton.addEventListener('mouseenter', () => {
+          pleaButton.style.transform = 'translateY(-2px)';
+          pleaButton.style.boxShadow = '0 6px 16px rgba(255, 215, 0, 0.4)';
+        }, { signal: abortController.signal });
+        pleaButton.addEventListener('mouseleave', () => {
+          pleaButton.style.transform = 'translateY(0)';
+          pleaButton.style.boxShadow = '0 4px 12px rgba(255, 215, 0, 0.3)';
+        }, { signal: abortController.signal });
+        pleaButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          handlePleaFlow();
+        }, { signal: abortController.signal });
+        buttonsContainer.appendChild(pleaButton);
+      } else {
+        // Show recharge button if can't afford plea
+        const rechargeButton = document.createElement('button');
+        rechargeButton.innerHTML = '▶️ Recharge Energy (Watch Ad)';
+        rechargeButton.style.cssText = `
+          padding: 14px 28px;
+          font-size: 1rem;
+          font-weight: 600;
+          background: linear-gradient(135deg, #6b5dd6 0%, #8b7de6 100%);
+          color: #ffffff;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(107, 93, 214, 0.3);
+        `;
+        rechargeButton.addEventListener('mouseenter', () => {
+          rechargeButton.style.transform = 'translateY(-2px)';
+          rechargeButton.style.boxShadow = '0 6px 16px rgba(107, 93, 214, 0.4)';
+        }, { signal: abortController.signal });
+        rechargeButton.addEventListener('mouseleave', () => {
+          rechargeButton.style.transform = 'translateY(0)';
+          rechargeButton.style.boxShadow = '0 4px 12px rgba(107, 93, 214, 0.3)';
+        }, { signal: abortController.signal });
+        rechargeButton.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const success = await handleRecharge();
+          if (success) {
+            // Refresh the risk view to show updated buttons
+            showRiskView();
+          }
+        }, { signal: abortController.signal });
+        buttonsContainer.appendChild(rechargeButton);
+      }
+    }
 
     // OK button
     const okButton = document.createElement('button');
@@ -368,6 +669,7 @@
 
   /**
    * Handle plea flow - shows plea modal, processes result, displays toast
+   * Deducts 5 energy and updates risk rating after completion
    */
   async function handlePleaFlow() {
     if (currentState !== STATE.RISK_VIEW) return;
@@ -376,15 +678,36 @@
     currentState = STATE.PLEA;
 
     const g = global.game;
-    const player = global.getP?.(g.humanId);
+    const humanId = g?.humanId;
+    const player = global.getP?.(humanId);
     const hoh = global.getP?.(g.hohId);
 
     if (!player || !hoh) {
       console.error('[NominationIntroModal] Missing player or HOH');
-      showToast('Unable to make a deal at this time');
+      showToast('Unable to make a plea at this time');
       dismiss();
       return;
     }
+
+    // Check energy and deduct cost
+    const currentEnergy = getPlayerEnergy(humanId);
+    if (currentEnergy < CONFIG.PLEA_ENERGY_COST) {
+      console.warn('[NominationIntroModal] Insufficient energy for plea');
+      showToast(`Need ${CONFIG.PLEA_ENERGY_COST} energy to make a plea`);
+      // Offer recharge
+      const success = await handleRecharge();
+      if (success) {
+        // Retry plea after recharge
+        handlePleaFlow();
+      } else {
+        currentState = STATE.RISK_VIEW;
+      }
+      return;
+    }
+
+    // Deduct energy cost
+    deductPlayerEnergy(humanId, CONFIG.PLEA_ENERGY_COST);
+    console.info(`[NominationIntroModal] Deducted ${CONFIG.PLEA_ENERGY_COST} energy for plea`);
 
     // Set plea active flag
     g.__nominationPleaActive = true;
@@ -425,25 +748,51 @@
         g.__nomsPleaInfluence[player.id] = pleaResult.influence;
         
         // Apply affinity adjustment (in-memory only)
+        let affinityDelta = 0;
         if (pleaResult.successful) {
           if (!hoh.affinity) hoh.affinity = {};
           const currentAffinity = hoh.affinity[player.id] || 0.5;
-          hoh.affinity[player.id] = Math.min(1, currentAffinity + pleaResult.influence * 0.5);
+          const influenceFactor = pleaResult.influence || 0.1;
+          affinityDelta = influenceFactor * 0.5;
+          hoh.affinity[player.id] = Math.max(0, Math.min(1, currentAffinity + affinityDelta));
           
           console.info('[NominationIntroModal] Applied affinity adjustment', {
             playerId: player.id,
             hohId: hoh.id,
             influence: pleaResult.influence,
+            affinityDelta: affinityDelta,
             newAffinity: hoh.affinity[player.id]
           });
+        } else {
+          // Unsuccessful plea may slightly worsen relationship
+          if (!hoh.affinity) hoh.affinity = {};
+          const currentAffinity = hoh.affinity[player.id] || 0.5;
+          affinityDelta = -0.05;
+          hoh.affinity[player.id] = Math.max(0, Math.min(1, currentAffinity + affinityDelta));
+          console.info('[NominationIntroModal] Plea unsuccessful, slight affinity decrease');
         }
         
-        // Show non-blocking toast instead of alert()
-        const resultMsg = pleaResult.successful 
-          ? 'Your plea resonated with the HOH. Your relationship has improved slightly.'
-          : 'You\'ve made your case, but the HOH seems unmoved.';
+        // Recalculate risk with updated affinity
+        const oldRisk = currentRiskData?.risk || 50;
+        currentRiskData = computeNominationRisk();
+        const newRisk = currentRiskData.risk;
+        const riskChange = newRisk - oldRisk;
         
-        showToast(resultMsg, 3000);
+        console.info('[NominationIntroModal] Risk updated after plea', {
+          oldRisk,
+          newRisk,
+          riskChange
+        });
+        
+        // Show non-blocking toast with result
+        let resultMsg;
+        if (pleaResult.successful) {
+          resultMsg = `Your plea resonated with the HOH. Risk ${riskChange < 0 ? 'decreased' : 'changed'} to ${getRiskCategory(newRisk).category}.`;
+        } else {
+          resultMsg = 'You\'ve made your case, but the HOH seems unmoved.';
+        }
+        
+        showToast(resultMsg, 3500);
       } else {
         console.info('[NominationIntroModal] Plea skipped or timed out');
       }
@@ -454,6 +803,9 @@
     } finally {
       // Clear plea active flag
       g.__nominationPleaActive = false;
+
+      // Force phase advance after plea
+      forcePhaseAdvance();
 
       // Dismiss modal after plea completes (with small delay for toast)
       setTimeout(() => {
@@ -712,38 +1064,206 @@
           margin-left: auto;
           margin-right: auto;
         `;
-        bodyEl.textContent = 'The Head of Household will now nominate two houseguests for eviction. Your social game and relationships will be tested.';
-        content.appendChild(bodyEl);
+        
+        // Announcement mode: read-only when players <= 4
+        if (alive.length <= 4) {
+          bodyEl.textContent = 'The Head of Household will now nominate houseguests for eviction. The end is near.';
+          content.appendChild(bodyEl);
+          
+          // No interactive buttons in announcement mode
+          console.info('[NominationIntroModal] Announcement mode - players <= 4');
+        } else {
+          bodyEl.textContent = 'The Head of Household will now nominate two houseguests for eviction. Your social game and relationships will be tested.';
+          content.appendChild(bodyEl);
 
-        // Add risk check button if eligible
-        if (isEligible) {
-          const riskButton = document.createElement('button');
-          riskButton.textContent = 'Check My Risk';
-          riskButton.style.cssText = `
-            padding: 12px 28px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.25) 100%);
-            color: #ffd700;
-            border: 1px solid rgba(255, 215, 0, 0.4);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 8px;
-          `;
-          riskButton.addEventListener('mouseenter', () => {
-            riskButton.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0.35) 100%)';
-            riskButton.style.borderColor = 'rgba(255, 215, 0, 0.6)';
-          }, { signal: abortController.signal });
-          riskButton.addEventListener('mouseleave', () => {
-            riskButton.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.25) 100%)';
-            riskButton.style.borderColor = 'rgba(255, 215, 0, 0.4)';
-          }, { signal: abortController.signal });
-          riskButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showRiskView();
-          }, { signal: abortController.signal });
-          content.appendChild(riskButton);
+          // Add risk check button if eligible (not HOH, not veto holder)
+          if (isEligible) {
+            const currentEnergy = getPlayerEnergy(humanId);
+            const canAffordCheck = currentEnergy >= CONFIG.CHECK_RISK_ENERGY_COST;
+
+            // Button container for tooltip positioning
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = `
+              position: relative;
+              display: inline-block;
+              margin-top: 8px;
+            `;
+
+            if (canAffordCheck) {
+              // Create Check My Risk button with tooltip
+              const riskButton = document.createElement('button');
+              riskButton.textContent = `Check My Risk (${CONFIG.CHECK_RISK_ENERGY_COST} energy)`;
+              riskButton.setAttribute('aria-describedby', 'risk-check-tooltip');
+              riskButton.style.cssText = `
+                padding: 12px 28px;
+                font-size: 0.95rem;
+                font-weight: 600;
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.25) 100%);
+                color: #ffd700;
+                border: 1px solid rgba(255, 215, 0, 0.4);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              `;
+              
+              // Tooltip
+              const tooltip = document.createElement('div');
+              tooltip.id = 'risk-check-tooltip';
+              tooltip.setAttribute('role', 'tooltip');
+              tooltip.textContent = `Costs ${CONFIG.CHECK_RISK_ENERGY_COST} energy. Recharge available via ads.`;
+              tooltip.style.cssText = `
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%) translateY(-8px);
+                background: rgba(0, 0, 0, 0.9);
+                color: #fff;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                white-space: nowrap;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                z-index: 10;
+              `;
+              buttonContainer.appendChild(tooltip);
+
+              // Show/hide tooltip on hover and focus
+              riskButton.addEventListener('mouseenter', () => {
+                riskButton.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0.35) 100%)';
+                riskButton.style.borderColor = 'rgba(255, 215, 0, 0.6)';
+                tooltip.style.opacity = '1';
+              }, { signal: abortController.signal });
+              
+              riskButton.addEventListener('mouseleave', () => {
+                riskButton.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.25) 100%)';
+                riskButton.style.borderColor = 'rgba(255, 215, 0, 0.4)';
+                tooltip.style.opacity = '0';
+              }, { signal: abortController.signal });
+              
+              riskButton.addEventListener('focus', () => {
+                tooltip.style.opacity = '1';
+              }, { signal: abortController.signal });
+              
+              riskButton.addEventListener('blur', () => {
+                tooltip.style.opacity = '0';
+              }, { signal: abortController.signal });
+              
+              // Click handler with energy deduction
+              riskButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Deduct energy
+                if (deductPlayerEnergy(humanId, CONFIG.CHECK_RISK_ENERGY_COST)) {
+                  showToast(`-${CONFIG.CHECK_RISK_ENERGY_COST} energy`);
+                  showRiskView();
+                } else {
+                  showToast('Unable to check risk at this time');
+                }
+              }, { signal: abortController.signal });
+              
+              buttonContainer.appendChild(riskButton);
+            } else {
+              // Show Recharge button when insufficient energy
+              const rechargeButton = document.createElement('button');
+              rechargeButton.innerHTML = '▶️ Recharge Energy (Watch Ad)';
+              rechargeButton.setAttribute('aria-label', 'Recharge social energy by watching an ad');
+              rechargeButton.style.cssText = `
+                padding: 12px 28px;
+                font-size: 0.95rem;
+                font-weight: 600;
+                background: linear-gradient(135deg, #6b5dd6 0%, #8b7de6 100%);
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 4px 12px rgba(107, 93, 214, 0.3);
+              `;
+              
+              rechargeButton.addEventListener('mouseenter', () => {
+                rechargeButton.style.transform = 'translateY(-2px)';
+                rechargeButton.style.boxShadow = '0 6px 16px rgba(107, 93, 214, 0.4)';
+              }, { signal: abortController.signal });
+              
+              rechargeButton.addEventListener('mouseleave', () => {
+                rechargeButton.style.transform = 'translateY(0)';
+                rechargeButton.style.boxShadow = '0 4px 12px rgba(107, 93, 214, 0.3)';
+              }, { signal: abortController.signal });
+              
+              rechargeButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const success = await handleRecharge();
+                if (success) {
+                  // Refresh modal to show Check button
+                  // Re-render the button container
+                  const newEnergy = getPlayerEnergy(humanId);
+                  if (newEnergy >= CONFIG.CHECK_RISK_ENERGY_COST) {
+                    // Reload modal content with Check button available
+                    content.innerHTML = '';
+                    
+                    // Re-add icon
+                    const iconEl2 = document.createElement('div');
+                    iconEl2.style.cssText = `
+                      font-size: 4rem;
+                      margin-bottom: 20px;
+                      line-height: 1;
+                    `;
+                    iconEl2.textContent = '🔑';
+                    content.appendChild(iconEl2);
+                    
+                    // Re-add title
+                    const titleEl2 = document.createElement('h2');
+                    titleEl2.id = 'phase-intro-title-nomination';
+                    titleEl2.style.cssText = `
+                      font-size: 2.2rem;
+                      font-weight: 700;
+                      color: #ffffff;
+                      margin: 0 0 16px 0;
+                      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+                      letter-spacing: 0.5px;
+                    `;
+                    titleEl2.textContent = 'Nomination Ceremony';
+                    content.appendChild(titleEl2);
+                    
+                    // Re-add body
+                    const bodyEl2 = document.createElement('p');
+                    bodyEl2.style.cssText = bodyEl.style.cssText;
+                    bodyEl2.textContent = bodyEl.textContent;
+                    content.appendChild(bodyEl2);
+                    
+                    // Add Check button (now affordable)
+                    const riskButton2 = document.createElement('button');
+                    riskButton2.textContent = `Check My Risk (${CONFIG.CHECK_RISK_ENERGY_COST} energy)`;
+                    riskButton2.style.cssText = `
+                      padding: 12px 28px;
+                      font-size: 0.95rem;
+                      font-weight: 600;
+                      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.25) 100%);
+                      color: #ffd700;
+                      border: 1px solid rgba(255, 215, 0, 0.4);
+                      border-radius: 8px;
+                      cursor: pointer;
+                      transition: all 0.2s ease;
+                      margin-top: 8px;
+                    `;
+                    riskButton2.addEventListener('click', (e) => {
+                      e.stopPropagation();
+                      if (deductPlayerEnergy(humanId, CONFIG.CHECK_RISK_ENERGY_COST)) {
+                        showToast(`-${CONFIG.CHECK_RISK_ENERGY_COST} energy`);
+                        showRiskView();
+                      }
+                    }, { signal: abortController.signal });
+                    content.appendChild(riskButton2);
+                  }
+                }
+              }, { signal: abortController.signal });
+              
+              buttonContainer.appendChild(rechargeButton);
+            }
+
+            content.appendChild(buttonContainer);
+          }
         }
 
         modal.appendChild(content);
@@ -775,6 +1295,9 @@
           if (prefersReducedMotion) {
             modalInRaf.style.transition = 'none';
           }
+          
+          // Record show time for visibility threshold check
+          modalShowTime = Date.now();
         });
 
         // Click outside overlay to dismiss
@@ -799,15 +1322,22 @@
           }
         }, { signal: abortController.signal });
 
-        // Handle tab visibility changes (alt-tab protection)
-        // If user switches tabs while modal is showing, proactively dismiss
-        // to avoid returning to a broken intermediate state
+        // Handle tab visibility changes (alt-tab protection with threshold)
+        // Only dismiss if modal has been visible for more than 500ms
+        // This prevents accidental dismissal on quick alt-tab
         document.addEventListener('visibilitychange', () => {
           if (document.hidden) {
+            // Check if modal has been visible long enough
+            const visibleDuration = Date.now() - modalShowTime;
+            if (visibleDuration < CONFIG.VISIBILITY_THRESHOLD_MS) {
+              console.info(`[NominationIntroModal] Tab hidden but modal only visible for ${visibleDuration}ms, not dismissing`);
+              return;
+            }
+            
             // Tab became hidden while modal is showing
             const vulnerableStates = [STATE.SHOWING, STATE.RISK_VIEW, STATE.PLEA];
             if (vulnerableStates.includes(currentState)) {
-              console.warn('[NominationIntroModal] Tab hidden while modal active, dismissing to prevent freeze');
+              console.warn('[NominationIntroModal] Tab hidden while modal active (>500ms), dismissing to prevent freeze');
               dismiss();
             }
           }
