@@ -1717,27 +1717,36 @@
       await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
       await waitCardsIdle();
 
-      // Determine winner from eligible participants
-      // Filter out any players with score of 0 - they cannot win
-      const scoredEntries = [...g.lastCompScores.entries()]
-        .filter(([id]) => elig.includes(id))
-        .filter(([id, score]) => score > 0);
-      
-      // If all players scored 0, pick a random eligible player as fallback
-      // EXCEPT: Never pick human player with 0 score (who didn't play)
-      // ENDURANCE FIX: Skip fallback if authoritative winner already exists
-      if (scoredEntries.length === 0) {
-        // Check if we have an authoritative winner from endurance minigame
-        if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
-          console.info(`[hoh] ✓ Authoritative winner exists (${g.__authoritativeWinner.playerId}), skipping random fallback`);
-          // Ensure the authoritative winner has a valid score
-          const authWinner = g.__authoritativeWinner.playerId;
-          if (!g.lastCompScores.has(authWinner) || g.lastCompScores.get(authWinner) === 0) {
-            console.warn(`[hoh] Authoritative winner ${authWinner} has no score, setting to ${g.__authoritativeWinner.score}`);
-            g.lastCompScores.set(authWinner, g.__authoritativeWinner.score);
-          }
-          scoredEntries.push([authWinner, g.lastCompScores.get(authWinner)]);
-        } else {
+      // ENDURANCE FIX: Check for authoritative winner FIRST before score-based determination
+      // If an endurance minigame has marked an authoritative winner, use it directly
+      let winner;
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        winner = g.__authoritativeWinner.playerId;
+        console.info(`[hoh] ✓ Using authoritative winner from endurance minigame: ${winner}`);
+        
+        // Ensure the authoritative winner has a valid score in lastCompScores
+        if (!g.lastCompScores.has(winner) || g.lastCompScores.get(winner) === 0) {
+          console.warn(`[hoh] Authoritative winner ${winner} has no score, setting to ${g.__authoritativeWinner.score}`);
+          g.lastCompScores.set(winner, g.__authoritativeWinner.score);
+        }
+        
+        // ENDURANCE FIX: Clear authoritative winner flag immediately after use
+        // This prevents it from affecting later phases or competitions
+        console.debug('[hoh] Clearing authoritative winner flag after use');
+        delete g.__authoritativeWinner;
+      } else {
+        // No authoritative winner - use score-based determination
+        console.debug('[hoh] No authoritative winner, using score-based determination');
+        
+        // Determine winner from eligible participants
+        // Filter out any players with score of 0 - they cannot win
+        const scoredEntries = [...g.lastCompScores.entries()]
+          .filter(([id]) => elig.includes(id))
+          .filter(([id, score]) => score > 0);
+        
+        // If all players scored 0, pick a random eligible player as fallback
+        // EXCEPT: Never pick human player with 0 score (who didn't play)
+        if (scoredEntries.length === 0) {
           console.warn('[hoh] All players scored 0, selecting random winner from eligible (excluding human with 0 score)');
           // Exclude human player who didn't play from fallback selection
           const eligibleForFallback = elig.filter(id => {
@@ -1763,29 +1772,15 @@
           }
           
           const randomIndex = Math.floor((global.rng?.() || Math.random()) * eligibleForFallback.length);
-          const winner = eligibleForFallback[randomIndex];
+          winner = eligibleForFallback[randomIndex];
           // Give the random winner a minimal score > 0
           g.lastCompScores.set(winner, 1);
           scoredEntries.push([winner, 1]);
-        }
-      }
-      
-      const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
-      // NOTE: Using let instead of const to allow override in defensive check below
-      // This is needed when authoritative winner doesn't match the score-based winner
-      let winner = sortedEntries[0][0];
-      
-      // ENDURANCE FIX: Defensive check - warn if winner doesn't match authoritative winner
-      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
-        if (g.__authoritativeWinner.playerId !== winner) {
-          console.error(`[hoh] ⚠️ MISMATCH: Authoritative winner (${g.__authoritativeWinner.playerId}) differs from determined winner (${winner})!`);
-          console.error('[hoh] This should not happen - using authoritative winner');
-          console.debug('[hoh] ✓ Error Recovery: Preventing fallback winner override - applying authoritative winner');
-          // Override with authoritative winner
-          winner = g.__authoritativeWinner.playerId;
         } else {
-          console.info(`[hoh] ✓ Winner ${winner} matches authoritative winner from endurance minigame`);
-          console.debug('[hoh] ✓ Authoritative winner successfully applied without conflict');
+          // Sort entries by score and pick the highest
+          const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
+          winner = sortedEntries[0][0];
+          console.debug(`[hoh] Score-based winner: ${winner} with score ${g.lastCompScores.get(winner)}`);
         }
       }
       
@@ -1850,11 +1845,6 @@
       }
 
       global.updateHud(); global.renderPanel();
-      
-      // ENDURANCE FIX: Clear authoritative winner after use
-      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
-        console.info('[hoh] Clearing authoritative winner flag');
-        delete g.__authoritativeWinner;
       }
     } finally {
       g.__hohResolving = false;
