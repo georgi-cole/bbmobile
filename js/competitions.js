@@ -89,87 +89,6 @@
     } catch (e) { /* Non-fatal error, continue */ }
   }
 
-  /**
-   * Apply authoritative winner atomically within competitions context
-   * Called by endurance minigames (e.g., Hold-The-Wall) to ensure their winner
-   * is guaranteed to become HOH/POV regardless of synthetic scoring or fallbacks.
-   * 
-   * @param {Object} authWinner - Authoritative winner object
-   * @param {number} authWinner.playerId - Winner's player ID
-   * @param {number} authWinner.score - Winner's score
-   * @param {string} authWinner.minigame - Minigame identifier
-   * @param {string} authWinner.compType - Competition type ('hoh' or 'pov')
-   * @param {number} authWinner.timestamp - When winner was determined
-   * @returns {boolean} True on success, false on failure
-   */
-  global.__applyAuthoritativeWinner = function(authWinner) {
-    const g = global.game;
-    
-    if (!authWinner || !authWinner.playerId || !authWinner.compType) {
-      console.error('[Competitions] __applyAuthoritativeWinner: Invalid authWinner object', authWinner);
-      return false;
-    }
-    
-    const { playerId, score, minigame, compType } = authWinner;
-    
-    console.info(`[Competitions] __applyAuthoritativeWinner: Applying ${compType} winner - Player ${playerId} from ${minigame}`);
-    
-    try {
-      // Ensure lastCompScores contains winner with highest score
-      let maxScore = 0;
-      for (const [id, s] of g.lastCompScores.entries()) {
-        if (id !== playerId && s > maxScore) {
-          maxScore = s;
-        }
-      }
-      const winnerScore = Math.max(score || 100, maxScore + 1);
-      g.lastCompScores.set(playerId, winnerScore);
-      console.debug(`[Competitions] Set authoritative winner score: ${winnerScore} (max was ${maxScore})`);
-      
-      // Update game state based on competition type
-      if (compType === 'hoh') {
-        // Clear all HOH flags
-        for (const p of g.players) p.hoh = false;
-        
-        // Set new HOH
-        g.hohId = playerId;
-        g.lastHOHId = playerId;
-        g.lastHOHWeek = g.week;
-        
-        const winner = global.getP?.(playerId) || g.players.find(p => p.id === playerId);
-        if (winner) {
-          winner.hoh = true;
-          winner.stats = winner.stats || {};
-          winner.wins = winner.wins || {};
-          winner.stats.hohWins = (winner.stats.hohWins || 0) + 1;
-          winner.wins.hoh = (winner.wins.hoh || 0) + 1;
-          console.info(`[Competitions] ✓ HOH assigned to Player ${playerId}, total HOH wins: ${winner.stats.hohWins}`);
-        }
-      } else if (compType === 'pov') {
-        g.vetoHolder = playerId;
-        
-        const winner = global.getP?.(playerId) || g.players.find(p => p.id === playerId);
-        if (winner) {
-          winner.stats = winner.stats || {};
-          winner.wins = winner.wins || {};
-          winner.stats.vetoWins = (winner.stats.vetoWins || 0) + 1;
-          winner.wins.veto = (winner.wins.veto || 0) + 1;
-          console.info(`[Competitions] ✓ POV assigned to Player ${playerId}, total POV wins: ${winner.stats.vetoWins}`);
-        }
-      }
-      
-      // Clear transient flags from both locations
-      delete global.__authoritativeWinner;
-      delete g.__authoritativeWinner;
-      console.debug('[Competitions] ✓ Cleared authoritative winner flags');
-      
-      return true;
-    } catch (error) {
-      console.error('[Competitions] __applyAuthoritativeWinner failed:', error);
-      return false;
-    }
-  };
-
   // Fisher-Yates shuffle for legacy pool (one-time per season)
   function shuffleLegacyPool() {
     const g = global.game;
@@ -1348,59 +1267,6 @@
   // Expose globally for reuse
   global.showTriSlotReveal = showTriSlotReveal;
 
-  /**
-   * Show condensed authoritative winner reveal
-   * Used when an endurance minigame has pre-determined the winner
-   * Displays a faster, more focused reveal centered on the authoritative winner
-   * 
-   * @param {string} compType - Competition type ('HOH' or 'POV')
-   * @param {number} winnerId - Winner's player ID
-   * @param {number} score - Winner's score
-   * @param {Map} scoresMap - Full scores map for context (optional display)
-   * @returns {Promise<void>}
-   */
-  async function showAuthoritativeWinnerReveal(compType, winnerId, score, scoresMap) {
-    const g = global.game;
-    
-    console.info(`[Competitions] showAuthoritativeWinnerReveal: ${compType} winner = Player ${winnerId}`);
-    
-    // Build simplified top-3 array with authoritative winner first
-    const arr = [...scoresMap.entries()]
-      .map(([id, sc]) => ({
-        id,
-        sc,
-        name: global.safeName(id)
-      }))
-      .sort((a, b) => b.sc - a.sc);
-    
-    const top3 = arr.slice(0, 3);
-    
-    // Use condensed tri-slot reveal (shorter durations)
-    await showTriSlotReveal({
-      title: `${compType} Competition`,
-      topThree: top3,
-      winnerEmoji: '👑',
-      winnerTone: 'ok',
-      showIntro: false,
-      useNewPopup: true,
-      introDuration: 1000,      // Faster intro
-      placeDuration: 1000,      // Faster place reveal
-      winnerDuration: 2500      // Slightly faster winner reveal
-    });
-    
-    // Add crown animation to winner
-    setTimeout(() => {
-      const winnerName = top3[0].name;
-      document.querySelectorAll('.top-roster-tile').forEach(tile => {
-        const name = tile.querySelector('.top-tile-name')?.textContent;
-        if (name === winnerName) {
-          const crown = tile.querySelector('.badge-crown');
-          if (crown) crown.classList.add('crownPulse');
-        }
-      });
-    }, 300); // Faster crown animation trigger
-  }
-
   // New: Show top-3 reveal card with crown animation
   async function showCompetitionReveal(title, scoresMap, ids) {
     const g = global.game;
@@ -1864,11 +1730,8 @@
       const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
       
       let winner;
-      let useAuthoritativeReveal = false;
-      
       if (authWinner && authWinner.compType === 'hoh') {
         winner = authWinner.playerId;
-        useAuthoritativeReveal = true;
         console.info(`[hoh] ✓ Using authoritative winner from endurance minigame: ${winner}`);
         
         // Ensure the authoritative winner has the highest score in lastCompScores
@@ -1895,14 +1758,9 @@
         console.debug('[hoh] No authoritative winner, using score-based determination');
       }
 
-      // Show reveal: use condensed authoritative reveal if winner is pre-determined
-      if (useAuthoritativeReveal) {
-        console.info('[hoh] Using condensed authoritative reveal for endurance winner');
-        await showAuthoritativeWinnerReveal('HOH', winner, authWinner.score, g.lastCompScores);
-      } else {
-        // Standard reveal for score-based competitions
-        await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
-      }
+      // Always show full reveal sequence, even during fast-forward
+      // Users should see the winner and results when they skip
+      await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
       await waitCardsIdle();
 
       // Determine winner if not already set by authoritative winner above
