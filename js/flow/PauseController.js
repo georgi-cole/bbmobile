@@ -294,35 +294,16 @@
       if (pauseState.timerState.remainingMs <= 0) {
         console.info('[PauseController] Timer expired during pause, triggering immediate timeout');
         
-        // Capture callback to local variable before scheduling
-        const callback = pauseState.timerState.phaseTimeoutCallback;
-        
-        // Clear timer state and pausedTimeRemaining immediately
-        pauseState.timerState.phaseTimeoutCallback = null;
-        pauseState.timerState.endAt = null;
-        pauseState.timerState.remainingMs = null;
-        game.pausedTimeRemaining = null;
-        
-        // Trigger phase timeout callback immediately if valid
-        if (typeof callback === 'function') {
+        // Trigger phase timeout callback immediately
+        if (typeof pauseState.timerState.phaseTimeoutCallback === 'function') {
           try {
             // Use setTimeout to avoid blocking and allow UI updates
             setTimeout(() => {
-              // Guard invocation - callback might have been invalidated
-              if (typeof callback === 'function') {
-                try {
-                  callback();
-                  console.info('[PauseController] Phase timeout callback executed successfully');
-                } catch (innerErr) {
-                  console.error('[PauseController] Error inside phase timeout callback:', innerErr);
-                }
-              }
+              pauseState.timerState.phaseTimeoutCallback();
             }, 10);
           } catch (err) {
-            console.error('[PauseController] Error scheduling phase timeout callback:', err);
+            console.error('[PauseController] Error calling phase timeout callback:', err);
           }
-        } else {
-          console.warn('[PauseController] Timer expired but no valid callback found');
         }
       } else {
         // Timer has time remaining, restore with adjusted endAt
@@ -339,16 +320,11 @@
           remainingMs: pauseState.timerState.remainingMs,
           newEndAt
         });
-        
-        // Clear callback reference when resuming normally to prevent stale references
-        pauseState.timerState.phaseTimeoutCallback = null;
       }
     }
 
-    // Clear stored remaining time (already cleared above if expired, but ensure it's clear here too)
-    if (game.pausedTimeRemaining !== null) {
-      game.pausedTimeRemaining = null;
-    }
+    // Clear stored remaining time
+    game.pausedTimeRemaining = null;
   }
 
   /**

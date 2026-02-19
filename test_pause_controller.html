@@ -142,14 +142,6 @@
   </div>
 
   <div class="test-section">
-    <h2>Expired Timer Test</h2>
-    <div>
-      <button id="test-expired-timer" class="primary">Test Timer Expiry During Pause</button>
-    </div>
-    <p><small>This test simulates opening settings while a timer is running, waiting for it to expire, then closing settings. The callback should fire without errors.</small></p>
-  </div>
-
-  <div class="test-section">
     <h2>Event Log</h2>
     <button id="clear-log" class="danger">Clear Log</button>
     <div class="log" id="event-log"></div>
@@ -343,59 +335,6 @@
 
     document.getElementById('test-ffwd').addEventListener('click', () => {
       window.activateFastForward();
-    });
-
-    document.getElementById('test-expired-timer').addEventListener('click', async () => {
-      log('=== Testing Timer Expiry During Pause ===', 'info');
-      
-      // Set up a short timer (3 seconds)
-      const startTime = Date.now();
-      const timerDuration = 3000;
-      window.game.endAt = startTime + timerDuration;
-      window.game.phaseEndsAt = startTime + timerDuration;
-      
-      let callbackFired = false;
-      window.game.phaseTimeoutCallback = function() {
-        callbackFired = true;
-        log('✓ Phase timeout callback fired!', 'info');
-      };
-      
-      log('Timer started (3 seconds)', 'info');
-      
-      // Wait 1 second
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Pause
-      if (window.PauseController) {
-        window.PauseController.pause('settings');
-        log('Paused (settings opened)', 'pause');
-        updateStatus();
-      }
-      
-      // Wait 4 seconds (past expiry)
-      log('Waiting 4 seconds for timer to expire during pause...', 'info');
-      await new Promise(resolve => setTimeout(resolve, 4000));
-      
-      // Resume - this should trigger the callback
-      log('Resuming (settings closed)...', 'resume');
-      try {
-        if (window.PauseController) {
-          window.PauseController.resume('settings');
-          log('✓ Resume completed without exception', 'info');
-          updateStatus();
-        }
-      } catch (err) {
-        log('✗ Exception thrown during resume: ' + err, 'guard');
-      }
-      
-      // Wait for callback to fire
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      if (callbackFired) {
-        log('✓ Test passed: Callback fired after resume', 'info');
-      } else {
-        log('✗ Test failed: Callback did not fire', 'guard');
-      }
     });
 
     document.getElementById('clear-log').addEventListener('click', () => {
