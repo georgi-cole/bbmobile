@@ -322,19 +322,16 @@
       
       log('Starting finishCompPhase simulation...', 'info');
       
-      // Check for authoritative winner FIRST (dual-source pattern)
-      const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
-      
+      // Check for authoritative winner FIRST
       let winner;
-      if (authWinner && authWinner.compType === 'hoh') {
-        winner = authWinner.playerId;
+      if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
+        winner = g.__authoritativeWinner.playerId;
         log(`✓ Using authoritative winner: ${winner}`, 'success');
         updateStatus('authWinnerStatus', `Player ${winner}`, true);
         
-        // Clear flag immediately (both locations)
-        delete window.__authoritativeWinner;
+        // Clear flag immediately
         delete g.__authoritativeWinner;
-        log('✓ Cleared authoritative winner flags (both locations)', 'success');
+        log('✓ Cleared authoritative winner flag', 'success');
         updateStatus('flagClearedStatus', 'Yes', true);
       } else {
         // Fallback to score-based
@@ -407,13 +404,10 @@
         updateStatus('matchStatus', 'FAIL', false);
       }
       
-      // Check both locations for authoritative winner flag
-      if (!g.__authoritativeWinner && !window.__authoritativeWinner) {
-        log('✅ Authoritative winner flags cleared (both locations)', 'success');
+      if (!g.__authoritativeWinner) {
+        log('✅ Authoritative winner flag cleared', 'success');
       } else {
         log('❌ Authoritative winner flag NOT cleared', 'error');
-        if (g.__authoritativeWinner) log('  - Still set on window.game', 'error');
-        if (window.__authoritativeWinner) log('  - Still set on window', 'error');
         updateStatus('flagClearedStatus', 'No', false);
       }
     };
@@ -455,13 +449,10 @@
         updateStatus('matchStatus', 'FAIL', false);
       }
       
-      // Check both locations for authoritative winner flag
-      if (!g.__authoritativeWinner && !window.__authoritativeWinner) {
-        log('✅ Authoritative winner flags cleared (both locations)', 'success');
+      if (!g.__authoritativeWinner) {
+        log('✅ Authoritative winner flag cleared', 'success');
       } else {
         log('❌ Authoritative winner flag NOT cleared', 'error');
-        if (g.__authoritativeWinner) log('  - Still set on window.game', 'error');
-        if (window.__authoritativeWinner) log('  - Still set on window', 'error');
         updateStatus('flagClearedStatus', 'No', false);
       }
     };
@@ -510,13 +501,10 @@
         log('✅ Sofia (AI) correctly won', 'success');
       }
       
-      // Check both locations for authoritative winner flag
-      if (!g.__authoritativeWinner && !window.__authoritativeWinner) {
-        log('✅ Authoritative winner flags cleared (both locations)', 'success');
+      if (!g.__authoritativeWinner) {
+        log('✅ Authoritative winner flag cleared', 'success');
       } else {
         log('❌ Authoritative winner flag NOT cleared', 'error');
-        if (g.__authoritativeWinner) log('  - Still set on window.game', 'error');
-        if (window.__authoritativeWinner) log('  - Still set on window', 'error');
         updateStatus('flagClearedStatus', 'No', false);
       }
     };
@@ -543,30 +531,24 @@
           log('Checking authoritative winner...', 'info');
           
           const g = window.game;
-          // Check both locations for authoritative winner
-          const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
-          
-          if (authWinner) {
-            log(`✓ Authoritative winner set: Player ${authWinner.playerId}`, 'success');
-            if (window.__authoritativeWinner) log('  - Set on window', 'info');
-            if (g.__authoritativeWinner) log('  - Set on window.game', 'info');
-            updateStatus('authWinnerStatus', `Player ${authWinner.playerId}`, true);
+          if (g.__authoritativeWinner) {
+            log(`✓ Authoritative winner set: Player ${g.__authoritativeWinner.playerId}`, 'success');
+            updateStatus('authWinnerStatus', `Player ${g.__authoritativeWinner.playerId}`, true);
             
             // Simulate finish comp phase
             setTimeout(async () => {
-              const expectedWinner = authWinner.playerId;
               await simulateFinishCompPhase();
               
-              if (g.hohId === expectedWinner) {
+              if (g.hohId === g.__authoritativeWinner.playerId) {
                 log('✅ TEST PASSED: HOH matches authoritative winner', 'success');
                 updateStatus('matchStatus', 'PASS', true);
               } else {
-                log(`❌ TEST FAILED: HOH (${g.hohId}) does not match authoritative winner (${expectedWinner})`, 'error');
+                log('❌ TEST FAILED: HOH does not match authoritative winner', 'error');
                 updateStatus('matchStatus', 'FAIL', false);
               }
             }, 500);
           } else {
-            log('⚠ No authoritative winner set (checked both window and window.game)', 'warning');
+            log('⚠ No authoritative winner set', 'warning');
             updateStatus('authWinnerStatus', 'Not set', false);
           }
         }, {
