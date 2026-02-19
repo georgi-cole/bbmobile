@@ -781,11 +781,6 @@
           if (p.isPlayer && !hasHumanStartedHolding) {
             console.warn(`[HoldWall] ⚠ Marking non-starter (${p.name}) as dropped - cannot win by inactivity`);
             p.dropTimeMs = 0; // Mark as dropped at time 0
-            p.started = false; // Mark explicitly as non-starter
-          } else if (!p.started) {
-            // AI participant who never started (shouldn't happen, but defensive)
-            console.warn(`[HoldWall] ⚠ Marking AI non-starter (${p.name}) as dropped - cannot win by inactivity`);
-            p.dropTimeMs = 0;
           }
         }
       });
@@ -808,8 +803,7 @@
           name: p.name,
           timeMs: p.dropTimeMs,
           score: stillHolding.length === 0 && idx === 0 ? 100 : 0,
-          isPlayer: p.isPlayer,
-          dropped: true // Mark as dropped participant
+          isPlayer: p.isPlayer
         }))
       ];
       
@@ -865,7 +859,6 @@
             score: standings[0].score,
             minigame: gameId,
             compType: compType, // 'hoh' or 'pov'
-            isLastStanding: true, // HOTFIX: Mark as last-standing endurance competition
             timestamp: Date.now()
           };
           
@@ -879,7 +872,7 @@
             // GameGuard may block this - ignore error
           }
           
-          console.info(`[HoldWall] ✓ Authoritative last-standing winner set: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
+          console.info(`[HoldWall] ✓ Authoritative winner set on window and window.game: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
           
           // Immediately call atomic helper if available to apply winner in competitions context
           if (typeof window.__applyAuthoritativeWinner === 'function') {
