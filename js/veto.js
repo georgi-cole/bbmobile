@@ -1103,10 +1103,8 @@
           // ENDURANCE FIX: Check for authoritative winner before generating fallback scores
           // If an endurance minigame has marked an authoritative winner, skip generating AI scores
           // This prevents the fallback logic from overriding the endurance winner
-          // Check BOTH locations for authoritative winner (window direct + window.game)
-          const authCheck = window.__authoritativeWinner || g.__authoritativeWinner;
-          if(authCheck && authCheck.compType === 'pov'){
-            console.info('[veto] Skipping score generation for player ' + id + ' - authoritative winner exists (' + authCheck.playerId + ')');
+          if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+            console.info('[veto] Skipping score generation for player ' + id + ' - authoritative winner exists (' + g.__authoritativeWinner.playerId + ')');
             // Set 0 score for non-winners in endurance competitions
             g.lastCompScores.set(id, 0);
             continue;
@@ -1136,11 +1134,9 @@
     // ENDURANCE FIX: Check for authoritative winner BEFORE sorting and reveal
     // If an endurance minigame has marked an authoritative winner, inject their score
     // as the highest score so the reveal shows the correct winner
-    // Check BOTH locations for authoritative winner (window direct + window.game)
     var authWinner = null;
-    var authCheck = window.__authoritativeWinner || g.__authoritativeWinner;
-    if(authCheck && authCheck.compType === 'pov'){
-      authWinner = authCheck.playerId;
+    if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+      authWinner = g.__authoritativeWinner.playerId;
       console.info('[veto] ✓ Using authoritative winner from endurance minigame: ' + authWinner);
       
       // Ensure the authoritative winner has the highest score in lastCompScores
@@ -1152,15 +1148,13 @@
         }
       });
       // Set authoritative winner's score to be highest (use their actual score if higher)
-      var authScore = Math.max(authCheck.score || 100, maxScore + 1);
+      var authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
       g.lastCompScores.set(authWinner, authScore);
       console.info('[veto] Injected authoritative winner score: ' + authScore + ' (max was ' + maxScore + ')');
       
       // ENDURANCE FIX: Clear authoritative winner flag immediately after use
       // This prevents it from affecting later phases or competitions
-      // Clear BOTH locations
       console.info('[veto] Clearing authoritative winner flag after use');
-      delete window.__authoritativeWinner;
       delete g.__authoritativeWinner;
     }
 
@@ -1188,15 +1182,13 @@
     // ENDURANCE FIX: Skip fallback if authoritative winner already exists
     if(nonZeroArr.length === 0 && eligible.length){
       // Check if we have an authoritative winner from endurance minigame
-      // Check BOTH locations for authoritative winner (window direct + window.game)
-      const authCheck = window.__authoritativeWinner || g.__authoritativeWinner;
-      if(authCheck && authCheck.compType === 'pov'){
-        console.info('[veto] ✓ Authoritative winner exists (' + authCheck.playerId + '), skipping random fallback');
+      if(g.__authoritativeWinner && g.__authoritativeWinner.compType === 'pov'){
+        console.info('[veto] ✓ Authoritative winner exists (' + g.__authoritativeWinner.playerId + '), skipping random fallback');
         // Ensure the authoritative winner has a valid score
-        var authWinner = authCheck.playerId;
+        var authWinner = g.__authoritativeWinner.playerId;
         if(!g.lastCompScores.has(authWinner) || g.lastCompScores.get(authWinner) === 0){
-          console.warn('[veto] Authoritative winner ' + authWinner + ' has no score, setting to ' + authCheck.score);
-          g.lastCompScores.set(authWinner, authCheck.score);
+          console.warn('[veto] Authoritative winner ' + authWinner + ' has no score, setting to ' + g.__authoritativeWinner.score);
+          g.lastCompScores.set(authWinner, g.__authoritativeWinner.score);
         }
         nonZeroArr = [[authWinner, g.lastCompScores.get(authWinner)]];
         // Update original array for reveal display
@@ -1297,9 +1289,8 @@
     console.info('[veto] ✓ ASSERTION PASSED: POV correctly assigned to player ' + winner);
     
     // ASSERTION: Verify authoritative winner flag was cleared
-    if(g.__authoritativeWinner || window.__authoritativeWinner){
-      var staleData = g.__authoritativeWinner || window.__authoritativeWinner;
-      console.error('[veto] ASSERTION FAILED: Authoritative winner flag was not cleared! Stale data: ' + JSON.stringify(staleData));
+    if(g.__authoritativeWinner){
+      console.error('[veto] ASSERTION FAILED: Authoritative winner flag was not cleared! Stale data: ' + JSON.stringify(g.__authoritativeWinner));
     }
     
     var W = getP(global.game.vetoHolder);
