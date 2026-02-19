@@ -305,7 +305,10 @@
 
     // Use new scoring system if enabled and available
     let normalizedBase = base;
-    if (g?.cfg?.useNewMinigames && global.MinigameScoring) {
+    if (base > 200 && global.MinigameScoring) {
+      // Central-scale score (SCALE=1000): map 0-1000 → 0-100
+      normalizedBase = Math.max(0, Math.min(100, base * 100 / 1000));
+    } else if (g?.cfg?.useNewMinigames && global.MinigameScoring) {
       // New system: scores should already be 0-100 from games
       // Just ensure they're in valid range
       normalizedBase = Math.max(0, Math.min(100, base));
@@ -343,6 +346,7 @@
       const gameKey = label.split('/')[1];
       if (gameKey && gameKey !== 'AI') {
         if (g.phase === 'hoh') g.__hohGameKey = gameKey;
+        else if (g.phase === 'veto_comp') g.__vetoGameKey = gameKey;
         else if (g.phase === 'final3_comp1') g.__f3p1GameKey = gameKey;
         else if (g.phase === 'final3_comp2') g.__f3p2GameKey = gameKey;
         else if (g.phase === 'final3_comp3') g.__f3p3GameKey = gameKey;
@@ -482,7 +486,150 @@
     maybeFinishComp();
   }
 
-  function maybeFinishComp() {
+  /**
+   * Fill missing competition scores for a set of participants using deterministic
+   * AI generation. Replaces ad-hoc (5 + rand * N) fallback blocks.
+   *
+   * Rules applied in order:
+   *  1. Human who skipped (humanSkipped=true) → 0 (logged)
+   *  2. Authoritative winner (g.__authoritativeWinner matching compType) → skip (caller sets score)
+   *  3. AI players without scores → MinigameScoring.generateOpponentScoresForCompetition()
+   *     Scores are returned in central scale (0-1000) then mapped to comp scale (0-150).
+   *
+   * Sets g.__compAudit snapshot (seedParts, generatedScores, authoritativeWinner, mapping).
+   *
+   * @param {Array}  ids               - All participant IDs (already-scored players are skipped)
+   * @param {Object} opts
+   * @param {string}  opts.compType    - 'hoh', 'pov', 'final3_comp1/2/3' (default: g.phase)
+   * @param {boolean} opts.humanSkipped - Whether human did not complete the minigame
+   * @param {string}  opts.gameKey     - Minigame key used this competition (for seeding)
+   */
+  function fillMissingScores(ids, opts = {}) {
+    const g = global.game;
+    const compType = opts.compType || g.phase || 'hoh';
+    const humanSkipped = !!opts.humanSkipped;
+    const gameKey = opts.gameKey || 'unknown';
+    const humanId = g.humanId;
+
+    // Determine authoritative winner if any (must match compType)
+    const authWinner = g.__authoritativeWinner;
+    const authoritativeWinnerId = (authWinner && authWinner.compType === compType)
+      ? authWinner.playerId : null;
+    const authoritativeWinnerScore = authoritativeWinnerId
+      ? (global.MinigameScoring
+          ? global.MinigameScoring.mapCompToCentral(authWinner.score || 100)
+          : Math.round((authWinner.score || 100) * 1000 / 150))
+      : null;
+
+    // Step 1: Assign 0 to human who skipped
+    for (const id of ids) {
+      if (!g.lastCompScores.has(id) && String(id) === String(humanId) && humanSkipped) {
+        console.info(`[fillMissingScores] Human skipped (${compType}) - assigning 0 score`);
+        g.lastCompScores.set(id, 0);
+      }
+    }
+
+    // Collect IDs still needing AI-generated scores
+    // (excludes: already-scored, human, authoritative winner)
+    const missing = ids.filter(id => {
+      if (g.lastCompScores.has(id)) return false;
+      if (String(id) === String(humanId)) return false;
+      if (String(id) === String(authoritativeWinnerId)) return false;
+      return true;
+    });
+
+    if (missing.length === 0) {
+      // Defensive: ensure any remaining human without a score gets 0
+      for (const id of ids) {
+        if (!g.lastCompScores.has(id) && String(id) === String(humanId)) {
+          console.warn(`[fillMissingScores] Human has no score in ${compType} - assigning 0 (defensive)`);
+          g.lastCompScores.set(id, 0);
+        }
+      }
+      return;
+    }
+
+    // Seed parts: stable per competition (compSeed + week + compType + gameKey)
+    const seedParts = [g.__compSeed || Date.now(), g.week || 1, compType, gameKey];
+
+    // Get human's score in central scale as a baseline for opponent generation
+    const humanCompScore = g.lastCompScores.get(humanId != null ? humanId : -1) || 0;
+    const humanCentralScore = global.MinigameScoring
+      ? global.MinigameScoring.mapCompToCentral(humanCompScore)
+      : Math.round(humanCompScore * 1000 / 150);
+
+    // Build opponents array
+    const opponents = missing.map(id => {
+      const p = global.getP ? global.getP(id) : null;
+      return {
+        id,
+        compBeast: (p && p.compBeast) || 0.5,
+        persona: (p && p.persona) || null
+      };
+    });
+
+    const diffMult = (typeof getAIDifficultyMultiplier === 'function') ? getAIDifficultyMultiplier() : 1;
+
+    // Generate deterministic scores (central scale)
+    let generatedCentralScores = [];
+    if (global.MinigameScoring && typeof global.MinigameScoring.generateOpponentScoresForCompetition === 'function') {
+      generatedCentralScores = global.MinigameScoring.generateOpponentScoresForCompetition(
+        humanCentralScore, humanId, opponents, {
+          seedParts,
+          compType,
+          authoritativeWinnerId,
+          authoritativeWinnerScore,
+          difficultyMultiplier: diffMult,
+          humanSkipped
+        }
+      );
+    } else {
+      // Legacy fallback: non-deterministic random (used when MinigameScoring not loaded)
+      for (const opp of opponents) {
+        generatedCentralScores.push([opp.id, Math.round(Math.max(10, (5 + (global.rng?.() || Math.random()) * 20) * 10))]);
+      }
+    }
+
+    // Map central-scale scores to comp-store scale (0-150) and store
+    const mapToComp = global.MinigameScoring
+      ? s => global.MinigameScoring.mapCentralToCompScale(s)
+      : s => Math.round(Math.max(0, Math.min(150, s * 150 / 1000)));
+
+    for (const [id, centralScore] of generatedCentralScores) {
+      if (!g.lastCompScores.has(id)) {
+        const compScore = Math.max(1, mapToComp(centralScore)); // Minimum 1 to avoid 0-score
+        g.lastCompScores.set(id, compScore);
+      }
+    }
+
+    // Defensive: ensure all IDs have a score
+    for (const id of ids) {
+      if (!g.lastCompScores.has(id)) {
+        console.warn(`[fillMissingScores] Unscored player ${id} after generation - assigning 0`);
+        g.lastCompScores.set(id, 0);
+      }
+    }
+
+    // Write audit object for debugging and replay
+    g.__compAudit = {
+      seedParts,
+      compType,
+      gameKey,
+      generatedOpponentScores: generatedCentralScores,
+      authoritativeWinner: authoritativeWinnerId
+        ? { playerId: authoritativeWinnerId, score: authoritativeWinnerScore }
+        : null,
+      humanSkipped,
+      mapping: { centralScale: 1000, compScale: 150 },
+      timestamp: Date.now()
+    };
+
+    console.debug('[fillMissingScores] Filled', generatedCentralScores.length,
+      'scores for', compType, '| seed:', seedParts[0]);
+  }
+  global.fillMissingScores = fillMissingScores;
+
+
     const g = global.game; const alive = global.alivePlayers();
     let eligible = alive.map(p => p.id);
     // Week-based eligibility: only filter out player if they were HOH in previous week
@@ -1608,6 +1755,16 @@
     g.__hohGameKey = null; // Track which game was played
     g.__instructionsRenderedHOH = false; // Track if instructions were rendered
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
+    // Seed for deterministic opponent generation: stable per competition run
+    g.__compSeed = global.SeededRNG
+      ? global.SeededRNG.seedFrom('hoh', g.week || 1, g.humanId, Math.floor(Date.now() / 30000))
+      : ((g.rngSeed || 0) + (g.week || 1) * 1000 + 1);
+    // Ensure competitions config with opt-in human-bias exists (default: disabled)
+    g.cfg = g.cfg || {};
+    g.cfg.competitions = g.cfg.competitions || {};
+    if (!g.cfg.competitions.humanBias) {
+      g.cfg.competitions.humanBias = { enabled: false, chance: 0.20 };
+    }
     // Initialize lastHOHWeek if not set (for backwards compatibility with older saves)
     if (g.lastHOHWeek === undefined) {
       g.lastHOHWeek = null;
@@ -1687,20 +1844,15 @@
             g.lastCompScores.set(id, 0);
             continue;
           }
-          // AI players get random scores (always > 0)
-          let baseScore = 5 + (global.rng?.() || Math.random()) * 20;
-          const p = global.getP(id);
-          if (p) {
-            const recentWins = (p.stats?.hohWins || 0) + (p.stats?.vetoWins || 0);
-            if (recentWins >= 2) {
-              baseScore *= (0.85 + Math.random() * 0.15); // Slight reduction
-            }
-          }
-          // Ensure AI scores are always > 0 to prevent 0-score players from winning
-          baseScore = Math.max(1, baseScore);
-          g.lastCompScores.set(id, baseScore);
+          // AI players without scores: filled deterministically by fillMissingScores below
         }
       }
+      // Deterministically fill missing AI scores (replaces ad-hoc 5+rand*20 fallback)
+      fillMissingScores(elig, {
+        compType: 'hoh',
+        gameKey: g.__hohGameKey || 'unknown',
+        humanSkipped: !g.__humanPlayedHOH
+      });
 
       // Get participant IDs before reveal
       const participantIds = [...g.lastCompScores.keys()].filter(id => elig.includes(id));
@@ -2300,6 +2452,10 @@
     g.lastCompScoresMeta = new Map();
     g.__f3p1GameKey = null; // Track game key
     g.__humanPlayedF3P1 = false; // Reset participation flag
+    // Seed for deterministic opponent generation
+    g.__compSeed = global.SeededRNG
+      ? global.SeededRNG.seedFrom('final3_comp1', g.week || 1, g.humanId, Math.floor(Date.now() / 30000))
+      : ((g.rngSeed || 0) + (g.week || 1) * 1000 + 2);
     global.tv.say('Final 3 — Part 1');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P1);
@@ -2336,18 +2492,8 @@
     }
     
     const ids = global.alivePlayers().map(p => p.id);
-    // Assign fallback scores, but 0 for human who didn't play
-    for (const id of ids) {
-      if (!g.lastCompScores.has(id)) {
-        // Assign 0 score for human if they didn't play
-        if (id === g.humanId && !g.__humanPlayedF3P1) {
-          console.info('[F3P1] Human skipped - assigning 0 score');
-          g.lastCompScores.set(id, 0);
-          continue;
-        }
-        g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
-      }
-    }
+    // Deterministically fill missing scores (replaces ad-hoc 5+rand*5 fallback)
+    fillMissingScores(ids, { compType: 'final3_comp1', gameKey: g.__f3p1GameKey || 'unknown', humanSkipped: !g.__humanPlayedF3P1 });
     
     // Filter out players with score of 0 - they cannot win
     const arr = [...g.lastCompScores.entries()]
@@ -2551,6 +2697,10 @@
     g.lastCompScoresMeta = new Map();
     g.__f3p2GameKey = null; // Track game key
     g.__humanPlayedF3P2 = false; // Reset participation flag
+    // Seed for deterministic opponent generation
+    g.__compSeed = global.SeededRNG
+      ? global.SeededRNG.seedFrom('final3_comp2', g.week || 1, g.humanId, Math.floor(Date.now() / 30000))
+      : ((g.rngSeed || 0) + (g.week || 1) * 1000 + 3);
     global.tv.say('Final 3 — Part 2');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P2);
@@ -2642,18 +2792,8 @@
       g.__skipRequested = false;
     }
     
-    // Assign fallback scores, but 0 for human who didn't play
-    for (const id of duo) {
-      if (!g.lastCompScores.has(id)) {
-        // Assign 0 score for human if they didn't play
-        if (id === g.humanId && !g.__humanPlayedF3P2) {
-          console.info('[F3P2] Human skipped - assigning 0 score');
-          g.lastCompScores.set(id, 0);
-          continue;
-        }
-        g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
-      }
-    }
+    // Deterministically fill missing scores (replaces ad-hoc 5+rand*5 fallback)
+    fillMissingScores(duo, { compType: 'final3_comp2', gameKey: g.__f3p2GameKey || 'unknown', humanSkipped: !g.__humanPlayedF3P2 });
     
     // Filter out players with score of 0 - they cannot win
     const sorted = [...g.lastCompScores.entries()]
@@ -2894,6 +3034,10 @@
     g.__f3_finalists = finalists.slice();
     g.__f3p3GameKey = null; // Track game key
     g.__humanPlayedF3P3 = false; // Reset participation flag
+    // Seed for deterministic opponent generation
+    g.__compSeed = global.SeededRNG
+      ? global.SeededRNG.seedFrom('final3_comp3', g.week || 1, g.humanId, Math.floor(Date.now() / 30000))
+      : ((g.rngSeed || 0) + (g.week || 1) * 1000 + 4);
     global.tv.say('Final 3 — Part 3');
     global.phaseMusic?.('hoh');
     // setPhase() triggers renderPanel() -> renderF3P3(), which needs g.__f3_finalists
@@ -2991,18 +3135,8 @@
       g.__skipRequested = false;
     }
     
-    // Assign fallback scores, but 0 for human who didn't play
-    for (const id of finalists) {
-      if (!g.lastCompScores.has(id)) {
-        // Assign 0 score for human if they didn't play
-        if (id === g.humanId && !g.__humanPlayedF3P3) {
-          console.info('[F3P3] Human skipped - assigning 0 score');
-          g.lastCompScores.set(id, 0);
-          continue;
-        }
-        g.lastCompScores.set(id, 5 + (global.rng?.() || Math.random()) * 5);
-      }
-    }
+    // Deterministically fill missing scores (replaces ad-hoc 5+rand*5 fallback)
+    fillMissingScores(finalists, { compType: 'final3_comp3', gameKey: g.__f3p3GameKey || 'unknown', humanSkipped: !g.__humanPlayedF3P3 });
     
     // Filter out players with score of 0 - they cannot win
     const sorted = [...g.lastCompScores.entries()]

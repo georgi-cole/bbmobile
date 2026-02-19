@@ -149,6 +149,159 @@
     },
 
     /**
+     * Map a score from central scale (0-1000) to competition store scale (0-150).
+     * Competition store uses 0-150 for legacy backwards-compatibility.
+     * @param {number} centralScore - Score in 0-1000 range
+     * @returns {number} Score in 0-150 range
+     */
+    mapCentralToCompScale(centralScore) {
+      return Math.round(Math.max(0, Math.min(150, centralScore * 150 / SCALE)));
+    },
+
+    /**
+     * Map a score from competition store scale (0-150) to central scale (0-1000).
+     * @param {number} compScore - Score in 0-150 range
+     * @returns {number} Score in 0-1000 range
+     */
+    mapCompToCentral(compScore) {
+      return Math.round(Math.max(0, Math.min(SCALE, compScore * SCALE / 150)));
+    },
+
+    /**
+     * Generate deterministic, persona-aware opponent scores for a competition.
+     *
+     * This is the primary helper for filling missing scores before a competition
+     * reveal. It uses a seeded RNG for reproducible results, respects any
+     * authoritative winner (endurance games), and supports an opt-in human-bias.
+     *
+     * @param {number} humanScore - Human's score in CENTRAL scale (0-1000). Pass 0 if skipped.
+     * @param {string|number} humanId - Human player's ID (used to skip generating for them)
+     * @param {Array} opponents - Array of {id, compBeast?, persona?}
+     * @param {Object} opts
+     * @param {Array}  opts.seedParts            - Seed parts array for SeededRNG (default: [Date.now()])
+     * @param {string} opts.compType             - 'hoh', 'pov', 'final3_comp1', etc. (default: 'hoh')
+     * @param {*}      opts.authoritativeWinnerId- ID of authoritative winner; their score must not be exceeded
+     * @param {number} opts.authoritativeWinnerScore - Central-scale score of authoritative winner
+     * @param {number} opts.difficultyMultiplier  - AI difficulty scalar (default: 1.0)
+     * @param {boolean} opts.humanSkipped         - Whether human did not play (default: false)
+     * @returns {Array} Array of [id, centralScore] pairs (central scale, 0-1000)
+     */
+    generateOpponentScoresForCompetition(humanScore, humanId, opponents, opts = {}) {
+      const {
+        seedParts = [Date.now()],
+        compType = 'hoh',
+        authoritativeWinnerId = null,
+        authoritativeWinnerScore = null,
+        difficultyMultiplier = 1.0,
+        humanSkipped = false
+      } = opts;
+
+      if (!opponents || opponents.length === 0) return [];
+
+      const cfg = (g.game && g.game.cfg) || g.cfg || {};
+
+      // Opt-in human-bias config (default: disabled)
+      const humanBias = (cfg.competitions && cfg.competitions.humanBias) || { enabled: false, chance: 0.20 };
+
+      // Initialize seeded RNG: prefer SeededRNG (mulberry32) over bbSeededRng (LCG)
+      let rng;
+      if (g.SeededRNG && typeof g.SeededRNG.create === 'function') {
+        rng = g.SeededRNG.create(seedParts);
+      } else if (g.bbSeededRng) {
+        // Fold seedParts into a single integer for legacy bbSeededRng
+        const legacySeed = seedParts.reduce((acc, p) => ((acc * 31 + (Number(p) || 0)) >>> 0), 0);
+        rng = g.bbSeededRng(legacySeed || 1);
+      } else {
+        // Absolute fallback: non-deterministic
+        rng = { next: Math.random };
+      }
+      const random = () => rng.next();
+
+      // Phase-specific target win rate
+      const winChances = cfg.playerWinChances || DEFAULT_WIN_CHANCES;
+      const basePhase = compType.startsWith('final3') ? 'hoh' : compType;
+      const targetWinRate = winChances[basePhase] || DEFAULT_WIN_CHANCES.hoh;
+      const numOpponents = opponents.length;
+      // P(beat all N) = targetWinRate → P(beat one) = targetWinRate^(1/N)
+      const perOpponentBeatProb = Math.pow(targetWinRate, 1 / numOpponents);
+
+      // Opt-in bias: single RNG draw to decide if bias applies this run
+      // When enabled, all opponent scores are scaled down slightly so human
+      // has a higher chance of being top. Does NOT override authoritative winners.
+      const biasActive = humanBias.enabled && random() < humanBias.chance;
+      const biasMultiplier = biasActive ? 0.85 : 1.0;
+
+      // If human skipped, use a neutral reference point for generating opponents
+      const effectiveHumanScore = humanSkipped ? SCALE * 0.45 : humanScore;
+
+      const results = [];
+
+      for (const opponent of opponents) {
+        const id = opponent.id;
+
+        // Skip the authoritative winner — their score is managed by the caller
+        if (authoritativeWinnerId !== null && String(id) === String(authoritativeWinnerId)) {
+          continue;
+        }
+
+        const compBeastFactor = opponent.compBeast || 0.5;
+        const normalizedCompBeast = compBeastFactor > 1 ? compBeastFactor / 10 : compBeastFactor;
+
+        // Decide if human beats this opponent this competition
+        const humanBeatsOpponent = random() < perOpponentBeatProb;
+
+        let opponentScore;
+        if (humanBeatsOpponent) {
+          const marginPct = 0.05 + random() * 0.15; // 5-20% below human
+          opponentScore = effectiveHumanScore * (1 - marginPct);
+        } else {
+          const marginPct = 0.05 + random() * 0.15; // 5-20% above human
+          opponentScore = effectiveHumanScore * (1 + marginPct);
+        }
+
+        // compBeast + variance + difficulty + optional bias
+        const variance = (random() - 0.5) * 0.08; // ±4% variance
+        const compMultiplier = (0.90 + normalizedCompBeast * 0.20 + variance) * difficultyMultiplier * biasMultiplier;
+        opponentScore *= compMultiplier;
+
+        // Persona adjustments (reuse OpponentSynth helper if available)
+        const persona = opponent.persona || (g.getP && g.getP(id) && g.getP(id).persona) || null;
+        if (persona) {
+          if (persona.chaos > 0.7) {
+            opponentScore += (random() - 0.5) * SCALE * 0.10;
+          } else if (persona.chaos < 0.3) {
+            opponentScore = opponentScore * 0.95 + (SCALE / 2) * 0.05;
+          }
+          if (persona.aggr > 0.7) {
+            opponentScore += (random() - 0.5) * SCALE * 0.06;
+          }
+        }
+
+        // Fatigue: reduce for players with many recent wins
+        const playerData = g.getP ? g.getP(id) : null;
+        if (playerData) {
+          const recentWins = ((playerData.stats && playerData.stats.hohWins) || 0) +
+                             ((playerData.stats && playerData.stats.vetoWins) || 0);
+          if (recentWins >= 2) {
+            opponentScore *= 0.85 + random() * 0.15;
+          }
+        }
+
+        // Respect authoritative winner: cap below their score
+        if (authoritativeWinnerId !== null && authoritativeWinnerScore !== null) {
+          opponentScore = Math.min(opponentScore, authoritativeWinnerScore - 1);
+        }
+
+        // Clamp and round; minimum 1 so score-based filtering still works
+        opponentScore = Math.round(Math.max(1, Math.min(SCALE * 1.5, opponentScore)));
+
+        results.push([id, opponentScore]);
+      }
+
+      return results;
+    },
+
+    /**
      * Calculate final competition score with all modifiers
      * @param {Object} params - Scoring parameters
      * @param {number} params.rawScore - Raw game score
