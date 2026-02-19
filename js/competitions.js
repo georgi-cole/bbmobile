@@ -90,29 +90,6 @@
   }
 
   /**
-   * Apply authoritative win probabilities for last-standing competitions
-   * Sets winner to 100% probability, all others to 0%
-   * 
-   * @param {Object} g - Game state object
-   * @param {number} winnerId - Winner's player ID
-   */
-  function applyAuthoritativeWinProb(g, winnerId) {
-    if (!g.lastCompProbabilities) {
-      g.lastCompProbabilities = new Map();
-    }
-    
-    // Clear existing probabilities
-    g.lastCompProbabilities.clear();
-    
-    // Set winner to 100%, all participants to 0%
-    for (const [id] of g.lastCompScores.entries()) {
-      g.lastCompProbabilities.set(id, id === winnerId ? 1.0 : 0.0);
-    }
-    
-    console.info(`[Competitions] ✓ Applied authoritative win probabilities: Player ${winnerId} = 1.0, others = 0.0`);
-  }
-
-  /**
    * Apply authoritative winner atomically within competitions context
    * Called by endurance minigames (e.g., Hold-The-Wall) to ensure their winner
    * is guaranteed to become HOH/POV regardless of synthetic scoring or fallbacks.
@@ -122,7 +99,6 @@
    * @param {number} authWinner.score - Winner's score
    * @param {string} authWinner.minigame - Minigame identifier
    * @param {string} authWinner.compType - Competition type ('hoh' or 'pov')
-   * @param {boolean} authWinner.isLastStanding - Whether this is a last-standing endurance win
    * @param {number} authWinner.timestamp - When winner was determined
    * @returns {boolean} True on success, false on failure
    */
@@ -134,9 +110,9 @@
       return false;
     }
     
-    const { playerId, score, minigame, compType, isLastStanding } = authWinner;
+    const { playerId, score, minigame, compType } = authWinner;
     
-    console.info(`[Competitions] __applyAuthoritativeWinner: Applying ${compType} winner - Player ${playerId} from ${minigame}${isLastStanding ? ' (LAST STANDING)' : ''}`);
+    console.info(`[Competitions] __applyAuthoritativeWinner: Applying ${compType} winner - Player ${playerId} from ${minigame}`);
     
     try {
       // Ensure lastCompScores contains winner with highest score
@@ -149,11 +125,6 @@
       const winnerScore = Math.max(score || 100, maxScore + 1);
       g.lastCompScores.set(playerId, winnerScore);
       console.debug(`[Competitions] Set authoritative winner score: ${winnerScore} (max was ${maxScore})`);
-      
-      // For last-standing competitions, apply deterministic win probabilities
-      if (isLastStanding) {
-        applyAuthoritativeWinProb(g, playerId);
-      }
       
       // Update game state based on competition type
       if (compType === 'hoh') {
@@ -411,16 +382,7 @@
     const g = global.game; 
     g.lastCompScores = g.lastCompScores || new Map();
     g.lastCompScoresMeta = g.lastCompScoresMeta || new Map();
-    
-    // HOTFIX: If authoritative winner is set (endurance games), and score already exists,
-    // skip submission to prevent overwriting endurance game scores
-    if (g.lastCompScores.has(id)) {
-      const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
-      if (authWinner && authWinner.isLastStanding) {
-        console.info(`[Competition] ✓ Skipping score submission for player ${id} - authoritative last-standing winner already set`);
-      }
-      return false;
-    }
+    if (g.lastCompScores.has(id)) return false;
 
     // Use new scoring system if enabled and available
     let normalizedBase = base;
@@ -528,11 +490,7 @@
     // Check BOTH locations for authoritative winner (window direct + window.game)
     const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
     if (authWinner) {
-      if (authWinner.isLastStanding) {
-        console.info(`[OpponentSynth] Skipping synthetic generation - authoritative last-standing winner present: Player ${authWinner.playerId}`);
-      } else {
-        console.info('[OpponentSynth] Skipping - authoritative winner already set by endurance minigame');
-      }
+      console.info('[OpponentSynth] Skipping - authoritative winner already set by endurance minigame');
       return;
     }
 
@@ -1911,9 +1869,7 @@
       if (authWinner && authWinner.compType === 'hoh') {
         winner = authWinner.playerId;
         useAuthoritativeReveal = true;
-        
-        const isLastStanding = authWinner.isLastStanding === true;
-        console.info(`[hoh] ✓ Using authoritative winner from minigame: Player ${winner}${isLastStanding ? ' (isLastStanding=true)' : ''}`);
+        console.info(`[hoh] ✓ Using authoritative winner from endurance minigame: ${winner}`);
         
         // Ensure the authoritative winner has the highest score in lastCompScores
         // Find the current max score and set authoritative winner's score higher
@@ -1928,28 +1884,12 @@
         g.lastCompScores.set(winner, authScore);
         console.debug(`[hoh] Injected authoritative winner score: ${authScore} (max was ${maxScore})`);
         
-        // For last-standing competitions, set deterministic win probabilities
-        if (isLastStanding) {
-          applyAuthoritativeWinProb(g, winner);
-          console.info(`[hoh] ✓ Applied authoritative win probabilities for last-standing winner ${winner}`);
-        }
-        
         // ENDURANCE FIX: Clear authoritative winner flag immediately after use
         // This prevents it from affecting later phases or competitions
         // Clear BOTH locations
         console.debug('[hoh] Clearing authoritative winner flag after use');
         delete window.__authoritativeWinner;
         delete g.__authoritativeWinner;
-        
-        // Defensively call __applyAuthoritativeWinner again to ensure state consistency
-        if (typeof global.__applyAuthoritativeWinner === 'function') {
-          try {
-            global.__applyAuthoritativeWinner(authWinner);
-            console.info(`[hoh] ✓ __applyAuthoritativeWinner called defensively for Player ${winner}`);
-          } catch (e) {
-            console.warn('[hoh] __applyAuthoritativeWinner call failed (non-fatal):', e);
-          }
-        }
       } else {
         // No authoritative winner - use score-based determination
         console.debug('[hoh] No authoritative winner, using score-based determination');
