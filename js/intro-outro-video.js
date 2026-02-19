@@ -302,31 +302,6 @@
   }
   g.markGameStarted = markGameStarted;
 
-  // Wrap showFinaleCinematic so we can replace credits entirely with our video.
-  function wrapFinale(){
-    const prevShow = g.showFinaleCinematic;
-    if (typeof prevShow !== 'function' || prevShow.__ioWrapped) return;
-    const wrapped = function(){
-      try { prevShow.apply(this, arguments); } catch (e){ console.warn('[intro-outro] finale orig error', e); }
-      (async ()=>{
-        if (outroPlayed) return;
-        const url = await pickVideoUrl(OUTRO_URL, OUTRO_URL_MOBILE);
-        let hasVideo = true;
-        try { const r = await fetch(url, { method:'HEAD', cache:'no-store' }); hasVideo = !!r.ok; } catch {}
-        if (!hasVideo) return;
-        // Stop built-in credits just before or after they start, then play our outro
-        setTimeout(()=>{
-          try { g.stopCreditsSequence?.(); } catch {}
-          if (outroPlayed) return;
-          outroPlayed = true;
-          playVideo(url, { onEnd: ()=>{}, onSkip: ()=>{}, onFail: ()=>{} });
-        }, 1200);
-      })();
-    };
-    wrapped.__ioWrapped = true;
-    g.showFinaleCinematic = wrapped;
-    console.info('[intro-outro] showFinaleCinematic wrapped');
-  }
 
   // Fallback: wrap startCreditsSequence in case it’s invoked directly.
   function wrapCredits(){
@@ -361,7 +336,6 @@
   }
 
   function installOutroHooks(){
-    wrapFinale();
     wrapCredits();
   }
 

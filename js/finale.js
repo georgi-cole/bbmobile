@@ -292,24 +292,6 @@
       console.warn('[finale] failed to mark game as completed:', e);
     }
     
-    // Autoplay outro video after 5 seconds only on first call (unless already started via CREDITS button)
-    // Check if outro has already been autoplayed by checking a persistent flag
-    if(!g.__outroStarted && !g.__outroAutoPlayed){
-      setTimeout(()=>{
-        if(!g.__outroStarted && !g.__outroAutoPlayed && typeof g.playOutroVideo === 'function'){
-          console.info('[finale] autoplaying outro video (first time only)');
-          g.__outroStarted = true;
-          g.__outroAutoPlayed = true; // Mark that autoplay has occurred
-          try{
-            g.playOutroVideo(false); // Pass false to indicate automatic first play
-          }catch(e){
-            console.warn('[finale] autoplay outro error', e);
-            g.__outroStarted = false;
-          }
-        }
-      }, 5000);
-    }
-    
     return dim;
   }
 
