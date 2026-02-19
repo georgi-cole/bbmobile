@@ -629,17 +629,6 @@
   }
   global.fillMissingScores = fillMissingScores;
 
-
-    const g = global.game; const alive = global.alivePlayers();
-    let eligible = alive.map(p => p.id);
-    // Week-based eligibility: only filter out player if they were HOH in previous week
-    if (g.phase === 'hoh' && alive.length > 3 && g.week > 1 && g.lastHOHId && g.lastHOHWeek === (g.week - 1)) {
-      eligible = eligible.filter(id => id !== g.lastHOHId);
-    }
-    const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
-    if (done === eligible.length) { finishCompPhase(); }
-  }
-
   function logScoreboard(title, scoresMap, ids) {
     // Hidden: don't log full scoreboard anymore
     // Full results are shown in reveal card
