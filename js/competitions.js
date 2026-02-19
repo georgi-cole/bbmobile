@@ -411,7 +411,16 @@
     const g = global.game; 
     g.lastCompScores = g.lastCompScores || new Map();
     g.lastCompScoresMeta = g.lastCompScoresMeta || new Map();
-    if (g.lastCompScores.has(id)) return false;
+    
+    // HOTFIX: If authoritative winner is set (endurance games), and score already exists,
+    // skip submission to prevent overwriting endurance game scores
+    if (g.lastCompScores.has(id)) {
+      const authWinner = window.__authoritativeWinner || g.__authoritativeWinner;
+      if (authWinner && authWinner.isLastStanding) {
+        console.info(`[Competition] ✓ Skipping score submission for player ${id} - authoritative last-standing winner already set`);
+      }
+      return false;
+    }
 
     // Use new scoring system if enabled and available
     let normalizedBase = base;
