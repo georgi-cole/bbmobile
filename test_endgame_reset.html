@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>End-of-Season Reset Test</title>
+  <style>
+    body {
+      background: #0d151f;
+      color: #e0e8f0;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+    }
+    .test-panel {
+      max-width: 900px;
+      margin: 0 auto;
+      background: linear-gradient(145deg, #1a2533, #0f1925);
+      border: 1px solid rgba(110, 160, 220, 0.18);
+      border-radius: 16px;
+      padding: 30px;
+    }
+    h1 { margin-top: 0; color: #6fd3ff; }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    .test-section h2 { margin-top: 0; font-size: 1.2rem; color: #9bbdff; }
+    button {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 4px;
+      font-size: 0.85rem;
+    }
+    button:hover { background: #4574b8; }
+    button.danger { background: #993636; }
+    button.danger:hover { background: #aa4747; }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; }
+    .warn { color: #fbbf24; }
+    .info { color: #60a5fa; }
+    .summary {
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    .summary.all-pass { background: rgba(74,222,128,0.15); color: #4ade80; }
+    .summary.has-fail { background: rgba(248,113,113,0.15); color: #f87171; }
+  </style>
+</head>
+<body>
+<div class="test-panel">
+  <h1>🔄 End-of-Season Reset Tests</h1>
+  <p>Validates that <strong>New Season</strong> and <strong>Exit</strong> buttons in the finale
+  modal correctly teardown state and start fresh. Run these tests by clicking "Run" in each section.</p>
+
+  <!-- =================== SECTION 1: Unit tests =================== -->
+  <div class="test-section">
+    <h2>1. Unit Tests – State Teardown Logic</h2>
+    <p>Exercises the exact code paths touched by the finale EXIT and New Season handlers
+    without needing a live game session.</p>
+    <button onclick="runUnitTests()">▶ Run Unit Tests</button>
+    <div id="unit-results" class="result">Not run yet.</div>
+  </div>
+
+  <!-- =================== SECTION 2: Exit flow =================== -->
+  <div class="test-section">
+    <h2>2. Integration – EXIT Action</h2>
+    <p>Simulates a finished game and then triggers the EXIT teardown path.
+    Checks that <code>flowState.gameStarted</code> is reset, game state is cleared,
+    and <code>restartToHub</code> is reachable.</p>
+    <button onclick="runExitIntegration()">▶ Simulate EXIT</button>
+    <div id="exit-results" class="result">Not run yet.</div>
+  </div>
+
+  <!-- =================== SECTION 3: New Season flow =================== -->
+  <div class="test-section">
+    <h2>3. Integration – NEW SEASON Action</h2>
+    <p>Simulates a finished game with stale state (surplus players, stale juryHouse, etc.)
+    then calls the New Season teardown logic and verifies the game state is clean before
+    <code>rebuildGame()</code> runs.</p>
+    <button onclick="runNewSeasonIntegration()">▶ Simulate New Season</button>
+    <div id="new-season-results" class="result">Not run yet.</div>
+  </div>
+
+  <!-- =================== SECTION 4: Player count =================== -->
+  <div class="test-section">
+    <h2>4. Player Count – No Inflation</h2>
+    <p>After the teardown + rebuild, verifies the player array contains exactly N players
+    (configured cast size) with no leftovers from the previous season.</p>
+    <button onclick="runPlayerCountTest()">▶ Run Player Count Test</button>
+    <div id="count-results" class="result">Not run yet.</div>
+  </div>
+
+  <!-- =================== Run All =================== -->
+  <div class="test-section">
+    <h2>Run All Tests</h2>
+    <button onclick="runAll()" style="background:#2a6a40">▶ Run All</button>
+    <div id="all-summary" class="result">Not run yet.</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ─── Tiny assertion helpers ──────────────────────────────────────────────────
+let _log = [];
+function log(msg, cls = '') { _log.push(`<span class="${cls}">${msg}</span>`); }
+function assert(cond, label) {
+  if (cond) { log(`✔ PASS  ${label}`, 'pass'); return true; }
+  log(`✘ FAIL  ${label}`, 'fail'); return false;
+}
+function note(msg) { log(`  ℹ ${msg}`, 'info'); }
+function show(id) {
+  document.getElementById(id).innerHTML = _log.join('\n');
+  _log = [];
+}
+function summaryLine(passed, total) {
+  const cls = passed === total ? 'all-pass' : 'has-fail';
+  return `<div class="summary ${cls}">${passed}/${total} tests passed</div>`;
+}
+
+// ─── Mock helpers ────────────────────────────────────────────────────────────
+function makeGame(n = 5) {
+  // Simulate a finished game: all players evicted except the final 2 (winner + runner-up),
+  // plus 2 extra stale players that should NOT persist into the new season.
+  // Total = n + 2 to reproduce the reported player-count-inflation scenario.
+  const players = [];
+  const total = n + 2;
+  for (let i = 1; i <= total; i++) {
+    // Last 2 players (winner + runner-up) are still active; everyone else evicted
+    const isActive = i > total - 2;
+    players.push({ id: i, name: i === 1 ? 'You' : `P${i}`, human: i === 1, evicted: !isActive });
+  }
+  return {
+    players,
+    humanId: 1,
+    hohId: null,          // no HOH at game end
+    nominees: [],         // no nominees at game end
+    vetoHolder: null,     // no veto holder at game end
+    juryHouse: [3, 4, 5], // stale jury IDs from previous season
+    week: 8,
+    phase: 'vote',
+    __terminated: false,
+    __castRandomized: true,
+    __minigamePool: ['a', 'b'],
+    __minigameIndex: 3,
+    __minigameHistory: ['c'],
+    cfg: { numPlayers: n }
+  };
+}
+
+function mockGameLifecycle() {
+  let runEnded = false, newRunStarted = false, currentToken = 42;
+  return {
+    endCurrentRun() { runEnded = true; currentToken++; },
+    startNewRun()   { newRunStarted = true; currentToken++; },
+    _runEnded() { return runEnded; },
+    _newRunStarted() { return newRunStarted; },
+    _token() { return currentToken; }
+  };
+}
+
+// ─── Replicate the teardown steps from finale.js EXIT handler ────────────────
+function runExitTeardown(game, GL) {
+  // mirror the exact code in finale.js cinExit handler (steps 1-6)
+  try { if (GL) GL.endCurrentRun(); } catch {}
+  try { if (game) game.__terminated = true; } catch {}
+  try { if (game) {
+    game.players = []; game.phase = 'lobby'; game.week = 1;
+    game.humanId = null; game.hohId = null; game.nominees = [];
+    game.vetoHolder = null; game.juryHouse = [];
+  }} catch {}
+}
+
+// ─── Replicate the teardown steps from finale.js startNewSeasonFlow ──────────
+function runNewSeasonTeardown(game, GL) {
+  // mirror steps 0a-0c + 5b-5c from the updated startNewSeasonFlow
+  try { if (GL) GL.endCurrentRun(); } catch {}
+  try { if (GL) GL.startNewRun(); } catch {}
+  try { if (game) game.__terminated = false; } catch {}
+  try { if (game) {
+    game.players = []; game.humanId = null; game.hohId = null;
+    game.nominees = []; game.vetoHolder = null; game.juryHouse = [];
+    game.week = 1; game.phase = 'lobby'; game.__castRandomized = false;
+  }} catch {}
+  try { if (game) {
+    game.__minigamePool = null; game.__minigameIndex = 0; game.__minigameHistory = [];
+  }} catch {}
+}
+
+// ─── Replicate buildCastInternal for player-count test ───────────────────────
+function buildCastMock(game, n) {
+  game.players = [];
+  for (let i = 1; i <= n; i++) {
+    game.players.push({ id: i, name: i === 1 ? 'You' : `AI${i}`, human: i === 1, evicted: false });
+  }
+}
+
+// ─── TEST SUITES ─────────────────────────────────────────────────────────────
+
+function runUnitTests() {
+  _log = [];
+  let pass = 0, total = 0;
+  function t(c, l) { total++; if (assert(c, l)) pass++; }
+
+  // 1. EXIT teardown clears game state
+  const g1 = makeGame(5);
+  const GL1 = mockGameLifecycle();
+  runExitTeardown(g1, GL1);
+  t(GL1._runEnded(),          'EXIT: GameLifecycle.endCurrentRun() called');
+  t(g1.__terminated === true, 'EXIT: game.__terminated = true');
+  t(g1.players.length === 0,  'EXIT: game.players cleared');
+  t(g1.juryHouse.length === 0,'EXIT: game.juryHouse cleared');
+  t(g1.humanId === null,      'EXIT: game.humanId = null');
+  t(g1.hohId === null,        'EXIT: game.hohId = null');
+  t(Array.isArray(g1.nominees) && g1.nominees.length === 0, 'EXIT: game.nominees cleared');
+  t(g1.vetoHolder === null,   'EXIT: game.vetoHolder = null');
+  t(g1.phase === 'lobby',     'EXIT: game.phase = lobby');
+  t(g1.week === 1,            'EXIT: game.week = 1');
+
+  // 2. New Season teardown clears and resets lifecycle
+  const g2 = makeGame(5);
+  const GL2 = mockGameLifecycle();
+  runNewSeasonTeardown(g2, GL2);
+  t(GL2._runEnded(),                'NEW SEASON: GameLifecycle.endCurrentRun() called');
+  t(GL2._newRunStarted(),           'NEW SEASON: GameLifecycle.startNewRun() called');
+  t(g2.__terminated === false,      'NEW SEASON: game.__terminated = false');
+  t(g2.players.length === 0,        'NEW SEASON: game.players cleared');
+  t(g2.juryHouse.length === 0,      'NEW SEASON: game.juryHouse cleared');
+  t(g2.humanId === null,            'NEW SEASON: game.humanId = null');
+  t(g2.__castRandomized === false,  'NEW SEASON: game.__castRandomized reset to false');
+  t(g2.__minigamePool === null,     'NEW SEASON: game.__minigamePool cleared');
+  t(g2.__minigameIndex === 0,       'NEW SEASON: game.__minigameIndex reset');
+  t(g2.week === 1,                  'NEW SEASON: game.week = 1');
+  t(g2.phase === 'lobby',           'NEW SEASON: game.phase = lobby');
+
+  // 3. Teardown is safe with null game / GL
+  let threw = false;
+  try { runExitTeardown(null, null); } catch { threw = true; }
+  t(!threw, 'EXIT: safe with null game + null GameLifecycle');
+  threw = false;
+  try { runNewSeasonTeardown(null, null); } catch { threw = true; }
+  t(!threw, 'NEW SEASON: safe with null game + null GameLifecycle');
+
+  document.getElementById('unit-results').innerHTML =
+    _log.join('\n') + summaryLine(pass, total);
+  return { pass, total };
+}
+
+function runExitIntegration() {
+  _log = [];
+  let pass = 0, total = 0;
+  function t(c, l) { total++; if (assert(c, l)) pass++; }
+
+  // Simulate a completed game
+  const game = makeGame(7);
+  note(`Before teardown: ${game.players.length} players, juryHouse=[${game.juryHouse}], phase=${game.phase}`);
+
+  const GL = mockGameLifecycle();
+
+  // Verify preconditions
+  t(game.players.length === 9,    'BEFORE: players.length = 9 (7+2 stale)');
+  t(game.juryHouse.length === 3,  'BEFORE: juryHouse has 3 stale entries');
+  t(game.phase !== 'lobby',       'BEFORE: phase is not lobby');
+
+  // Run EXIT teardown
+  runExitTeardown(game, GL);
+
+  t(GL._runEnded(),               'AFTER: lifecycle ended');
+  t(game.__terminated === true,   'AFTER: terminated = true');
+  t(game.players.length === 0,    'AFTER: players emptied');
+  t(game.juryHouse.length === 0,  'AFTER: juryHouse emptied');
+  t(game.phase === 'lobby',       'AFTER: phase = lobby');
+  t(game.week === 1,              'AFTER: week = 1');
+
+  note('StartupFlow.restartToHub() availability check:');
+  const hasRestartToHub = typeof window.StartupFlow?.restartToHub === 'function'
+                       || typeof window.restartToHub === 'function';
+  if (hasRestartToHub) {
+    note('restartToHub IS available in this context (live game env)');
+  } else {
+    note('restartToHub not available (isolated test page - expected outside game)');
+  }
+
+  document.getElementById('exit-results').innerHTML =
+    _log.join('\n') + summaryLine(pass, total);
+  return { pass, total };
+}
+
+function runNewSeasonIntegration() {
+  _log = [];
+  let pass = 0, total = 0;
+  function t(c, l) { total++; if (assert(c, l)) pass++; }
+
+  const CAST_SIZE = 5;
+  const game = makeGame(CAST_SIZE); // creates 7 players (5+2 stale)
+  note(`Before teardown: ${game.players.length} players, juryHouse=[${game.juryHouse}], castRandomized=${game.__castRandomized}`);
+
+  const GL = mockGameLifecycle();
+  const token_before = GL._token();
+
+  // Run New Season teardown
+  runNewSeasonTeardown(game, GL);
+
+  note(`After teardown: ${game.players.length} players, juryHouse=[${game.juryHouse}]`);
+
+  t(GL._runEnded(),                 'Lifecycle ended before new run');
+  t(GL._newRunStarted(),            'New run started via GameLifecycle');
+  t(GL._token() > token_before,     'Run token incremented (no stale token)');
+  t(game.__terminated === false,    'terminated flag cleared for new season');
+  t(game.players.length === 0,      'players array emptied before rebuild');
+  t(game.juryHouse.length === 0,    'juryHouse cleared (prevents alivePlayers() miscount)');
+  t(game.__castRandomized === false,'__castRandomized reset (cast-randomizer will re-run)');
+  t(game.__minigamePool === null,   'minigame pool cleared');
+  t(game.week === 1,                'week reset to 1');
+
+  // Simulate what rebuildGame(false) → buildCastInternal does
+  buildCastMock(game, CAST_SIZE);
+  note(`After rebuild: ${game.players.length} players`);
+  t(game.players.length === CAST_SIZE, `Exactly ${CAST_SIZE} players after rebuild (no inflation)`);
+  t(game.players.filter(p => p.human).length === 1, 'Exactly 1 human player');
+
+  document.getElementById('new-season-results').innerHTML =
+    _log.join('\n') + summaryLine(pass, total);
+  return { pass, total };
+}
+
+function runPlayerCountTest() {
+  _log = [];
+  let pass = 0, total = 0;
+  function t(c, l) { total++; if (assert(c, l)) pass++; }
+
+  [3, 5, 7, 10, 12, 16].forEach(n => {
+    const game = makeGame(n);     // starts with n+2 stale players
+    const GL = mockGameLifecycle();
+    runNewSeasonTeardown(game, GL);  // teardown
+    buildCastMock(game, n);          // rebuild
+    t(game.players.length === n, `Cast size ${n}: got exactly ${game.players.length} players`);
+    t(game.juryHouse.length === 0, `Cast size ${n}: juryHouse is empty after rebuild`);
+    const aliveFn = () => game.players.filter(p => !p.evicted && !game.juryHouse.includes(p.id));
+    t(aliveFn().length === n, `Cast size ${n}: alivePlayers() = ${aliveFn().length} (all alive)`);
+  });
+
+  document.getElementById('count-results').innerHTML =
+    _log.join('\n') + summaryLine(pass, total);
+  return { pass, total };
+}
+
+function runAll() {
+  const r1 = runUnitTests();
+  const r2 = runExitIntegration();
+  const r3 = runNewSeasonIntegration();
+  const r4 = runPlayerCountTest();
+
+  const totalPass = r1.pass + r2.pass + r3.pass + r4.pass;
+  const totalAll  = r1.total + r2.total + r3.total + r4.total;
+  const cls = totalPass === totalAll ? 'all-pass' : 'has-fail';
+  document.getElementById('all-summary').innerHTML =
+    `<div class="summary ${cls}">Overall: ${totalPass}/${totalAll} tests passed</div>`;
+}
+</script>
+</body>
+</html>

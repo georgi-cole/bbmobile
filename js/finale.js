@@ -70,14 +70,53 @@
 
     // Wire buttons
     panel.querySelector('#cinExit').onclick=()=>{ 
-      console.info('[finale] EXIT clicked, navigating to intro hub');
+      console.info('[finale] EXIT clicked, initiating comprehensive teardown');
       
-      // Hide main game UI by removing the 'main-screen-built' class first
-      // This ensures the topbar and wrap elements are hidden via CSS
-      document.body.classList.remove('main-screen-built');
-      console.info('[finale] Removed main-screen-built class to hide game UI');
+      // 1. End current run via lifecycle system
+      try {
+        if (g.GameLifecycle) {
+          g.GameLifecycle.endCurrentRun();
+          console.info('[finale] ✓ Ended current run via GameLifecycle');
+        }
+      } catch (e) {
+        console.warn('[finale] Failed to end run via GameLifecycle', e);
+      }
       
-      // Pause/stop any running game loops to avoid background activity
+      // 2. Set termination flag for legacy compatibility
+      try {
+        if (g.game) {
+          g.game.__terminated = true;
+          console.info('[finale] ✓ Set game termination flag (legacy)');
+        }
+      } catch (e) {
+        console.warn('[finale] Failed to set termination flag', e);
+      }
+      
+      // 3. Stop Social AI Scheduler
+      try {
+        if (g.SocialAIScheduler && typeof g.SocialAIScheduler.stopAiSocialPhase === 'function') {
+          g.SocialAIScheduler.stopAiSocialPhase('finale-exit');
+          console.info('[finale] ✓ Social AI Scheduler stopped');
+        }
+        if (g.__smAutoDriver && typeof g.__smAutoDriver.stop === 'function') {
+          g.__smAutoDriver.stop();
+          console.info('[finale] ✓ Social AI auto-driver stopped');
+        }
+      } catch (e) {
+        console.warn('[finale] Failed to stop Social AI systems', e);
+      }
+      
+      // 4. Stop phase timer
+      try {
+        if (typeof g.stopPhaseTimer === 'function') {
+          g.stopPhaseTimer();
+          console.info('[finale] ✓ Phase timer stopped');
+        }
+      } catch (e) {
+        console.warn('[finale] Failed to stop phase timer', e);
+      }
+      
+      // 5. Pause/stop any running game loops to avoid background activity
       try {
         if (g.PauseController && typeof g.PauseController.pause === 'function') {
           g.PauseController.pause('finale-exit');
@@ -89,11 +128,34 @@
         console.warn('[finale] failed to pause game on exit', e);
       }
       
+      // 6. Clear game state to allow fresh restart
+      try {
+        if (g.game) {
+          g.game.players = [];
+          g.game.phase = 'lobby';
+          g.game.week = 1;
+          g.game.humanId = null;
+          g.game.hohId = null;
+          g.game.nominees = [];
+          g.game.vetoHolder = null;
+          g.game.juryHouse = [];
+          console.info('[finale] ✓ Game state cleared');
+        }
+      } catch (e) {
+        console.warn('[finale] Failed to clear game state', e);
+      }
+      
+      console.info('[finale] ✓ Teardown complete - returning to hub');
+      
       // Remove the finale modal
       try{dim.remove();}catch{} 
       
-      // Navigate back to intro hub
-      if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
+      // Navigate back to intro hub using StartupFlow.restartToHub() for proper reset
+      // This resets flowState.gameStarted/introHubShown and re-initializes IntroScreen
+      if (g.StartupFlow && typeof g.StartupFlow.restartToHub === 'function') {
+        console.info('[finale] Using StartupFlow.restartToHub()');
+        g.StartupFlow.restartToHub();
+      } else if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
         console.info('[finale] Showing intro hub after exit');
         g.IntroScreen.showWithPreload();
       } else if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
@@ -176,6 +238,50 @@
   function startNewSeasonFlow() {
     console.info('[new-season] starting new season flow');
 
+    // 0a) CRITICAL: End current run via lifecycle system
+    try {
+      if (g.GameLifecycle) {
+        g.GameLifecycle.endCurrentRun();
+        console.info('[new-season] ✓ Ended current run via GameLifecycle');
+      }
+    } catch (e) {
+      console.warn('[new-season] Failed to end current run via GameLifecycle:', e);
+    }
+
+    // 0b) CRITICAL: Start a new run using lifecycle system
+    try {
+      if (g.GameLifecycle) {
+        g.GameLifecycle.startNewRun();
+        console.info('[new-season] ✓ Started new run via GameLifecycle');
+      }
+    } catch (e) {
+      console.warn('[new-season] Failed to start new run via GameLifecycle:', e);
+    }
+
+    // 0c) CRITICAL: Clear termination flag for new season
+    try {
+      if (g.game) {
+        g.game.__terminated = false;
+        console.info('[new-season] ✓ Cleared termination flag for new season');
+      }
+    } catch (e) {
+      console.warn('[new-season] Failed to clear termination flag:', e);
+    }
+
+    // 0d) Stop Social AI systems before any rebuild
+    try {
+      if (g.SocialAIScheduler && typeof g.SocialAIScheduler.stopAiSocialPhase === 'function') {
+        g.SocialAIScheduler.stopAiSocialPhase('new-season');
+        console.info('[new-season] Social AI Scheduler stopped');
+      }
+      if (g.__smAutoDriver && typeof g.__smAutoDriver.stop === 'function') {
+        g.__smAutoDriver.stop();
+        console.info('[new-season] Social AI auto-driver stopped');
+      }
+    } catch (e) {
+      console.warn('[new-season] failed to stop Social AI systems:', e);
+    }
+
     // 1) Attempt to abort any active TV sequences / overlays
     try {
       if (g.TVSequence && typeof g.TVSequence.abort === 'function') {
@@ -237,6 +343,35 @@
       const el=document.getElementById(id);
       if(el) el.innerHTML='';
     });
+
+    // 5b) CRITICAL: Clear game state BEFORE rebuilding to prevent stale data
+    try {
+      if (g.game) {
+        g.game.players = [];
+        g.game.humanId = null;
+        g.game.hohId = null;
+        g.game.nominees = [];
+        g.game.vetoHolder = null;
+        g.game.juryHouse = [];
+        g.game.week = 1;
+        g.game.phase = 'lobby';
+        g.game.__castRandomized = false;
+        console.info('[new-season] ✓ Game state cleared for new season');
+      }
+    } catch(e) {
+      console.warn('[new-season] failed to clear game state:', e);
+    }
+
+    // 5c) Clear minigame pool for fresh selection
+    try {
+      if (g.game) {
+        g.game.__minigamePool = null;
+        g.game.__minigameIndex = 0;
+        g.game.__minigameHistory = [];
+      }
+    } catch(e) {
+      console.warn('[new-season] failed to clear minigame pool:', e);
+    }
 
     // 6) Rebuild game (same as before) but with a short, deliberate delay
     const API = g.Game || g;
