@@ -1,7 +1,7 @@
 // Settings Modal - integrates with GlobalPauseController
 
 export const SettingsModal = (() => {
-  const id = 'settings'; // Use normalized ID without 'modal:' prefix
+  const id = 'modal:settings';
   let el = null;
 
   function init() {
