@@ -841,25 +841,16 @@
         // Store winner player ID for HOH/POV determination
         const winnerParticipant = participantsByName.get(standings[0].name);
         if(winnerParticipant && winnerParticipant.id !== undefined){
-          const authWinner = {
+          // BUG FIX: Store on g.game (window.game), not g (window)
+          // competitions.js reads from g.__authoritativeWinner where g = window.game
+          g.game.__authoritativeWinner = {
             playerId: winnerParticipant.id,
             score: standings[0].score,
             minigame: gameId,
             compType: compType, // 'hoh' or 'pov'
             timestamp: Date.now()
           };
-          
-          // Primary: direct window property (bypasses GameGuard proxy entirely)
-          window.__authoritativeWinner = authWinner;
-          
-          // Secondary: also try window.game (may be proxied by GameGuard)
-          try {
-            if (g.game) g.game.__authoritativeWinner = authWinner;
-          } catch(e) { 
-            // GameGuard may block this - ignore error
-          }
-          
-          console.log(`[HoldWall] ✓ Authoritative winner set on window AND window.game: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
+          console.log(`[HoldWall] ✓ Authoritative winner set: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
         }
       }
       
