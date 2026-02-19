@@ -110,3 +110,48 @@ This mechanism can be extended to other competition types that need authoritativ
 - Fixes: Endurance competition winner mismatch bug
 - Related: Hold the Wall winner determination
 - Related: POV endurance competitions
+
+## Update (v2.1): Deterministic Opponent Generation
+
+The fallback scoring logic that previously used ad-hoc random values (`5 + rand * N`) has been replaced with `fillMissingScores()` which calls `MinigameScoring.generateOpponentScoresForCompetition()`.
+
+### Key protections for authoritative winners
+
+1. **`generateOpponentScoresForCompetition` skips authoritative winners**: When `authoritativeWinnerId` is provided, no score is generated for that player and all other scores are capped below `authoritativeWinnerScore - 1`.
+
+2. **`fillMissingScores` guards**: The function checks `g.__authoritativeWinner` before generating scores. If a matching authoritative winner exists, it skips generation for that player and the caller's score-injection logic remains untouched.
+
+3. **Deterministic replay**: Each competition run initialises `g.__compSeed` so the opponent scores are reproducible given the same seed parts. The audit object `g.__compAudit` records all relevant info.
+
+### Integration example
+
+An endurance minigame that sets an authoritative winner:
+
+```javascript
+// In endurance minigame (e.g. hold-wall.js)
+const g = window.game;
+g.__authoritativeWinner = {
+  playerId: winnerParticipant.id,
+  score: standings[0].score,    // typically 100 (comp scale)
+  minigame: 'holdWall',
+  compType: compType,           // 'hoh' or 'pov'
+  timestamp: Date.now()
+};
+```
+
+The competition logic will:
+1. `fillMissingScores()` detects `g.__authoritativeWinner.compType === compType`
+2. Does NOT generate a score for `authoritativeWinnerId`
+3. Generates scores for all other players, capped below `authoritativeWinnerScore`
+4. The caller (`finishCompPhase` / `finishVetoComp`) then injects the authoritative winner's score as the highest
+
+This two-stage approach ensures the authoritative winner is always shown with the highest score in the final scoreboard.
+
+### Audit trail
+
+After every `fillMissingScores()` call, `g.__compAudit` contains:
+- `authoritativeWinner`: snapshot of the winner protected (or `null`)
+- `generatedOpponentScores`: central-scale scores generated for other players
+- `seedParts`: the exact seed used (for replay)
+
+See [minigames-scoring.md](./minigames-scoring.md) for the full audit format.

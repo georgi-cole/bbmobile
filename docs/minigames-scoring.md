@@ -6,13 +6,172 @@ The unified scoring system ensures fairness and balance across all minigames by 
 
 **Update (v2.0):** Scoring system updated to use SCALE=1000 (previously 0-100) for higher precision and better granularity in competition results.
 
+**Update (v2.1):** Added deterministic opponent synthesis, seeded RNG utility, scale mapping helpers, and opt-in human-bias configuration.
+
 ## Core Module: central-scoring.js
 
 All minigames now use the centralized scoring module (`js/minigames/central-scoring.js`) which provides:
 
-- **MinigameScoring**: Score normalization with SCALE=1000
+- **MinigameScoring**: Score normalization with SCALE=1000, plus competition-scale mapping helpers and `generateOpponentScoresForCompetition()`
 - **GameUtils**: Phase-specific win determination (HOH: 20%, POV: 30%)
 - **OpponentSynth**: Realistic AI opponent score generation
+
+## Scale Mapping Helpers
+
+The competition store uses a legacy 0–150 scale for `g.lastCompScores`. The central scoring system uses a 0–1000 scale (SCALE). Two helpers convert between them:
+
+```javascript
+// Central (0-1000) → competition store (0-150)
+const compScore = MinigameScoring.mapCentralToCompScale(centralScore);
+
+// Competition store (0-150) → central (0-1000)
+const centralScore = MinigameScoring.mapCompToCentral(compScore);
+```
+
+These are also used internally by `fillMissingScores()` in competitions.js.
+
+## Deterministic Opponent Synthesis
+
+### `MinigameScoring.generateOpponentScoresForCompetition(humanScore, humanId, opponents, opts)`
+
+Generates deterministic, persona-aware AI opponent scores for a competition. This is the primary replacement for ad-hoc fallback blocks.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `humanScore` | number | Human's score in central scale (0–1000). Pass 0 if skipped. |
+| `humanId` | string\|number | Human player's ID |
+| `opponents` | Array | `[{ id, compBeast?, persona? }]` |
+| `opts.seedParts` | Array | Seed parts for SeededRNG (default: `[Date.now()]`) |
+| `opts.compType` | string | `'hoh'`, `'pov'`, `'final3_comp1'`, etc. |
+| `opts.authoritativeWinnerId` | * | ID of authoritative winner (skipped; their score set by caller) |
+| `opts.authoritativeWinnerScore` | number | Central-scale score of authoritative winner (others capped below) |
+| `opts.difficultyMultiplier` | number | AI difficulty scalar (default: 1.0) |
+| `opts.humanSkipped` | boolean | Whether human did not play (default: false) |
+
+**Returns:** `Array<[id, centralScore]>` — one entry per non-authoritative opponent in central scale (0–1000).
+
+**Example:**
+
+```javascript
+const results = MinigameScoring.generateOpponentScoresForCompetition(
+  600,   // human score (0-1000)
+  humanId,
+  [{ id: 2, compBeast: 0.7 }, { id: 3, compBeast: 0.4 }],
+  {
+    seedParts: [g.__compSeed, g.week, 'hoh', gameKey],
+    compType: 'hoh',
+    difficultyMultiplier: 1.0,
+    humanSkipped: false
+  }
+);
+// results: [[2, 487], [3, 612]]  (deterministic)
+```
+
+### Authoritative Winner Protection
+
+When `authoritativeWinnerId` is provided:
+- No score is generated for that player (their score is managed by the caller)
+- All other opponent scores are capped below `authoritativeWinnerScore - 1`
+- This ensures endurance game winners are never beaten by synthetic scores
+
+## SeededRNG Utility
+
+Located at `js/utils/seeded-rng.js`, exposed as `window.SeededRNG`.
+
+Uses **mulberry32** PRNG (period 2^32, passes TestU01) with **FNV-1a** seed hashing.
+
+### API
+
+```javascript
+// Hash any number of parts into a single uint32 seed
+const seed = SeededRNG.seedFrom('hoh', week, humanId);
+
+// Create an RNG from an array of parts (auto-hashed) or a single seed number
+const rng = SeededRNG.create([week, 'hoh', humanId]);  // preferred
+const rng = SeededRNG.create(seed);                    // also accepted
+
+// Produce values in [0, 1)
+const val = rng.next();
+
+// Random integer in [min, max)
+const n = rng.range(0, 10);
+
+// Pick random element from array
+const item = rng.choice(array);
+
+// Return shuffled copy (Fisher-Yates)
+const shuffled = rng.shuffle(array);
+
+// Get current internal state (useful for audit/replay)
+const state = rng.getSeed();
+```
+
+## Competition Audit Object
+
+After each call to `fillMissingScores()`, an audit snapshot is written to `g.__compAudit`:
+
+```javascript
+g.__compAudit = {
+  seedParts: ['hoh', 5, 1, 1708000000],  // seed inputs used
+  compType: 'hoh',
+  gameKey: 'holdWall',
+  generatedOpponentScores: [[2, 487], [3, 612]],  // central scale
+  authoritativeWinner: null,  // or { playerId, score } if endurance
+  humanSkipped: false,
+  mapping: { centralScale: 1000, compScale: 150 },
+  timestamp: 1708000000000
+};
+```
+
+This object can be used to:
+- Debug unexpected competition outcomes
+- Replay a competition with the same seed
+- Verify authoritative winner protection
+
+## Opt-In Human Bias
+
+The legacy 20% human-bias (higher chance of human winning) is available as an opt-in configuration. It is **disabled by default**.
+
+```javascript
+// Enable in game config (NOT recommended for normal gameplay)
+g.cfg.competitions.humanBias = { enabled: true, chance: 0.20 };
+```
+
+When enabled, a single RNG draw per competition determines whether bias applies. If triggered, all opponent base scores are multiplied by 0.85 (15% reduction), giving the human a statistically higher chance of being top scorer.
+
+**Important:** Bias is applied at generation time (before scoring), not as an after-the-fact override. It never overrides authoritative winners from endurance games.
+
+## Per-Competition Seed (`g.__compSeed`)
+
+Each competition start function (`startHOH`, `beginF3P1Competition`, etc.) initializes `g.__compSeed`:
+
+```javascript
+// Competition seed: deterministic within a 30-second window
+g.__compSeed = SeededRNG.seedFrom('hoh', g.week, g.humanId, Math.floor(Date.now() / 30000));
+```
+
+The seed is used as the first element of `seedParts` in `fillMissingScores`. Replaying with the same seed reproduces the same opponent scores (within the same 30-second window).
+
+## `fillMissingScores(ids, opts)` — competitions.js
+
+Exposed as `global.fillMissingScores`. Used by all competition finish functions (`finishCompPhase`, `finishF3P1/P2/P3`) and `finishVetoComp` to replace ad-hoc `5 + rand * N` fallbacks.
+
+```javascript
+fillMissingScores(ids, {
+  compType: 'hoh',          // competition type
+  humanSkipped: false,      // whether human did not complete
+  gameKey: 'holdWall'       // minigame key for seeding
+});
+```
+
+Rules applied in order:
+1. Human who skipped (`humanSkipped=true`) → score 0
+2. Authoritative winner (`g.__authoritativeWinner` matching `compType`) → skipped (caller sets score)
+3. AI players without scores → `generateOpponentScoresForCompetition()` → mapped to comp scale (0–150)
+
+
 
 ## Scoring Types
 

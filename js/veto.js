@@ -642,6 +642,16 @@
     g.__humanPlayedVeto = false;
     g.__instructionsRenderedVeto = false; // Track if instructions were rendered
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
+    // Seed for deterministic opponent generation
+    g.__compSeed = (global.SeededRNG && typeof global.SeededRNG.seedFrom === 'function')
+      ? global.SeededRNG.seedFrom('pov', g.week || 1, g.humanId, Math.floor(Date.now() / 30000))
+      : ((g.rngSeed || 0) + (g.week || 1) * 1000 + 5);
+    // Ensure competitions config with opt-in human-bias exists (default: disabled)
+    g.cfg = g.cfg || {};
+    g.cfg.competitions = g.cfg.competitions || {};
+    if (!g.cfg.competitions.humanBias) {
+      g.cfg.competitions.humanBias = { enabled: false, chance: 0.20 };
+    }
     g.__vetoResultsShown = false; // Track if results have been shown to prevent redundant display
     g.__postVetoRevealCalled = false; // Track if post-reveal handler has been called
     g.__skipInlineWinner = false; // Track if inline winner wait should be skipped (human fast-path)
@@ -1123,13 +1133,26 @@
             g.lastCompScores.set(id, 0);
             continue;
           }
-          // AI players get random scores (always > 0)
-          // Ensure AI scores are always > 0 to prevent 0-score players from winning
-          var aiScore = Math.max(1, 5 + rng()*5);
-          g.lastCompScores.set(id, aiScore);
+          // AI players without scores: filled deterministically by fillMissingScores below
         }
       }
     })();
+    // Deterministically fill missing AI scores via fillMissingScores (replaces ad-hoc 5+rng()*5 fallback)
+    if (typeof global.fillMissingScores === 'function') {
+      global.fillMissingScores(eligible, {
+        compType: 'pov',
+        gameKey: g.__vetoGameKey || 'unknown',
+        humanSkipped: !g.__humanPlayedVeto
+      });
+    } else {
+      // Absolute fallback if fillMissingScores not loaded yet
+      for (var _fi = 0; _fi < eligible.length; _fi++) {
+        var _fid = +eligible[_fi];
+        if (!g.lastCompScores.has(_fid) && _fid !== g.humanId) {
+          g.lastCompScores.set(_fid, Math.max(1, 5 + rng() * 5));
+        }
+      }
+    }
 
     // ENDURANCE FIX: Check for authoritative winner BEFORE sorting and reveal
     // If an endurance minigame has marked an authoritative winner, inject their score
