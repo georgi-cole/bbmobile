@@ -25,7 +25,7 @@
     PLEA_ENERGY_COST: 5,         // Energy required to make a plea
     RECHARGE_ENERGY_AMOUNT: 5,   // Energy awarded from ad recharge
     VISIBILITY_THRESHOLD_MS: 500, // Minimum visibility time before allowing visibility-dismiss
-    NOMS_MODAL_MAX_PAUSE_MS: 30000 // Watchdog timeout for pause (30 seconds)
+    NOMS_MODAL_MAX_PAUSE_MS: 90000 // Watchdog timeout for pause (90 seconds)
   };
 
   // State machine states
@@ -231,27 +231,23 @@
     
     const slots = Math.max(2, Math.min(4, g.__twistNomSlots || 2));
     
-    // Enhanced risk algorithm per requirements
-    // Base from player threat (0..1) * 60
-    const threat = player.threat ?? player.reputation ?? 0.5;
-    const threatComponent = threat * 60;
-    
-    // HOH affinity component: (1 - affinity) * 25
-    const affinity = hoh.affinity?.[player.id] ?? player.affinity?.[hoh.id] ?? 0.5;
-    const affinityComponent = (1 - affinity) * 25;
-    
-    // House reputation component: (1 - reputation) * 15
-    const houseRep = g.houseReputation ?? global.houseReputation ?? 0.5;
-    const reputationComponent = (1 - houseRep) * 15;
-    
-    // Random variance: -5 to +5
-    const randomVariance = (Math.random() * 10) - 5;
-    
-    // Calculate total risk
-    let risk = threatComponent + affinityComponent + reputationComponent + randomVariance;
-    
-    // Clamp to 0..100
-    risk = Math.max(0, Math.min(100, Math.round(risk)));
+    // Base components (all 0..1 normalized)
+    const threat = Math.min(1, Math.max(0, player.threat || 0));
+    const affinityScore = hoh.affinity?.[player.id];
+    const affinity = (affinityScore !== undefined && affinityScore !== null)
+      ? Math.min(1, Math.max(0, affinityScore))
+      : 0.5; // neutral if unknown
+    const houseRep = Math.min(1, Math.max(0, global.game?.houseReputation || 0.5));
+
+    // Weighted calculation with reduced threat impact
+    const baseRisk =
+      (threat * 35) +                  // threat: 0-35 points
+      ((1 - affinity) * 40) +          // poor affinity with HOH: 0-40 points
+      ((1 - houseRep) * 15);           // poor house standing: 0-15 points
+
+    // Add small random variance (-5 to +5)
+    const variance = (Math.random() * 10) - 5;
+    const risk = Math.round(Math.min(100, Math.max(0, baseRisk + variance)));
 
     // Generate contextual explanation
     let explanation = '';
@@ -277,6 +273,10 @@
       explanation = 'Your position in the house is moderate.';
     }
 
+    const numericRisk = risk;
+    const label = getRiskCategory(numericRisk).category;
+    console.info('[NominationIntroModal] Risk calculation:', { threat, affinity, houseRep, baseRisk, variance, numericRisk, label });
+
     return { risk, explanation, threat, affinity, houseReputation: houseRep };
   }
 
@@ -286,17 +286,17 @@
    * @returns {Object} { category, description }
    */
   function getRiskCategory(risk) {
-    if (risk < 10) {
+    if (risk <= 5) {
       return { category: 'unknown', description: 'Your risk is currently unknown', color: '#8a9fb5' };
-    } else if (risk < 20) {
+    } else if (risk <= 20) {
       return { category: 'very low', description: 'You are very unlikely to be nominated', color: '#44ff88' };
-    } else if (risk < 35) {
+    } else if (risk <= 35) {
       return { category: 'low', description: 'You have a low chance of being nominated', color: '#77ff55' };
-    } else if (risk < 55) {
+    } else if (risk <= 55) {
       return { category: 'medium', description: 'You have a moderate chance of being nominated', color: '#ffaa44' };
-    } else if (risk < 70) {
+    } else if (risk <= 70) {
       return { category: 'high', description: 'You have a high chance of being nominated', color: '#ff8844' };
-    } else if (risk < 85) {
+    } else if (risk <= 85) {
       return { category: 'very high', description: 'You are very likely to be nominated', color: '#ff5544' };
     } else {
       return { category: 'extreme', description: 'You are almost certainly being nominated', color: '#ff4444' };
@@ -309,7 +309,8 @@
    * @returns {boolean}
    */
   function isHighRisk(risk) {
-    return risk >= 55; // high, very high, or extreme
+    const { category } = getRiskCategory(risk);
+    return category === 'high' || category === 'very high' || category === 'extreme';
   }
 
   /**
@@ -994,12 +995,14 @@
       // Clear plea active flag
       g.__nominationPleaActive = false;
 
-      // Force phase advance after plea
-      forcePhaseAdvance();
-
-      // Dismiss modal after plea completes (with small delay for toast)
+      // NOTE: Do NOT release pause here - modal stays open after plea for user to review updated risk
+      // NOTE: Do NOT dismiss here - modal remains open, user must click outside to close
+      // Return to SHOWING state and refresh risk view after small delay for toast
       setTimeout(() => {
-        dismiss();
+        if (currentState === STATE.PLEA) {
+          currentState = STATE.SHOWING;
+          showRiskView();
+        }
       }, CONFIG.PLEA_DELAY_BEFORE_DISMISS_MS);
     }
   }
@@ -1041,7 +1044,9 @@
 
     // Request pause for phase timer
     try {
+      console.info('[NominationIntroModal] Requesting timer pause');
       pauseHandle = requestPause();
+      console.info('[NominationIntroModal] Pause handle:', pauseHandle);
     } catch (err) {
       console.error('[NominationIntroModal] Error requesting pause:', err);
       // Continue without pause if request fails
