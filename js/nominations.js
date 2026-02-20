@@ -21,6 +21,25 @@
   function aiPickNominees(count=2){
     const g=global.game; const hoh=global.getP(g.hohId);
     const pool=eligibleNomIds();
+
+    // Use NominationRisk.chooseNomineeByRisk when available (feature-gated)
+    if(global.NominationRisk && typeof global.NominationRisk.chooseNomineeByRisk === 'function'){
+      const getBondFn = (hohId, pid) => {
+        if(g.getBond) return g.getBond(hohId, pid);
+        const h = global.getP(hohId);
+        return h?.affinity?.[pid] ?? 0;
+      };
+      const cfg = g.cfg || {};
+      return global.NominationRisk.chooseNomineeByRisk(
+        pool, g.hohId, getBondFn,
+        global.rng || Math.random,
+        cfg.deterministicNomination || false,
+        count,
+        -1, 1 // affinity is in [-1, 1] range in this game
+      );
+    }
+
+    // Legacy fallback
     const scored=pool.map(id=>{
       const cand=global.getP(id);
       const aff=hoh?.affinity?.[id] ?? 0;
@@ -499,6 +518,67 @@
     return showNomineeReactionsSimultaneouslyInternal(nomineeIds);
   }
 
+  /**
+   * Handle plea opportunity for nominees.
+   * Shows PleaUI for the human player if they were nominated.
+   * For AI nominees, auto-generates and processes a simulated plea silently.
+   * @param {string[]} nomineeIds
+   * @param {Object}   g  game state
+   */
+  async function handleNomineePleas(nomineeIds, g){
+    if(!nomineeIds || nomineeIds.length === 0) return;
+    const hohId = g.hohId;
+    const hoh = global.getP(hohId);
+
+    for(const nomId of nomineeIds){
+      const nominee = global.getP(nomId);
+      if(!nominee) continue;
+
+      let pleaText = '';
+      let pleaSubmitted = false;
+
+      if(nominee.human){
+        // Show interactive plea modal for human nominee
+        const result = await global.PleaUI.show({
+          nomineeId: nomId,
+          nomineeName: nominee.name || 'You',
+          onSubmit: function(text){ pleaText = text; }
+        });
+        pleaSubmitted = result.submitted;
+        if(result.submitted) pleaText = result.text;
+      } else {
+        // Auto-generate a brief plea for AI nominees (simulated, non-blocking)
+        pleaText = nominee.name + ' made a silent plea to the HOH.';
+        pleaSubmitted = Math.random() < 0.4; // 40% chance AI plea is "submitted"
+      }
+
+      if(pleaSubmitted && pleaText){
+        // Compute persuasion score from text length and keyword presence
+        const keywords = ['safe','promise','loyal','deal','trust','vote','save','protect','jury','deserve'];
+        const lower = pleaText.toLowerCase();
+        const keywordHits = keywords.filter(function(k){ return lower.indexOf(k) !== -1; }).length;
+        const lengthBonus = Math.min(pleaText.length / 200, 1) * 0.05;
+        const keywordBonus = Math.min(keywordHits, 5) * 0.02;
+        const delta = 0.05 + lengthBonus + keywordBonus; // small positive bump
+
+        // Temporarily adjust affinity/bond between HOH and nominee
+        if(hoh && hoh.affinity){
+          hoh.affinity[nomId] = global.clamp
+            ? global.clamp((hoh.affinity[nomId] ?? 0) + delta, -1, 1)
+            : Math.max(-1, Math.min(1, (hoh.affinity[nomId] ?? 0) + delta));
+        }
+
+        // Persist plea result so downstream phases can consult it
+        g._pleaBuffer = { nomineeId: nomId, delta: delta, text: pleaText };
+
+        console.info('[noms] Plea processed for', nominee.name, '| delta:', delta.toFixed(3));
+        if(nominee.human){
+          try{ global.addLog?.('You made a plea to the HOH.', 'tiny'); }catch(e){ /* optional */ }
+        }
+      }
+    }
+  }
+
   async function finalizeNoms(){
     const g=global.game;
     if(g.nomsLocked || g.__nomsCommitted) return; // already locked
@@ -634,6 +714,15 @@
         }catch(e){
           // Reactions are optional, continue if they fail
           console.warn('[noms] Nominee reactions failed:', e);
+        }
+      }
+
+      // Step 3b: Plea opportunity for human nominee (feature-gated on PleaUI)
+      if(global.PleaUI && typeof global.PleaUI.show === 'function'){
+        try{
+          await handleNomineePleas(ids, g);
+        }catch(e){
+          console.warn('[noms] Plea step failed (non-fatal):', e);
         }
       }
       
