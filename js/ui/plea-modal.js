@@ -25,8 +25,7 @@
       let resolved = false;
       const failsafe = setTimeout(function() {
         _close(null);
-        _settle(resolve, resolved, { submitted: false, text: '' });
-        resolved = true;
+        if (!resolved) { resolved = true; resolve({ submitted: false, text: '' }); }
       }, 90000);
 
       function settle(result) {
@@ -173,10 +172,6 @@
         settle({ submitted: false, text: '' });
       }
     });
-  }
-
-  function _settle(resolve, alreadyResolved, result) {
-    if (!alreadyResolved) resolve(result);
   }
 
   function _close(modal) {

@@ -557,8 +557,8 @@
         const keywords = ['safe','promise','loyal','deal','trust','vote','save','protect','jury','deserve'];
         const lower = pleaText.toLowerCase();
         const keywordHits = keywords.filter(function(k){ return lower.indexOf(k) !== -1; }).length;
-        const lengthBonus = Math.min(pleaText.length / 200, 1) * 0.05;
-        const keywordBonus = Math.min(keywordHits, 5) * 0.02;
+        const lengthBonus = Math.min(pleaText.length / 200, 1) * 0.05; // max +0.05 at 200+ chars
+        const keywordBonus = Math.min(keywordHits, 5) * 0.02; // up to 5 keywords × 0.02 = max +0.10
         const delta = 0.05 + lengthBonus + keywordBonus; // small positive bump
 
         // Temporarily adjust affinity/bond between HOH and nominee
