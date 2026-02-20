@@ -601,17 +601,19 @@
       // Calculate final score
       const finalScore = Math.max(0, score);
       
-      // Stats
-      statsDiv.innerHTML = `
-        <div style="text-align:center;">
-          <div style="font-size:1.2rem;color:#6fd3ff;margin-bottom:10px;">Game Over!</div>
-          <div>Final Score: <strong style="color:#83bfff;">${finalScore}</strong></div>
-          <div>Laser Hits: ${laserHits}</div>
-          <div>Correct Items: ${correctItems}</div>
-          <div>Wrong Items: ${wrongItems}</div>
-          <div>Best Combo: ${bestCombo}</div>
-        </div>
-      `;
+      // Stats (practice mode only)
+      if(!competitionMode) {
+        statsDiv.innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:1.2rem;color:#6fd3ff;margin-bottom:10px;">Game Over!</div>
+            <div>Final Score: <strong style="color:#83bfff;">${finalScore}</strong></div>
+            <div>Laser Hits: ${laserHits}</div>
+            <div>Correct Items: ${correctItems}</div>
+            <div>Wrong Items: ${wrongItems}</div>
+            <div>Best Combo: ${bestCombo}</div>
+          </div>
+        `;
+      }
       
       // Set result for integration
       window.minigameResult = {
@@ -632,7 +634,7 @@
         if(typeof onComplete === 'function'){
           onComplete(finalScore);
         }
-      }, 2000);
+      }, competitionMode ? 0 : 2000);
     }
     
     // Start game button

@@ -365,17 +365,19 @@
       const scoreFactor = Math.max(0, 1 - (totalSeconds - idealTime) / 120);
       const finalScore = Math.max(0, Math.floor(scoreFactor * 1000));
       
-      // Stats
-      statsDiv.innerHTML = `
-        <div style="text-align:center;">
-          <div style="font-size:1.2rem;color:#6fd3ff;margin-bottom:10px;">Game Over!</div>
-          <div>Total Time: <strong style="color:#f7b955;">${totalSeconds.toFixed(1)}s</strong></div>
-          <div>Score: <strong style="color:#83bfff;">${finalScore}</strong></div>
-          <div>Total Mistakes: ${totalMistakes}</div>
-          <div>Best Round: ${bestTime.toFixed(1)}s</div>
-          <div>Accuracy: ${accuracy}%</div>
-        </div>
-      `;
+      // Stats (practice mode only)
+      if(!competitionMode) {
+        statsDiv.innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:1.2rem;color:#6fd3ff;margin-bottom:10px;">Game Over!</div>
+            <div>Total Time: <strong style="color:#f7b955;">${totalSeconds.toFixed(1)}s</strong></div>
+            <div>Score: <strong style="color:#83bfff;">${finalScore}</strong></div>
+            <div>Total Mistakes: ${totalMistakes}</div>
+            <div>Best Round: ${bestTime.toFixed(1)}s</div>
+            <div>Accuracy: ${accuracy}%</div>
+          </div>
+        `;
+      }
       
       timerDiv.textContent = totalSeconds.toFixed(1) + 's';
       timerDiv.style.color = '#74e48b';
@@ -399,7 +401,7 @@
         if(typeof onComplete === 'function'){
           onComplete(finalScore);
         }
-      }, 2000);
+      }, competitionMode ? 0 : 2000);
     }
     
     // Start game button
