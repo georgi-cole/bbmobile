@@ -20,7 +20,8 @@
     "test:background-theme": "node scripts/test-background-theme.mjs",
     "test:hold-wall-hoh": "node scripts/test-hold-wall-hoh-winner.mjs",
     "test:opponent-synth": "node tests/scripts/test-opponent-synth.mjs",
-    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social && npm run test:pov-carousel && npm run test:pause-integration && npm run test:background-theme && npm run test:hold-wall-hoh && npm run test:opponent-synth",
+    "test:score-pipeline-v2": "node tests/scripts/test-score-pipeline-v2.mjs",
+    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social && npm run test:pov-carousel && npm run test:pause-integration && npm run test:background-theme && npm run test:hold-wall-hoh && npm run test:opponent-synth && npm run test:score-pipeline-v2",
     "build:progression": "cd src/progression && tsc",
     "typecheck:progression": "cd src/progression && tsc --noEmit"
   },

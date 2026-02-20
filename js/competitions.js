@@ -1885,8 +1885,15 @@
 
       // Always show full reveal sequence, even during fast-forward
       // Users should see the winner and results when they skip
-      await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
-      await waitCardsIdle();
+      // SCORING PIPELINE V2: Use unified CompetitionResults modal when flag enabled
+      const _useV2 = !!(g.cfg && g.cfg.scoringPipeline && g.cfg.scoringPipeline.useV2 === true);
+      if (_useV2 && global.CompetitionResults && global.ScorePipeline) {
+        const _standings = global.ScorePipeline.buildStandings(g.lastCompScores);
+        await global.CompetitionResults.show({ title: 'HOH Competition', standings: _standings, compType: 'hoh' });
+      } else {
+        await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
+        await waitCardsIdle();
+      }
 
       // Determine winner if not already set by authoritative winner above
       if (!winner) {
