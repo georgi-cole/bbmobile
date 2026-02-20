@@ -1434,8 +1434,25 @@
     }
 
     // Always show full reveal - skip/FFWD should jump to results, not bypass them
+    // SCORING PIPELINE V2: Use unified CompetitionResults modal when flag enabled
+    var _useV2Veto = !!(g.cfg && g.cfg.scoringPipeline && g.cfg.scoringPipeline.useV2 === true);
+    if(_useV2Veto && window.CompetitionResults && typeof window.CompetitionResults.show === 'function'){
+      try{
+        var _displayDuration = g.__skipInlineWinner ? POV_RESULTS_INSTANT_DISMISS_MS : POV_RESULTS_TO_WINNER_DELAY_MS;
+        var _v2Standings = window.ScorePipeline
+          ? window.ScorePipeline.buildStandings(g.lastCompScores, { maxResults: 1 })
+          : (function(){ var top = arr[0]; return top ? [{ rank: 1, id: top[0], score: top[1], displayScore: +(top[1]/10).toFixed(1) }] : []; })();
+        console.info('[veto] v2: Showing CompetitionResults modal (duration: ' + _displayDuration + 'ms)');
+        window.CompetitionResults.show({ title: 'POV Competition', standings: _v2Standings, compType: 'pov', autoDismissMs: _displayDuration })
+          .then(function(){
+            if(global.game && !global.game.__postVetoRevealCalled){ handlePostVetoReveal(); }
+          });
+      }catch(e){
+        console.warn('[veto] CompetitionResults.show error, using legacy fallback', e);
+        showVetoRevealSequence(top3).then(function(){ handlePostVetoReveal(); }).catch(function(){ handlePostVetoReveal(); });
+      }
     // Use new leaderboard renderer if available
-    if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
+    } else if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
       try{
         // Normalize scores to plain object for renderer
         var scoresObj = {};
