@@ -8,6 +8,7 @@
   const gameId = 'pressure-plank';
   
   function render(container, onComplete, options = {}){
+    const competitionMode = !!options.competitionMode;
     const root = document.createElement('div');
     root.style.cssText = 'position:relative;display:grid;grid-template-rows:auto 1fr auto;height:100%;min-height:480px;background:radial-gradient(120% 120% at 50% 0%, #0a0f22, #0c1630);color:#e9f3ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden;';
     
@@ -303,10 +304,12 @@
       const survivalTime = timeElapsed / 1000;
       const rawScore = Math.min(100, Math.max(0, survivalTime * 2)); // ~50s = 100 score
       
-      // Show end screen
-      endScreen.style.display = 'flex';
-      root.querySelector('#finalScore').textContent = Math.round(rawScore);
-      root.querySelector('#finalTime').textContent = `${survivalTime.toFixed(1)}s`;
+      // Show end screen (practice mode only)
+      if(!competitionMode) {
+        endScreen.style.display = 'flex';
+        root.querySelector('#finalScore').textContent = Math.round(rawScore);
+        root.querySelector('#finalTime').textContent = `${survivalTime.toFixed(1)}s`;
+      }
       
       // Set result and dispatch event
       g.minigameResult = {
@@ -325,7 +328,7 @@
         if(typeof onComplete === 'function'){
           onComplete(rawScore);
         }
-      }, 1500);
+      }, competitionMode ? 0 : 1500);
     }
     
     // Wire up events

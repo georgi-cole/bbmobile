@@ -1888,7 +1888,10 @@
       // SCORING PIPELINE V2: Use unified CompetitionResults modal when flag enabled
       const _useV2 = !!(g.cfg && g.cfg.scoringPipeline && g.cfg.scoringPipeline.useV2 === true);
       if (_useV2 && global.CompetitionResults && global.ScorePipeline) {
-        const _standings = global.ScorePipeline.buildStandings(g.lastCompScores);
+        const _hohKey = g.__hohGameKey || 'unknown';
+        const _hohMeta = global.MinigameRegistry && typeof global.MinigameRegistry.getGame === 'function' ? global.MinigameRegistry.getGame(_hohKey) : null;
+        const _isEndurance = !!(_hohMeta && _hohMeta.scoring === 'endurance');
+        const _standings = global.ScorePipeline.buildStandings(g.lastCompScores, { endurance: _isEndurance });
         await global.CompetitionResults.show({ title: 'HOH Competition', standings: _standings, compType: 'hoh' });
       } else {
         await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
