@@ -655,7 +655,6 @@
     g.__vetoResultsShown = false; // Track if results have been shown to prevent redundant display
     g.__postVetoRevealCalled = false; // Track if post-reveal handler has been called
     g.__skipInlineWinner = false; // Track if inline winner wait should be skipped (human fast-path)
-    g.__povResultsShown = false; // Idempotency guard for v2 CompetitionResults.show
     // Reset grace attempt flag for new competition
     if (g.humanId != null) {
       delete g[`__graceReplayAttempt_veto_comp_${g.humanId}`];
@@ -1420,13 +1419,10 @@
     // This ensures no redundant timers are left running from previous phases
     console.info('[veto] Clearing all veto timers before showing results');
     clearAllVetoTimers();
-
-    // Determine v2 flag early so it can gate the phase-countdown shortening below
-    var _useV2Veto = !!(g.cfg && g.cfg.scoringPipeline && g.cfg.scoringPipeline.useV2 === true);
     
-    // Set phase countdown to exactly 1 second for results-to-winner transition.
-    // When v2 is active we await the modal directly, so no timer shortening is needed.
-    if(!_useV2Veto && typeof global.setPhase === 'function'){
+    // Set phase countdown to exactly 1 second for results-to-winner transition
+    // This uses the canonical phase timer as single source of truth
+    if(typeof global.setPhase === 'function'){
       try{
         // Calculate time in seconds (convert from ms constant)
         var timeToWinner = Math.ceil(POV_RESULTS_TO_WINNER_DELAY_MS / 1000);
@@ -1439,27 +1435,26 @@
 
     // Always show full reveal - skip/FFWD should jump to results, not bypass them
     // SCORING PIPELINE V2: Use unified CompetitionResults modal when flag enabled
+    var _useV2Veto = !!(g.cfg && g.cfg.scoringPipeline && g.cfg.scoringPipeline.useV2 === true);
     if(_useV2Veto && window.CompetitionResults && typeof window.CompetitionResults.show === 'function'){
-      if (!g.__povResultsShown) {
-        g.__povResultsShown = true;
-        try{
-          var _displayDuration = g.__skipInlineWinner ? POV_RESULTS_INSTANT_DISMISS_MS : POV_RESULTS_TO_WINNER_DELAY_MS;
-          var _vetoKey = g.__vetoGameKey || 'unknown';
-          var _vetoMeta = window.MinigameRegistry && typeof window.MinigameRegistry.getGame === 'function' ? window.MinigameRegistry.getGame(_vetoKey) : null;
-          var _isEnduranceVeto = !!(_vetoMeta && _vetoMeta.scoring === 'endurance');
-          var _v2Standings = window.ScorePipeline
-            ? window.ScorePipeline.buildStandings(g.lastCompScores, { maxResults: 1, endurance: _isEnduranceVeto })
-            : (function(){ var top = arr[0]; return top ? [{ rank: 1, id: top[0], score: top[1], displayScore: +(top[1]/10).toFixed(1) }] : []; })();
-          console.info('[veto] v2: Showing CompetitionResults modal (duration: ' + _displayDuration + 'ms)');
-          window.CompetitionResults.show({ title: 'POV Competition', standings: _v2Standings, compType: 'pov', autoDismissMs: _displayDuration })
-            .then(function(){
-              if(global.game && !global.game.__postVetoRevealCalled){ handlePostVetoReveal(); }
-            });
-        }catch(e){
-          console.warn('[veto] CompetitionResults.show error, using legacy fallback', e);
-          showVetoRevealSequence(top3).then(function(){ handlePostVetoReveal(); }).catch(function(){ handlePostVetoReveal(); });
-        }
+      try{
+        var _displayDuration = g.__skipInlineWinner ? POV_RESULTS_INSTANT_DISMISS_MS : POV_RESULTS_TO_WINNER_DELAY_MS;
+        var _vetoKey = g.__vetoGameKey || 'unknown';
+        var _vetoMeta = window.MinigameRegistry && typeof window.MinigameRegistry.getGame === 'function' ? window.MinigameRegistry.getGame(_vetoKey) : null;
+        var _isEnduranceVeto = !!(_vetoMeta && _vetoMeta.scoring === 'endurance');
+        var _v2Standings = window.ScorePipeline
+          ? window.ScorePipeline.buildStandings(g.lastCompScores, { maxResults: 1, endurance: _isEnduranceVeto })
+          : (function(){ var top = arr[0]; return top ? [{ rank: 1, id: top[0], score: top[1], displayScore: +(top[1]/10).toFixed(1) }] : []; })();
+        console.info('[veto] v2: Showing CompetitionResults modal (duration: ' + _displayDuration + 'ms)');
+        window.CompetitionResults.show({ title: 'POV Competition', standings: _v2Standings, compType: 'pov', autoDismissMs: _displayDuration })
+          .then(function(){
+            if(global.game && !global.game.__postVetoRevealCalled){ handlePostVetoReveal(); }
+          });
+      }catch(e){
+        console.warn('[veto] CompetitionResults.show error, using legacy fallback', e);
+        showVetoRevealSequence(top3).then(function(){ handlePostVetoReveal(); }).catch(function(){ handlePostVetoReveal(); });
       }
+    // Use new leaderboard renderer if available
     } else if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
       try{
         // Normalize scores to plain object for renderer
