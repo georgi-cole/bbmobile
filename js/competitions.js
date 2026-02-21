@@ -1742,6 +1742,7 @@
     g.__humanPlayedHOH = false;
     g.__compRunning = true; // Mark competition as running
     g.__hohGameKey = null; // Track which game was played
+    g.__compResultsShown = false; // Reset idempotency guard for results display
     g.__instructionsRenderedHOH = false; // Track if instructions were rendered
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
     // Seed for deterministic opponent generation: stable per competition run
@@ -1888,11 +1889,14 @@
       // SCORING PIPELINE V2: Use unified CompetitionResults modal when flag enabled
       const _useV2 = !!(g.cfg && g.cfg.scoringPipeline && g.cfg.scoringPipeline.useV2 === true);
       if (_useV2 && global.CompetitionResults && global.ScorePipeline) {
-        const _hohKey = g.__hohGameKey || 'unknown';
-        const _hohMeta = global.MinigameRegistry && typeof global.MinigameRegistry.getGame === 'function' ? global.MinigameRegistry.getGame(_hohKey) : null;
-        const _isEndurance = !!(_hohMeta && _hohMeta.scoring === 'endurance');
-        const _standings = global.ScorePipeline.buildStandings(g.lastCompScores, { endurance: _isEndurance });
-        await global.CompetitionResults.show({ title: 'HOH Competition', standings: _standings, compType: 'hoh' });
+        if (!g.__compResultsShown) {
+          g.__compResultsShown = true;
+          const _hohKey = g.__hohGameKey || 'unknown';
+          const _hohMeta = global.MinigameRegistry && typeof global.MinigameRegistry.getGame === 'function' ? global.MinigameRegistry.getGame(_hohKey) : null;
+          const _isEndurance = !!(_hohMeta && _hohMeta.scoring === 'endurance');
+          const _standings = global.ScorePipeline.buildStandings(g.lastCompScores, { endurance: _isEndurance });
+          await global.CompetitionResults.show({ title: 'HOH Competition', standings: _standings, compType: 'hoh' });
+        }
       } else {
         await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
         await waitCardsIdle();
@@ -1999,7 +2003,8 @@
     // Hook: Log XP for HOH win
     if (global.ProgressionEvents?.onHOHWin) global.ProgressionEvents.onHOHWin(winner, elig);
 
-      await waitCardsIdle();
+      // Skip card queue wait after v2 results (modal dismissal already handles pacing)
+      if (!_useV2) { await waitCardsIdle(); }
 
       // Robust social call — prefer startSocial, fall back to startSocialIntermission
       const runSocial = global.startSocial || global.startSocialIntermission;

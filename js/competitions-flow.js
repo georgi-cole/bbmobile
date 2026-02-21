@@ -1066,6 +1066,22 @@
     overlay.appendChild(closeBtn);
     overlay.appendChild(gameContainer);
     document.body.appendChild(overlay);
+
+    // In competitionMode: inject scoped CSS to suppress duplicate in-minigame score UIs.
+    // Removed in close() to ensure it only applies while the overlay exists.
+    let suppressStyle = null;
+    if (options.competitionMode) {
+      suppressStyle = document.createElement('style');
+      suppressStyle.setAttribute('data-comp-suppress', '1');
+      suppressStyle.textContent =
+        '#competition-minigame-overlay .ccPanel{display:none!important}' +
+        '#competition-minigame-overlay [class*="score-panel"]{display:none!important}' +
+        '#competition-minigame-overlay [class*="final-score"]{display:none!important}' +
+        '#competition-minigame-overlay [class*="game-over"]{display:none!important}' +
+        '#competition-minigame-overlay [class*="result-screen"]{display:none!important}' +
+        '#competition-minigame-overlay [class*="end-screen"]{display:none!important}';
+      document.head.appendChild(suppressStyle);
+    }
     
     console.info('[CompetitionFlow] ✓ Fullscreen overlay created and appended to document.body');
 
@@ -1193,6 +1209,12 @@
       if(timerInterval){
         clearInterval(timerInterval);
       }
+
+      // Remove competition mode suppression style so it only applies while overlay exists
+      if (suppressStyle && suppressStyle.parentNode) {
+        suppressStyle.parentNode.removeChild(suppressStyle);
+        suppressStyle = null;
+      }
       
       // Resume phase timer if we paused it
       if(phaseTimerWasPaused && g.resumePhaseTimer){
@@ -1301,17 +1323,19 @@
           }
           hasCompleted = true;
           
-          // Show completion animation
-          showCompletionAnimation(overlay, score, options.previousBest);
+          // In competitionMode: skip animation panel (CompetitionResults shows results once)
+          if (!options.competitionMode) {
+            showCompletionAnimation(overlay, score, options.previousBest);
+          }
           
-          // Close overlay and call completion callback after animation
+          // In competitionMode: close immediately; otherwise wait for animation
           setTimeout(() => {
             console.info('[CompetitionFlow] → Closing fullscreen overlay and calling onComplete');
             close(false); // Use fade out animation
             if(typeof onComplete === 'function'){
               onComplete(score);
             }
-          }, 2500); // Wait for animation to complete
+          }, options.competitionMode ? 0 : 2500); // competitionMode: immediate; else wait for animation
         }, gameOptions);
         console.info('[CompetitionFlow] ✓ renderMinigame called successfully');
       } catch (renderErr) {
