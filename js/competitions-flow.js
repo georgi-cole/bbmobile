@@ -1904,12 +1904,7 @@
           setTimeout(() => g.advancePhase(), 100);
         }
       } else if(options.autoFastAdvance !== false){
-        // Skip the fast-forward results overlay when Score Pipeline v2 is active –
-        // CompetitionResults.show() in finishCompPhase / finishVetoComp handles the modal.
-        const _cfg = (global.game && global.game.cfg) || {};
-        if (!(_cfg.scoringPipeline && _cfg.scoringPipeline.useV2 === true)) {
-          global.CompetitionFlow.showCompetitionResultsAndFastForward(score);
-        }
+        global.CompetitionFlow.showCompetitionResultsAndFastForward(score);
       } else {
         console.info('[ImmediateResults] autoFastAdvance disabled for this flow call');
       }
