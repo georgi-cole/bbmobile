@@ -1188,6 +1188,31 @@
     }
   }
 
+  function ensureSkipVotesButton() {
+    try {
+      if (!state || !state.container) return;
+      if (state.container.querySelector('.lv2-skip-votes-btn')) return;
+
+      const btn = document.createElement('button');
+      btn.className = 'lv2-skip-votes-btn btn neutral';
+      btn.type = 'button';
+      btn.title = 'Skip Votes — reveal result immediately';
+      btn.textContent = 'Skip Votes';
+
+      btn.addEventListener('click', function () {
+        try {
+          window.dispatchEvent(new CustomEvent('skipVotesPressed'));
+        } catch (err) {
+          console.error('[lv2] skip votes dispatch failed', err);
+        }
+      });
+
+      state.container.appendChild(btn);
+    } catch (err) {
+      console.warn('[lv2] ensureSkipVotesButton failed', err);
+    }
+  }
+
   // Create voting CTA for 2-nominee flows (inline button pattern)
   function createCtaBar(options = {}) {
     const {
@@ -1208,6 +1233,9 @@
     
     // Store onVote callback for inline CTA to use
     state.ctaBar = { onVote };
+
+    // Ensure skip button exists when overlay/CTA is present
+    ensureSkipVotesButton();
     
     // For 2-nominee flows, inline CTA pattern is used
     // Name button becomes the evict button when selected
