@@ -1439,11 +1439,8 @@
     if(_useV2Veto && window.CompetitionResults && typeof window.CompetitionResults.show === 'function'){
       try{
         var _displayDuration = g.__skipInlineWinner ? POV_RESULTS_INSTANT_DISMISS_MS : POV_RESULTS_TO_WINNER_DELAY_MS;
-        var _vetoKey = g.__vetoGameKey || 'unknown';
-        var _vetoMeta = window.MinigameRegistry && typeof window.MinigameRegistry.getGame === 'function' ? window.MinigameRegistry.getGame(_vetoKey) : null;
-        var _isEnduranceVeto = !!(_vetoMeta && _vetoMeta.scoring === 'endurance');
         var _v2Standings = window.ScorePipeline
-          ? window.ScorePipeline.buildStandings(g.lastCompScores, { maxResults: 1, endurance: _isEnduranceVeto })
+          ? window.ScorePipeline.buildStandings(g.lastCompScores, { maxResults: 1 })
           : (function(){ var top = arr[0]; return top ? [{ rank: 1, id: top[0], score: top[1], displayScore: +(top[1]/10).toFixed(1) }] : []; })();
         console.info('[veto] v2: Showing CompetitionResults modal (duration: ' + _displayDuration + 'ms)');
         window.CompetitionResults.show({ title: 'POV Competition', standings: _v2Standings, compType: 'pov', autoDismissMs: _displayDuration })
