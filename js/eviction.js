@@ -22,35 +22,6 @@
 
   function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
-  // Resolver for the currently-pending interruptibleSleep (if any)
-  let _skipVotesResolve = null;
-
-  // Like sleep(), but resolves immediately when skipVoteSequence() is called
-  function interruptibleSleep(ms) {
-    return new Promise(r => {
-      const g = global.game;
-      if (g?.eviction?.__skipVotes) { r(); return; }
-      const t = setTimeout(() => { _skipVotesResolve = null; r(); }, ms);
-      _skipVotesResolve = () => { clearTimeout(t); _skipVotesResolve = null; r(); };
-    });
-  }
-
-  // Skip all remaining ballot animations and jump straight to the vote result
-  function skipVoteSequence() {
-    const g = global.game;
-    if (!g?.eviction?.sequenceStarted || g.eviction.sequenceDone) return;
-    g.eviction.__skipVotes = true;
-    // Clear diary room display immediately
-    const tvOverlay = document.getElementById('tvOverlay');
-    if (tvOverlay) tvOverlay.innerHTML = '';
-    const tv = document.getElementById('tv');
-    if (tv) tv.classList.remove('tvTall');
-    // Interrupt any current sleep
-    if (_skipVotesResolve) _skipVotesResolve();
-    console.info('[eviction] Vote sequence skipped by user');
-  }
-  global.skipVoteSequence = skipVoteSequence;
-
   // Eviction result phrase variants
   const EVICTION_PHRASES = [
     'you have been evicted.',
@@ -900,7 +871,6 @@
     const g=global.game; if(!g) return;
     if(g.eviction.sequenceStarted) return;
     g.eviction.sequenceStarted=true;
-    g.eviction.__skipVotes=false;
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
@@ -955,13 +925,11 @@
       
       // Issue #5: Show diary room with avatars (legacy) OR push vote to LV2
       if(!useLv2){ 
-        if (!g.eviction.__skipVotes) {
-          showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
-        }
-        await interruptibleSleep(3000);
+        showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
+        await sleep(3000);
       } else { 
         // LV2 path: Push vote to show voter chip and update counts
-        if(global.lv2?.pushVote && !g.eviction.__skipVotes){
+        if(global.lv2?.pushVote){
           // leftId is first nominee (left position in LV2 UI)
           // Compare pick with leftId to determine 'left' or 'right' vote attribution
           const [leftId] = noms;
@@ -972,11 +940,9 @@
             pick: votePick
           });
         }
-        await interruptibleSleep(1500); // Wait for LV2 to process vote
+        await sleep(1500); // Wait for LV2 to process vote
       }
-      if (!g.eviction.__skipVotes) {
-        try{ await global.cardQueueWaitIdle?.(); }catch{}
-      }
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
       
       // Hook: Push vote to rollout overlay if it's showing
       if(global.LiveVoteRollout?.isShowing?.()){
@@ -1001,7 +967,7 @@
         updateLiveVoteMulti(counts);
       }
       markVoter(entry.voter,`voted (${namePick})`);
-      await interruptibleSleep(180);
+      await sleep(180);
     }
 
     g.eviction.sequenceDone=true;
