@@ -477,19 +477,17 @@
       const accuracy = totalTargets > 0 ? Math.round((targetsHit / totalTargets) * 100) : 0;
       const finalScore = Math.max(0, score);
       
-      // Stats (practice mode only)
-      if(!competitionMode) {
-        statsDiv.innerHTML = `
-          <div style="text-align:center;">
-            <div style="font-size:1.2rem;color:#6fd3ff;margin-bottom:10px;">Game Over!</div>
-            <div>Final Score: <strong style="color:#83bfff;">${finalScore}</strong></div>
-            <div>Accuracy: ${accuracy}%</div>
-            <div>Max Combo: ${maxCombo}x</div>
-            <div>Correct Hits: ${targetsHit}</div>
-            <div>Wrong Color Hits: ${wrongColorHits}</div>
-          </div>
-        `;
-      }
+      // Stats
+      statsDiv.innerHTML = `
+        <div style="text-align:center;">
+          <div style="font-size:1.2rem;color:#6fd3ff;margin-bottom:10px;">Game Over!</div>
+          <div>Final Score: <strong style="color:#83bfff;">${finalScore}</strong></div>
+          <div>Accuracy: ${accuracy}%</div>
+          <div>Max Combo: ${maxCombo}x</div>
+          <div>Correct Hits: ${targetsHit}</div>
+          <div>Wrong Color Hits: ${wrongColorHits}</div>
+        </div>
+      `;
       
       // Set result for integration
       window.minigameResult = {
@@ -510,7 +508,7 @@
         if(typeof onComplete === 'function'){
           onComplete(finalScore);
         }
-      }, competitionMode ? 0 : 2000);
+      }, 2000);
     }
     
     // Start game button

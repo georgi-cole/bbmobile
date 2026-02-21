@@ -8,7 +8,6 @@
   const gameId = 'tilted-ledge';
   
   function render(container, onComplete, options = {}){
-    const competitionMode = !!options.competitionMode;
     const root = document.createElement('div');
     root.style.cssText = 'position:relative;display:grid;grid-template-rows:auto 1fr auto;height:100%;min-height:480px;background:linear-gradient(180deg,#0b1020,#0f1530);color:#e8f3ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden;';
     
@@ -294,12 +293,10 @@
       // Calculate final score (0-100 scale)
       const rawScore = Math.min(100, Math.max(0, score));
       
-      // Show end screen (practice mode only)
-      if(!competitionMode) {
-        endScreen.style.display = 'flex';
-        root.querySelector('#finalScore').textContent = Math.round(rawScore);
-        root.querySelector('#finalTime').textContent = `${(timeElapsed / 1000).toFixed(1)}s`;
-      }
+      // Show end screen
+      endScreen.style.display = 'flex';
+      root.querySelector('#finalScore').textContent = Math.round(rawScore);
+      root.querySelector('#finalTime').textContent = `${(timeElapsed / 1000).toFixed(1)}s`;
       
       // Set result and dispatch event
       g.minigameResult = {
@@ -318,7 +315,7 @@
         if(typeof onComplete === 'function'){
           onComplete(rawScore);
         }
-      }, competitionMode ? 0 : 1500);
+      }, 1500);
     }
     
     // Wire up events

@@ -329,12 +329,10 @@
           rawScore * 10; // Fallback: scale to 0-1000
       }
       
-      if(!competitionMode) {
-        scoreDisplay.innerHTML = `
-          <div style="font-size:1.1rem;margin:10px 0;">Correct: ${correctCount}/${selectedQuestions.length}</div>
-          <div style="font-size:1.3rem;color:#83bfff;">Final Score: ${Math.round(finalScore)}</div>
-        `;
-      }
+      scoreDisplay.innerHTML = `
+        <div style="font-size:1.1rem;margin:10px 0;">Correct: ${correctCount}/${selectedQuestions.length}</div>
+        <div style="font-size:1.3rem;color:#83bfff;">Final Score: ${Math.round(finalScore)}</div>
+      `;
       
       // Save best score
       saveScore(variant === 'pulse' ? 'triviaPulse' : 'triviaQuiz', finalScore);
@@ -344,7 +342,7 @@
       
       setTimeout(() => {
         onComplete(finalScore);
-      }, competitionMode ? 0 : 2500);
+      }, 2500);
     }
     
     wrapper.appendChild(title);
