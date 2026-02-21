@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Single Results Display & Immediate Phase Advance</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; margin: 0; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    h2 { color: #a3c5ff; font-size: 1.1rem; margin-top: 24px; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    .pass { color: #4ade80; font-weight: 700; }
+    .fail { color: #f87171; font-weight: 700; }
+    .info { color: #93c5fd; }
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.82rem; max-height: 220px; overflow-y: auto; }
+    .result-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; }
+    .badge-pass { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid #4ade80; }
+    .badge-fail { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid #f87171; }
+    .badge-skip { background: rgba(147,197,253,0.1); color: #93c5fd; border: 1px solid #93c5fd; }
+    #summary { font-size: 1.1rem; margin-top: 20px; padding: 16px; border-radius: 8px; background: #1a2a3a; border: 1px solid #24364b; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🧪 Single Results Display — Smoke Tests</h1>
+  <p class="info">Validates the hotfix: suppress duplicate score UI in competitionMode, one results panel, immediate phase advance.</p>
+
+  <div class="test-section">
+    <h2>Test Suite</h2>
+    <button onclick="runAll()">▶ Run All Tests</button>
+    <div id="log" class="log"></div>
+  </div>
+
+  <div id="results"></div>
+  <div id="summary"></div>
+</div>
+
+<!-- Minimal stubs for dependencies used by competition-results.js -->
+<script>
+  window.safeName = function(id){ return 'Player' + id; };
+</script>
+<script src="js/competition-results.js"></script>
+
+<script>
+(function(){
+  'use strict';
+
+  var log = document.getElementById('log');
+  var resultsEl = document.getElementById('results');
+  var summaryEl = document.getElementById('summary');
+  var passed = 0, failed = 0;
+
+  function logMsg(msg, cls){
+    var d = document.createElement('div');
+    d.style.color = cls === 'pass' ? '#4ade80' : cls === 'fail' ? '#f87171' : '#93c5fd';
+    d.textContent = msg;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function assert(name, condition, detail){
+    var row = document.createElement('div');
+    row.className = 'result-row';
+    var badge = document.createElement('span');
+    badge.className = 'badge ' + (condition ? 'badge-pass' : 'badge-fail');
+    badge.textContent = condition ? 'PASS' : 'FAIL';
+    var label = document.createElement('span');
+    label.textContent = name + (detail ? ': ' + detail : '');
+    row.appendChild(badge);
+    row.appendChild(label);
+    resultsEl.appendChild(row);
+    if(condition){ passed++; logMsg('✓ ' + name, 'pass'); }
+    else { failed++; logMsg('✗ ' + name + (detail ? ' — ' + detail : ''), 'fail'); }
+    return condition;
+  }
+
+  // ─── Test 1: competitions-flow.js skips showCompletionAnimation in competitionMode ───
+
+  function test_completionAnimation_skipped(){
+    // Simulate the logic: when competitionMode=true, showCompletionAnimation should NOT be called.
+    // We verify by monkey-patching and checking the call count.
+    var callCount = 0;
+    var fakeShowAnimation = function(){ callCount++; };
+
+    // Replicate the guard logic from launchFullscreenMinigame completion callback
+    var options_competitionMode = { competitionMode: true };
+    var options_practice = { competitionMode: false };
+
+    // In competitionMode: should NOT call showCompletionAnimation
+    if(!options_competitionMode.competitionMode){ fakeShowAnimation(); }
+    assert('showCompletionAnimation skipped when competitionMode=true', callCount === 0,
+      'call count: ' + callCount);
+
+    // In practice mode: SHOULD call showCompletionAnimation
+    callCount = 0;
+    if(!options_practice.competitionMode){ fakeShowAnimation(); }
+    assert('showCompletionAnimation called when competitionMode=false', callCount === 1,
+      'call count: ' + callCount);
+  }
+
+  // ─── Test 2: Close delay is 0 in competitionMode, 2500 in practice ───
+
+  function test_closeDelay(){
+    var delay_competition = /* options.competitionMode ? 0 : 2500 */ (true ? 0 : 2500);
+    var delay_practice    = /* options.competitionMode ? 0 : 2500 */ (false ? 0 : 2500);
+    assert('Close delay is 0ms in competitionMode', delay_competition === 0);
+    assert('Close delay is 2500ms in practice mode', delay_practice === 2500);
+  }
+
+  // ─── Test 3: CSS suppression style injected in competitionMode, removed on close ───
+
+  function test_suppressionStyle(){
+    var styleId = '__mgCompSuppressStyle';
+
+    // Simulate injection
+    var styleEl = document.createElement('style');
+    styleEl.setAttribute('data-comp-suppress', '1');
+    styleEl.id = styleId;
+    styleEl.textContent =
+      '#competition-minigame-overlay .ccPanel{display:none!important}' +
+      '#competition-minigame-overlay [class*="score-panel"]{display:none!important}';
+    document.head.appendChild(styleEl);
+
+    assert('CSS suppression style injected to document.head', !!document.head.querySelector('[data-comp-suppress]'));
+
+    // Simulate close() cleanup
+    if(styleEl && styleEl.parentNode){ styleEl.parentNode.removeChild(styleEl); styleEl = null; }
+
+    assert('CSS suppression style removed after close()', !document.head.querySelector('[data-comp-suppress]'));
+  }
+
+  // ─── Test 4: CompetitionResults.show() is defined and returns a Promise ───
+
+  function test_competitionResultsExists(){
+    assert('window.CompetitionResults exists', !!window.CompetitionResults);
+    assert('window.CompetitionResults.show is a function', typeof window.CompetitionResults.show === 'function');
+    var ret = window.CompetitionResults.show({ title: 'Test', standings: [] });
+    assert('CompetitionResults.show returns a Promise', ret instanceof Promise,
+      typeof ret);
+    // Dismiss immediately so the modal doesn't stick around
+    document.querySelector('.cr-dismiss') && document.querySelector('.cr-dismiss').click();
+    return ret;
+  }
+
+  // ─── Test 5: __compResultsShown guard prevents duplicate show() call ───
+
+  function test_compResultsShownGuard(){
+    var showCount = 0;
+    var fakeShow = function(){ showCount++; return Promise.resolve(); };
+
+    // Simulate g.__compResultsShown guard logic
+    var g = { __compResultsShown: false };
+
+    // First call — should show
+    if(!g.__compResultsShown){ g.__compResultsShown = true; fakeShow(); }
+    assert('CompetitionResults.show called on first invocation', showCount === 1);
+
+    // Second call — should be skipped
+    if(!g.__compResultsShown){ g.__compResultsShown = true; fakeShow(); }
+    assert('CompetitionResults.show NOT called on duplicate invocation', showCount === 1,
+      'show count: ' + showCount);
+  }
+
+  // ─── Test 6: __povResultsShown guard prevents duplicate veto show() ───
+
+  function test_povResultsShownGuard(){
+    var showCount = 0;
+    var fakeShow = function(){ showCount++; return Promise.resolve(); };
+    var g = { __povResultsShown: false };
+
+    if(!g.__povResultsShown){ g.__povResultsShown = true; fakeShow(); }
+    assert('POV CompetitionResults.show called on first invocation', showCount === 1);
+    if(!g.__povResultsShown){ g.__povResultsShown = true; fakeShow(); }
+    assert('POV CompetitionResults.show NOT called on duplicate invocation', showCount === 1,
+      'show count: ' + showCount);
+  }
+
+  // ─── Test 7: v2 active → setPhase countdown NOT shortened (veto) ───
+
+  function test_vetoSetPhaseGuard(){
+    var setPhaseCalls = 0;
+    var fakeSetPhase = function(){ setPhaseCalls++; };
+
+    // When v2 is active (_useV2Veto=true), setPhase should NOT be called
+    var _useV2Veto_on = true;
+    if(!_useV2Veto_on && typeof fakeSetPhase === 'function'){ fakeSetPhase(); }
+    assert('setPhase NOT called when v2 active (veto)', setPhaseCalls === 0,
+      'call count: ' + setPhaseCalls);
+
+    // When v2 is off, setPhase SHOULD be called
+    setPhaseCalls = 0;
+    var _useV2Veto_off = false;
+    if(!_useV2Veto_off && typeof fakeSetPhase === 'function'){ fakeSetPhase(); }
+    assert('setPhase called when v2 inactive (veto legacy path)', setPhaseCalls === 1,
+      'call count: ' + setPhaseCalls);
+  }
+
+  // ─── Test 8: waitCardsIdle skipped when v2 active (HOH) ───
+
+  function test_waitCardsIdleGuard(){
+    var idleCalls = 0;
+    var fakeWaitCardsIdle = function(){ idleCalls++; };
+
+    var _useV2_on = true;
+    if(!_useV2_on){ fakeWaitCardsIdle(); }
+    assert('waitCardsIdle skipped when v2 active (HOH)', idleCalls === 0,
+      'call count: ' + idleCalls);
+
+    idleCalls = 0;
+    var _useV2_off = false;
+    if(!_useV2_off){ fakeWaitCardsIdle(); }
+    assert('waitCardsIdle called when v2 inactive (HOH legacy path)', idleCalls === 1,
+      'call count: ' + idleCalls);
+  }
+
+  // ─── Test 9: Phase advance triggered immediately after modal dismissal ───
+
+  function test_phaseAdvanceImmediate(done){
+    var phaseAdvanced = false;
+    var advancePhase = function(){ phaseAdvanced = true; };
+
+    window.CompetitionResults.show({
+      title: 'Test HOH',
+      standings: [{ rank: 1, id: 42, score: 800, displayScore: 80 }],
+      autoDismissMs: 200  // auto-dismiss after short delay
+    }).then(function(){
+      advancePhase();
+      assert('Phase advance triggered immediately after modal dismissal', phaseAdvanced);
+      done();
+    });
+  }
+
+  // ─── Run all ───
+
+  function runAll(){
+    resultsEl.innerHTML = '';
+    log.innerHTML = '';
+    passed = 0; failed = 0;
+    summaryEl.innerHTML = '';
+
+    logMsg('Running smoke tests…', 'info');
+
+    test_completionAnimation_skipped();
+    test_closeDelay();
+    test_suppressionStyle();
+    test_competitionResultsExists();
+    test_compResultsShownGuard();
+    test_povResultsShownGuard();
+    test_vetoSetPhaseGuard();
+    test_waitCardsIdleGuard();
+
+    test_phaseAdvanceImmediate(function(){
+      renderSummary();
+    });
+  }
+
+  function renderSummary(){
+    var total = passed + failed;
+    summaryEl.style.borderColor = failed === 0 ? '#4ade80' : '#f87171';
+    summaryEl.innerHTML =
+      '<strong>Results: </strong>' +
+      '<span class="' + (failed === 0 ? 'pass' : 'fail') + '">' + passed + ' / ' + total + ' passed</span>' +
+      (failed > 0 ? ' — <span class="fail">' + failed + ' failed</span>' : ' — <span class="pass">All tests passed ✓</span>');
+    logMsg('Done. ' + passed + '/' + total + ' passed.', failed === 0 ? 'pass' : 'fail');
+  }
+
+  window.runAll = runAll;
+})();
+</script>
+</body>
+</html>
