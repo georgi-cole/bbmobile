@@ -903,12 +903,7 @@
     const configDuration = (game && game.cfg && game.cfg.minigameDuration) || 180;
     
     // Check for unlimited mode
-    // hold_wall (and legacy holdWall) is an endurance game – timers are always disabled
-    const isHoldWall = (gameKey === 'hold_wall' || gameKey === 'holdWall');
-    const isUnlimited = options.unlimited === true || options.timeLimit === null || isHoldWall;
-    if(isHoldWall){
-      console.info('[CompetitionFlow] hold_wall endurance game – disabling countdown timer');
-    }
+    const isUnlimited = options.unlimited === true || options.timeLimit === null;
     
     // Pause phase timer when starting minigame
     let phaseTimerWasPaused = false;
@@ -1026,11 +1021,6 @@
     timerContainer.appendChild(timerIcon);
     timerContainer.appendChild(timerText);
     timerContainer.appendChild(progressBar);
-
-    // For endurance games (hold_wall) completely hide the countdown UI
-    if(isHoldWall){
-      timerContainer.style.display = 'none';
-    }
 
     // Close button
     const closeBtn = document.createElement('button');
@@ -1620,124 +1610,6 @@
     }, { once: true });
   });
 
-  /**
-   * Authoritatively resolve a competition (HOH or POV) for endurance minigames.
-   * Sets winner directly in game state, marks all resolution flags, and advances
-   * the phase without showing any intermediate results overlay.
-   *
-   * Idempotent: subsequent calls with the same compType during the same phase are
-   * silently ignored.
-   *
-   * @param {Object} opts
-   * @param {string}   opts.phase            - Current game phase (e.g. 'hoh', 'veto_comp')
-   * @param {string}   opts.compType         - 'hoh' or 'pov'
-   * @param {string}   [opts.gameKey]        - Minigame key (e.g. 'hold_wall')
-   * @param {*}        opts.winnerId         - ID of the winning player
-   * @param {Array}    [opts.eliminationOrder] - Ordered list of eliminated player IDs
-   * @param {string}   [opts.reason]         - Human-readable reason for logging
-   */
-  function authoritativeResolveCompetition({ phase, compType, gameKey, winnerId, eliminationOrder, reason } = {}){
-    const game = g.game;
-    if(!game){
-      console.warn('[CompetitionFlow.authoritativeResolveCompetition] No game object – aborting');
-      return;
-    }
-
-    const resolvedCompType = compType || phase || game.phase;
-    const guardKey = `__authResolved_${resolvedCompType}`;
-
-    // Idempotency: only resolve once per phase
-    if(game[guardKey]){
-      console.warn(`[CompetitionFlow.authoritativeResolveCompetition] Already resolved for '${resolvedCompType}' – skipping duplicate call`);
-      return;
-    }
-    game[guardKey] = true;
-
-    console.info(`[CompetitionFlow.authoritativeResolveCompetition] ▶ Resolving ${resolvedCompType}, winner: ${winnerId}, key: ${gameKey || 'endurance'}, reason: ${reason || 'last-standing'}`);
-
-    // --- 1. Persist minimal results (winner=1000, others=0) ---
-    if(!game.lastCompScores || !(game.lastCompScores instanceof Map)){
-      game.lastCompScores = new Map();
-    }
-    game.lastCompScores.set(winnerId, 1000);
-    if(Array.isArray(eliminationOrder)){
-      eliminationOrder.forEach(id => { if(id !== winnerId) game.lastCompScores.set(id, 0); });
-    }
-
-    // --- 2. Set authoritative winner flag (used by finishCompPhase / finishVetoComp guards) ---
-    game.__authoritativeWinner = {
-      playerId: winnerId,
-      score: 1000,
-      minigame: gameKey || 'endurance',
-      compType: resolvedCompType,
-      timestamp: Date.now()
-    };
-
-    // --- 3. Directly update game state and mark resolved flags ---
-    if(resolvedCompType === 'hoh'){
-      // Set HOH winner
-      if(Array.isArray(game.players)){
-        game.players.forEach(p => { p.hoh = false; });
-      }
-      const winner = g.getP ? g.getP(winnerId) : null;
-      if(winner){ winner.hoh = true; }
-      game.hohId = winnerId;
-      // Mark HOH resolved so finishCompPhase short-circuits
-      game.__hohResolved = true;
-      game.__compRunning = false;
-      console.info(`[CompetitionFlow.authoritativeResolveCompetition] ✓ HOH set → player ${winnerId}`);
-    } else if(resolvedCompType === 'pov'){
-      // Set POV winner
-      game.vetoHolder = winnerId;
-      // Mark veto comp resolved so finishVetoComp short-circuits
-      game.__finishVetoCompCalled = true;
-      game.__vetoResolving = true;
-      console.info(`[CompetitionFlow.authoritativeResolveCompetition] ✓ POV set → player ${winnerId}`);
-    }
-
-    // --- 4. Update badges / HUD ---
-    try{ if(typeof g.syncPlayerBadgeStates === 'function') g.syncPlayerBadgeStates(); }catch(e){}
-    try{ if(typeof g.updateHud === 'function') g.updateHud(); }catch(e){}
-
-    // --- 5. Close the fullscreen overlay if still open ---
-    if(activeMinigameOverlay && activeMinigameOverlay.parentNode){
-      try{
-        activeMinigameOverlay.parentNode.removeChild(activeMinigameOverlay);
-        console.info('[CompetitionFlow.authoritativeResolveCompetition] ✓ Fullscreen overlay closed');
-      }catch(e){
-        console.warn('[CompetitionFlow.authoritativeResolveCompetition] Could not remove overlay:', e);
-      }
-      activeMinigameOverlay = null;
-    }
-
-    // --- 6. Advance phase without any results popup ---
-    // Small delay to let any in-flight microtasks settle before phase change
-    setTimeout(() => {
-      try{
-        const currentPhase = game.phase;
-        if(resolvedCompType === 'hoh' && currentPhase === 'hoh' && typeof g.finishCompPhase === 'function'){
-          // finishCompPhase will see __hohResolved=true and skip re-computation
-          console.info('[CompetitionFlow.authoritativeResolveCompetition] Calling finishCompPhase()');
-          g.finishCompPhase();
-        } else if(resolvedCompType === 'pov' && (currentPhase === 'veto_comp' || currentPhase === 'veto' || currentPhase === 'pov') && typeof g.finishVetoComp === 'function'){
-          // finishVetoComp will see __finishVetoCompCalled=true and skip re-computation
-          console.info('[CompetitionFlow.authoritativeResolveCompetition] Calling finishVetoComp()');
-          g.finishVetoComp();
-        } else if(typeof game.advancePhase === 'function'){
-          console.info('[CompetitionFlow.authoritativeResolveCompetition] Advancing phase via game.advancePhase()');
-          game.advancePhase();
-        }
-      }catch(err){
-        console.error('[CompetitionFlow.authoritativeResolveCompetition] Phase advance error:', err);
-      }
-    }, 150);
-
-    // Dispatch event for observability
-    g.dispatchEvent(new CustomEvent('authoritative-competition-resolved', {
-      detail: { compType: resolvedCompType, winnerId, gameKey: gameKey || 'hold_wall', reason: reason || 'last-standing' }
-    }));
-  }
-
   // Expose to global
   g.CompetitionFlow = {
     showInstructionsInTV: showInstructionsInTV,
@@ -1746,7 +1618,6 @@
     cleanupOnPhaseChange: cleanupOnPhaseChange,
     ensureAttachedContainer: ensureAttachedContainer,
     resolveAttachedTvContainer: ensureAttachedContainer, // Alias for consistency
-    authoritativeResolveCompetition: authoritativeResolveCompetition,
     // Expose guard utilities for debugging
     getGameRef: getGameRef,
     flushDeferredCalls: flushDeferredCalls
