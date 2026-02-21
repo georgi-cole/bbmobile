@@ -43,6 +43,7 @@
   let progressBar = null;
   let progressInterval = null;
   let prefersReducedMotion = false;
+  let skipVotesButton = null;
 
   // Initialize the unified skip+timer pill
   function init(){
@@ -126,6 +127,23 @@
     // Hide tvTitle when skip button is present
     if(tvTitle) tvTitle.style.display = 'none';
 
+    // Create Skip Votes button (shown only during the ballot reveal sequence)
+    skipVotesButton = document.createElement('button');
+    skipVotesButton.id = 'tvSkipVotesBtn';
+    skipVotesButton.className = 'tv-skip-votes-btn';
+    skipVotesButton.setAttribute('aria-label', 'Skip to vote results');
+    skipVotesButton.setAttribute('title', 'Skip to vote results');
+    skipVotesButton.textContent = '⏭ Skip Votes';
+    skipVotesButton.style.display = 'none';
+    tvHead.appendChild(skipVotesButton);
+
+    skipVotesButton.addEventListener('click', () => {
+      if(typeof g.skipVoteSequence === 'function'){
+        g.skipVoteSequence();
+      }
+      skipVotesButton.style.display = 'none';
+    });
+
     // Wire up handlers
     wireHandlers();
 
@@ -158,14 +176,29 @@
     timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
 
+  // Show/hide Skip Votes button based on ballot reveal sequence state
+  function updateSkipVotesVisibility(){
+    if(!skipVotesButton) return;
+    const eviction = g.game?.eviction;
+    const shouldShow = (
+      eviction &&
+      eviction.sequenceStarted &&
+      !eviction.sequenceDone &&
+      !eviction.__skipVotes
+    );
+    skipVotesButton.style.display = shouldShow ? '' : 'none';
+  }
+
   // Start timer update interval
   function startTimerUpdate(){
     // Update immediately
     updateTimerDisplay();
+    updateSkipVotesVisibility();
     
     // Update every second
     setInterval(() => {
       updateTimerDisplay();
+      updateSkipVotesVisibility();
     }, 1000);
   }
 
