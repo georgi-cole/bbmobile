@@ -40,17 +40,19 @@ try {
     'utf8'
   );
   
-  // Check for authoritative winner assignment
-  if (!holdWallContent.includes('g.__authoritativeWinner')) {
-    throw new Error('g.__authoritativeWinner not set in Hold The Wall');
+  // Check for authoritative winner assignment – either via new API or legacy flag
+  const usesNewAPI = holdWallContent.includes('authoritativeResolveCompetition');
+  const usesLegacyFlag = holdWallContent.includes('g.game.__authoritativeWinner') || holdWallContent.includes('g.__authoritativeWinner');
+  if (!usesNewAPI && !usesLegacyFlag) {
+    throw new Error('Neither authoritativeResolveCompetition call nor g.__authoritativeWinner found in Hold The Wall');
   }
   
-  if (!holdWallContent.includes('playerId:')) {
-    throw new Error('playerId field not set in authoritative winner');
+  if (!holdWallContent.includes('playerId:') && !holdWallContent.includes('winnerId')) {
+    throw new Error('Winner ID field not set in authoritative winner logic');
   }
   
-  if (!holdWallContent.includes('compType:')) {
-    throw new Error('compType field not set in authoritative winner');
+  if (!holdWallContent.includes('compType')) {
+    throw new Error('compType not referenced in Hold The Wall winner logic');
   }
   
   // Check for AFK detection
@@ -73,7 +75,7 @@ try {
     throw new Error('Wall pointer-events not disabled after AFK drop');
   }
   
-  console.log('  ✅ Authoritative winner logic present');
+  console.log('  ✅ Authoritative winner logic present' + (usesNewAPI ? ' (via authoritativeResolveCompetition API)' : ' (legacy flag)'));
   console.log('  ✅ AFK detection implemented');
   console.log('  ✅ Grace period is 3 seconds');
   console.log('  ✅ Wall disabling logic present');
@@ -271,6 +273,169 @@ try {
 } catch (error) {
   console.error(`  ❌ FAILED: ${error.message}`);
   errors.push(`Test 5: ${error.message}`);
+  testsFailed++;
+}
+console.log('');
+
+// Test 6: Verify canonical key is hold_wall in registry
+console.log('🧪 Test 6: Canonical key is hold_wall in registry');
+try {
+  const registryContent = readFileSync(
+    join(rootDir, 'js/minigames/registry.js'),
+    'utf8'
+  );
+
+  if (!registryContent.includes("key: 'hold_wall'")) {
+    throw new Error("registry.js does not have key: 'hold_wall'");
+  }
+
+  if (!/hold_wall\s*:/.test(registryContent)) {
+    throw new Error('registry.js does not have hold_wall: entry');
+  }
+
+  console.log("  ✅ hold_wall is the canonical registry key");
+  testsPassed++;
+} catch (error) {
+  console.error(`  ❌ FAILED: ${error.message}`);
+  errors.push(`Test 6: ${error.message}`);
+  testsFailed++;
+}
+console.log('');
+
+// Test 7: Verify legacy aliases map to hold_wall in compat-bridge
+console.log('🧪 Test 7: Legacy aliases resolve to hold_wall in compat-bridge');
+try {
+  const compatContent = readFileSync(
+    join(rootDir, 'js/minigames/core/compat-bridge.js'),
+    'utf8'
+  );
+
+  const aliases = ['holdWall', 'hold-wall', 'holdwall', 'holdthewall'];
+  for (const alias of aliases) {
+    const pattern = new RegExp(`['"]${alias}['"]\\s*:\\s*['"]hold_wall['"]`);
+    if (!pattern.test(compatContent)) {
+      throw new Error(`Alias '${alias}' does not map to 'hold_wall' in compat-bridge.js`);
+    }
+  }
+
+  console.log("  ✅ All legacy aliases (holdWall, hold-wall, holdwall, holdthewall) map to hold_wall");
+  testsPassed++;
+} catch (error) {
+  console.error(`  ❌ FAILED: ${error.message}`);
+  errors.push(`Test 7: ${error.message}`);
+  testsFailed++;
+}
+console.log('');
+
+// Test 8: Verify authoritativeResolveCompetition API exists in competitions-flow.js
+console.log('🧪 Test 8: authoritativeResolveCompetition API in competitions-flow.js');
+try {
+  const flowContent = readFileSync(
+    join(rootDir, 'js/competitions-flow.js'),
+    'utf8'
+  );
+
+  if (!flowContent.includes('function authoritativeResolveCompetition')) {
+    throw new Error('authoritativeResolveCompetition function not found in competitions-flow.js');
+  }
+
+  if (!flowContent.includes('authoritativeResolveCompetition: authoritativeResolveCompetition')) {
+    throw new Error('authoritativeResolveCompetition not exposed on CompetitionFlow object');
+  }
+
+  if (!flowContent.includes('game.hohId = winnerId')) {
+    throw new Error('authoritativeResolveCompetition does not set game.hohId');
+  }
+
+  if (!flowContent.includes('game.vetoHolder = winnerId')) {
+    throw new Error('authoritativeResolveCompetition does not set game.vetoHolder');
+  }
+
+  if (!flowContent.includes('game.__hohResolved = true')) {
+    throw new Error('authoritativeResolveCompetition does not set __hohResolved guard');
+  }
+
+  if (!flowContent.includes('game.__finishVetoCompCalled = true')) {
+    throw new Error('authoritativeResolveCompetition does not set __finishVetoCompCalled guard');
+  }
+
+  console.log('  ✅ authoritativeResolveCompetition function defined');
+  console.log('  ✅ Exposed on CompetitionFlow object');
+  console.log('  ✅ Sets game.hohId for HOH');
+  console.log('  ✅ Sets game.vetoHolder for POV');
+  console.log('  ✅ Sets __hohResolved guard');
+  console.log('  ✅ Sets __finishVetoCompCalled guard');
+  testsPassed++;
+} catch (error) {
+  console.error(`  ❌ FAILED: ${error.message}`);
+  errors.push(`Test 8: ${error.message}`);
+  testsFailed++;
+}
+console.log('');
+
+// Test 9: Verify hold_wall timer is disabled in launchFullscreenMinigame
+console.log('🧪 Test 9: Timer disabled for hold_wall in launchFullscreenMinigame');
+try {
+  const flowContent = readFileSync(
+    join(rootDir, 'js/competitions-flow.js'),
+    'utf8'
+  );
+
+  if (!flowContent.includes("gameKey === 'hold_wall'")) {
+    throw new Error("No gameKey === 'hold_wall' check found in competitions-flow.js");
+  }
+
+  if (!flowContent.includes("timerContainer.style.display = 'none'")) {
+    throw new Error('Timer container hide logic not found');
+  }
+
+  if (!flowContent.includes('isHoldWall')) {
+    throw new Error('isHoldWall variable not found');
+  }
+
+  console.log("  ✅ gameKey === 'hold_wall' check present");
+  console.log('  ✅ Timer container hidden for hold_wall');
+  console.log('  ✅ isHoldWall variable used correctly');
+  testsPassed++;
+} catch (error) {
+  console.error(`  ❌ FAILED: ${error.message}`);
+  errors.push(`Test 9: ${error.message}`);
+  testsFailed++;
+}
+console.log('');
+
+// Test 10: Verify hold-wall.js calls authoritativeResolveCompetition
+console.log('🧪 Test 10: hold-wall.js calls authoritativeResolveCompetition');
+try {
+  const holdWallContent = readFileSync(
+    join(rootDir, 'js/minigames/hold-wall.js'),
+    'utf8'
+  );
+
+  if (!holdWallContent.includes('authoritativeResolveCompetition')) {
+    throw new Error('hold-wall.js does not call authoritativeResolveCompetition');
+  }
+
+  if (!holdWallContent.includes("gameKey: 'hold_wall'")) {
+    throw new Error("hold-wall.js does not pass gameKey: 'hold_wall'");
+  }
+
+  if (!holdWallContent.includes('You have won Head of Household') && !holdWallContent.includes('You have won the Power of Veto')) {
+    throw new Error('hold-wall.js does not show winner title banner');
+  }
+
+  if (!holdWallContent.includes('g.MiniGames.hold_wall')) {
+    throw new Error('hold-wall.js does not export as hold_wall');
+  }
+
+  console.log('  ✅ authoritativeResolveCompetition is called');
+  console.log("  ✅ gameKey: 'hold_wall' passed correctly");
+  console.log('  ✅ Winner title banner shown for human wins');
+  console.log('  ✅ Module exported as hold_wall');
+  testsPassed++;
+} catch (error) {
+  console.error(`  ❌ FAILED: ${error.message}`);
+  errors.push(`Test 10: ${error.message}`);
   testsFailed++;
 }
 console.log('');

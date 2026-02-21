@@ -197,7 +197,7 @@
       steps: []
     },
     
-    holdWall: {
+    hold_wall: {
       title: 'Hold Wall',
       description: 'Hold your finger on the wall as long as possible without moving! Try to last 15+ seconds.',
       steps: []
