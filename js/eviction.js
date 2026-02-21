@@ -1911,4 +1911,22 @@
   global.queueGameOverIfHumanPreJury = queueGameOverIfHumanPreJury;
   global.showGameOverModalRobust = showGameOverModalRobust;
 
+  // Skip-votes global handler: immediately reveal votes when requested
+  try {
+    window.addEventListener('skipVotesPressed', function onSkipVotesPressed() {
+      try {
+        const g = global.game;
+        if (g?.eviction && !g.eviction.revealed && !g.eviction.revealing) {
+          revealVotes();
+        } else {
+          console.debug('[eviction] skipVotesPressed ignored — no active live vote');
+        }
+      } catch (err) {
+        console.error('[eviction] skipVotesPressed handler error', err);
+      }
+    }, { passive: true });
+  } catch (err) {
+    console.warn('[eviction] failed to install skipVotesPressed handler', err);
+  }
+
 })(window);
