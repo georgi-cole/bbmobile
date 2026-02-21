@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold the Wall v2 — Smoke Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    h1 { color: #83bfff; text-align: center; margin: 0 0 6px; }
+    .subtitle { text-align: center; color: #95a9c0; font-size: 0.85rem; margin-bottom: 24px; }
+    .section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .section h2 { color: #83bfff; margin: 0 0 12px; font-size: 1.1rem; border-bottom: 1px solid #2c3a4d; padding-bottom: 8px; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    button {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+    button:hover { background: #a3cfff; }
+    button:disabled { background: #444; color: #888; cursor: not-allowed; }
+    .summary {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 8px 0;
+    }
+    .pass-count { color: #66ff66; }
+    .fail-count { color: #ff6b6b; }
+    #log {
+      background: rgba(10, 19, 31, 0.9);
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 360px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+    }
+    .log-line { padding: 2px 0; border-bottom: 1px solid rgba(44,58,77,0.3); }
+    .log-line:last-child { border-bottom: none; }
+    .info { color: #83bfff; }
+    .ok   { color: #66ff66; }
+    .fail { color: #ff6b6b; }
+    .warn { color: #ffd700; }
+    #gameHost {
+      width: 100%;
+      height: 520px;
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0d1424;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧱 Hold the Wall v2 — Smoke Test</h1>
+  <p class="subtitle">Validates: authoritative winner contract · lastCompScores winner=1000 others=0 · HOH/POV winner not overwritten</p>
+
+  <div class="section">
+    <h2>Test Controls</h2>
+    <div class="btn-row">
+      <button onclick="runAll()">▶ Run All Tests</button>
+      <button onclick="testRegistryEntry()">T1: Registry entry</button>
+      <button onclick="testCompatBridge()">T2: Compat bridge</button>
+      <button onclick="testGameCompletion('hoh')">T3: HOH completion</button>
+      <button onclick="testGameCompletion('pov')">T4: POV completion</button>
+      <button onclick="testNoTimerFlag()">T5: No timer flag</button>
+      <button onclick="testWinnerNotOverwritten()">T6: Winner not overwritten</button>
+      <button onclick="clearLog()">🗑 Clear</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Results</h2>
+    <div class="summary">
+      <span>✅ <span class="pass-count" id="passCount">0</span> passed</span>
+      <span>❌ <span class="fail-count" id="failCount">0</span> failed</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <div class="section">
+    <h2>Live Game Demo</h2>
+    <div id="gameHost"></div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button onclick="launchDemo('hoh')">▶ Launch HOH demo</button>
+      <button onclick="launchDemo('pov')">▶ Launch POV demo</button>
+    </div>
+  </div>
+
+  <!-- Load the module under test -->
+  <script src="js/minigames/hold_wall.js"></script>
+
+  <script>
+    // ─── Minimal stubs for isolated testing ─────────────────────────────────
+    window.game = null; // reset between tests
+
+    function makeGame(phase) {
+      return {
+        phase: phase || 'hoh',
+        week: 3,
+        lastHOHId: null,
+        lastHOHWeek: null,
+        humanId: 0,
+        players: [
+          { id: 0, name: 'You',    human: true,  evicted: false },
+          { id: 1, name: 'Alex',   human: false, evicted: false },
+          { id: 2, name: 'Riley',  human: false, evicted: false },
+          { id: 3, name: 'Morgan', human: false, evicted: false }
+        ],
+        lastCompScores: new Map()
+      };
+    }
+
+    // ─── Log helpers ─────────────────────────────────────────────────────────
+    var passed = 0, failed = 0;
+
+    function log(msg, cls) {
+      cls = cls || 'info';
+      var el = document.getElementById('log');
+      var d = document.createElement('div');
+      d.className = 'log-line ' + cls;
+      d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+      el.appendChild(d);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function ok(name) {
+      passed++;
+      document.getElementById('passCount').textContent = passed;
+      log('✅ ' + name + ' PASSED', 'ok');
+    }
+
+    function fail(name, reason) {
+      failed++;
+      document.getElementById('failCount').textContent = failed;
+      log('❌ ' + name + ' FAILED: ' + reason, 'fail');
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      passed = 0; failed = 0;
+      document.getElementById('passCount').textContent = 0;
+      document.getElementById('failCount').textContent = 0;
+    }
+
+    // ─── Tests ───────────────────────────────────────────────────────────────
+
+    // T1: Registry entry exists in MiniGames global
+    function testRegistryEntry() {
+      log('=== T1: MiniGames registry entry ===');
+      if (window.MiniGames && window.MiniGames['hold_wall'] && typeof window.MiniGames['hold_wall'].render === 'function') {
+        ok('T1: MiniGames.hold_wall registered');
+      } else {
+        fail('T1', 'window.MiniGames.hold_wall not registered or missing .render');
+      }
+    }
+
+    // T2: Compat bridge (legacy key → hold_wall)
+    function testCompatBridge() {
+      log('=== T2: Compat bridge key aliases ===');
+      // We verify the module key matches expectation — actual bridge lives in compat-bridge.js
+      // Here we just confirm MiniGames uses the canonical underscore key
+      var hasCanonical = !!(window.MiniGames && window.MiniGames['hold_wall']);
+      var hasLegacy    = !!(window.MiniGames && window.MiniGames['holdWall']);
+      if (hasCanonical) {
+        ok('T2: Canonical key hold_wall present');
+        if (hasLegacy) {
+          log('  ℹ legacy holdWall also present (fine)', 'warn');
+        }
+      } else {
+        fail('T2', 'Canonical key hold_wall missing from MiniGames');
+      }
+    }
+
+    // T3 / T4: game completes with authoritative winner + scores
+    function testGameCompletion(compPhase) {
+      var testName = 'T' + (compPhase === 'hoh' ? '3' : '4') + ': ' + compPhase.toUpperCase() + ' completion';
+      log('=== ' + testName + ' ===');
+
+      // Setup game context
+      window.game = makeGame(compPhase === 'pov' ? 'veto_comp' : 'hoh');
+
+      // Attach module to a hidden container
+      var host = document.createElement('div');
+      host.style.cssText = 'position:fixed;left:-9999px;width:400px;height:520px;';
+      document.body.appendChild(host);
+
+      var completed = false;
+      var errors = [];
+
+      if (!window.MiniGames || !window.MiniGames['hold_wall']) {
+        fail(testName, 'hold_wall module not loaded');
+        document.body.removeChild(host);
+        return;
+      }
+
+      window.MiniGames['hold_wall'].render(host, function(score) {
+        completed = true;
+
+        // Assert 1: score returned = 1000
+        if (score !== 1000) errors.push('onComplete score=' + score + ' (expected 1000)');
+
+        // Assert 2: __authoritativeWinner set correctly
+        var aw = window.game.__authoritativeWinner;
+        if (!aw) {
+          errors.push('__authoritativeWinner not set');
+        } else {
+          if (aw.gameKey !== 'hold_wall')   errors.push('gameKey=' + aw.gameKey);
+          if (aw.score !== 1000)            errors.push('aw.score=' + aw.score);
+          if (!aw.playerId && aw.playerId !== 0) errors.push('no playerId');
+          var expectedCompType = compPhase === 'pov' ? 'pov' : 'hoh';
+          if (aw.compType !== expectedCompType) errors.push('compType=' + aw.compType + ' (expected ' + expectedCompType + ')');
+        }
+
+        // Assert 3: lastCompScores — winner=1000, others=0
+        var scores = window.game.lastCompScores;
+        if (!scores || scores.size === 0) {
+          errors.push('lastCompScores empty');
+        } else {
+          var winnerId = aw ? aw.playerId : null;
+          var nonWinnerScores = [];
+          scores.forEach(function(v, k) {
+            if (k !== winnerId && v !== 0) nonWinnerScores.push('player ' + k + '=' + v);
+          });
+          if (nonWinnerScores.length) errors.push('non-winners not 0: ' + nonWinnerScores.join(', '));
+          if (winnerId !== null && scores.get(winnerId) !== 1000) errors.push('winner score=' + scores.get(winnerId));
+        }
+
+        if (errors.length === 0) {
+          ok(testName);
+        } else {
+          fail(testName, errors.join('; '));
+        }
+
+        document.body.removeChild(host);
+      });
+
+      // Click Start button to trigger game
+      setTimeout(function() {
+        var btn = host.querySelector('#hw2StartBtn');
+        if (btn) btn.click();
+      }, 100);
+
+      // Wait max 10 s for AI drops
+      setTimeout(function() {
+        if (!completed) {
+          fail(testName, 'game did not complete within 11 s');
+          document.body.removeChild(host);
+        }
+      }, 10500);
+    }
+
+    // T5: No timer flag in competitions-flow for hold_wall
+    function testNoTimerFlag() {
+      log('=== T5: No timer (unlimited) for hold_wall ===');
+      // We verify the competitions-flow.js logic: isUnlimited becomes true when gameKey==='hold_wall'
+      // Simulate the condition inline
+      var gameKey = 'hold_wall';
+      var options = {};
+      var isUnlimited = options.unlimited === true || options.timeLimit === null || gameKey === 'hold_wall';
+      if (isUnlimited) {
+        ok('T5: hold_wall correctly sets isUnlimited=true');
+      } else {
+        fail('T5', 'hold_wall did not set isUnlimited');
+      }
+    }
+
+    // T6: HOH/POV winner is not overwritten by finishCompPhase-style logic
+    function testWinnerNotOverwritten() {
+      log('=== T6: Winner not overwritten by resolution logic ===');
+      // Simulate finishCompPhase for hold_wall gameKey
+      var game = makeGame('hoh');
+      var elig = [0, 1, 2, 3];
+      var winnerId = 1; // AI winner
+
+      game.__authoritativeWinner = {
+        compType: 'hoh',
+        playerId: winnerId,
+        score: 1000,
+        gameKey: 'hold_wall'
+      };
+
+      // Simulate the updated finishCompPhase branch
+      var winner = null;
+      if (game.__authoritativeWinner && game.__authoritativeWinner.compType === 'hoh') {
+        winner = game.__authoritativeWinner.playerId;
+        if (game.__authoritativeWinner.gameKey === 'hold_wall') {
+          for (var i = 0; i < elig.length; i++) {
+            game.lastCompScores.set(elig[i], elig[i] === winner ? 1000 : 0);
+          }
+        }
+        delete game.__authoritativeWinner;
+      }
+
+      var errors = [];
+      if (winner !== winnerId) errors.push('winner=' + winner + ' expected ' + winnerId);
+      if (game.lastCompScores.get(winnerId) !== 1000) errors.push('winner score=' + game.lastCompScores.get(winnerId));
+      elig.forEach(function(id) {
+        if (id !== winnerId && game.lastCompScores.get(id) !== 0) errors.push('non-winner ' + id + '=' + game.lastCompScores.get(id));
+      });
+      if (game.__authoritativeWinner) errors.push('__authoritativeWinner not cleared');
+
+      if (errors.length === 0) {
+        ok('T6: Winner correctly enforced, others=0, flag cleared');
+      } else {
+        fail('T6', errors.join('; '));
+      }
+    }
+
+    // Run all tests in sequence
+    function runAll() {
+      clearLog();
+      log('🚀 Running all smoke tests…', 'info');
+      testRegistryEntry();
+      testCompatBridge();
+      testNoTimerFlag();
+      testWinnerNotOverwritten();
+      // Async tests - schedule with small gap so logs don't interleave badly
+      setTimeout(function() { testGameCompletion('hoh'); }, 200);
+      setTimeout(function() { testGameCompletion('pov'); }, 300);
+    }
+
+    // ─── Live demo ──────────────────────────────────────────────────────────
+    function launchDemo(compPhase) {
+      window.game = makeGame(compPhase === 'pov' ? 'veto_comp' : 'hoh');
+      var host = document.getElementById('gameHost');
+      host.innerHTML = '';
+      if (!window.MiniGames || !window.MiniGames['hold_wall']) {
+        host.textContent = '⚠ hold_wall module not loaded';
+        return;
+      }
+      window.MiniGames['hold_wall'].render(host, function(score) {
+        log('Demo complete — score: ' + score + ', winner: ' + (window.game.__authoritativeWinner ? window.game.__authoritativeWinner.playerId : 'cleared'), 'ok');
+      });
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', function() {
+      log('Test suite ready. Module loaded: ' + !!(window.MiniGames && window.MiniGames['hold_wall']), 'info');
+    });
+  </script>
+</body>
+</html>

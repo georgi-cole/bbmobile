@@ -198,8 +198,14 @@
     },
     
     holdWall: {
-      title: 'Hold Wall',
+      title: 'Hold the Wall (legacy)',
       description: 'Hold your finger on the wall as long as possible without moving! Try to last 15+ seconds.',
+      steps: []
+    },
+
+    hold_wall: {
+      title: 'Hold the Wall',
+      description: 'Press and hold the wall — last person standing wins! No timer. The endurance competition ends only when one person remains.',
       steps: []
     },
     

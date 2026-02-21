@@ -115,9 +115,10 @@
     'simon': 'simonSays',  // Legacy alias
     
     // Phase 1: Scaffolds (future games)
-    'holdWall': 'holdWall',
-    'hold-wall': 'holdWall',
-    'holdwall': 'holdWall',
+    'holdWall': 'hold_wall',
+    'hold-wall': 'hold_wall',
+    'holdwall': 'hold_wall',
+    'hold_wall': 'hold_wall',
     'tiltedLedge': 'tiltedLedge',
     'tilted-ledge': 'tiltedLedge',
     'tiltedledge': 'tiltedLedge',
