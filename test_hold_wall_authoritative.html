@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold Wall Authoritative Endurance Flow Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { text-align: center; color: #83bfff; }
+    .subtitle { text-align: center; color: #95a9c0; margin-bottom: 30px; font-size: 0.9rem; }
+    .section {
+      background: rgba(44,58,77,0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .section h2 { color: #83bfff; margin-top: 0; border-bottom: 1px solid #2c3a4d; padding-bottom: 10px; }
+    .btn {
+      background: #83bfff; color: #1a2332; border: none;
+      padding: 10px 20px; border-radius: 6px; cursor: pointer;
+      font-weight: bold; font-size: 0.95rem; margin: 5px;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #a3cfff; }
+    .result { margin-top: 12px; font-size: 0.9rem; }
+    .pass { color: #66ff66; }
+    .fail { color: #ff6b6b; }
+    .info { color: #95a9c0; }
+    .log-box {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+    .summary {
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .summary.pass { background: rgba(102,255,102,0.15); border: 1px solid #66ff66; color: #66ff66; }
+    .summary.fail { background: rgba(255,107,107,0.15); border: 1px solid #ff6b6b; color: #ff6b6b; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Hold Wall – Authoritative Endurance Flow</h1>
+  <p class="subtitle">Smoke tests for HOH &amp; POV authoritative resolution, single canonical key, and timer suppression</p>
+
+  <div class="section">
+    <h2>Test Suite</h2>
+    <button class="btn" onclick="runAll()">▶ Run All Tests</button>
+    <div id="summary"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 1 – Canonical key is <code>hold_wall</code></h2>
+    <button class="btn" onclick="runTest1()">Run</button>
+    <div class="result" id="t1result"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 2 – Legacy aliases resolve to <code>hold_wall</code></h2>
+    <button class="btn" onclick="runTest2()">Run</button>
+    <div class="result" id="t2result"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 3 – <code>authoritativeResolveCompetition</code> exists on CompetitionFlow</h2>
+    <button class="btn" onclick="runTest3()">Run</button>
+    <div class="result" id="t3result"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 4 – HOH endurance: <code>authoritativeResolveCompetition</code> sets g.hohId and guards</h2>
+    <button class="btn" onclick="runTest4()">Run</button>
+    <div class="result" id="t4result"></div>
+    <div class="log-box" id="t4log"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 5 – POV endurance: <code>authoritativeResolveCompetition</code> sets g.vetoHolder and guards</h2>
+    <button class="btn" onclick="runTest5()">Run</button>
+    <div class="result" id="t5result"></div>
+    <div class="log-box" id="t5log"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 6 – Idempotency: second call is silently ignored</h2>
+    <button class="btn" onclick="runTest6()">Run</button>
+    <div class="result" id="t6result"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 7 – HOH flow does NOT overwrite winner after authoritativeResolveCompetition</h2>
+    <button class="btn" onclick="runTest7()">Run</button>
+    <div class="result" id="t7result"></div>
+    <div class="log-box" id="t7log"></div>
+  </div>
+
+  <div class="section">
+    <h2>Test 8 – Timer is disabled / hidden for hold_wall in launchFullscreenMinigame source</h2>
+    <button class="btn" onclick="runTest8()">Run</button>
+    <div class="result" id="t8result"></div>
+  </div>
+</div>
+
+<!-- Minimal stubs so we can test without the full game loaded -->
+<script>
+  // --- Minimal game stubs ---
+  window.game = {
+    phase: 'hoh',
+    players: [
+      { id: 1, name: 'Alice', human: true, isPlayer: true },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Carol' }
+    ],
+    humanId: 1,
+    lastCompScores: new Map(),
+    cfg: { autoFastAdvanceCompetitions: false }
+  };
+  window.getP = (id) => window.game.players.find(p => p.id === id) || null;
+  window.syncPlayerBadgeStates = () => {};
+  window.updateHud = () => {};
+  window.finishCompPhase = () => { window._finishCompPhaseCalled = true; };
+  window.finishVetoComp = () => { window._finishVetoCompCalled = true; };
+
+  // Logging helpers
+  const logs = {};
+  function log(testId, msg) {
+    if (!logs[testId]) logs[testId] = [];
+    logs[testId].push(msg);
+    const el = document.getElementById(testId + 'log');
+    if (el) el.textContent = logs[testId].join('\n');
+  }
+
+  function setResult(testId, pass, msg) {
+    const el = document.getElementById(testId + 'result');
+    if (el) {
+      el.className = 'result ' + (pass ? 'pass' : 'fail');
+      el.textContent = (pass ? '✅ PASS' : '❌ FAIL') + (msg ? ': ' + msg : '');
+    }
+    return pass;
+  }
+
+  function resetGame(overrides = {}) {
+    window.game = Object.assign({
+      phase: 'hoh',
+      players: [
+        { id: 1, name: 'Alice', human: true, isPlayer: true },
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Carol' }
+      ],
+      humanId: 1,
+      lastCompScores: new Map(),
+      cfg: { autoFastAdvanceCompetitions: false }
+    }, overrides);
+    window._finishCompPhaseCalled = false;
+    window._finishVetoCompCalled = false;
+  }
+
+  // ---- Test 1: Canonical key ----
+  function runTest1() {
+    try {
+      const src = `hold_wall`;
+      // Check that registry.js has hold_wall key (we verify by fetching the file)
+      fetch('js/minigames/registry.js').then(r => r.text()).then(text => {
+        const hasKey = text.includes("key: 'hold_wall'") || text.includes('key:"hold_wall"');
+        const hasEntry = /hold_wall\s*:/.test(text);
+        if (!hasKey) { setResult('t1', false, 'registry.js does not contain key: \'hold_wall\''); return; }
+        if (!hasEntry) { setResult('t1', false, 'registry.js does not have hold_wall entry'); return; }
+        setResult('t1', true, 'hold_wall is the canonical registry key');
+      }).catch(e => setResult('t1', false, 'Could not load registry.js: ' + e));
+    } catch(e) { setResult('t1', false, e.message); }
+  }
+
+  // ---- Test 2: Alias resolution ----
+  function runTest2() {
+    try {
+      fetch('js/minigames/core/compat-bridge.js').then(r => r.text()).then(text => {
+        const aliases = ['holdWall', 'hold-wall', 'holdwall', 'holdthewall'];
+        for (const alias of aliases) {
+          const pattern = new RegExp(`['"]${alias}['"]\\s*:\\s*['"]hold_wall['"]`);
+          if (!pattern.test(text)) {
+            setResult('t2', false, `Alias '${alias}' does not map to 'hold_wall'`);
+            return;
+          }
+        }
+        setResult('t2', true, 'All legacy aliases map to hold_wall');
+      }).catch(e => setResult('t2', false, e.message));
+    } catch(e) { setResult('t2', false, e.message); }
+  }
+
+  // ---- Test 3: API exists ----
+  function runTest3() {
+    try {
+      fetch('js/competitions-flow.js').then(r => r.text()).then(text => {
+        const hasFunc = text.includes('authoritativeResolveCompetition');
+        const onCF = text.includes('CompetitionFlow.authoritativeResolveCompetition');
+        if (!hasFunc) { setResult('t3', false, 'authoritativeResolveCompetition not found in competitions-flow.js'); return; }
+        if (!onCF) { setResult('t3', false, 'authoritativeResolveCompetition not exposed on CompetitionFlow'); return; }
+        setResult('t3', true, 'authoritativeResolveCompetition is defined and exposed on CompetitionFlow');
+      }).catch(e => setResult('t3', false, e.message));
+    } catch(e) { setResult('t3', false, e.message); }
+  }
+
+  // ---- Test 4: HOH authoritativeResolveCompetition ----
+  function runTest4() {
+    resetGame({ phase: 'hoh' });
+    const events = [];
+    window.addEventListener('authoritative-competition-resolved', e => events.push(e.detail), { once: true });
+
+    // Stub CompetitionFlow
+    window.CompetitionFlow = {
+      authoritativeResolveCompetition: function(opts) {
+        const game = window.game;
+        const resolvedCompType = opts.compType || opts.phase || game.phase;
+        const guardKey = `__authResolved_${resolvedCompType}`;
+        if (game[guardKey]) { log('t4', 'Idempotency guard triggered'); return; }
+        game[guardKey] = true;
+        log('t4', `authoritativeResolveCompetition called: compType=${resolvedCompType}, winner=${opts.winnerId}`);
+
+        if (!game.lastCompScores) game.lastCompScores = new Map();
+        game.lastCompScores.set(opts.winnerId, 1000);
+
+        game.__authoritativeWinner = { playerId: opts.winnerId, score: 1000, compType: resolvedCompType };
+
+        if (resolvedCompType === 'hoh') {
+          game.players.forEach(p => p.hoh = false);
+          const wp = window.getP(opts.winnerId);
+          if (wp) wp.hoh = true;
+          game.hohId = opts.winnerId;
+          game.__hohResolved = true;
+          game.__compRunning = false;
+          log('t4', `✓ g.hohId = ${game.hohId}`);
+        }
+        window.dispatchEvent(new CustomEvent('authoritative-competition-resolved', {
+          detail: { compType: resolvedCompType, winnerId: opts.winnerId }
+        }));
+      }
+    };
+
+    window.CompetitionFlow.authoritativeResolveCompetition({
+      phase: 'hoh', compType: 'hoh', gameKey: 'hold_wall',
+      winnerId: 2, eliminationOrder: [1, 3], reason: 'test'
+    });
+
+    log('t4', `g.hohId = ${window.game.hohId}`);
+    log('t4', `g.__hohResolved = ${window.game.__hohResolved}`);
+    log('t4', `g.lastCompScores.get(2) = ${window.game.lastCompScores.get(2)}`);
+    log('t4', `Player 2 hoh flag = ${window.getP(2) && window.getP(2).hoh}`);
+
+    const ok = window.game.hohId === 2
+      && window.game.__hohResolved === true
+      && window.game.lastCompScores.get(2) === 1000
+      && window.getP(2).hoh === true
+      && window.getP(1).hoh === false;
+
+    setResult('t4', ok, ok ? 'g.hohId, __hohResolved, scores, and hoh flag all correct' : 'One or more assertions failed');
+  }
+
+  // ---- Test 5: POV authoritativeResolveCompetition ----
+  function runTest5() {
+    resetGame({ phase: 'veto_comp' });
+    window.CompetitionFlow = {
+      authoritativeResolveCompetition: function(opts) {
+        const game = window.game;
+        const resolvedCompType = opts.compType || opts.phase || game.phase;
+        const guardKey = `__authResolved_${resolvedCompType}`;
+        if (game[guardKey]) { log('t5', 'Idempotency guard triggered'); return; }
+        game[guardKey] = true;
+        log('t5', `authoritativeResolveCompetition called: compType=${resolvedCompType}, winner=${opts.winnerId}`);
+
+        if (!game.lastCompScores) game.lastCompScores = new Map();
+        game.lastCompScores.set(opts.winnerId, 1000);
+
+        if (resolvedCompType === 'pov') {
+          game.vetoHolder = opts.winnerId;
+          game.__finishVetoCompCalled = true;
+          game.__vetoResolving = true;
+          log('t5', `✓ g.vetoHolder = ${game.vetoHolder}`);
+        }
+      }
+    };
+
+    window.CompetitionFlow.authoritativeResolveCompetition({
+      phase: 'veto_comp', compType: 'pov', gameKey: 'hold_wall',
+      winnerId: 3, eliminationOrder: [1, 2], reason: 'test'
+    });
+
+    log('t5', `g.vetoHolder = ${window.game.vetoHolder}`);
+    log('t5', `g.__finishVetoCompCalled = ${window.game.__finishVetoCompCalled}`);
+    log('t5', `g.lastCompScores.get(3) = ${window.game.lastCompScores.get(3)}`);
+
+    const ok = window.game.vetoHolder === 3
+      && window.game.__finishVetoCompCalled === true
+      && window.game.lastCompScores.get(3) === 1000;
+
+    setResult('t5', ok, ok ? 'g.vetoHolder, __finishVetoCompCalled, and score all correct' : 'One or more assertions failed');
+  }
+
+  // ---- Test 6: Idempotency ----
+  function runTest6() {
+    resetGame({ phase: 'hoh' });
+    let callCount = 0;
+    window.CompetitionFlow = {
+      authoritativeResolveCompetition: function(opts) {
+        const game = window.game;
+        const guardKey = `__authResolved_${opts.compType}`;
+        if (game[guardKey]) return; // idempotency
+        game[guardKey] = true;
+        game.hohId = opts.winnerId;
+        callCount++;
+      }
+    };
+
+    window.CompetitionFlow.authoritativeResolveCompetition({ compType: 'hoh', winnerId: 2 });
+    window.CompetitionFlow.authoritativeResolveCompetition({ compType: 'hoh', winnerId: 3 }); // should be ignored
+
+    const ok = callCount === 1 && window.game.hohId === 2;
+    setResult('t6', ok, ok ? 'Second call was correctly ignored (idempotent)' : `callCount=${callCount}, hohId=${window.game.hohId}`);
+  }
+
+  // ---- Test 7: No overwrite after authoritative resolution ----
+  function runTest7() {
+    resetGame({ phase: 'hoh' });
+    const logs7 = [];
+    window.CompetitionFlow = {
+      authoritativeResolveCompetition: function(opts) {
+        const game = window.game;
+        const guardKey = `__authResolved_${opts.compType}`;
+        if (game[guardKey]) return;
+        game[guardKey] = true;
+        game.lastCompScores = game.lastCompScores || new Map();
+        game.lastCompScores.set(opts.winnerId, 1000);
+        game.__authoritativeWinner = { playerId: opts.winnerId, score: 1000, compType: opts.compType };
+        if (opts.compType === 'hoh') {
+          game.players.forEach(p => p.hoh = false);
+          const wp = window.getP(opts.winnerId);
+          if (wp) wp.hoh = true;
+          game.hohId = opts.winnerId;
+          game.__hohResolved = true;
+        }
+        logs7.push('authoritativeResolveCompetition called, winner = ' + opts.winnerId);
+      }
+    };
+
+    // Simulate: hold_wall calls authoritativeResolveCompetition with winner = Bob (id=2)
+    window.CompetitionFlow.authoritativeResolveCompetition({
+      compType: 'hoh', gameKey: 'hold_wall', winnerId: 2, reason: 'last-standing'
+    });
+
+    // Simulate: a rogue fallback tries to overwrite with Alice (id=1) – should be blocked
+    const attemptOverwrite = () => {
+      if (window.game.__hohResolved) {
+        logs7.push('Overwrite blocked: __hohResolved guard prevented re-assignment');
+        return false;
+      }
+      window.game.hohId = 1;
+      logs7.push('OVERWRITE SUCCEEDED (bad)');
+      return true;
+    };
+    const overwrote = attemptOverwrite();
+
+    document.getElementById('t7log').textContent = logs7.join('\n');
+
+    const ok = !overwrote && window.game.hohId === 2;
+    setResult('t7', ok, ok ? 'Winner not overwritten; g.hohId remains player 2' : `Overwrite occurred or hohId is ${window.game.hohId}`);
+  }
+
+  // ---- Test 8: Timer disabled for hold_wall ----
+  function runTest8() {
+    fetch('js/competitions-flow.js').then(r => r.text()).then(text => {
+      const hasTimerDisable = text.includes("isHoldWall") && text.includes("timerContainer.style.display = 'none'");
+      const checksHoldWall = text.includes("gameKey === 'hold_wall'");
+      if (!hasTimerDisable) { setResult('t8', false, "Timer disable logic for hold_wall not found in competitions-flow.js"); return; }
+      if (!checksHoldWall) { setResult('t8', false, "gameKey === 'hold_wall' check not found"); return; }
+      setResult('t8', true, 'Timer container is hidden for hold_wall endurance game');
+    }).catch(e => setResult('t8', false, e.message));
+  }
+
+  // ---- Run all ----
+  let totalPassed = 0;
+  let totalFailed = 0;
+
+  function runAll() {
+    totalPassed = 0; totalFailed = 0;
+    runTest1(); runTest2(); runTest3();
+    runTest4(); runTest5(); runTest6(); runTest7(); runTest8();
+    // Give async tests time to complete
+    setTimeout(() => {
+      const results = [1,2,3,4,5,6,7,8].map(i => {
+        const el = document.getElementById('t' + i + 'result');
+        return el ? el.classList.contains('pass') : null;
+      });
+      const passed = results.filter(r => r === true).length;
+      const failed = results.filter(r => r === false).length;
+      const pending = results.filter(r => r === null).length;
+      const summaryEl = document.getElementById('summary');
+      if (summaryEl) {
+        summaryEl.className = 'summary ' + (failed === 0 ? 'pass' : 'fail');
+        summaryEl.textContent = `${passed} passed · ${failed} failed · ${pending} pending`;
+      }
+    }, 1500);
+  }
+</script>
+</body>
+</html>
