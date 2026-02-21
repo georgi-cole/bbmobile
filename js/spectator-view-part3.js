@@ -18,11 +18,11 @@
   let currentVariant = null;
 
   // Three different competition variants
-  const VARIANTS = ['hold_wall', 'trivia', 'speedChallenge'];
+  const VARIANTS = ['holdWall', 'trivia', 'speedChallenge'];
 
   // Configuration constants for simulations
   const SIMULATION_CONFIG = {
-    hold_wall: {
+    holdWall: {
       maxClimbHeight: 350,
       climbIncrement: { min: 15, max: 25 },
       enduranceDepletionBase: 8,
@@ -77,7 +77,7 @@
     console.info(`[SpectatorPart3] Selected variant: ${currentVariant}`);
 
     // Create the appropriate variant view
-    if (currentVariant === 'hold_wall') {
+    if (currentVariant === 'holdWall') {
       currentView = createHoldWallView(competitorIds);
     } else if (currentVariant === 'trivia') {
       currentView = createTriviaView(competitorIds);
@@ -695,7 +695,7 @@
         return;
       }
       
-      const config = SIMULATION_CONFIG.hold_wall;
+      const config = SIMULATION_CONFIG.holdWall;
       
       progressInterval = setInterval(() => {
         elapsed++;

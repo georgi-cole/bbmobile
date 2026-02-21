@@ -821,82 +821,49 @@
       // Show end screen
       endScreen.style.display = 'flex';
       
-      // Build lookup map to find participant objects by name
-      const participantsByName = new Map(participants.map(p => [p.name, p]));
-      
-      // Show human winner title banner
-      const winnerEntry = standings[0];
-      const isHumanWinner = winnerEntry && winnerEntry.isPlayer;
-      if(isHumanWinner){
-        const titleMsg = compType === 'pov'
-          ? 'You have won the Power of Veto!'
-          : 'You have won Head of Household!';
-        const banner = document.createElement('div');
-        banner.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a3a5a,#0f2a40);border:2px solid #83bfff;border-radius:12px;padding:20px 32px;text-align:center;z-index:200;color:#e8f3ff;font-size:1.4rem;font-weight:700;box-shadow:0 8px 32px rgba(131,191,255,0.4);animation:fadeIn 0.5s ease;';
-        banner.textContent = titleMsg;
-        root.appendChild(banner);
-        console.log(`[HoldWall] ✓ Winner banner shown: "${titleMsg}"`);
-        // Remove banner after 3 seconds
-        setTimeout(() => { if(banner.parentNode) banner.parentNode.removeChild(banner); }, 3000);
-      }
-      
       // Store results globally
       if(g.lastCompScores){
         // ENDURANCE FIX: Don't replace the entire Map - just update scores for participants
         // This prevents submitScore() from failing and maintains CompLocks integrity
+        
+        // OPTIMIZATION: Create lookup map to avoid O(n²) complexity
+        const participantsByName = new Map(participants.map(p => [p.name, p]));
+        
         standings.forEach(s => {
+          // Find the participant to get their player ID
           const participant = participantsByName.get(s.name);
           if(participant && participant.id !== undefined){
             g.lastCompScores.set(participant.id, s.score);
           }
         });
-      }
-      
-      // Determine winner participant
-      const winnerParticipant = participantsByName.get(standings[0].name);
-      if(winnerParticipant && winnerParticipant.id !== undefined){
-        const winnerId = winnerParticipant.id;
-        const eliminationOrder = standings.slice(1).map(s => {
-          const p = participantsByName.get(s.name);
-          return p ? p.id : null;
-        }).filter(id => id !== null);
-
-        // Use authoritativeResolveCompetition API if available (preferred path)
-        if(g.CompetitionFlow && typeof g.CompetitionFlow.authoritativeResolveCompetition === 'function'){
-          console.log(`[HoldWall] ✓ Calling authoritativeResolveCompetition: winner=${winnerId}, compType=${compType}`);
-          g.CompetitionFlow.authoritativeResolveCompetition({
-            phase: g.game && g.game.phase,
-            compType: compType,
-            gameKey: 'hold_wall',
-            winnerId: winnerId,
-            eliminationOrder: eliminationOrder,
-            reason: 'last-person-standing'
-          });
-        } else {
-          // Fallback: set authoritative winner flag directly (legacy path)
-          if(g.game){
-            g.game.__authoritativeWinner = {
-              playerId: winnerId,
-              score: standings[0].score,
-              minigame: 'hold_wall',
-              compType: compType,
-              timestamp: Date.now()
-            };
-          }
-          console.log(`[HoldWall] ✓ Authoritative winner set (legacy): Player ${winnerId} (${standings[0].name}) for ${compType}`);
+        
+        // ENDURANCE FIX: Mark winner as authoritative to prevent override by fallback logic
+        // Store winner player ID for HOH/POV determination
+        const winnerParticipant = participantsByName.get(standings[0].name);
+        if(winnerParticipant && winnerParticipant.id !== undefined){
+          // BUG FIX: Store on g.game (window.game), not g (window)
+          // competitions.js reads from g.__authoritativeWinner where g = window.game
+          g.game.__authoritativeWinner = {
+            playerId: winnerParticipant.id,
+            score: standings[0].score,
+            minigame: gameId,
+            compType: compType, // 'hoh' or 'pov'
+            timestamp: Date.now()
+          };
+          console.log(`[HoldWall] ✓ Authoritative winner set: Player ${winnerParticipant.id} (${standings[0].name}) for ${compType}`);
         }
       }
       
       // Dispatch event
       g.dispatchEvent(new CustomEvent('minigame:end', {
         detail: {
-          game: 'hold_wall',
+          game: gameId,
           score: standings[0].score,
           standings: standings
         }
       }));
       
-      // Call completion callback after delay (gives time for the winner banner to display)
+      // Call completion callback after delay
       setTimeout(() => {
         if(typeof onComplete === 'function'){
           onComplete(standings[0].score);
@@ -934,9 +901,8 @@
     document.addEventListener('touchend', handleMouseUp);
   }
   
-  // Export – hold_wall is the canonical key; holdWall preserved as legacy alias
+  // Export
   if(!g.MiniGames) g.MiniGames = {};
-  g.MiniGames.hold_wall = { render };
-  g.MiniGames.holdWall = { render }; // legacy alias
+  g.MiniGames.holdWall = { render };
   
 })(window);

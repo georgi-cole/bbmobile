@@ -115,12 +115,9 @@
     'simon': 'simonSays',  // Legacy alias
     
     // Phase 1: Scaffolds (future games)
-    // hold_wall is the canonical key; holdWall / hold-wall / holdwall / holdthewall are legacy aliases
-    'hold_wall': 'hold_wall',
-    'holdWall': 'hold_wall',
-    'hold-wall': 'hold_wall',
-    'holdwall': 'hold_wall',
-    'holdthewall': 'hold_wall',
+    'holdWall': 'holdWall',
+    'hold-wall': 'holdWall',
+    'holdwall': 'holdWall',
     'tiltedLedge': 'tiltedLedge',
     'tilted-ledge': 'tiltedLedge',
     'tiltedledge': 'tiltedLedge',

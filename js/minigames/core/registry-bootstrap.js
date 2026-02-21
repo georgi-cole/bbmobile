@@ -36,7 +36,7 @@
         'memoryMatch', 'timingBar', 'patternMatch',
         'wordAnagram', 'targetPractice', 'estimationGame',
         'wordTyping', 'sliderPuzzle', 'pathFinder',
-        'simonSays', 'hold_wall', 'tiltedLedge', 'pressurePlank',
+        'simonSays', 'holdWall', 'tiltedLedge', 'pressurePlank',
         'rainBarrelBalance', 'memoryZipline', 'swipeMaze',
         'logicLocks', 'cardClash',
         'clockStopper', 'flashFlood', 'gridLock',

@@ -323,8 +323,8 @@
     },
     
     // Phase 1: Scaffolds (now implemented!)
-    hold_wall: {
-      key: 'hold_wall',
+    holdWall: {
+      key: 'holdWall',
       name: 'Hold Wall',
       description: 'Endurance wall hold - last as long as possible',
       type: 'endurance',
