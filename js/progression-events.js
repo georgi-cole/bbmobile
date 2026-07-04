@@ -101,10 +101,10 @@
   }
 
   /**
-   * Hook: Survival after eviction
+   * Hook: Eviction survivor
    */
-  function onSurviveEviction(survivalPlayerId) {
-    logXP('SURVIVE_EVICTION', survivalPlayerId);
+  function onSurviveEviction(survivorId) {
+    logXP('SURVIVE_EVICTION', survivorId);
   }
 
   /**
@@ -152,15 +152,15 @@
   /**
    * Hook: Survived nomination (stayed on block but not evicted)
    */
-  function onSurviveNomination(survivalPlayerId) {
-    logXP('SURVIVE_NOMINATION', survivalPlayerId);
+  function onSurviveNomination(survivorId) {
+    logXP('SURVIVE_NOMINATION', survivorId);
   }
 
   /**
    * Hook: Survived tied eviction vote
    */
-  function onSurviveTie(survivalPlayerId, votes) {
-    logXP('SURVIVE_TIE', survivalPlayerId, { votes });
+  function onSurviveTie(survivorId, votes) {
+    logXP('SURVIVE_TIE', survivorId, { votes });
   }
 
   /**
@@ -264,12 +264,7 @@
     onSkipCompetition,
     onLastPlaceComp,
     onEvicted,
-    onCleanWeek,
-
-    // Survival naming aliases for new code. Keep old hook names above so existing callers continue to work.
-    onSurvivalEviction: onSurviveEviction,
-    onSurvivalNomination: onSurviveNomination,
-    onSurvivalTie: onSurviveTie
+    onCleanWeek
   };
 
 })(window);
