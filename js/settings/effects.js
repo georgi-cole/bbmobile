@@ -14,8 +14,6 @@
       if(Config.DEFAULT_CFG.compactMode === undefined) Config.DEFAULT_CFG.compactMode = false;
       if(Config.DEFAULT_CFG.compactRosterLayout === undefined) Config.DEFAULT_CFG.compactRosterLayout = 'standard';
       if(Config.DEFAULT_CFG.publicMode === undefined) Config.DEFAULT_CFG.publicMode = true;
-      if(Config.DEFAULT_CFG.publicModeAdminOverride === undefined) Config.DEFAULT_CFG.publicModeAdminOverride = false;
-      if(Config.DEFAULT_CFG.survivalMode === undefined) Config.DEFAULT_CFG.survivalMode = false;
     }
 
     const g = global.game = global.game || {};
@@ -24,8 +22,6 @@
     if(cfg.compactMode === undefined){ cfg.compactMode = false; changed = true; }
     if(cfg.compactRosterLayout === undefined){ cfg.compactRosterLayout = 'standard'; changed = true; }
     if(cfg.publicMode === undefined){ cfg.publicMode = true; changed = true; }
-    if(cfg.publicModeAdminOverride === undefined){ cfg.publicModeAdminOverride = false; changed = true; }
-    if(cfg.survivalMode === undefined){ cfg.survivalMode = false; changed = true; }
     global.cfg = cfg;
 
     if(changed && Config.saveStoredCfg){
@@ -76,7 +72,7 @@
     try{
       if(global.SettingsVisibilityFilter?.isDevUser?.()) return true;
     }catch(e){}
-    return !!cfg.publicModeAdminOverride;
+    return !!cfg.advancedMode;
   }
 
   function promptVipSubscription(input){
@@ -177,11 +173,11 @@
     if(advanced && Array.isArray(advanced.groups)){
       const quickActions = advanced.groups.find(function(group){ return group.title === 'Quick Actions'; });
       if(quickActions && Array.isArray(quickActions.fields)){
-        if(!quickActions.fields.some(function(item){ return item && item.content && item.content.indexOf('data-key="publicModeAdminOverride"') !== -1; })){
+        if(!quickActions.fields.some(function(item){ return item && item.content && item.content.indexOf('data-key="publicMode"') !== -1; })){
           quickActions.fields.push(helpers.html([
             '<label class="toggleRow">',
               '<span>Public Mode override</span>',
-              '<input type="checkbox" data-key="publicModeAdminOverride">',
+              '<input type="checkbox" data-key="publicMode">',
             '</label>',
             '<div class="tiny muted">Advanced-only override for the public build setting.</div>'
           ].join('')));
@@ -199,39 +195,9 @@
     return true;
   }
 
-  function isSettingsButton(target){
-    const btn = target && target.closest && target.closest('#btnOpenSettings,#btnSettings,#settingsBtn,#settings,button[data-action="settings"],button[data-open="settings"],.btn-settings,.settingsButton,button[title="Settings"]');
-    return btn || null;
-  }
-
-  function installSettingsEntrypointRedirect(){
-    if(global.SettingsRender && typeof global.SettingsRender.openSettingsModal === 'function'){
-      global.openSettingsModal = global.SettingsRender.openSettingsModal;
-      global.closeSettingsModal = global.SettingsRender.closeSettingsModal || global.closeSettingsModal;
-      global.UI = global.UI || {};
-      global.UI.openSettingsModal = global.SettingsRender.openSettingsModal;
-      global.UI.initSettingsUI = function(){
-        const btn = document.getElementById('btnOpenSettings') || document.getElementById('btnSettings') || document.getElementById('settingsBtn');
-        if(btn) btn.__wired = true;
-      };
-      return true;
-    }
-    return false;
-  }
-
   function installEventOverrides(){
     if(global[SETTINGS_OVERRIDE_FLAG]) return;
     global[SETTINGS_OVERRIDE_FLAG] = true;
-
-    document.addEventListener('click', function(e){
-      const btn = isSettingsButton(e.target);
-      if(!btn) return;
-      if(!installSettingsEntrypointRedirect()) return;
-      e.preventDefault();
-      e.stopPropagation();
-      if(typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-      global.SettingsRender.openSettingsModal();
-    }, true);
 
     document.addEventListener('change', function(e){
       const input = e.target && e.target.closest && e.target.closest('input[data-vip-locked="true"]');
@@ -257,7 +223,6 @@
     ensureRuntimeDefaults();
     injectCompactStyles();
     installEventOverrides();
-    installSettingsEntrypointRedirect();
     if(installRegistryOverrides()){
       applyCompactMode(!!(global.game && global.game.cfg && global.game.cfg.compactMode), global.game && global.game.cfg);
       return;
@@ -265,7 +230,9 @@
     setTimeout(installRuntimeOverrides, 50);
   }
 
+  // Side effect map: key -> handler function
   const EFFECT_HANDLERS = {
+    // Colorblind mode toggle
     colorblindMode: function(value, cfg){
       try{
         document.body.classList.toggle('cb', !!value);
@@ -273,6 +240,8 @@
         console.warn('[effects] colorblindMode toggle failed', e);
       }
     },
+    
+    // Top roster visibility
     showTopRoster: function(value, cfg){
       try{
         global.updateHud?.();
@@ -280,6 +249,8 @@
         console.warn('[effects] showTopRoster update failed', e);
       }
     },
+    
+    // Theme changes (handled by theme-switcher.js, but we can trigger HUD update)
     timerStyle: function(value, cfg){
       try{
         global.updateHud?.();
@@ -287,6 +258,8 @@
         console.warn('[effects] timerStyle update failed', e);
       }
     },
+    
+    // Jury house toggle
     enableJuryHouse: function(value, cfg){
       try{
         global.updateHud?.();
@@ -294,22 +267,18 @@
         console.warn('[effects] enableJuryHouse update failed', e);
       }
     },
+
     compactMode: applyCompactMode,
+
     compactRosterLayout: function(value, cfg){
       applyCompactMode(value === '4x4-smaller', cfg);
     },
+
     publicMode: function(value, cfg){
-      if(cfg && cfg.publicModeAdminOverride){
-        cfg.publicMode = !!value;
-      }
       console.info('[effects] publicMode changed to:', !!value);
     },
-    publicModeAdminOverride: function(value, cfg){
-      console.info('[effects] publicModeAdminOverride changed to:', !!value);
-    },
-    survivalMode: function(value, cfg){
-      console.info('[effects] survivalMode changed to:', !!value);
-    },
+    
+    // Social Spend Debug HUD toggle
     debugSocialHUD: function(value, cfg){
       try{
         if (global.SocialUIAdapter && typeof global.SocialUIAdapter.refreshHUD === 'function') {
@@ -319,14 +288,21 @@
         console.warn('[effects] debugSocialHUD refresh failed', e);
       }
     },
+    
+    // Advanced mode toggle - triggers settings modal rebuild when changed
     advancedMode: function(value, cfg){
       console.info('[effects] advancedMode changed to:', value);
+      // The modal rebuild is handled in render.js applySettings
     }
   };
 
+  // Apply side effects for changed config keys
   function applyEffects(cfg, changedKeys){
     if(!cfg) return;
+    
+    // If no specific keys provided, apply all effects
     const keys = changedKeys || Object.keys(EFFECT_HANDLERS);
+    
     keys.forEach(function(key){
       const handler = EFFECT_HANDLERS[key];
       if(handler && cfg.hasOwnProperty(key)){
@@ -339,8 +315,10 @@
     });
   }
 
+  // Apply all registered effects (useful for initial load)
   function applyAllEffects(cfg){
     applyEffects(cfg, Object.keys(EFFECT_HANDLERS));
+    // Also trigger global HUD update
     try{
       global.updateHud?.();
     }catch(e){
@@ -348,13 +326,13 @@
     }
   }
 
+  // Export to global namespace
   const SettingsEffects = global.SettingsEffects = global.SettingsEffects || {};
   SettingsEffects.applyEffects = applyEffects;
   SettingsEffects.applyAllEffects = applyAllEffects;
   SettingsEffects.EFFECT_HANDLERS = EFFECT_HANDLERS;
   SettingsEffects.installRuntimeOverrides = installRuntimeOverrides;
   SettingsEffects.advanceSurvivalDay = advanceSurvivalDay;
-  SettingsEffects.installSettingsEntrypointRedirect = installSettingsEntrypointRedirect;
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', installRuntimeOverrides);

@@ -41,14 +41,6 @@
     };
   }
 
-  function badge(text){
-    return '<span class="tiny muted" style="display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 6px;border:1px solid #51658a;border-radius:999px;color:#cfe2ff;background:#1a2233">' + text + '</span>';
-  }
-
-  function badgedCheckbox(key, label, badgeText){
-    return html('<label class="toggleRow"><span>' + label + (badgeText ? badge(badgeText) : '') + '</span><input type="checkbox" data-key="' + key + '"></label>');
-  }
-
   /**
    * Build minigame mode dropdown options dynamically
    * Includes base modes + categories (as optgroups) + individual games
@@ -60,8 +52,9 @@
       {value: 'cycle', label: 'Cycle through all'}
     ];
 
+    // Add categories and their games using optgroups for accessibility
     const Registry = global.MinigameRegistry;
-    if (!Registry) return options;
+    if (!Registry) return options; // Fallback if registry not loaded yet
 
     const categories = [
       {key: 'arcade', label: 'Arcade'},
@@ -71,24 +64,33 @@
     ];
 
     categories.forEach(cat => {
+      // Add category option (standalone, selects all from category)
       options.push({value: `category:${cat.key}`, label: `All ${cat.label} games`});
+      
+      // Start optgroup for individual games in this category
       options.push({optgroup: true, label: cat.label});
+      
+      // Add games in this category
       const games = Registry.getGamesByCategory(cat.key, {
         implementedOnly: true,
         excludeRetired: true
       });
+      
       games.forEach(gameKey => {
         const game = Registry.getGame(gameKey);
         if (game) {
           options.push({value: `game:${gameKey}`, label: game.name});
         }
       });
+      
+      // End optgroup
       options.push({endOptgroup: true});
     });
 
     return options;
   }
 
+  // Tab registry - defines all tabs, groups, and fields
   const TAB_REGISTRY = [
     {
       id: 'general',
@@ -100,16 +102,7 @@
           fields: [
             checkbox('fxCards', 'Card reveal popups (FX cards)'),
             checkbox('showTopRoster', 'Show top roster above TV'),
-            checkbox('adaptiveBackground', 'Adaptive backgrounds (intro screen)'),
-            checkbox('compactMode', 'Compact mode (uses 4x4 smaller roster layout)'),
-            html('<div class="tiny muted">Enables the compact roster layout automatically. The old 2x8 layout is hidden on purpose.</div>')
-          ]
-        },
-        {
-          title: 'Mode toggles',
-          fields: [
-            badgedCheckbox('publicMode', 'Public mode', 'VIP'),
-            html('<div class="tiny muted">Default-on for now. Toggling it shows a VIP subscription prompt unless you are using the advanced/admin override.</div>')
+            checkbox('adaptiveBackground', 'Adaptive backgrounds (intro screen)')
           ]
         },
         {
@@ -132,6 +125,7 @@
       id: 'cast',
       label: 'Cast',
       visibility: 'all',
+      // Custom mount function - will inject Cast editor UI
       mount: 'mountCastTab'
     },
     {
@@ -144,9 +138,7 @@
           fields: [
             checkbox('enableJuryHouse', 'Enable Jury House'),
             checkbox('enablePublicFav', 'Fans\' favourite mode'),
-            checkbox('progressionEnabled', 'Enable XP and leveling system (experimental)'),
-            checkbox('survivalMode', 'Survival mode'),
-            html('<div class="tiny muted">Uses Survival wording throughout the game instead of Survivor.</div>')
+            checkbox('progressionEnabled', 'Enable XP and leveling system (experimental)')
           ]
         },
         {
@@ -298,9 +290,7 @@
           title: 'Quick Actions',
           fields: [
             html('<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label class="toggleRow"><span>Self-evict player</span><select id="qaSelfEvictSelect" style="width:220px"></select></label><button class="btn danger" data-action="self-evict">Self-evict</button></div>'),
-            html('<div class="tiny muted" style="margin-top:2px">Immediately removes the selected houseguest from the game as a self-eviction.</div>'),
-            html('<label class="toggleRow"><span>Public mode override</span><input type="checkbox" data-key="publicModeAdminOverride"><span class="tiny muted">admin only</span></label>'),
-            html('<div class="tiny muted">Visible in advanced mode only. Lets you flip public mode without the VIP prompt.</div>')
+            html('<div class="tiny muted" style="margin-top:2px">Immediately removes the selected houseguest from the game as a self-eviction.</div>')
           ]
         },
         {
@@ -326,7 +316,7 @@
         {
           title: 'Quick Actions',
           fields: [
-            html('<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small" id="btnAdvanceSurvivalDay">Advance Survival Day ▶</button><button class="btn small" id="btnClearLog">Clear Log</button><button class="btn small" id="btnDebugExport">Export Save</button><button class="btn small" id="btnDebugImport">Import</button></div>'),
+            html('<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small" id="btnNextWeek">Force Week ▶</button><button class="btn small" id="btnClearLog">Clear Log</button><button class="btn small" id="btnDebugExport">Export Save</button><button class="btn small" id="btnDebugImport">Import</button></div>'),
             html('<input id="debugImportFile" type="file" accept="application/json" style="display:none"/>')
           ]
         },
@@ -353,6 +343,7 @@
     }
   ];
 
+  // Export to global namespace
   const SettingsRegistry = global.SettingsRegistry = global.SettingsRegistry || {};
   SettingsRegistry.TAB_REGISTRY = TAB_REGISTRY;
   SettingsRegistry.helpers = {
