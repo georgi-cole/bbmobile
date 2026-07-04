@@ -1,9 +1,9 @@
-// Players total (6-22) injector - single-shot, no duplicates
+// Players total (6–22) injector — single-shot, no duplicates
 // - Inserts into the visible Settings modal (prefers Cast; falls back to active pane)
 // - Persists to bb_settings_modular + bb_cfg_v2
 // - Lobby: rebuild + auto-start; Mid-season: reload to apply
 // - Marks the modal with data-bb-numplayers-injected to prevent reinjection
-// - Unique field id: numPlayersCast (won't collide with existing numPlayers)
+// - Unique field id: numPlayersCast (won’t collide with existing numPlayers)
 // - Exposes window.forcePlayersControlInject() and window.cleanupNumPlayersDupes()
 
 (function (g) {
@@ -101,7 +101,7 @@
   }
 
   function injectIntoPane(modalRoot, pane){
-    // Don't re-inject into the same modal
+    // Don’t re-inject into the same modal
     if(modalRoot.dataset.bbNumplayersInjected === '1'){
       log('already injected in this modal; skipping');
       return true;
@@ -174,7 +174,7 @@
         if(typeof g.startOpeningSequence === 'function'){ setTimeout(()=>g.startOpeningSequence(), 60); }
         g.addLog?.(`New season started with ${val} players.`,'ok');
       }else{
-        g.addLog?.(`Players set to ${val}. Restarting to apply...`,'warn');
+        g.addLog?.(`Players set to ${val}. Restarting to apply…`,'warn');
         setTimeout(()=>location.reload(), 250);
       }
     }catch(e){
@@ -185,7 +185,7 @@
     try{
       const btn = document.getElementById('btnStartQuick');
       if(btn && g.game?.phase!=='lobby'){
-        btn.textContent = 'Restart';
+        btn.textContent = '↻';
         btn.title = 'Restart (reload and apply saved settings)';
         btn.setAttribute('aria-label', 'Restart game');
       }
@@ -209,7 +209,7 @@
     // Try once shortly after DOM is ready
     setTimeout(injectNow, 80);
 
-    // Hook Settings open buttons - single shot per click
+    // Hook Settings open buttons — single shot per click
     ['btnOpenSettings','btnSettings'].forEach(id=>{
       const b = document.getElementById(id);
       if(b && !b.__playersOnce){
@@ -229,13 +229,3 @@
     init();
   }
 })(window);
-
-(function(){
-  'use strict';
-  if(window.__bbLiveSettingsOverridesLoading) return;
-  window.__bbLiveSettingsOverridesLoading = true;
-  var s = document.createElement('script');
-  s.defer = true;
-  s.src = 'js/live-settings-overrides.js?v=survival-visible-1';
-  document.head.appendChild(s);
-})();
