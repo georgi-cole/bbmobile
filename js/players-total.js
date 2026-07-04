@@ -229,3 +229,243 @@
     init();
   }
 })(window);
+
+(function(g){
+  'use strict';
+
+  const STORE = 'bb_cfg_v2';
+  const STYLE_ID = 'bb-clean-settings-request-styles';
+  const KEYS = ['bb_settings_modular', STORE];
+
+  function readCfg(){
+    let merged = {};
+    KEYS.forEach(k=>{
+      try{ const raw = localStorage.getItem(k); if(raw) Object.assign(merged, JSON.parse(raw)); }catch{}
+    });
+    const game = g.game = g.game || {};
+    game.cfg = Object.assign({
+      compactMode: false,
+      compactRosterLayout: 'standard',
+      publicMode: true,
+      publicModeAdminOverride: false,
+      survivalMode: false
+    }, game.cfg || {}, merged);
+    return game.cfg;
+  }
+
+  function saveCfg(cfg){
+    KEYS.forEach(k=>{ try{ localStorage.setItem(k, JSON.stringify(cfg)); }catch{} });
+  }
+
+  function isVipAllowed(cfg){
+    if(cfg.publicModeAdminOverride) return true;
+    try{ if(g.SettingsVisibilityFilter?.isDevUser?.()) return true; }catch{}
+    return !!(g.BB_DEV || g.__BB_DEV__ || g.DEBUG_SETTINGS || document.body.classList.contains('advanced-settings'));
+  }
+
+  function notify(message, cls){
+    try{ g.addLog?.(message, cls || ''); }catch{ try{ console.info('[settings]', message); }catch{} }
+  }
+
+  function injectStyles(){
+    if(document.getElementById(STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = [
+      '.bb-vip-badge{display:inline-flex;align-items:center;margin-left:6px;padding:1px 6px;border-radius:999px;background:linear-gradient(135deg,#f7d774,#b8872d);color:#18110a;font-size:.58rem;font-weight:800;letter-spacing:.4px;vertical-align:middle}',
+      'body.compact-mode #rosterBar,body.compact-roster-4x4-smaller #rosterBar{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}',
+      'body.compact-mode .mobile-roster-active-grid,body.compact-roster-4x4-smaller .mobile-roster-active-grid{--mobile-roster-cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:2px!important}',
+      'body.compact-mode .mobile-roster-tile,body.compact-roster-4x4-smaller .mobile-roster-tile{max-width:96px;min-width:52px;padding:1px!important;border-radius:5px}',
+      'body.compact-mode .mobile-roster-name,body.compact-roster-4x4-smaller .mobile-roster-name{font-size:9px;min-height:12px;max-height:14px;padding:1px 2px 2px}',
+      'body.compact-mode #rosterBar img,body.compact-roster-4x4-smaller #rosterBar img{max-width:42px;max-height:42px}'
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+
+  function applyModeEffects(cfg){
+    injectStyles();
+    cfg.compactRosterLayout = cfg.compactMode ? '4x4-smaller' : 'standard';
+    try{
+      document.body.classList.toggle('compact-mode', !!cfg.compactMode);
+      document.body.classList.toggle('compact-roster-4x4-smaller', !!cfg.compactMode);
+      document.body.classList.toggle('public-mode', cfg.publicMode !== false);
+      document.body.classList.toggle('survival-mode', !!cfg.survivalMode);
+    }catch{}
+    try{ g.MobileRoster?.refresh?.(); }catch{}
+    try{ g.renderTopRoster?.(); }catch{}
+    try{ g.renderRosterBar?.(); }catch{}
+    try{ g.updateHud?.(); }catch{}
+  }
+
+  function row(key, label, checked, extra){
+    return '<label class="toggleRow bb-clean-setting"><span>'+label+(extra||'')+'</span><input type="checkbox" data-bb-setting="'+key+'" '+(checked?'checked':'')+'></label>';
+  }
+
+  function addDynamicControls(root){
+    const cfg = readCfg();
+    const general = root.querySelector('[data-pane="general"] .settingsGrid');
+    if(general && !general.querySelector('[data-bb-clean-group="modes"]')){
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('data-bb-clean-group','modes');
+      card.innerHTML = '<h3>Mode toggles</h3><div class="sep"></div>'+
+        row('compactMode','Compact mode', !!cfg.compactMode)+
+        row('publicMode','Public mode', cfg.publicMode !== false, ' <span class="bb-vip-badge">VIP</span>')+
+        row('survivalMode','Survival mode', !!cfg.survivalMode);
+      general.prepend(card);
+    }
+    const advanced = root.querySelector('[data-pane="advanced"] .settingsGrid');
+    if(advanced && !advanced.querySelector('[data-bb-clean-group="admin-public"]')){
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('data-bb-clean-group','admin-public');
+      card.innerHTML = '<h3>Advanced</h3><div class="sep"></div>'+row('publicModeAdminOverride','Public mode admin override', !!cfg.publicModeAdminOverride);
+      advanced.prepend(card);
+    }
+    const debug = root.querySelector('[data-pane="debug"] .settingsGrid');
+    if(debug){
+      const old = debug.querySelector('#btnNextWeek');
+      if(old){ old.id = 'btnAdvanceSurvivalDay'; old.textContent = 'Advance Survival Day'; }
+      if(!debug.querySelector('#btnAdvanceSurvivalDay')){
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = '<h3>Survival Debug</h3><div class="sep"></div><button class="btn small" id="btnAdvanceSurvivalDay">Advance Survival Day</button>';
+        debug.prepend(card);
+      }
+    }
+  }
+
+  function addInlineControls(root){
+    const cfg = readCfg();
+    const features = root.querySelector('#tabFeatures .toggleRow');
+    if(features && !features.querySelector('[data-bb-clean-group="inline-modes"]')){
+      const box = document.createElement('span');
+      box.setAttribute('data-bb-clean-group','inline-modes');
+      box.innerHTML = row('compactMode','Compact mode', !!cfg.compactMode)+
+        row('publicMode','Public mode', cfg.publicMode !== false, ' <span class="bb-vip-badge">VIP</span>')+
+        row('survivalMode','Survival mode', !!cfg.survivalMode);
+      features.prepend(box);
+    }
+    const manage = root.querySelector('#tabManage');
+    if(manage && !manage.querySelector('[data-bb-clean-group="inline-admin"]')){
+      const block = document.createElement('div');
+      block.setAttribute('data-bb-clean-group','inline-admin');
+      block.innerHTML = '<div class="sep"></div><h3>Advanced</h3><div class="toggleRow">'+row('publicModeAdminOverride','Public mode admin override', !!cfg.publicModeAdminOverride)+'</div><div class="row"><button class="btn small" id="btnAdvanceSurvivalDay">Advance Survival Day</button></div>';
+      manage.appendChild(block);
+    }
+  }
+
+  function syncControls(root){
+    const cfg = readCfg();
+    root.querySelectorAll('[data-bb-setting="compactMode"]').forEach(i=>i.checked = !!cfg.compactMode);
+    root.querySelectorAll('[data-bb-setting="publicMode"]').forEach(i=>i.checked = cfg.publicMode !== false);
+    root.querySelectorAll('[data-bb-setting="publicModeAdminOverride"]').forEach(i=>i.checked = !!cfg.publicModeAdminOverride);
+    root.querySelectorAll('[data-bb-setting="survivalMode"]').forEach(i=>i.checked = !!cfg.survivalMode);
+  }
+
+  function renameVisibleSurvivorText(){
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node=>{
+      if(node.nodeValue && /survivor/i.test(node.nodeValue)){
+        node.nodeValue = node.nodeValue.replace(/Survivor/g, 'Survival').replace(/survivor/g, 'survival');
+      }
+    });
+  }
+
+  function patchSettingsUI(){
+    injectStyles();
+    applyModeEffects(readCfg());
+    const dynamic = document.getElementById('settingsBackdrop');
+    if(dynamic) addDynamicControls(dynamic);
+    const inline = document.getElementById('settingsModal');
+    if(inline) addInlineControls(inline);
+    if(dynamic) syncControls(dynamic);
+    if(inline) syncControls(inline);
+    renameVisibleSurvivorText();
+  }
+
+  function promptVip(input){
+    const cfg = readCfg();
+    input.checked = cfg.publicMode !== false;
+    const msg = 'Public mode is a VIP setting. Upgrade to VIP to change it.';
+    try{
+      if(typeof g.showConfirm === 'function') g.showConfirm(msg, { title:'VIP required', tone:'warn' });
+      else alert(msg);
+    }catch{ alert(msg); }
+  }
+
+  function saveSetting(key, value){
+    const cfg = readCfg();
+    cfg[key] = !!value;
+    if(key === 'compactMode') cfg.compactRosterLayout = cfg.compactMode ? '4x4-smaller' : 'standard';
+    saveCfg(cfg);
+    applyModeEffects(cfg);
+    return cfg;
+  }
+
+  function advanceSurvivalDay(){
+    const game = g.game;
+    if(!game){ notify('Game not started', 'warn'); return; }
+    try{
+      if(typeof g.proceedNextWeek === 'function'){
+        g.proceedNextWeek();
+      }else if(typeof g.nextWeek === 'function'){
+        g.nextWeek();
+      }else{
+        game.week = (game.week || 1) + 1;
+        game.phase = 'intermission';
+        game.nominees = [];
+        game.vetoHolder = null;
+        game.hohId = null;
+        if(Array.isArray(game.players)) game.players.forEach(p=>{ p.nominated = false; p.hoh = false; p.nominationState = 'none'; });
+        try{ g.setPhase?.('intermission', 1, ()=>g.startHOH?.()); }catch{}
+        try{ g.renderPanel?.(); }catch{}
+      }
+      try{ g.updateHud?.(); }catch{}
+      notify('Survival day advanced.', 'ok');
+    }catch(err){
+      notify('Failed to advance Survival day: '+err, 'warn');
+    }
+  }
+
+  document.addEventListener('change', function(e){
+    const input = e.target && e.target.closest && e.target.closest('[data-bb-setting]');
+    if(!input) return;
+    const key = input.getAttribute('data-bb-setting');
+    const cfg = readCfg();
+    if(key === 'publicMode' && !isVipAllowed(cfg)){
+      e.preventDefault();
+      e.stopPropagation();
+      promptVip(input);
+      return;
+    }
+    saveSetting(key, input.checked);
+    patchSettingsUI();
+  }, true);
+
+  document.addEventListener('click', function(e){
+    const settingsButton = e.target && e.target.closest && e.target.closest('#btnOpenSettings,#btnSettings,#settingsBtn,#settings,button[title="Settings"],.btn-settings,.settingsButton');
+    if(settingsButton) setTimeout(patchSettingsUI, 80);
+    const advanceButton = e.target && e.target.closest && e.target.closest('#btnAdvanceSurvivalDay,#btnNextWeek');
+    if(advanceButton){
+      e.preventDefault();
+      e.stopPropagation();
+      advanceSurvivalDay();
+      setTimeout(patchSettingsUI, 20);
+    }
+  }, true);
+
+  function init(){
+    const cfg = readCfg();
+    if(cfg.publicMode === undefined) cfg.publicMode = true;
+    saveCfg(cfg);
+    patchSettingsUI();
+    setTimeout(patchSettingsUI, 250);
+    setTimeout(patchSettingsUI, 1000);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
+  else init();
+})(window);
