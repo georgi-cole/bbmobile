@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Eviction Auto-Skip Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+    .test-controls {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 2px solid #3498db;
+    }
+    .test-controls h2 {
+      color: #3498db;
+      margin-top: 0;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button.danger {
+      background: #e74c3c;
+    }
+    button.danger:hover {
+      background: #c0392b;
+    }
+    button.success {
+      background: #2ecc71;
+    }
+    button.success:hover {
+      background: #27ae60;
+    }
+    .info {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border-left: 4px solid #f39c12;
+    }
+    .status {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .event-log {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .event-log-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid #3a3a3a;
+    }
+    .event-log-entry.skip-event {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .event-log-entry.success-event {
+      color: #2ecc71;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚫 Social Eviction Auto-Skip Test Suite</h1>
+  <p>Test the Social phase auto-skip functionality when the human player is evicted.</p>
+
+  <div class="test-controls">
+    <h2>Test Controls</h2>
+    
+    <div class="info">
+      <strong>Test Scenario 1:</strong> Human player is evicted → Should auto-skip social phase immediately
+    </div>
+    <button onclick="testEvictedPlayer()" class="danger">🚫 Test Evicted Player Auto-Skip</button>
+    
+    <div class="info">
+      <strong>Test Scenario 2:</strong> Human player is not evicted → Social phase runs normally
+    </div>
+    <button onclick="testNormalPlayer()" class="success">✅ Test Normal Player (Not Evicted)</button>
+    
+    <div class="info">
+      <strong>Controls:</strong>
+    </div>
+    <button onclick="resetTest()">🔄 Reset Test</button>
+    <button onclick="checkPlayerStatus()">📊 Check Player Status</button>
+  </div>
+
+  <div id="statusDisplay" class="status"></div>
+
+  <!-- Event Log -->
+  <div class="event-log" id="eventLog">
+    <strong>Event Log:</strong>
+  </div>
+
+  <!-- Mock game environment -->
+  <script>
+    // Mock game environment
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      week: 1,
+      phase: 'social_intermission',
+      humanId: 1,
+      endAt: Date.now() + 180000,
+      phaseEndsAt: Date.now() + 180000,
+      players: []
+    };
+
+    // Create mock players
+    const mockPlayers = [
+      { id: 1, name: 'Human Player', evicted: false },
+      { id: 2, name: 'AI Player 2', evicted: false },
+      { id: 3, name: 'AI Player 3', evicted: false },
+      { id: 4, name: 'AI Player 4', evicted: false }
+    ];
+
+    // Mock helper functions
+    window.alivePlayers = () => mockPlayers.filter(p => !p.evicted);
+    window.getP = (id) => mockPlayers.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.addLog = (msg, type) => {
+      console.log(`[${type}] ${msg}`);
+      logEvent(`[${type}] ${msg}`);
+    };
+    
+    // Mock phase advance
+    window.advancePhase = () => {
+      logEvent('🎯 advancePhase() called - Phase would advance here', 'skip-event');
+      updateStatus('Phase advanced successfully - Social phase was auto-skipped!');
+    };
+
+    // Mock TV functions
+    window.tv = {
+      say: (msg) => {
+        logEvent(`TV: ${msg}`);
+      }
+    };
+
+    // Mock card functions
+    window.cardQueueWaitIdle = async () => {
+      return Promise.resolve();
+    };
+
+    // Mock CardManager
+    window.CardManager = {
+      clear: async (force) => {
+        logEvent('CardManager: Cards cleared');
+        return Promise.resolve();
+      }
+    };
+
+    // Mock SocializeMobile
+    window.SocializeMobile = {
+      ensureSocializeLauncher: () => {
+        logEvent('SocializeMobile: Launcher mounted');
+      },
+      updateHUD: () => {
+        logEvent('SocializeMobile: HUD updated');
+      },
+      hide: () => {
+        logEvent('SocializeMobile: Launcher hidden');
+      }
+    };
+
+    // Mock phaseMusic
+    window.phaseMusic = (type) => {
+      logEvent(`Music: ${type} phase music started`);
+    };
+
+    // Event logging
+    function logEvent(msg, className = '') {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `event-log-entry ${className}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function updateStatus(msg) {
+      const status = document.getElementById('statusDisplay');
+      status.innerHTML = `<strong>Status:</strong> ${msg}<br><strong>Time:</strong> ${new Date().toLocaleTimeString()}`;
+    }
+
+    function checkPlayerStatus() {
+      const humanPlayer = window.getP(1);
+      if (humanPlayer) {
+        updateStatus(`Human player: ${humanPlayer.name}, Evicted: ${humanPlayer.evicted ? 'YES' : 'NO'}`);
+        logEvent(`Player status check: ${humanPlayer.name} - Evicted: ${humanPlayer.evicted ? 'YES' : 'NO'}`);
+      } else {
+        updateStatus('ERROR: Human player not found');
+      }
+    }
+
+    function resetTest() {
+      location.reload();
+    }
+
+    function testEvictedPlayer() {
+      logEvent('=== STARTING EVICTED PLAYER TEST ===', 'skip-event');
+      updateStatus('Setting human player as evicted and starting Social phase...');
+      
+      // Mark human player as evicted
+      const humanPlayer = window.getP(1);
+      if (humanPlayer) {
+        humanPlayer.evicted = true;
+        logEvent('✅ Human player marked as evicted', 'success-event');
+      } else {
+        updateStatus('ERROR: Human player not found');
+        return;
+      }
+
+      // Start Social phase
+      setTimeout(() => {
+        logEvent('Starting Social phase with evicted player...');
+        if (window.startSocialIntermission) {
+          window.startSocialIntermission('test', () => {
+            logEvent('Social phase callback executed');
+          });
+        } else {
+          updateStatus('ERROR: startSocialIntermission not loaded');
+          logEvent('ERROR: startSocialIntermission function not available');
+        }
+      }, 100);
+    }
+
+    function testNormalPlayer() {
+      logEvent('=== STARTING NORMAL PLAYER TEST ===', 'success-event');
+      updateStatus('Starting Social phase with normal (non-evicted) player...');
+      
+      // Ensure human player is not evicted
+      const humanPlayer = window.getP(1);
+      if (humanPlayer) {
+        humanPlayer.evicted = false;
+        logEvent('✅ Human player is not evicted', 'success-event');
+      } else {
+        updateStatus('ERROR: Human player not found');
+        return;
+      }
+
+      // Start Social phase
+      setTimeout(() => {
+        logEvent('Starting Social phase with normal player...');
+        if (window.startSocialIntermission) {
+          window.startSocialIntermission('test', () => {
+            logEvent('Social phase callback executed');
+          });
+          updateStatus('Social phase started normally - should not auto-skip');
+        } else {
+          updateStatus('ERROR: startSocialIntermission not loaded');
+          logEvent('ERROR: startSocialIntermission function not available');
+        }
+      }, 100);
+    }
+
+    // Auto-check on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        updateStatus('Test ready - Click a test button to begin');
+        logEvent('Test page loaded and ready');
+        checkPlayerStatus();
+      }, 500);
+    });
+  </script>
+
+  <!-- Load Social Maneuvers module first -->
+  <script src="js/social-maneuvers.js"></script>
+  <!-- Load Social module after -->
+  <script src="js/social.js"></script>
+</body>
+</html>
