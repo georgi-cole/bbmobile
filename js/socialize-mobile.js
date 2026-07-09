@@ -10,6 +10,9 @@
   // Flag to prevent re-entrant mounting during DOM mutations
   let _isCurrentlyMounting = false;
 
+  // One-time eviction skip logging per phase
+  let _evictedSkipLoggedForPhase = null;
+
   // Touch detection
   const isTouchDevice = ('ontouchstart' in window) || 
                         (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
@@ -120,7 +123,12 @@
     const humanId = g.humanId;
     const humanPlayer = global.getP?.(humanId);
     if(humanPlayer && humanPlayer.evicted){
-      console.info('[socialize-mobile] Human player is evicted - not mounting launcher');
+      // Log once per phase to avoid spam
+      const currentPhaseToken = `${g.phase}_${g.week}_evicted`;
+      if (_evictedSkipLoggedForPhase !== currentPhaseToken) {
+        console.info('[socialize-mobile] Human player is evicted - not mounting launcher');
+        _evictedSkipLoggedForPhase = currentPhaseToken;
+      }
       return null;
     }
     

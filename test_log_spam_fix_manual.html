@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Spam Fix Manual Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    h1 { color: #667eea; margin-bottom: 10px; }
+    .section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    button:hover { transform: translateY(-2px); }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .status.info { background: #e3f2fd; border-left: 4px solid #2196f3; }
+    .status.success { background: #e8f5e9; border-left: 4px solid #4caf50; }
+    .status.warning { background: #fff3e0; border-left: 4px solid #ff9800; }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    .console-output {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .console-output div {
+      margin: 2px 0;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔇 Social Log Spam Fix Manual Test</h1>
+    <div class="subtitle">Verify that high-frequency logs are gated behind debugSocialAI flag</div>
+
+    <div class="section">
+      <h2>📊 Test Configuration</h2>
+      <div class="status info">
+        <strong>Debug Mode:</strong> <span id="debugStatus">Loading...</span>
+      </div>
+      <button onclick="toggleDebug()">Toggle debugSocialAI</button>
+      <button onclick="clearConsoleOutput()">Clear Console</button>
+    </div>
+
+    <div class="section">
+      <h2>🧪 Test Cases</h2>
+      <button onclick="testComputeActionCost()">Test computeActionCost</button>
+      <button onclick="testInfluenceBonus()">Test Influence Bonus</button>
+      <button onclick="testEvictedPlayer()">Test Evicted Player Mount</button>
+      <button onclick="testRemountStorm()">Test Remount Storm Prevention</button>
+    </div>
+
+    <div class="section">
+      <h2>📝 Console Output</h2>
+      <div id="consoleOutput" class="console-output">
+        <div style="color: #569cd6">Console output will appear here...</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>✅ Expected Results</h2>
+      <div class="status success">
+        <strong>When debugSocialAI = false:</strong>
+        <ul>
+          <li>❌ No [computeActionCost] logs</li>
+          <li>❌ No [unified-success] logs</li>
+          <li>✅ One "evicted - not mounting" log per phase (at most)</li>
+          <li>❌ No repeated remount logs</li>
+          <li>✅ Essential lifecycle logs only</li>
+        </ul>
+      </div>
+      <div class="status warning">
+        <strong>When debugSocialAI = true:</strong>
+        <ul>
+          <li>✅ All [computeActionCost] logs visible</li>
+          <li>✅ All [unified-success] logs visible</li>
+          <li>✅ Remount debugging logs visible</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load game modules -->
+  <script src="js/bootstrap.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-action-config.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+  <script src="js/social-maneuvers-launcher-bootstrap.js"></script>
+
+  <script>
+    // Intercept console logs
+    const consoleOutput = document.getElementById('consoleOutput');
+    const originalConsole = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error
+    };
+
+    let logBuffer = [];
+
+    function interceptConsole() {
+      ['log', 'info', 'warn', 'error'].forEach(method => {
+        console[method] = function(...args) {
+          originalConsole[method].apply(console, args);
+          const msg = args.map(a => 
+            typeof a === 'object' ? JSON.stringify(a) : String(a)
+          ).join(' ');
+          
+          logBuffer.push({ type: method, msg, timestamp: Date.now() });
+          
+          const div = document.createElement('div');
+          const color = {
+            log: '#d4d4d4',
+            info: '#569cd6',
+            warn: '#dcdcaa',
+            error: '#f48771'
+          }[method];
+          div.style.color = color;
+          div.textContent = `[${method.toUpperCase()}] ${msg}`;
+          consoleOutput.appendChild(div);
+          consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        };
+      });
+    }
+
+    interceptConsole();
+
+    // Initialize game
+    if (!window.game) {
+      window.game = {
+        cfg: {
+          debugSocialAI: false,
+          enableSocialManeuvers: true
+        },
+        phase: 'social_intermission',
+        week: 1,
+        humanId: 'p1',
+        players: new Map()
+      };
+    }
+
+    // Mock player
+    window.getP = (id) => {
+      if (id === 'p1') {
+        return { id: 'p1', name: 'Human', evicted: false };
+      }
+      return { id: 'p2', name: 'AI', evicted: false };
+    };
+
+    function updateDebugStatus() {
+      const status = window.game?.cfg?.debugSocialAI;
+      document.getElementById('debugStatus').textContent = status ? 'ENABLED' : 'DISABLED';
+      document.getElementById('debugStatus').style.color = status ? '#4caf50' : '#f44336';
+      document.getElementById('debugStatus').style.fontWeight = 'bold';
+    }
+
+    function toggleDebug() {
+      window.game.cfg.debugSocialAI = !window.game.cfg.debugSocialAI;
+      updateDebugStatus();
+      console.info(`[TEST] debugSocialAI is now ${window.game.cfg.debugSocialAI ? 'ENABLED' : 'DISABLED'}`);
+    }
+
+    function clearConsoleOutput() {
+      consoleOutput.innerHTML = '<div style="color: #569cd6">Console cleared...</div>';
+      logBuffer = [];
+    }
+
+    function testComputeActionCost() {
+      console.info('[TEST] Testing computeActionCost logging...');
+      
+      if (window.SocialManeuvers?.computeActionCost) {
+        // Test with single target
+        window.SocialManeuvers.computeActionCost('smalltalk', ['p2']);
+        
+        // Test with multiple targets
+        window.SocialManeuvers.computeActionCost('strategize', ['p2', 'p3', 'p4']);
+        
+        console.info('[TEST] computeActionCost test complete. Check for [computeActionCost] logs above.');
+      } else {
+        console.error('[TEST] SocialManeuvers.computeActionCost not available');
+      }
+    }
+
+    function testInfluenceBonus() {
+      console.info('[TEST] Testing unified-success influence bonus logging...');
+      
+      if (window.SocialActionConfig?.computeSuccessChance) {
+        // Initialize SocialManeuvers resources
+        if (window.SocialManeuvers?.SocialResources) {
+          window.SocialManeuvers.SocialResources.init('p1');
+          window.SocialManeuvers.SocialResources.setInfluence('p1', 'p2', 50);
+        }
+        
+        const actor = window.getP('p1');
+        const target = window.getP('p2');
+        
+        // Call multiple times to simulate high-frequency
+        for (let i = 0; i < 5; i++) {
+          window.SocialActionConfig.computeSuccessChance(
+            0.5,
+            [],
+            'smalltalk',
+            actor,
+            target,
+            0.1
+          );
+        }
+        
+        console.info('[TEST] Influence bonus test complete. Check for [unified-success] logs above.');
+      } else {
+        console.error('[TEST] SocialActionConfig.computeSuccessChance not available');
+      }
+    }
+
+    function testEvictedPlayer() {
+      console.info('[TEST] Testing evicted player mount attempt logging...');
+      
+      // Mark player as evicted
+      const humanPlayer = window.getP('p1');
+      humanPlayer.evicted = true;
+      
+      // Try to mount launcher multiple times
+      if (window.SocializeMobile?.ensureLauncher) {
+        for (let i = 0; i < 5; i++) {
+          window.SocializeMobile.ensureLauncher();
+        }
+        console.info('[TEST] Evicted player test complete. Should see only ONE eviction log above.');
+      } else {
+        console.error('[TEST] SocializeMobile.ensureLauncher not available');
+      }
+      
+      // Restore player state
+      humanPlayer.evicted = false;
+    }
+
+    function testRemountStorm() {
+      console.info('[TEST] Testing remount storm prevention...');
+      
+      if (window.SocialLauncherBootstrap?.mountIfMissing) {
+        // Clear any existing launcher
+        const existingLauncher = document.querySelector('#socializeLauncher');
+        if (existingLauncher) existingLauncher.remove();
+        
+        // Try rapid remounts
+        for (let i = 0; i < 10; i++) {
+          window.SocialLauncherBootstrap.mountIfMissing();
+        }
+        
+        console.info('[TEST] Remount storm test complete. Should be rate-limited with cooldown.');
+      } else {
+        console.error('[TEST] SocialLauncherBootstrap.mountIfMissing not available');
+      }
+    }
+
+    // Initialize
+    updateDebugStatus();
+    console.info('[TEST] Log spam fix test initialized');
+    console.info('[TEST] Current debugSocialAI: ' + window.game.cfg.debugSocialAI);
+  </script>
+</body>
+</html>

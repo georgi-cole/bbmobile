@@ -9,6 +9,15 @@
   let mountTargetObserver = null;
   let observerActive = false;
 
+  // Rate-limiting for remount attempts (prevent storm)
+  let lastMountAttempt = 0;
+  const MOUNT_COOLDOWN_MS = 1000; // 1 second between attempts
+  let consecutiveFailures = 0;
+  const MAX_CONSECUTIVE_FAILURES = 3;
+  
+  // One-time eviction skip logging per phase
+  let _evictedSkipLoggedForPhase = null;
+
   // ============================================================================
   // MOUNT TARGET RESOLUTION
   // ============================================================================
@@ -51,13 +60,45 @@
    * Mount the Socialize launcher if it's missing.
    * Guards against duplicate mounts by checking for existing launcher.
    * Only mounts if in social phase.
+   * Rate-limited to prevent remount storm.
    */
   function mountIfMissing() {
+    // Rate-limiting: prevent rapid remount attempts
+    const now = Date.now();
+    if (now - lastMountAttempt < MOUNT_COOLDOWN_MS) {
+      return false;
+    }
+    lastMountAttempt = now;
+
+    // Stop after too many consecutive failures (e.g., when human is evicted)
+    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+      const debugEnabled = global.game?.cfg?.debugSocialAI;
+      if (debugEnabled) {
+        console.info('[social-launcher] Max consecutive failures reached - stopping remount attempts');
+      }
+      return false;
+    }
+
     // Check if we're in social phase
     const g = global.game || {};
     const inSocialPhase = g.phase === 'social_intermission' || g.phase === 'social';
     if (!inSocialPhase) {
       // Not in social phase - don't mount
+      consecutiveFailures = 0; // Reset counter when not in phase
+      return false;
+    }
+
+    // Check if human player is evicted - don't mount for evicted players
+    const humanId = g.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    if (humanPlayer && humanPlayer.evicted) {
+      // Log once per phase to avoid spam
+      const currentPhaseToken = `${g.phase}_${g.week}_evicted`;
+      if (_evictedSkipLoggedForPhase !== currentPhaseToken) {
+        console.info('[social-launcher] Human player is evicted - stopping remount attempts');
+        _evictedSkipLoggedForPhase = currentPhaseToken;
+      }
+      consecutiveFailures++; // Increment to eventually stop trying
       return false;
     }
 
@@ -65,18 +106,21 @@
     const existingLauncher = document.querySelector('#socializeLauncher, .socialize-launcher, [data-sm-launcher]');
     if (existingLauncher) {
       // Launcher exists, no need to mount
+      consecutiveFailures = 0; // Reset counter on success
       return false;
     }
 
     const target = resolveMountTarget();
     if (!target) {
       // No mount target available yet
+      consecutiveFailures++;
       return false;
     }
 
     // Check if SocializeMobile.ensureLauncher is available
     if (typeof global.SocializeMobile?.ensureLauncher !== 'function') {
       console.warn('[social-launcher] SocializeMobile.ensureLauncher not available');
+      consecutiveFailures++;
       return false;
     }
 
@@ -85,10 +129,18 @@
       global.SocializeMobile.ensureLauncher();
       global.SocializeMobile.updateHUDDisplay?.();
       global.SocializeMobile.show?.();
-      console.info('[social-launcher] re-mounted after DOM change');
+      
+      // Gate remount success logs behind debugSocialAI flag
+      const debugEnabled = global.game?.cfg?.debugSocialAI;
+      if (debugEnabled) {
+        console.info('[social-launcher] re-mounted after DOM change');
+      }
+      
+      consecutiveFailures = 0; // Reset counter on success
       return true;
     } catch (e) {
       console.error('[social-launcher] Failed to mount launcher:', e);
+      consecutiveFailures++;
       return false;
     }
   }
@@ -104,12 +156,24 @@
   function startLauncherObserver() {
     // Prevent duplicate observers
     if (observerActive) {
-      console.info('[social-launcher] observer already active');
+      const debugEnabled = global.game?.cfg?.debugSocialAI;
+      if (debugEnabled) {
+        console.info('[social-launcher] observer already active');
+      }
       return;
     }
 
     observerActive = true;
-    console.info('[social-launcher] observer started');
+    
+    // Reset failure counters when starting observer
+    consecutiveFailures = 0;
+    lastMountAttempt = 0;
+    _evictedSkipLoggedForPhase = null;
+    
+    const debugEnabled = global.game?.cfg?.debugSocialAI;
+    if (debugEnabled) {
+      console.info('[social-launcher] observer started');
+    }
 
     // Use resolveMountTarget() to get or create mount target
     const initialTarget = resolveMountTarget();
@@ -193,7 +257,15 @@
       mountTargetObserver = null;
     }
 
-    console.info('[social-launcher] observer stopped');
+    // Reset state when stopping
+    consecutiveFailures = 0;
+    lastMountAttempt = 0;
+    _evictedSkipLoggedForPhase = null;
+
+    const debugEnabled = global.game?.cfg?.debugSocialAI;
+    if (debugEnabled) {
+      console.info('[social-launcher] observer stopped');
+    }
   }
 
   // ============================================================================

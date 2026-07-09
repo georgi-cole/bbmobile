@@ -682,7 +682,11 @@
       ? `base ${baseCost} + group ${groupCost} (${targetCount - 1} extra)`
       : `${baseCost}`;
 
-    console.info(`[computeActionCost] ${actionId}: ${total}⚡ (${breakdown})`);
+    // Gate high-frequency cost calculation logs behind debugSocialAI flag
+    const debugEnabled = global.game?.cfg?.debugSocialAI;
+    if (debugEnabled) {
+      console.info(`[computeActionCost] ${actionId}: ${total}⚡ (${breakdown})`);
+    }
 
     return {
       total: Math.max(0, Math.round(total)),
