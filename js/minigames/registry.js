@@ -325,8 +325,8 @@
     // Phase 1: Scaffolds (now implemented!)
     holdWall: {
       key: 'holdWall',
-      name: 'Hold Wall',
-      description: 'Endurance wall hold - last as long as possible',
+      name: 'Hold Wall (legacy)',
+      description: 'Endurance wall hold - last as long as possible (legacy, replaced by hold_wall)',
       type: 'endurance',
       category: 'endurance',
       difficulty: 'hard',
@@ -337,9 +337,29 @@
       module: 'hold-wall.js',
       minScore: 0,
       maxScore: 100,
+      retired: true,
+      replacedBy: 'hold_wall',
+      seasons: ['spring', 'summer', 'autumn', 'winter'],
+      suppressGlobalReveal: true
+    },
+
+    hold_wall: {
+      key: 'hold_wall',
+      name: 'Hold the Wall',
+      description: 'Authoritative endurance — last person standing wins HOH or POV. No timer. Winner always gets 1000, others 0.',
+      type: 'endurance',
+      category: 'endurance',
+      difficulty: 'hard',
+      estimatedDuration: 90,
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'hold_wall.js',
+      minScore: 0,
+      maxScore: 1000,
       retired: false,
       seasons: ['spring', 'summer', 'autumn', 'winter'],
-      suppressGlobalReveal: true // Minigame handles its own results display internally
+      suppressGlobalReveal: true
     },
     
     tiltedLedge: {

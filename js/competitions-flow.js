@@ -903,7 +903,7 @@
     const configDuration = (game && game.cfg && game.cfg.minigameDuration) || 180;
     
     // Check for unlimited mode
-    const isUnlimited = options.unlimited === true || options.timeLimit === null;
+    const isUnlimited = options.unlimited === true || options.timeLimit === null || gameKey === 'hold_wall';
     
     // Pause phase timer when starting minigame
     let phaseTimerWasPaused = false;

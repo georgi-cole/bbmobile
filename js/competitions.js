@@ -1860,22 +1860,27 @@
       if (g.__authoritativeWinner && g.__authoritativeWinner.compType === 'hoh') {
         winner = g.__authoritativeWinner.playerId;
         console.info(`[hoh] ✓ Using authoritative winner from endurance minigame: ${winner}`);
-        
-        // Ensure the authoritative winner has the highest score in lastCompScores
-        // Find the current max score and set authoritative winner's score higher
-        let maxScore = 0;
-        for (const [id, score] of g.lastCompScores.entries()) {
-          if (id !== winner && score > maxScore) {
-            maxScore = score;
+
+        if (g.__authoritativeWinner.gameKey === 'hold_wall') {
+          // hold_wall v2: enforce winner=1000, all others=0
+          for (const id of elig) {
+            g.lastCompScores.set(id, id === winner ? 1000 : 0);
           }
+          console.debug('[hoh] hold_wall v2: enforced winner=1000, others=0');
+        } else {
+          // Legacy endurance: inject winner score as highest
+          let maxScore = 0;
+          for (const [id, score] of g.lastCompScores.entries()) {
+            if (id !== winner && score > maxScore) {
+              maxScore = score;
+            }
+          }
+          const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
+          g.lastCompScores.set(winner, authScore);
+          console.debug(`[hoh] Injected authoritative winner score: ${authScore} (max was ${maxScore})`);
         }
-        // Set authoritative winner's score to be highest (use their actual score if higher)
-        const authScore = Math.max(g.__authoritativeWinner.score || 100, maxScore + 1);
-        g.lastCompScores.set(winner, authScore);
-        console.debug(`[hoh] Injected authoritative winner score: ${authScore} (max was ${maxScore})`);
         
         // ENDURANCE FIX: Clear authoritative winner flag immediately after use
-        // This prevents it from affecting later phases or competitions
         console.debug('[hoh] Clearing authoritative winner flag after use');
         delete g.__authoritativeWinner;
       } else {
