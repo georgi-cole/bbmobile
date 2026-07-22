@@ -883,6 +883,12 @@
 
       // Run competition flow (pass TV viewport for instructions to appear inside TV)
       console.info('[Competition] → Calling CompetitionFlow.runCompetitionFlow with container and game:', mg);
+      
+      // Play competition start buzzer SFX
+      if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+        global.SoundMap.playSfx('competition', 'start_buzzer', 0.6);
+      }
+      
       global.CompetitionFlow.runCompetitionFlow(mg, instructionsContainer, (base) => {
         console.info(`[Competition] ← Competition completed with score: ${base}`);
         
@@ -1419,6 +1425,11 @@
 
     const top3 = arr.slice(0, 3);
 
+    // Play results drum roll SFX before reveal
+    if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+      global.SoundMap.playSfx('competition', 'results_drum', 0.7);
+    }
+    
     // Use reusable tri-slot reveal with new popup design
     await showTriSlotReveal({
       title: title,
@@ -1428,6 +1439,11 @@
       showIntro: false,
       useNewPopup: true
     });
+    
+    // Play winner reveal SFX after results
+    if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+      global.SoundMap.playSfx('competition', 'winner_reveal', 0.7);
+    }
 
     // Add crown animation to winner
     setTimeout(() => {

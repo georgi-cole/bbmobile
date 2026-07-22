@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sound System Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    .section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 10px 0;
+    }
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #357abd;
+    }
+    button:active {
+      background: #2a5f8f;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .toggle-button {
+      background: #28a745;
+    }
+    .toggle-button.off {
+      background: #dc3545;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success {
+      color: #28a745;
+    }
+    .error {
+      color: #dc3545;
+    }
+    .warning {
+      color: #ffc107;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎵 BBMobile Sound System Test</h1>
+
+  <div class="section">
+    <h2>System Status</h2>
+    <div class="status" id="systemStatus">
+      Loading...
+    </div>
+    <div style="margin-top: 10px;">
+      <button id="toggleSfx" class="toggle-button">Toggle SFX (ON)</button>
+      <button id="toggleMute" class="toggle-button">Toggle Mute (OFF)</button>
+      <button id="stopAll">Stop All Sounds</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>UI Sounds</h2>
+    <div class="grid" id="uiSounds">
+      <button onclick="testSfx('ui', 'click')">🖱️ Click</button>
+      <button onclick="testSfx('ui', 'hover')">👆 Hover</button>
+      <button onclick="testSfx('ui', 'modal_open')">📖 Modal Open</button>
+      <button onclick="testSfx('ui', 'modal_close')">📕 Modal Close</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Competition Sounds</h2>
+    <div class="grid" id="compSounds">
+      <button onclick="testSfx('competition', 'start_buzzer')">🔔 Start Buzzer</button>
+      <button onclick="testSfx('competition', 'countdown')">⏱️ Countdown</button>
+      <button onclick="testSfx('competition', 'correct')">✅ Correct</button>
+      <button onclick="testSfx('competition', 'wrong')">❌ Wrong</button>
+      <button onclick="testSfx('competition', 'timeout')">⏰ Timeout</button>
+      <button onclick="testSfx('competition', 'results_drum')">🥁 Results Drum</button>
+      <button onclick="testSfx('competition', 'winner_reveal')">🏆 Winner Reveal</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Voting Sounds</h2>
+    <div class="grid" id="votingSounds">
+      <button onclick="testSfx('voting', 'cast')">🗳️ Vote Cast</button>
+      <button onclick="testSfx('voting', 'tally_tick')">✓ Tally Tick</button>
+      <button onclick="testSfx('voting', 'result_drum')">🥁 Result Drum</button>
+      <button onclick="testSfx('voting', 'tiebreaker')">⚖️ Tiebreaker</button>
+      <button onclick="testSfx('voting', 'evicted_gong')">🔔 Evicted Gong</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Social Sounds</h2>
+    <div class="grid" id="socialSounds">
+      <button onclick="testSfx('social', 'action')">💬 Social Action</button>
+      <button onclick="testSfx('social', 'bond_increase')">💚 Bond Increase</button>
+      <button onclick="testSfx('social', 'bond_decrease')">💔 Bond Decrease</button>
+      <button onclick="testSfx('social', 'alliance_form')">🤝 Alliance Form</button>
+      <button onclick="testSfx('social', 'alliance_break')">💥 Alliance Break</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Jury Sounds</h2>
+    <div class="grid" id="jurySounds">
+      <button onclick="testSfx('jury', 'member_arrives')">👤 Member Arrives</button>
+      <button onclick="testSfx('jury', 'vote_cast')">🗳️ Vote Cast</button>
+      <button onclick="testSfx('jury', 'vote_reveal')">🎭 Vote Reveal</button>
+      <button onclick="testSfx('jury', 'return_twist')">🔄 Return Twist</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Finale Sounds</h2>
+    <div class="grid" id="finaleSounds">
+      <button onclick="testSfx('finale', 'winner_fanfare')">🎺 Winner Fanfare</button>
+      <button onclick="testSfx('finale', 'confetti_burst')">🎊 Confetti Burst</button>
+      <button onclick="testSfx('finale', 'crown_placement')">👑 Crown Placement</button>
+      <button onclick="testSfx('finale', 'check_reveal')">💰 Check Reveal</button>
+      <button onclick="testSfx('finale', 'runner_up')">🥈 Runner Up</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Fan Favorite Sounds</h2>
+    <div class="grid" id="fanFavSounds">
+      <button onclick="testSfx('fan_favorite', 'voting')">📊 Voting</button>
+      <button onclick="testSfx('fan_favorite', 'reveal')">🎭 Reveal</button>
+      <button onclick="testSfx('fan_favorite', 'winner')">⭐ Winner</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Event/Twist Sounds</h2>
+    <div class="grid" id="eventSounds">
+      <button onclick="testSfx('events', 'twist_announce')">🌀 Twist Announce</button>
+      <button onclick="testSfx('events', 'double_eviction')">2️⃣ Double Eviction</button>
+      <button onclick="testSfx('events', 'triple_eviction')">3️⃣ Triple Eviction</button>
+      <button onclick="testSfx('events', 'week_start')">📅 Week Start</button>
+      <button onclick="testSfx('events', 'diary_room_door')">🚪 Diary Room Door</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Notification Sounds</h2>
+    <div class="grid" id="notificationSounds">
+      <button onclick="testSfx('notifications', 'your_turn')">👉 Your Turn</button>
+      <button onclick="testSfx('notifications', 'timer_warning')">⚠️ Timer Warning</button>
+      <button onclick="testSfx('notifications', 'phase_end')">🏁 Phase End</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Test Logs</h2>
+    <div class="status" id="testLogs" style="max-height: 300px; overflow-y: auto;">
+      Ready to test...
+    </div>
+  </div>
+
+  <!-- Load the modules -->
+  <script>window.MUSIC_BASE = 'audio/';</script>
+  <script>
+    // Mock minimal game object
+    window.game = {
+      cfg: {
+        sfxOn: true,
+        musicOn: true
+      }
+    };
+    window.cfg = window.game.cfg;
+    
+    // Mock getMuted function
+    window.getMuted = function() {
+      return window.__muteState || false;
+    };
+  </script>
+  <script src="js/config/sound-map.js"></script>
+  <script src="js/sfx-player.js"></script>
+
+  <script>
+    // Test functions
+    function testSfx(category, key) {
+      const result = window.SoundMap.playSfx(category, key, 0.7);
+      logTest(category, key, result);
+    }
+
+    function logTest(category, key, result) {
+      const logs = document.getElementById('testLogs');
+      const timestamp = new Date().toLocaleTimeString();
+      const status = result ? '✓' : '✗';
+      const statusClass = result ? 'success' : 'error';
+      
+      const entry = document.createElement('div');
+      entry.innerHTML = `<span class="${statusClass}">[${timestamp}] ${status} ${category}.${key}</span>`;
+      logs.insertBefore(entry, logs.firstChild);
+      
+      // Keep only last 50 entries
+      while (logs.children.length > 50) {
+        logs.removeChild(logs.lastChild);
+      }
+    }
+
+    function updateStatus() {
+      const status = document.getElementById('systemStatus');
+      const sfxEnabled = window.cfg.sfxOn;
+      const muted = window.getMuted();
+      const activeCount = window.SfxPlayer.getActiveCount();
+      
+      status.innerHTML = `
+        <div><strong>SoundMap:</strong> ${window.SoundMap ? '<span class="success">✓ Loaded</span>' : '<span class="error">✗ Not Found</span>'}</div>
+        <div><strong>SfxPlayer:</strong> ${window.SfxPlayer ? '<span class="success">✓ Loaded</span>' : '<span class="error">✗ Not Found</span>'}</div>
+        <div><strong>SFX Enabled:</strong> ${sfxEnabled ? '<span class="success">ON</span>' : '<span class="error">OFF</span>'}</div>
+        <div><strong>Muted:</strong> ${muted ? '<span class="error">YES</span>' : '<span class="success">NO</span>'}</div>
+        <div><strong>Active Sounds:</strong> ${activeCount}</div>
+        <div><strong>Default Volume:</strong> ${window.SfxPlayer.DEFAULT_VOLUME}</div>
+      `;
+    }
+
+    // Toggle buttons
+    document.getElementById('toggleSfx').addEventListener('click', function() {
+      window.cfg.sfxOn = !window.cfg.sfxOn;
+      this.textContent = 'Toggle SFX (' + (window.cfg.sfxOn ? 'ON' : 'OFF') + ')';
+      this.className = 'toggle-button' + (window.cfg.sfxOn ? '' : ' off');
+      updateStatus();
+    });
+
+    document.getElementById('toggleMute').addEventListener('click', function() {
+      window.__muteState = !window.getMuted();
+      this.textContent = 'Toggle Mute (' + (window.getMuted() ? 'ON' : 'OFF') + ')';
+      this.className = 'toggle-button' + (window.getMuted() ? ' off' : '');
+      updateStatus();
+    });
+
+    document.getElementById('stopAll').addEventListener('click', function() {
+      if (window.SfxPlayer && window.SfxPlayer.stopAll) {
+        window.SfxPlayer.stopAll();
+        logTest('system', 'stopAll', true);
+      }
+    });
+
+    // Update status every second
+    setInterval(updateStatus, 1000);
+    updateStatus();
+  </script>
+</body>
+</html>

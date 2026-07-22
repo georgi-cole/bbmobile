@@ -767,6 +767,12 @@
             // Use new competition flow with guards if available
             if(typeof global.runHumanMinigameWithGuards === 'function'){
               console.info('[veto.js] → Using runHumanMinigameWithGuards for veto competition');
+              
+              // Play competition start buzzer SFX
+              if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+                global.SoundMap.playSfx('competition', 'start_buzzer', 0.6);
+              }
+              
               global.runHumanMinigameWithGuards({
                 mg: mg,
                 host: hostNode,
@@ -1437,6 +1443,11 @@
     // Use new leaderboard renderer if available
     if(window.VetoResultsUI && typeof window.VetoResultsUI.renderVetoCompResults === 'function'){
       try{
+        // Play results drum roll SFX before reveal
+        if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+          global.SoundMap.playSfx('competition', 'results_drum', 0.7);
+        }
+        
         // Normalize scores to plain object for renderer
         var scoresObj = {};
         g.lastCompScores.forEach(function(v, k){ scoresObj[+k] = v; });
@@ -1450,6 +1461,13 @@
           maxResults: 1,  // Cosmetic: Show only winner (not top 3)
           autoDismissMs: displayDuration 
         });
+        
+        // Play winner reveal SFX after results shown
+        setTimeout(function() {
+          if (global.SoundMap && typeof global.SoundMap.playSfx === 'function') {
+            global.SoundMap.playSfx('competition', 'winner_reveal', 0.7);
+          }
+        }, 500);
         
         // Track post-reveal timer to allow cleanup on phase transition
         // Continue to ceremony after display duration (using configured constant)
